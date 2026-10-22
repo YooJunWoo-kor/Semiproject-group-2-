@@ -38,7 +38,7 @@ function FinanceModul() {
     ];
 
     return (
-        <div className="finance-module-page">
+        <div className="sub-container">
             <header>
                 <h2>[재무관리] 전산 업무 센터</h2>
                 <p>처리할 세부 재무 항목을 선택하세요.</p>

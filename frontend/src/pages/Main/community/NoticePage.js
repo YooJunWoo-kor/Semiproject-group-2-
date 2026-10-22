@@ -6,6 +6,15 @@ import { loadItems, saveItems } from "./communityStorage";
 const emptyForm = { title: "", category: noticeCategories[0], content: "", author: "임시 관리자", important: false };
 
 function NoticePage() {
+  //더미데이터 추가
+  const testdata = [
+    {name: "test1", a: "내용", b: "날짜"}
+    ,{name: "test1", a: "내용", b: "날짜"}
+    ,{name: "test1", a: "내용", b: "날짜"}
+    ,{name: "test1", a: "내용", b: "날짜"}
+    ,{name: "test1", a: "내용", b: "날짜"}
+    ,{name: "test1", a: "내용", b: "날짜"}
+  ];
   const [items, setItems] = useState(() => loadItems("notices")); //공지사항 게시글 목록
   const [query, setQuery] = useState(""); //검색창에 입력한 검색어
   const [view, setView] = useState("list"); //현재 표시할 화면
@@ -86,14 +95,6 @@ function NoticePage() {
   const showDetail = view === "detail" && selected !== null;
   const showForm = view === "write" || view === "edit";
 
-
-
-
-
-
-
-
-
   return (
     <main className="community-page">
       <h1>공지사항</h1>
@@ -102,7 +103,6 @@ function NoticePage() {
         <Link to="/main/community">커뮤니티 메인</Link>
       </nav>
 
-     
       {message ? <p role="status">{message}</p> : null}
 
       {view === "list" ? (
@@ -159,7 +159,7 @@ function NoticePage() {
         </article>
       ) : null}
 
-      {showForm ? (
+      {/* {showForm ? (
         <form onSubmit={save}>
           <h2>{view === "edit" ? "공지 수정" : "공지 등록"}</h2>
 
@@ -222,7 +222,8 @@ function NoticePage() {
             취소
           </button>
         </form>
-      ) : null}
+      ) : null} */}
+      
     </main>
   );
 }
