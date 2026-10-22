@@ -3,6 +3,7 @@
 준우  
 - 깃 초기화 완료
 - 품질관리 ui개선
+- npm install chart.js react-chartjs-2 (그래프 보는데 필요한 모듈)
 
 대성 직원관리 ui개선  
 왕식 네비게이션 추가  
