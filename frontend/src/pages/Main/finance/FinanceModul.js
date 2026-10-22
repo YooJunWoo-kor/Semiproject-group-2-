@@ -42,16 +42,12 @@ function FinanceModul() {
             <header>
                 <h2>[재무관리] 전산 업무 센터</h2>
                 <p>처리할 세부 재무 항목을 선택하세요.</p>
-                <button type="button" onClick={() => navigate('/main')}>
-                    ← 메인 모듈 목록으로 돌아가기
-                </button>
-                <hr />
             </header>
 
             <main>
-                <ul className="module-grid">
+                <div className="module-grid">
                     {financeMenus.map((menu) => (
-                        <li key={menu.id} className="module-card">
+                        <div key={menu.id} className="module-card">
                             <h3>{menu.title}</h3>
                             <p>{menu.description}</p>
                             <button
@@ -60,9 +56,9 @@ function FinanceModul() {
                             >
                                 {menu.title} 이동
                             </button>
-                        </li>
+                        </div>
                     ))}
-                </ul>
+                </div>
             </main>
         </div>
     );
