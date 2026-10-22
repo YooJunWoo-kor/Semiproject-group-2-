@@ -10,23 +10,23 @@ import ProductDetail from "./ProductDetail";
 
 function MainRouter() {
     return (
-        <div>
+        <div className="app">
 
             <SelectBar />
 
-            <Routes>
-                <Route path="/" element={<Main />}/>
+            <main className="page-container">
+                <Routes>
+                    <Route path="/" element={<Main />} />
 
-                <Route path="/Manage" element={<QualityTestList />}/>
+                    <Route path="/products" element={<ProductList />} />
 
-                <Route path="/products" element={<ProductList />}/>
+                    <Route path="/TestList" element={<QualityTestList />} />
 
-                <Route path="/TestList" element={<QualityTestList />}/>
+                    <Route path="/Graph" element={<QualityTestGraph />} />
 
-                <Route path="/Graph" element={<QualityTestGraph/>}/>
-
-                <Route path="/products/:id" element={<ProductDetail/>}/>
-            </Routes>
+                    <Route path="/products/:id" element={<ProductDetail />} />
+                </Routes>
+            </main>
 
         </div>
     )
