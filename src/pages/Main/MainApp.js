@@ -1,0 +1,69 @@
+// src/pages/Main/MainApp.js
+import React from 'react';
+import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
+import MainModule from './MainModule';
+import FinanceHome from './finance/FinanceHom';
+import HrRoutes from './hr/HrRoutes';
+import QaRouter from './qualityControl/QaRouter';
+import SchedulePage from './management/SchedulePage';
+import CommunityHome from './community/CommunityHome';
+import NoticePage from './community/NoticePage';
+import FreeBoardPage from './community/FreeBoardPage';
+import TechLibraryPage from './community/TechLibraryPage';
+import QnAPage from './community/QnAPage';
+import SuggestionPage from './community/SuggestionPage';
+import OperationalModule from './shared/OperationalModule';
+import CrmHome from './crm/CrmHome';
+import { CustomersPage, CustomerDetailPage } from './crm/CustomersPage';
+import PartnersPage from './crm/PartnersPage';
+import ConsultationsPage from './crm/ConsultationsPage';
+import ClaimsPage from './crm/ClaimsPage';
+import { useCrmData } from './crm/crmStorage';
+
+function MainApp() {
+    const [crmData, setCrmData] = useCrmData();
+    const crmProps = { data: crmData, setData: setCrmData };
+
+    return (
+        <div className="erp-shell">
+            {/* 상단 네비게이션 바 */}
+            <nav className="erp-top-nav" aria-label="ERP 주 메뉴">
+                <NavLink to="/main" end>대시보드</NavLink>
+                <NavLink to="/main/hr">인사</NavLink>
+                <NavLink to="/main/finance">재무</NavLink>
+                <NavLink to="/main/qa">품질</NavLink>
+                <NavLink to="/main/schedule">일정</NavLink>
+                <NavLink to="/main/project">프로젝트</NavLink>
+                <NavLink to="/main/crm">고객관리</NavLink>
+                <NavLink to="/main/community">커뮤니티</NavLink>
+            </nav>
+
+            {/* 실제 화면 라우팅 연결 영역 */}
+            <div className="main-content">
+                <Routes>
+                    <Route path="/" element={<MainModule />} />
+                    <Route path="/finance/*" element={<FinanceHome />} />
+                    <Route path="/hr/*" element={<HrRoutes />} />
+                    <Route path="/qa/*" element={<QaRouter />} />
+                    <Route path="/schedule/*" element={<SchedulePage />} />
+                    <Route path="/community/*" element={<CommunityHome />} />
+                    <Route path="/community/notice" element={<NoticePage />} />
+                    <Route path="/community/free" element={<FreeBoardPage />} />
+                    <Route path="/community/tech" element={<TechLibraryPage />} />
+                    <Route path="/community/qa" element={<QnAPage />} />
+                    <Route path="/community/suggestion" element={<SuggestionPage />} />
+                    <Route path="/project" element={<OperationalModule type="project" />} />
+                    <Route path="/crm" element={<CrmHome />} />
+                    <Route path="/crm/customers" element={<CustomersPage {...crmProps} />} />
+                    <Route path="/crm/customers/:customerId" element={<CustomerDetailPage {...crmProps} />} />
+                    <Route path="/crm/partners" element={<PartnersPage {...crmProps} />} />
+                    <Route path="/crm/consultations" element={<ConsultationsPage {...crmProps} />} />
+                    <Route path="/crm/claims" element={<ClaimsPage {...crmProps} />} />
+                    <Route path="*" element={<Navigate to="/main" replace />} />
+                </Routes>
+            </div>
+        </div>
+    );
+}
+
+export default MainApp;
