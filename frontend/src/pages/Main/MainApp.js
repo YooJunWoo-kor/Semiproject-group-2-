@@ -13,17 +13,9 @@ import TechLibraryPage from './community/TechLibraryPage';
 import QnAPage from './community/QnAPage';
 import SuggestionPage from './community/SuggestionPage';
 import OperationalModule from './shared/OperationalModule';
-import CrmHome from './crm/CrmHome';
-import { CustomersPage, CustomerDetailPage } from './crm/CustomersPage';
-import PartnersPage from './crm/PartnersPage';
-import ConsultationsPage from './crm/ConsultationsPage';
-import ClaimsPage from './crm/ClaimsPage';
-import { useCrmData } from './crm/crmStorage';
+import CrmRoutes from './crm/CrmRoutes';
 
 function MainApp() {
-    const [crmData, setCrmData] = useCrmData();
-    const crmProps = { data: crmData, setData: setCrmData };
-
     return (
         <div className="erp-shell">
             {/* 상단 네비게이션 바 */}
@@ -53,12 +45,7 @@ function MainApp() {
                     <Route path="/community/qa" element={<QnAPage />} />
                     <Route path="/community/suggestion" element={<SuggestionPage />} />
                     <Route path="/project" element={<OperationalModule type="project" />} />
-                    <Route path="/crm" element={<CrmHome />} />
-                    <Route path="/crm/customers" element={<CustomersPage {...crmProps} />} />
-                    <Route path="/crm/customers/:customerId" element={<CustomerDetailPage {...crmProps} />} />
-                    <Route path="/crm/partners" element={<PartnersPage {...crmProps} />} />
-                    <Route path="/crm/consultations" element={<ConsultationsPage {...crmProps} />} />
-                    <Route path="/crm/claims" element={<ClaimsPage {...crmProps} />} />
+                    <Route path="/crm/*" element={<CrmRoutes />} />
                     <Route path="*" element={<Navigate to="/main" replace />} />
                 </Routes>
             </div>
