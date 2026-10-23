@@ -4,14 +4,17 @@
   --color-brand-soft: #e9f5f2;
   --color-ink: #172033;
   --color-muted: #697386;
-  --color-line: #e4e8f0;
+  --color-line: #b4d6d6;
   --color-surface: #ffffff;
-  --color-canvas: #f4f7f6;
-  --color-success: #16845b;
+  --color-canvas: #d0f3f3;
+  --color-success: #0e94bd;
   --color-warning: #ad6b13;
   --color-danger: #c0394b;
   --shadow-card: 0 10px 30px rgb(29 45 86 / 7%);
   --radius-card: 14px;
+  --layer-radius: 10px;
+  --layer-shadow: 0px 10px 10px #527d8a55;
+  --card-shadow: 0px 3px 5px #527d8a33;
   font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
   color: var(--color-ink);
   background: var(--color-canvas);
@@ -34,6 +37,76 @@ h1, h2, h3 { letter-spacing: -.035em; }
 h1 { margin-bottom: 10px; font-size: clamp(1.7rem, 2.5vw, 2.2rem); }
 h2 { font-size: 1.35rem; }
 p { color: var(--color-muted); line-height: 1.65; }
+li{
+  list-style: none;
+}
+
+/* 각 기능별 네비 + container */
+.sub-main-contain{}
+/* 각 기능별 네비게이션 */
+.sub-main-nav{}
+/* 각 기능별 컨텐츠 노출 컨테이너 */
+.sub-container{}
+/* 각 업무 메인 카드 */
+.module-card{}
+/* 카드를 감싼 레이어 */
+.module-grid{}
+
+.module-grid{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px
+}
+
+.module-card{
+  text-align: center;
+  flex: 0 0 calc((100% - 32px) / 3);
+  min-width: 150px;
+  border: 1px solid var(--color-line);
+  box-shadow: var(--card-shadow);
+  border-radius: var(--radius-card);
+  padding: 20px;
+  padding-bottom: 50px;
+  background-color: #fff;
+  padding-top: 30px;
+}
+
+.sub-main-contain{
+  display: flex;
+  flex-direction:row;
+}
+
+.sub-container{
+  width: 100%;
+  padding: 50px 100px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--layer-radius);
+  background-color: #ffffffaa;
+  box-shadow: var(--layer-shadow);
+}
+
+.sub-main-nav{
+  color: white;
+  background-color: var(--color-success);
+  
+  border-radius: var(--layer-radius);
+  margin-right: 20px;
+  
+  width: 250px;
+  min-width: 250px;
+  
+  box-shadow: var(--layer-shadow);
+}
+
+.sub-main-nav li{
+  margin-bottom: 30px;
+  font-size: 15px;
+  font-weight: bold;
+}
+.sub-main-nav li:first-child{
+  margin-top: 60px;
+}
+
 
 /* 공통 입력 요소 */
 input:not([type='checkbox']):not([type='radio']), select, textarea {
@@ -103,19 +176,19 @@ table button { min-height: 32px; padding: 6px 10px; font-size: .82rem; }
 .erp-dashboard > header h1 { margin: 0; }
 .erp-dashboard > header span { margin-left: auto; color: var(--color-muted); }
 .erp-dashboard > main { max-width: 1280px; margin: 44px auto; }
-.erp-dashboard .module-grid, .finance-module-page .module-grid, .community-home .board-grid {
+.erp-dashboard .community-home .board-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; padding: 0; list-style: none;
 }
-.erp-dashboard .module-card, .finance-module-page .module-card, .community-home .board-card {
+.erp-dashboard .community-home .board-card {
   min-height: 190px; padding: 22px; background: white; border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card);
 }
-.erp-dashboard .module-card h3, .finance-module-page .module-card h3, .community-home .board-card h2 { margin-bottom: 9px; }
-.erp-dashboard .module-card button, .finance-module-page .module-card button { margin-top: 10px; color: var(--color-brand); background: var(--color-brand-soft); border-color: transparent; }
+.erp-dashboard h3, .community-home .board-card h2 { margin-bottom: 9px; }
+.erp-dashboard button { margin-top: 10px; color: var(--color-brand); background: var(--color-brand-soft); border-color: transparent; }
 .erp-dashboard > footer { color: var(--color-muted); text-align: center; }
 
 /* 공통 카드와 페이지 폭 */
 .community-page, .finance-page, .quality-page, .schedule-page { min-width: 0; }
-.community-home, .community-page, .finance-module-page, .finance-page, .product-list-page, .main-container, .quality-graph-page { padding: 28px; background: white; border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+.community-home, .community-page, .finance-page, .product-list-page, .main-container, .quality-graph-page { padding: 28px; background: white; border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
 .community-page h1, .finance-page h1, .product-list-page h1, .main-container h1 { margin-bottom: 7px; }
 .community-page section, .finance-page section, .community-page form, .finance-page form { margin-top: 20px; }
 .community-page > nav { display: flex; gap: 10px; margin: 12px 0 18px; }
@@ -219,7 +292,7 @@ table button { min-height: 32px; padding: 6px 10px; font-size: .82rem; }
   .erp-top-nav, .select-bar { gap: 2px; overflow-x: auto; padding: 8px 12px; }
   .erp-top-nav a, .select-bar a { padding: 9px; white-space: nowrap; font-size: .8rem; }
   .main-content { width: calc(100% - 24px); padding-top: 16px; }
-  .community-home, .community-page, .finance-module-page, .finance-page, .product-list-page, .main-container, .quality-graph-page { padding: 18px; }
+  .community-home, .community-page, .finance-page, .product-list-page, .main-container, .quality-graph-page { padding: 18px; }
   .erp-dashboard { padding: 20px; }
   .erp-dashboard > header > div, .page-top-header, .dashboard-top { align-items: flex-start; flex-direction: column; }
   .erp-dashboard > header span { margin-left: 0; }

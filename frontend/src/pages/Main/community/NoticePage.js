@@ -97,14 +97,6 @@ function NoticePage() {
   const showDetail = view === "detail" && selected !== null;
   const showForm = view === "write" || view === "edit";
 
-
-
-
-
-
-
-
-
   return (
     <main className="community-page">
       <h1>공지사항</h1>
@@ -113,7 +105,6 @@ function NoticePage() {
         <Link to="/main/community">커뮤니티 메인</Link>
       </nav>
 
-     
       {message ? <p role="status">{message}</p> : null}
 
       {view === "list" ? (
@@ -170,7 +161,70 @@ function NoticePage() {
         </article>
       ) : null}
 
-      <DataDistributor data = {data}/>
+      {/* {showForm ? (
+        <form onSubmit={save}>
+          <h2>{view === "edit" ? "공지 수정" : "공지 등록"}</h2>
+
+          <label>
+            제목*
+            <input
+              value={form.title}
+              onChange={(event) => setForm({ ...form, title: event.target.value })}
+            />
+          </label>
+          <br />
+
+          <label>
+            분류
+            <select
+              value={form.category}
+              onChange={(event) => setForm({ ...form, category: event.target.value })}
+            >
+              {noticeCategories.map((categoryItem) => (
+                <option key={categoryItem}>{categoryItem}</option>
+              ))}
+            </select>
+          </label>
+          <br />
+
+          <label>
+            작성자*
+            <input
+              value={form.author}
+              onChange={(event) => setForm({ ...form, author: event.target.value })}
+            />
+          </label>
+          <br />
+
+          <label>
+            <input
+              type="checkbox"
+              checked={form.important}
+              onChange={(event) => setForm({ ...form, important: event.target.checked })}
+            />
+            중요 공지
+          </label>
+          <br />
+
+          <label>
+            내용*
+            <textarea
+              rows="7"
+              value={form.content}
+              onChange={(event) => setForm({ ...form, content: event.target.value })}
+            />
+          </label>
+          <br />
+
+          <button type="submit">저장</button>
+          <button
+            type="button"
+            onClick={() => setView(selected ? "detail" : "list")}
+          >
+            취소
+          </button>
+        </form>
+      ) : null} */}
       
     </main>
   );
