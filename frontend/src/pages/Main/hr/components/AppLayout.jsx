@@ -1,12 +1,12 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 const menuItems = [
-  { to: '/main/hr', label: '대시보드', icon: '📊', end: true },
-  { to: '/main/hr/employees', label: '직원 관리', icon: '👥' },
-  { to: '/main/hr/departments', label: '부서 관리', icon: '🏢' },
-  { to: '/main/hr/attendance', label: '근태 관리', icon: '📅' },
-  { to: '/main/hr/payroll', label: '급여 관리', icon: '💰' },
-  { to: '/main/hr/settings', label: '시스템 관리', icon: '⚙️' }
+  { to: '/main/hr', label: '대시보드', end: true },
+  { to: '/main/hr/employees', label: '직원 관리' },
+  { to: '/main/hr/departments', label: '부서 관리'},
+  { to: '/main/hr/attendance', label: '근태 관리'},
+  { to: '/main/hr/payroll', label: '급여 관리' },
+  { to: '/main/hr/settings', label: '시스템 관리' }
 ];
 
 const pageTitles = {
@@ -44,7 +44,6 @@ export default function AppLayout() {
         </nav>
 
         <div className="hr-help-card">
-          <span>❓</span>
           <strong>도움이 필요하신가요?</strong>
           <p>관리자에게 문의하세요.</p>
           <p>ERP SYSTEM · v1.0.0</p>
@@ -56,9 +55,6 @@ export default function AppLayout() {
           <div>홈 / <strong>{title}</strong></div>
           
           <div>
-            <button type="button" aria-label="알림" className="alarm-btn">
-              🔔
-            </button>
             <span className="user-name">김대성</span>
             <span className="user-role">인사팀 관리자</span>
             <span className="dropdown-arrow">▼</span>
