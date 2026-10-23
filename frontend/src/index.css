@@ -1,15 +1,7 @@
+@import './css/ColorList.css';
+@import './css/SubMain.css';
+
 :root {
-  --color-brand: #244f6b;
-  --color-brand-dark: #1685c5;
-  --color-brand-soft: #b2f0ff;
-  --color-ink: #172033;
-  --color-muted: #697386;
-  --color-line: #b4d6d6;
-  --color-surface: #ffffff;
-  --color-canvas: #d0f3f3;
-  --color-success: #064d7c;
-  --color-warning: #ad6b13;
-  --color-danger: #c0394b;
   --shadow-card: 0 10px 30px rgb(29 45 86 / 7%);
   --radius-card: 14px;
   --layer-radius: 10px;
@@ -45,106 +37,6 @@ li{
   list-style: none;
 }
 
-/* 각 기능별 네비 + container */
-.sub-main-contain{}
-/* 각 기능별 네비게이션 */
-.sub-main-nav{}
-/* 각 기능별 컨텐츠 노출 컨테이너 */
-.sub-container{}
-/* 각 업무 메인 카드 */
-.module-card{}
-/* 카드를 감싼 레이어 */
-.module-grid{}
-
-.module-grid{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.module-card{
-  text-align: center;
-  flex: 0 0 calc((100% - 32px) / 3);
-  min-width: 150px;
-  border: 1px solid var(--color-line);
-  box-shadow: var(--card-shadow);
-  border-radius: var(--radius-card);
-  padding: 20px;
-  padding-bottom: 50px;
-  background-color: #fff;
-  padding-top: 30px;
-}
-
-.sub-main-contain{
-  display: flex;
-  flex-direction:row;
-}
-
-.sub-container{
-  width: 100%;
-  padding: 30px 50px;
-  border: 1px solid var(--color-line);
-  border-radius: var(--layer-radius);
-  background-color: #ffffffaa;
-  box-shadow: var(--layer-shadow);
-}
-
-.sub-main-nav{
-  color: white;
-  background-color: var(--color-success);
-  
-  border-radius: var(--layer-radius);
-  margin-right: 20px;
-  
-  width: 250px;
-  min-width: 250px;
-  min-height: 800px;
-  
-  box-shadow: var(--layer-shadow);
-}
-
-.sub-main-nav ul{
-  margin:0;
-  padding: 0;
-}
-
-.sub-main-nav li{
-  margin: 0 15px;
-}
-.sub-main-nav li:first-child{
-  margin-top: 50px;
-  margin-left: 35px;
-  margin-bottom: 20px;
-  color: #fff;
-  font-size: 20px;
-  font-weight: 500;
-}
-
-.sub-main-nav a{
-  display:block;
-  padding: 10px 20px;
-  margin: 5px;
-  border-radius: var(--button-radius);
-  font-size: 15px;
-  color: #c6f7ff;
-}
-.sub-main-nav a:hover{
-  font-weight: bold;
-  background-color: #0c4485;
-}
-
-.subtitle{
-  font-size: 25px;
-  font-weight: bolder;
-  color: var(--subtitle-color);
-  margin-right: 15px;
-}
-
-.subtext{
-  font-size: 15px;
-  color: #66818d;
-}
 
 /* 공통 입력 요소 */
 input:not([type='checkbox']):not([type='radio']), select, textarea {
@@ -276,7 +168,7 @@ table button { min-height: 32px; padding: 6px 10px; font-size: .82rem; }
 .page-top-header, .dashboard-top { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 .sub-title, .date-badge { color: var(--color-brand); font-size: .73rem; font-weight: 700; letter-spacing: .12em; }
 .stats-section, .attendance-stats, .payroll-stats, .dept-summary-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-.stat-card, .stat-box, .summary-card, .recent-activity-wrapper, .table-container-box, .dept-card, .payroll-notice-card, .setting-item-btn {
+.stat-box, .summary-card, .recent-activity-wrapper, .table-container-box, .dept-card, .payroll-notice-card, .setting-item-btn {
   padding: 20px; background: white; border: 1px solid var(--color-line); border-radius: 14px; box-shadow: var(--shadow-card);
 }
 .stat-value, .stat-num { margin: 14px 0 8px; color: var(--color-ink); font-size: 1.8rem; font-weight: 700; }

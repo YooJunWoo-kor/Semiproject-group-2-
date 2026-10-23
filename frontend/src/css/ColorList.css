@@ -1,0 +1,13 @@
+:root {
+    --color-brand: #244f6b;
+    --color-brand-dark: #1685c5;
+    --color-brand-soft: #b2f0ff;
+    --color-ink: #172033;
+    --color-muted: #697386;
+    --color-line: #b4d6d6;
+    --color-surface: #ffffff;
+    --color-canvas: #d0f3f3;
+    --color-success: #064d7c;
+    --color-warning: #ad6b13;
+    --color-danger: #c0394b;
+}

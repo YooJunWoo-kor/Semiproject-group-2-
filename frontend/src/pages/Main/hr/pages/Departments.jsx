@@ -1,3 +1,5 @@
+import StatisticsCard from "../../../../components/StatisticsCard";
+
 //json구조 i
 const departments = [
   {
@@ -58,9 +60,7 @@ export default function Departments() {
     <div className="departments-wrapper">
       <div className="page-top-header">
         <div>
-          <div className="sub-title">ORGANIZATION</div>
-          <h1>부서 관리</h1>
-          <p>회사 조직과 부서별 인원 현황을 확인합니다.</p>
+          <span className='subtitle'>부서 관리</span>
         </div>
 
         <button
@@ -72,42 +72,36 @@ export default function Departments() {
       </div>
 
       <div className="dept-summary-cards">
-        <div className="summary-card">
-          <span>전체 부서</span>
-          <strong>{departments.length}개</strong>
-        </div>
-
-        <div className="summary-card">
-          <span>전체 직원</span>
-          <strong>{totalEmployees}명</strong>
-        </div>
-
-        <div className="summary-card">
-          <span>평균 부서 인원</span>
-          <strong>{averageCount}명</strong>
-        </div>
+        <StatisticsCard title={"전체부서"} count={"6"}/>
+        <StatisticsCard title={"평균부서인원"} count={"21"} stiyle={1}/>
       </div>
 
       <div className="dept-grid">
         {departments.map((department) => (
-          <div className="dept-card" key={department.id}>
-            <h2>{department.name}</h2>
-            <p>{department.description}</p>
-
-            <div className="dept-card-footer">
-              <div>
-                <span>부서장</span>
-                <strong>{department.lead}</strong>
-              </div>
-
-              <div>
-                <span>구성원</span>
-                <strong>{department.count}명</strong>
-              </div>
-            </div>
-          </div>
+          <DepartCard data = {department}/> 
         ))}
       </div>
     </div>
   );
+}
+
+function DepartCard({data}){
+  return(
+    <div className="dept-card" key={data.id}>
+            <h2>{data.name}</h2>
+            <p>{data.description}</p>
+
+            <div className="dept-card-footer">
+              <div>
+                <span>부서장</span>
+                <strong>{data.lead}</strong>
+              </div>
+
+              <div>
+                <span>구성원</span>
+                <strong>{data.count}명</strong>
+              </div>
+            </div>
+          </div>
+  )
 }

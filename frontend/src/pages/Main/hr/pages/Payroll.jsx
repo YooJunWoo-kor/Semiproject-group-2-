@@ -1,35 +1,31 @@
+import StatisticsCard from "../../../../components/StatisticsCard";
+
 //
 const payrollStats = [
   {
     title: '이번 달 급여 총액',
-    value: '₩ 486.2M',
-    description: '10월 지급 예정',
+    value: '486.2',
   },
   {
     title: '지급 완료',
-    value: '0건',
-    description: '아직 지급 전입니다.',
+    value: '0',
   },
   {
     title: '지급 예정',
-    value: '128건',
-    description: '예정일 10월 25일',
+    value: '128',
   },
   {
     title: '대상 직원',
-    value: '128명',
-    description: '재직 직원 기준',
+    value: '128',
   },
 ];
 
 export default function Payroll() {
   return (
-    <div className="payroll-wrapper">
+    <div>
       <div className="page-top-header">
         <div>
-          <div className="sub-title">PAYROLL</div>
           <h1>급여 관리</h1>
-          <p>급여 지급 요약과 월별 급여 업무를 확인합니다.</p>
         </div>
 
         <button
@@ -42,13 +38,13 @@ export default function Payroll() {
         </button>
       </div>
 
-      <div className="payroll-stats">
+      <div className="dept-grid"
+        style={{
+          display: "flex"
+        }}
+      >
         {payrollStats.map((stat) => (
-          <div className="stat-box" key={stat.title}>
-            <div className="stat-title">{stat.title}</div>
-            <div className="stat-num">{stat.value}</div>
-            <div className="stat-desc">{stat.description}</div>
-          </div>
+          <StatisticsCard title={stat.title} count={stat.value}/>
         ))}
       </div>
 
