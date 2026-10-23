@@ -1,0 +1,453 @@
+
+{
+  "customers": [
+    {
+      "id": "customer-001",
+      "name": "김민지",
+      "phone": "010-1001-2001",
+      "email": "minji.kim@example.com",
+      "address": "서울시 강남구",
+      "joinDate": "2026-01-10",
+      "lastPurchaseDate": "2026-10-20"
+    },
+    {
+      "id": "customer-002",
+      "name": "이서준",
+      "phone": "010-1002-2002",
+      "email": "seojun.lee@example.com",
+      "address": "서울시 마포구",
+      "joinDate": "2026-03-18",
+      "lastPurchaseDate": "2026-10-18"
+    },
+    {
+      "id": "customer-003",
+      "name": "박지우",
+      "phone": "010-1003-2003",
+      "email": "jiwoo.park@example.com",
+      "address": "부산시 해운대구",
+      "joinDate": "2026-06-02",
+      "lastPurchaseDate": "2026-09-25"
+    },
+    {
+      "id": "customer-004",
+      "name": "최하윤",
+      "phone": "010-1004-2004",
+      "email": "hayoon.choi@example.com",
+      "address": "인천시 연수구",
+      "joinDate": "2026-07-11",
+      "lastPurchaseDate": "2026-10-11"
+    },
+    {
+      "id": "customer-005",
+      "name": "정도윤",
+      "phone": "010-1005-2005",
+      "email": "doyoon.jeong@example.com",
+      "address": "대전시 유성구",
+      "joinDate": "2026-08-25",
+      "lastPurchaseDate": "2026-10-08"
+    },
+    {
+      "id": "customer-006",
+      "name": "윤서아",
+      "phone": "010-1006-2006",
+      "email": "seoa.yoon@example.com",
+      "address": "서울시 서초구",
+      "joinDate": "2026-02-14",
+      "lastPurchaseDate": "2026-10-15"
+    },
+    {
+      "id": "customer-007",
+      "name": "한지훈",
+      "phone": "010-1007-2007",
+      "email": "jihoon.han@example.com",
+      "address": "서울시 송파구",
+      "joinDate": "2026-04-09",
+      "lastPurchaseDate": "2026-10-17"
+    },
+    {
+      "id": "customer-008",
+      "name": "송채원",
+      "phone": "010-1008-2008",
+      "email": "chaewon.song@example.com",
+      "address": "경기도 성남시",
+      "joinDate": "2026-05-21",
+      "lastPurchaseDate": "2026-10-09"
+    },
+    {
+      "id": "customer-009",
+      "name": "오하린",
+      "phone": "010-1009-2009",
+      "email": "harin.oh@example.com",
+      "address": "인천시 남동구",
+      "joinDate": "2026-06-30",
+      "lastPurchaseDate": "2026-10-12"
+    },
+    {
+      "id": "customer-010",
+      "name": "임도현",
+      "phone": "010-1010-2010",
+      "email": "dohyun.im@example.com",
+      "address": "경기도 수원시",
+      "joinDate": "2026-09-02",
+      "lastPurchaseDate": "2026-10-21"
+    }
+  ],
+  "purchases": [
+    {
+      "id": "purchase-001",
+      "customerId": "customer-001",
+      "productName": "수분 진정 세럼",
+      "date": "2026-10-20",
+      "store": "강남 플래그십 스토어",
+      "quantity": 2,
+      "amount": 64000
+    },
+    {
+      "id": "purchase-002",
+      "customerId": "customer-002",
+      "productName": "데일리 선크림",
+      "date": "2026-10-18",
+      "store": "공식 온라인몰",
+      "quantity": 1,
+      "amount": 28000
+    },
+    {
+      "id": "purchase-003",
+      "customerId": "customer-003",
+      "productName": "비건 립 틴트",
+      "date": "2026-09-25",
+      "store": "부산 센텀점",
+      "quantity": 1,
+      "amount": 19000
+    },
+    {
+      "id": "purchase-004",
+      "customerId": "customer-004",
+      "productName": "저자극 클렌징 폼",
+      "date": "2026-10-11",
+      "store": "공식 온라인몰",
+      "quantity": 1,
+      "amount": 22000
+    },
+    {
+      "id": "purchase-005",
+      "customerId": "customer-005",
+      "productName": "콜라겐 아이크림",
+      "date": "2026-10-08",
+      "store": "대전 유성점",
+      "quantity": 1,
+      "amount": 45000
+    },
+    {
+      "id": "purchase-006",
+      "customerId": "customer-006",
+      "productName": "시카 수분 크림",
+      "date": "2026-10-15",
+      "store": "공식 온라인몰",
+      "quantity": 2,
+      "amount": 76000
+    },
+    {
+      "id": "purchase-007",
+      "customerId": "customer-007",
+      "productName": "비타민 C 앰플",
+      "date": "2026-10-17",
+      "store": "잠실 직영점",
+      "quantity": 1,
+      "amount": 52000
+    },
+    {
+      "id": "purchase-008",
+      "customerId": "customer-008",
+      "productName": "톤업 선크림",
+      "date": "2026-10-09",
+      "store": "공식 온라인몰",
+      "quantity": 2,
+      "amount": 54000
+    },
+    {
+      "id": "purchase-009",
+      "customerId": "customer-009",
+      "productName": "히알루론산 토너",
+      "date": "2026-10-12",
+      "store": "인천 송도점",
+      "quantity": 1,
+      "amount": 31000
+    },
+    {
+      "id": "purchase-010",
+      "customerId": "customer-010",
+      "productName": "세라마이드 로션",
+      "date": "2026-10-21",
+      "store": "공식 온라인몰",
+      "quantity": 2,
+      "amount": 68000
+    }
+  ],
+  "partners": [
+    {
+      "id": "partner-001",
+      "name": "뷰티온 유통",
+      "type": "유통사",
+      "manager": "한가람",
+      "phone": "02-555-0101",
+      "email": "garam.han@beautyon.example.com",
+      "address": "서울시 송파구",
+      "memo": "수도권 오프라인 매장 유통"
+    },
+    {
+      "id": "partner-002",
+      "name": "해운대 코스메틱",
+      "type": "대리점",
+      "manager": "오다온",
+      "phone": "051-700-0202",
+      "email": "daon.oh@haeundae-cos.example.com",
+      "address": "부산시 해운대구",
+      "memo": "월 1회 정기 발주"
+    },
+    {
+      "id": "partner-003",
+      "name": "그린뷰티 편집숍",
+      "type": "납품처",
+      "manager": "윤새봄",
+      "phone": "042-600-0303",
+      "email": "saebom.yoon@greenbeauty.example.com",
+      "address": "대전시 유성구",
+      "memo": "비건 화장품 중심 납품"
+    },
+    {
+      "id": "partner-004",
+      "name": "서울 코스메틱 유통",
+      "type": "유통사",
+      "manager": "김태현",
+      "phone": "02-555-0404",
+      "email": "taehyun.kim@seoulcos.example.com",
+      "address": "서울시 강남구",
+      "memo": "서울 주요 백화점 화장품 유통"
+    },
+    {
+      "id": "partner-005",
+      "name": "인천 뷰티플러스",
+      "type": "대리점",
+      "manager": "박소연",
+      "phone": "032-600-0505",
+      "email": "soyeon.park@beautyplus.example.com",
+      "address": "인천시 연수구",
+      "memo": "인천 지역 화장품 판매 대리점"
+    },
+    {
+      "id": "partner-006",
+      "name": "케이뷰티 글로벌",
+      "type": "유통사",
+      "manager": "이현우",
+      "phone": "02-555-0606",
+      "email": "hyunwoo.lee@kbeauty.example.com",
+      "address": "서울시 영등포구",
+      "memo": "해외 수출 및 온라인 유통"
+    },
+    {
+      "id": "partner-007",
+      "name": "부산 뷰티마켓",
+      "type": "납품처",
+      "manager": "최유진",
+      "phone": "051-700-0707",
+      "email": "yujin.choi@busanbeauty.example.com",
+      "address": "부산시 수영구",
+      "memo": "부산 지역 편집숍 정기 납품"
+    },
+    {
+      "id": "partner-008",
+      "name": "수원 코스메디",
+      "type": "대리점",
+      "manager": "정민석",
+      "phone": "031-600-0808",
+      "email": "minseok.jeong@suwoncos.example.com",
+      "address": "경기도 수원시",
+      "memo": "경기 남부 지역 판매 및 유통"
+    },
+    {
+      "id": "partner-009",
+      "name": "오가닉 뷰티샵",
+      "type": "납품처",
+      "manager": "서하늘",
+      "phone": "02-555-0909",
+      "email": "haneul.seo@organicbeauty.example.com",
+      "address": "서울시 마포구",
+      "memo": "친환경 및 비건 화장품 납품"
+    },
+    {
+      "id": "partner-010",
+      "name": "프리미엄 코스메틱",
+      "type": "유통사",
+      "manager": "임지수",
+      "phone": "02-555-1010",
+      "email": "jisoo.im@premiumcos.example.com",
+      "address": "서울시 서초구",
+      "memo": "프리미엄 스킨케어 브랜드 유통"
+    }
+  ],
+  "consultations": [
+    {
+      "id": "consultation-001",
+      "customerId": "customer-001",
+      "inquiry": "민감성 피부에도 세럼을 사용할 수 있나요?",
+      "answer": "팔 안쪽에 소량 테스트 후 사용해 주세요.",
+      "status": "답변 완료"
+    },
+    {
+      "id": "consultation-002",
+      "customerId": "customer-002",
+      "inquiry": "선크림 재입고 일정을 알고 싶습니다.",
+      "answer": "재고 확인 후 안내드리겠습니다.",
+      "status": "처리 중"
+    },
+    {
+      "id": "consultation-003",
+      "customerId": "customer-004",
+      "inquiry": "클렌징 폼의 권장 사용 횟수가 궁금합니다.",
+      "answer": "아침과 저녁 하루 두 번 사용을 권장합니다.",
+      "status": "답변 완료"
+    },
+    {
+      "id": "consultation-004",
+      "customerId": "customer-003",
+      "inquiry": "립 틴트 색상을 다른 색상으로 변경할 수 있나요?",
+      "answer": "",
+      "status": "접수"
+    },
+    {
+      "id": "consultation-005",
+      "customerId": "customer-005",
+      "inquiry": "아이크림은 하루에 몇 번 사용해야 하나요?",
+      "answer": "제품 사용 안내에 따라 아침과 저녁에 적당량 사용하시면 됩니다.",
+      "status": "답변 완료"
+    },
+    {
+      "id": "consultation-006",
+      "customerId": "customer-006",
+      "inquiry": "시카 수분 크림의 유통기한을 확인하고 싶습니다.",
+      "answer": "제품 하단의 제조번호와 사용기한을 확인 중입니다.",
+      "status": "처리 중"
+    },
+    {
+      "id": "consultation-007",
+      "customerId": "customer-007",
+      "inquiry": "비타민 C 앰플 보관 방법이 궁금합니다.",
+      "answer": "직사광선을 피하고 제품에 표시된 보관 조건에 따라 보관해 주세요.",
+      "status": "답변 완료"
+    },
+    {
+      "id": "consultation-008",
+      "customerId": "customer-008",
+      "inquiry": "톤업 선크림 사용 후 피부가 건조합니다.",
+      "answer": "",
+      "status": "접수"
+    },
+    {
+      "id": "consultation-009",
+      "customerId": "customer-009",
+      "inquiry": "토너 정기 구매 시 할인 혜택이 있나요?",
+      "answer": "현재 적용 가능한 프로모션을 확인하고 있습니다.",
+      "status": "처리 중"
+    },
+    {
+      "id": "consultation-010",
+      "customerId": "customer-010",
+      "inquiry": "세라마이드 로션을 얼굴에도 사용할 수 있나요?",
+      "answer": "제품의 권장 사용 부위를 확인하여 사용해 주세요.",
+      "status": "답변 완료"
+    }
+  ],
+  "claims": [
+    {
+      "id": "claim-001",
+      "customerId": "customer-003",
+      "purchaseId": "purchase-003",
+      "type": "제품 불량",
+      "content": "개봉 전 용기 외부에 내용물이 묻어 있습니다.",
+      "resolution": "사진 확인 후 새 제품으로 교환했습니다.",
+      "status": "처리 완료"
+    },
+    {
+      "id": "claim-002",
+      "customerId": "customer-001",
+      "purchaseId": "purchase-001",
+      "type": "교환",
+      "content": "주문한 수량과 배송 수량이 다릅니다.",
+      "resolution": "출고 내역 확인 중입니다.",
+      "status": "검토 중"
+    },
+    {
+      "id": "claim-003",
+      "customerId": "customer-004",
+      "purchaseId": "purchase-004",
+      "type": "환불",
+      "content": "배송 중 용기가 파손되었습니다.",
+      "resolution": "파손 사진을 접수했습니다.",
+      "status": "접수"
+    },
+    {
+      "id": "claim-004",
+      "customerId": "customer-002",
+      "purchaseId": "purchase-002",
+      "type": "환불",
+      "content": "선크림을 잘못 주문하여 환불을 요청합니다.",
+      "resolution": "미개봉 상태를 확인한 후 환불 처리했습니다.",
+      "status": "처리 완료"
+    },
+    {
+      "id": "claim-005",
+      "customerId": "customer-005",
+      "purchaseId": "purchase-005",
+      "type": "제품 불량",
+      "content": "아이크림 용기의 펌프가 정상적으로 작동하지 않습니다.",
+      "resolution": "불량 여부를 확인하고 있습니다.",
+      "status": "검토 중"
+    },
+    {
+      "id": "claim-006",
+      "customerId": "customer-006",
+      "purchaseId": "purchase-006",
+      "type": "교환",
+      "content": "주문한 제품과 다른 종류의 수분 크림이 배송되었습니다.",
+      "resolution": "",
+      "status": "접수"
+    },
+    {
+      "id": "claim-007",
+      "customerId": "customer-007",
+      "purchaseId": "purchase-007",
+      "type": "불만 사항",
+      "content": "비타민 C 앰플의 제품 포장이 훼손된 상태로 배송되었습니다.",
+      "resolution": "배송 및 포장 과정을 확인 중입니다.",
+      "status": "검토 중"
+    },
+    {
+      "id": "claim-008",
+      "customerId": "customer-008",
+      "purchaseId": "purchase-008",
+      "type": "환불",
+      "content": "중복 주문으로 인해 제품 한 개의 환불을 요청합니다.",
+      "resolution": "반품 제품 확인 후 부분 환불을 완료했습니다.",
+      "status": "처리 완료"
+    },
+    {
+      "id": "claim-009",
+      "customerId": "customer-009",
+      "purchaseId": "purchase-009",
+      "type": "제품 불량",
+      "content": "토너 용기 뚜껑이 제대로 닫히지 않아 내용물이 새어 나옵니다.",
+      "resolution": "",
+      "status": "접수"
+    },
+    {
+      "id": "claim-010",
+      "customerId": "customer-010",
+      "purchaseId": "purchase-010",
+      "type": "교환",
+      "content": "로션 제품의 외부 포장에 심한 눌림이 있어 교환을 요청합니다.",
+      "resolution": "교환 가능 여부를 검토하고 있습니다.",
+      "status": "검토 중"
+    }
+  ]
+}

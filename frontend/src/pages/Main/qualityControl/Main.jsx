@@ -1,90 +1,148 @@
-import React, { useState } from "react";
-import QualityTestList from "./QualityTestList";
+import React from "react";
+import products from "./product";
 
 function Main() {
 
-    const [products, setProducts] = useState([
-        {
-            id: 1,
-            name: "수분크림",
-            company: "ABC Cosmetics",
-            status: "통과",
-            inspectionDate: "2026-10-20"
-        },
-        {
-            id: 2,
-            name: "선크림",
-            company: "ABC Cosmetics",
-            status: "불합격",
-            inspectionDate: "2026-10-20"
-        },
-        {
-            id: 3,
-            name: "클렌징폼",
-            company: "ABC Cosmetics",
-            status: "미실시",
-            inspectionDate: "-"
-        }
-    ]);
-
     const passCount = products.filter(
-        product => product.status === "통과"
+        product => product.qualityStatus === "통과"
     ).length;
 
     const failCount = products.filter(
-        product => product.status === "불합격"
+        product => product.qualityStatus === "불합격"
     ).length;
 
     const notTestedCount = products.filter(
-        product => product.status === "미실시"
+        product => product.qualityStatus === "미실시"
     ).length;
 
+    const recentProducts = products.slice(0, 5);
+
+    const failedProducts = products.filter(
+        product => product.qualityStatus === "불합격"
+    );
+
     return (
-        <div className="main-container">
+        <div className="sub-container">
 
-            <h1>품질보증 관리</h1>
+            <div className="page-header">
+                <h1>품질보증 관리</h1>
+                <p>제품의 품질검사 현황과 주요 이슈를 확인합니다.</p>
+            </div>
 
-            <p>
-                화장품 제품의 품질검사 현황을 관리합니다.
-            </p>
+            <div className="summary-grid">
 
-
-            <hr />
-
-
-            <section>
-
-                <h2>품질검사 현황</h2>
-
-                <div>
-                    <span>
-                        전체 : {products.length}개 <br/>
-                    </span>
-
-                    <span>
-                        통과 : {passCount}개 <br/>
-                    </span>
-
-                    <span>
-                        불합격 : {failCount}개 <br/>
-                    </span>
-
-                    <span>
-                        미실시 : {notTestedCount}개
-                    </span>
+                <div className="summary-card">
+                    <p>전체 제품</p>
+                    <h2>{products.length}</h2>
                 </div>
-                <br/>
 
-            </section>
+                <div className="summary-card">
+                    <p>통과</p>
+                    <h2>{passCount}</h2>
+                </div>
+
+                <div className="summary-card">
+                    <p>불합격</p>
+                    <h2>{failCount}</h2>
+                </div>
+
+                <div className="summary-card">
+                    <p>미실시</p>
+                    <h2>{notTestedCount}</h2>
+                </div>
+
+            </div>
 
 
-            <hr />
+            <div className="dashboard-content">
+
+                <section className="dashboard-section">
+
+                    <h2>최근 품질검사</h2>
+
+                    <table className="quality-table">
+
+                        <thead>
+                            <tr>
+                                <th>제품코드</th>
+                                <th>제품명</th>
+                                <th>검사일</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {recentProducts.map(product => (
+                                <tr key={product.id}>
+
+                                    <td>{product.code}</td>
+
+                                    <td>{product.name}</td>
+
+                                    <td>{product.inspectionDate}</td>
+
+                                    <td>
+                                        <span
+                                            className={
+                                                product.qualityStatus === "통과"
+                                                    ? "status pass"
+                                                    : product.qualityStatus === "불합격"
+                                                    ? "status fail"
+                                                    : "status not-tested"
+                                            }
+                                        >
+                                            {product.qualityStatus}
+                                        </span>
+                                    </td>
+
+                                </tr>
+                            ))}
+
+                        </tbody>
+
+                    </table>
+
+                </section>
 
 
-            <QualityTestList/>
+                <section className="dashboard-section">
+
+                    <h2>품질 이슈</h2>
+
+                    {failedProducts.length === 0 ? (
+
+                        <p>현재 불합격 제품이 없습니다.</p>
+
+                    ) : (
+
+                        failedProducts.map(product => (
+
+                            <div
+                                className="issue-item"
+                                key={product.id}
+                            >
+                                <strong>{product.name}</strong>
+
+                                <span>
+                                    {product.code}
+                                </span>
+
+                                <p>
+                                    {product.memo || "확인이 필요한 제품입니다."}
+                                </p>
+                            </div>
+
+                        ))
+
+                    )}
+
+                </section>
+
+            </div>
 
         </div>
-    )
+    );
 }
 
 export default Main;
