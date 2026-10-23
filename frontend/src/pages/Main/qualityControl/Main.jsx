@@ -22,7 +22,7 @@ function Main() {
     );
 
     return (
-        <div className="main-container">
+        <div className="sub-container">
 
             <div className="page-header">
                 <h1>품질보증 관리</h1>

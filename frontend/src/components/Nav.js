@@ -13,6 +13,7 @@ function Nav(props){
     return(
         <div className="sub-main-nav">
             <ul>
+                <li>전산업무센터</li>
                 {urlist.map((item)=>(
                     <li>
                         <Link to = {item.url}>

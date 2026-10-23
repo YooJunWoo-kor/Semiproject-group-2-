@@ -1,13 +1,13 @@
 :root {
-  --color-brand: #246b63;
-  --color-brand-dark: #18544e;
-  --color-brand-soft: #e9f5f2;
+  --color-brand: #244f6b;
+  --color-brand-dark: #1685c5;
+  --color-brand-soft: #b2f0ff;
   --color-ink: #172033;
   --color-muted: #697386;
   --color-line: #b4d6d6;
   --color-surface: #ffffff;
   --color-canvas: #d0f3f3;
-  --color-success: #0e94bd;
+  --color-success: #064d7c;
   --color-warning: #ad6b13;
   --color-danger: #c0394b;
   --shadow-card: 0 10px 30px rgb(29 45 86 / 7%);
@@ -15,6 +15,8 @@
   --layer-radius: 10px;
   --layer-shadow: 0px 10px 10px #527d8a55;
   --card-shadow: 0px 3px 5px #527d8a33;
+  --button-radius: 5px;
+  --subtitle-color: #11718a;
   font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
   color: var(--color-ink);
   background: var(--color-canvas);
@@ -23,6 +25,8 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
 
 * { box-sizing: border-box; }
 html { min-width: 320px; background: var(--color-canvas); }
@@ -55,7 +59,8 @@ li{
 .module-grid{
   display: flex;
   flex-wrap: wrap;
-  gap: 10px
+  gap: 10px;
+  margin-top: 20px;
 }
 
 .module-card{
@@ -78,7 +83,7 @@ li{
 
 .sub-container{
   width: 100%;
-  padding: 50px 100px;
+  padding: 30px 50px;
   border: 1px solid var(--color-line);
   border-radius: var(--layer-radius);
   background-color: #ffffffaa;
@@ -94,6 +99,7 @@ li{
   
   width: 250px;
   min-width: 250px;
+  min-height: 800px;
   
   box-shadow: var(--layer-shadow);
 }
@@ -104,21 +110,40 @@ li{
 }
 
 .sub-main-nav li{
-  
-  font-size: 15px;
-  font-weight: bold;
-  background-color: #18544e;
+  margin: 0 15px;
 }
 .sub-main-nav li:first-child{
-  margin-top: 30px;
+  margin-top: 50px;
+  margin-left: 35px;
+  margin-bottom: 20px;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 500;
 }
 
 .sub-main-nav a{
   display:block;
-  padding: 15px 40px;
+  padding: 10px 20px;
+  margin: 5px;
+  border-radius: var(--button-radius);
+  font-size: 15px;
+  color: #c6f7ff;
 }
 .sub-main-nav a:hover{
-  background-color: #172033;
+  font-weight: bold;
+  background-color: #0c4485;
+}
+
+.subtitle{
+  font-size: 25px;
+  font-weight: bolder;
+  color: var(--subtitle-color);
+  margin-right: 15px;
+}
+
+.subtext{
+  font-size: 15px;
+  color: #66818d;
 }
 
 /* 공통 입력 요소 */
