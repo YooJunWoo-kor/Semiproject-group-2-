@@ -2,10 +2,21 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { noticeCategories } from "./communityConfig";
 import { loadItems, saveItems } from "./communityStorage";
+import DataDistributor from "./DataComponent/DataDistributor";
 
 const emptyForm = { title: "", category: noticeCategories[0], content: "", author: "임시 관리자", important: false };
 
 function NoticePage() {
+  const data = [
+    {id : 1, content : "Na", name : "Noti1" }
+    ,{id : 2, content : "Nb", name : "Noti2" }
+    ,{id : 3, content : "Nc", name : "Noti3" }
+    ,{id : 4, content : "Nd", name : "Noti4" }
+    ,{id : 5, content : "Ne", name : "Noti5" }
+    ,{id : 6, content : "Nf", name : "Noti6" }
+  ]
+
+
   const [items, setItems] = useState(() => loadItems("notices")); //공지사항 게시글 목록
   const [query, setQuery] = useState(""); //검색창에 입력한 검색어
   const [view, setView] = useState("list"); //현재 표시할 화면
@@ -159,70 +170,8 @@ function NoticePage() {
         </article>
       ) : null}
 
-      {showForm ? (
-        <form onSubmit={save}>
-          <h2>{view === "edit" ? "공지 수정" : "공지 등록"}</h2>
-
-          <label>
-            제목*
-            <input
-              value={form.title}
-              onChange={(event) => setForm({ ...form, title: event.target.value })}
-            />
-          </label>
-          <br />
-
-          <label>
-            분류
-            <select
-              value={form.category}
-              onChange={(event) => setForm({ ...form, category: event.target.value })}
-            >
-              {noticeCategories.map((categoryItem) => (
-                <option key={categoryItem}>{categoryItem}</option>
-              ))}
-            </select>
-          </label>
-          <br />
-
-          <label>
-            작성자*
-            <input
-              value={form.author}
-              onChange={(event) => setForm({ ...form, author: event.target.value })}
-            />
-          </label>
-          <br />
-
-          <label>
-            <input
-              type="checkbox"
-              checked={form.important}
-              onChange={(event) => setForm({ ...form, important: event.target.checked })}
-            />
-            중요 공지
-          </label>
-          <br />
-
-          <label>
-            내용*
-            <textarea
-              rows="7"
-              value={form.content}
-              onChange={(event) => setForm({ ...form, content: event.target.value })}
-            />
-          </label>
-          <br />
-
-          <button type="submit">저장</button>
-          <button
-            type="button"
-            onClick={() => setView(selected ? "detail" : "list")}
-          >
-            취소
-          </button>
-        </form>
-      ) : null}
+      <DataDistributor data = {data}/>
+      
     </main>
   );
 }

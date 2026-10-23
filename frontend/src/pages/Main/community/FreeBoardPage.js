@@ -1,10 +1,20 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { loadItems, saveItems } from "./communityStorage";
+import DataDistributor from "./DataComponent/DataDistributor";
 
 const emptyForm = { title: "", author: "임시 사용자", content: "" };
 
 function FreeBoardPage() {
+  const data = [
+    {id : 1, content : "Fa", name : "Free1" }
+    ,{id : 2, content : "Fb", name : "Free2" }
+    ,{id : 3, content : "Fc", name : "Free3" }
+    ,{id : 4, content : "Fd", name : "Free4" }
+    ,{id : 5, content : "Fe", name : "Free5" }
+    ,{id : 6, content : "Ff", name : "Free6" }
+  ]
+
   const [items, setItems] = useState(() => loadItems("free-posts")); //전체 게시글 배열
   const [query, setQuery] = useState(""); //사용자가 입력한 검색어
   const [view, setView] = useState("list"); //현재 표시할 화면
@@ -257,8 +267,13 @@ function FreeBoardPage() {
           <button type="button" onClick={() => setView(selected ? "detail" : "list")}>취소</button>
         </form>
       ) : null}
+
+        <DataDistributor data = {data}/>
+
     </main>
   );
 }
+
+
 
 export default FreeBoardPage;
