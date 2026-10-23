@@ -98,9 +98,13 @@ li{
   box-shadow: var(--layer-shadow);
 }
 
+.sub-main-nav ul{
+  margin:0;
+  padding: 0;
+}
+
 .sub-main-nav li{
-  padding-bottom: 15px;
-  padding-top: 15px;
+  
   font-size: 15px;
   font-weight: bold;
   background-color: #18544e;
@@ -109,7 +113,11 @@ li{
   margin-top: 30px;
 }
 
-.sub-main-nav li:hover{
+.sub-main-nav a{
+  display:block;
+  padding: 15px 40px;
+}
+.sub-main-nav a:hover{
   background-color: #172033;
 }
 
