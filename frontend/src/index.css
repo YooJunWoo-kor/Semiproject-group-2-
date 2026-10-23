@@ -46,6 +46,27 @@ li{
 .sub-main-nav{}
 /* 각 기능별 컨텐츠 노출 컨테이너 */
 .sub-container{}
+/* 대시보드 모듈 관리 컴포넌트 */
+.module-grid{}
+/* 각 컨테츠별 대시보드 모듈 */
+.module-card{}
+
+.module-card{
+  text-align: center;
+  flex: 0 0 calc((100%) / 3);
+  padding: 15px;
+  background-color: #fff;
+  border-radius: var(--layer-radius);
+  box-shadow: var(--layer-shadow);
+  border: 1px solid var(--color-line);
+}
+
+.module-grid{
+  display: flex;
+  flex-direction:row;
+  flex-wrap: wrap;
+  background-color: #0e94bd;
+}
 
 .sub-main-contain{
   display: flex;
@@ -152,14 +173,14 @@ table button { min-height: 32px; padding: 6px 10px; font-size: .82rem; }
 .erp-dashboard > header h1 { margin: 0; }
 .erp-dashboard > header span { margin-left: auto; color: var(--color-muted); }
 .erp-dashboard > main { max-width: 1280px; margin: 44px auto; }
-.erp-dashboard .module-grid, .module-grid, .community-home .board-grid {
+.erp-dashboard .community-home .board-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; padding: 0; list-style: none;
 }
-.erp-dashboard .module-card, module-card, .community-home .board-card {
+.erp-dashboard .community-home .board-card {
   min-height: 190px; padding: 22px; background: white; border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card);
 }
-.erp-dashboard .module-card h3, .module-card h3, .community-home .board-card h2 { margin-bottom: 9px; }
-.erp-dashboard .module-card button, .module-card button { margin-top: 10px; color: var(--color-brand); background: var(--color-brand-soft); border-color: transparent; }
+.erp-dashboard h3, .community-home .board-card h2 { margin-bottom: 9px; }
+.erp-dashboard button, button { margin-top: 10px; color: var(--color-brand); background: var(--color-brand-soft); border-color: transparent; }
 .erp-dashboard > footer { color: var(--color-muted); text-align: center; }
 
 /* 공통 카드와 페이지 폭 */
