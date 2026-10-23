@@ -99,14 +99,19 @@ li{
 }
 
 .sub-main-nav li{
-  margin-bottom: 30px;
+  padding-bottom: 15px;
+  padding-top: 15px;
   font-size: 15px;
   font-weight: bold;
+  background-color: #18544e;
 }
 .sub-main-nav li:first-child{
-  margin-top: 60px;
+  margin-top: 30px;
 }
 
+.sub-main-nav li:hover{
+  background-color: #172033;
+}
 
 /* 공통 입력 요소 */
 input:not([type='checkbox']):not([type='radio']), select, textarea {
