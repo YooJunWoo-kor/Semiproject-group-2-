@@ -7,6 +7,7 @@ import ScheduleDetail from "./pages/ScheduleDetail";
 import ScheduleForm from "./pages/ScheduleForm";
 import ScheduleAdjustment from "./pages/ScheduleAdjustment";
 import DeadlineAlerts from "./pages/DeadlineAlerts";
+import Nav from "../../../components/Nav";
 
 export default function SchedulePage() {
   const [schedules, setSchedules] = useState(initialSchedules);
@@ -61,22 +62,19 @@ export default function SchedulePage() {
     setAdjustmentOpen(false);
   }
 
-  return (
-    <div className="schedule-page">
-      <aside>
-        <div>W</div>
-        <div>WORK<span>FLOW</span></div>
-        <p>사내 업무 시스템</p>
-        <div>WORKSPACE</div>
-        <div>▦ <span>일정관리</span></div>
-        <div>▤ <span>프로젝트</span></div>
-        <div>♙ <span>조직 / 구성원</span></div>
-        <div>
-          <div>김</div>
-          <div><strong>김OO</strong><small>개발팀 · 사용자</small></div>
-        </div>
-      </aside>
+  let mainUrl = "/main/schedule/";
+  const urlList = [
+      {name:"대시보드", url:mainUrl+"/"}
+      ,{name:"직원 관리", url:mainUrl+"/employees"}
+      ,{name:"부서 관리", url:mainUrl+"/departments"}
+      ,{name:"근태 관리", url:mainUrl+"/attendance"}
+      ,{name:"급여 관리", url:mainUrl+"/payroll"}
+      ,{name:"시스템 품목관리", url:mainUrl+"/settings"}
+  ];
 
+  return (
+    <div className='sub-main-contain'>
+      <Nav urlist={urlList}/>
       <main>
         <header>
           <div><span>워크스페이스</span><span>/</span><strong>일정관리</strong></div>
