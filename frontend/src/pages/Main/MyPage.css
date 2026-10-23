@@ -1,0 +1,192 @@
+
+/* 마이페이지 전체 */
+.my-page {
+    padding: 28px;
+    max-width: 1100px;
+    margin: 0 auto;
+    color: #1e293b;
+}
+
+.mypage-heading {
+    margin-bottom: 25px;
+}
+
+.mypage-heading h1 {
+    margin-bottom: 8px;
+}
+
+.mypage-heading p {
+    color: #64748b;
+}
+
+/* 공통 카드 */
+.mypage-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+}
+
+.mypage-card h2 {
+    font-size: 19px;
+    margin: 0 0 20px;
+}
+
+/* 직원 프로필 */
+.mypage-profile {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.mypage-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    background: #edf5f3;
+    border-radius: 50%;
+    font-size: 30px;
+}
+
+.mypage-profile h3 {
+    margin: 0 0 8px;
+}
+
+.mypage-profile p {
+    margin: 5px 0;
+    color: #64748b;
+}
+
+/* 기본 인사정보 */
+.mypage-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+}
+
+.mypage-info-grid p {
+    margin: 0;
+}
+
+.mypage-info-grid strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #64748b;
+    font-size: 13px;
+}
+
+/* 개인정보 수정 */
+.mypage-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+}
+
+.mypage-section-title h2 {
+    margin: 0;
+}
+
+.mypage-form {
+    display: grid;
+    gap: 16px;
+}
+
+.mypage-form label {
+    display: grid;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.mypage-form input {
+    padding: 11px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    font-size: 14px;
+}
+
+.mypage-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* 마이페이지 버튼 */
+.my-page button {
+    padding: 9px 16px;
+    border: 1px solid #cbd5e1;
+    background: white;
+    border-radius: 7px;
+    cursor: pointer;
+}
+
+.my-page button:hover {
+    background: #edf5f3;
+}
+
+/* 내 업무 요약 */
+.mypage-task-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.mypage-task-summary p {
+    padding: 12px 16px;
+    background: #f1f5f9;
+    border-radius: 8px;
+    margin: 0;
+}
+
+/* 내 업무 목록 */
+.mypage-table-wrap {
+    overflow-x: auto;
+}
+
+.mypage-task-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    min-width: 560px;
+}
+
+.mypage-task-table th,
+.mypage-task-table td {
+    padding: 14px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 14px;
+}
+
+.mypage-task-table th {
+    background: #f8fafc;
+    color: #475569;
+}
+
+.mypage-status {
+    padding: 5px 10px;
+    background: #e2f3ed;
+    color: #197568;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+/* 모바일 화면 */
+@media (max-width: 600px) {
+    .my-page {
+        padding: 16px;
+    }
+
+    .mypage-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mypage-card {
+        padding: 16px;
+    }
+}

@@ -68,10 +68,6 @@ function MainModule() {
             <header>
                 <div>
                     <h1>ERP 통합 시스템</h1>
-                    <span>접속자: 홍길동 (재무·회계팀 / 사원)</span>
-                    <button type="button" onClick={handleLogout}>
-                        로그아웃
-                    </button>
                 </div>
                 <hr />
             </header>
