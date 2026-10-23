@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 //회사설정 json형식으로 만들어짐
 const settings = [
   { title: '회사 정보', desc: '회사명, 사업자 정보 및 기본 설정', color: 'blue' },
@@ -27,42 +26,3 @@ export default function SystemSettings() {
     </div>
   );
 }
-=======
-const settings = [
-    { icon: '🏢', title: '회사 정보', desc: '회사명, 사업자 정보 및 기본 설정', color: 'blue' },
-    { icon: '⚙️', title: '사용자 및 권한', desc: '사용자 계정과 메뉴 접근 권한 관리', color: 'purple' },
-    { icon: '🔔', title: '알림 설정', desc: '시스템 알림 및 이메일 안내 설정', color: 'orange' },
-    { icon: '🔒', title: '보안 설정', desc: '비밀번호 정책과 로그인 보안 설정', color: 'green' }
-  ];
-  
-  export default function SystemSettings() {
-    return (
-      <div className="settings-wrapper">
-        <div className="page-top-header">
-          <div>
-            <div className="sub-title">SYSTEM CONFIGURATION</div>
-            <h1>시스템 관리</h1>
-            <p>ERP 시스템의 기본 설정과 권한을 관리합니다.</p>
-          </div>
-        </div>
-  
-        <div className="settings-list">
-          {settings.map(s => (
-            <button 
-              key={s.title} 
-              onClick={() => window.alert(`${s.title} 설정 화면은 추후 구현할 수 있습니다.`)}
-              className="setting-item-btn"
-            >
-              <span className="setting-icon">{s.icon}</span>
-              <span className="setting-text">
-                <strong>{s.title}</strong>
-                <small>{s.desc}</small>
-              </span>
-              <span className="chevron">➡️</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
->>>>>>> origin/feature/crm
