@@ -86,7 +86,6 @@ export default function SchedulePage() {
         <section>
           <div>
             <div>
-              <p>WORK MANAGEMENT</p>
               <h1>일정관리</h1>
               <p>팀의 주요 일정과 프로젝트 진행 상황을 관리하세요.</p>
             </div>

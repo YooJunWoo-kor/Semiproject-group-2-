@@ -9,9 +9,9 @@ export default function ScheduleStats({ schedules }) {
   ];
   return <div>
     {counts.map((item) =>
-      <div key={item.label}>
-        <div>{item.icon}</div>
-        <div>
+      <div className="stats-grid" key={item.label}>
+        <div className={`stat-icon ${item.tone}`}>{item.icon}</div>
+        <div className="stat-copy">
           <span>{item.label}</span>
           <strong>{item.value}<small>건</small></strong><em>{item.note}</em>
         </div>

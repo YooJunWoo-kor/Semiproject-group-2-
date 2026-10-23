@@ -4,20 +4,25 @@ import Main from "./Main";
 import QualityTestList from "./QualityTestList";
 import ProductList from "./ProductList";
 import QualityTestGraph from "./QualityTestGraph";
+import ProductDetail from "./ProductDetail";
+import Nav from "../../../components/Nav";
 
 function QaRouter() {
+    let mainUrl = "/main/qa/";
+    const urlList = [
+        {name:"품질 대시보드", url:mainUrl+"/"}
+        ,{name:"제품 목록", url:mainUrl+"/products"}
+        ,{name:"검사 목록", url:mainUrl+"/test-list"}
+        ,{name:"분석 그래프", url:mainUrl+"/graph"}
+    ];
     return (
-        <div className="quality-shell">
-            <nav className="module-subnav" aria-label="품질관리 하위 메뉴">
-                <NavLink to="/main/qa" end>품질 대시보드</NavLink>
-                <NavLink to="/main/qa/products">제품 목록</NavLink>
-                <NavLink to="/main/qa/test-list">검사 목록</NavLink>
-                <NavLink to="/main/qa/graph">분석 그래프</NavLink>
-            </nav>
+        <div className='sub-main-contain'>
+            <Nav urlist={urlList}/>
             <Routes>
                 <Route index element={<Main />} />
                 <Route path="manage/*" element={<QualityTestList />} />
-                <Route path="products/*" element={<ProductList />} />
+                <Route path="products" element={<ProductList />} />
+                <Route path="products/:id" element={<ProductDetail />}/>
                 <Route path="test-list/*" element={<QualityTestList />} />
                 <Route path="graph/*" element={<QualityTestGraph />} />
                 <Route path="*" element={<Navigate to="/main/qa" replace />} />

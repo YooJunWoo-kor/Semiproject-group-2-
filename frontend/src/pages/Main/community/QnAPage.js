@@ -1,10 +1,20 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { loadItems, saveItems } from "./communityStorage";
+import DataDistributor from "./DataComponent/DataDistributor";
 
 const emptyForm = { title: "", author: "임시 사용자", content: "", status: "답변 대기" };
 
 function QnAPage() {
+  const data = [
+    {id : 1, content : "Qa", name : "qd1" }
+    ,{id : 2, content : "Qb", name : "qd2" }
+    ,{id : 3, content : "Qc", name : "qd3" }
+    ,{id : 4, content : "Qd", name : "qd4" }
+    ,{id : 5, content : "Qe", name : "qd5" }
+    ,{id : 6, content : "Qf", name : "qd6" }
+  ]
+
   const [items, setItems] = useState(() => loadItems("questions")); //문의글 목록 저장
   const [query, setQuery] = useState(""); //제목,내용 등의 검색어
   const [status, setStatus] = useState("전체"); //문의 처리 상태 필터
@@ -275,8 +285,13 @@ function QnAPage() {
           <button type="button" onClick={() => setView(selected ? "detail" : "list")}>취소</button>
         </form>
       ) : null}
+
+        <DataDistributor data = {data}/>
+      
     </main>
   );
 }
+
+
 
 export default QnAPage;

@@ -12,9 +12,14 @@ import FreeBoardPage from './community/FreeBoardPage';
 import TechLibraryPage from './community/TechLibraryPage';
 import QnAPage from './community/QnAPage';
 import SuggestionPage from './community/SuggestionPage';
-import OperationalModule from './shared/OperationalModule';
+import CrmHome from './crm/CrmHome';
 import CrmRoutes from './crm/CrmRoutes';
+<<<<<<< HEAD
 import MyPage from './MyPage';
+=======
+// 파일 상단 import 목록에 추가
+import ProjectManagementPage from './project/ProjectManagementPage';
+>>>>>>> 98317d7250d01438e9694a7f0f6de18c0744cd8d
 
 function MainApp() {
 
@@ -72,10 +77,13 @@ function MainApp() {
                     <Route path="/community/free" element={<FreeBoardPage />} />
                     <Route path="/community/tech" element={<TechLibraryPage />} />
                     <Route path="/community/qa" element={<QnAPage />} />
-                    <Route path="/community/suggestion" element={<SuggestionPage />} />
-                    <Route path="/project" element={<OperationalModule type="project" />} />
+                    <Route path="/community/*suggestion" element={<SuggestionPage />} />
                     <Route path="/crm/*" element={<CrmRoutes />} />
+<<<<<<< HEAD
                     <Route path="/profile" element={<MyPage />} />
+=======
+                    <Route path="/project/*" element={<ProjectManagementPage />} />
+>>>>>>> 98317d7250d01438e9694a7f0f6de18c0744cd8d
                     <Route path="*" element={<Navigate to="/main" replace />} />
                 </Routes>
             </div>
