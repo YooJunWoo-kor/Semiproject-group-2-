@@ -1,0 +1,35 @@
+/* 건의 목록 전체를 두 칸으로 배치합니다. */
+.suggestion-list {
+    display: grid;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+/* 건의 하나를 카드처럼 보이게 꾸밉니다. */
+.suggestion-card {
+    padding: 20px;
+    border: 1px solid #e1e8ed;
+    border-radius: 13px;
+    background-color: #ffffff;
+    box-shadow: 0 3px 12px rgb(23 60 74 / 6%);
+}
+
+/* 카드 안의 아이디, 내용, 이름 줄 사이에 간격을 둡니다. */
+.suggestion-card>div {
+    margin-bottom: 10px;
+    color: #253751;
+    line-height: 1.5;
+}
+
+/* 마지막 줄 아래에는 불필요한 여백을 없앱니다. */
+.suggestion-card>div:last-child {
+    margin-bottom: 0;
+}
+
+/* 좁은 화면에서는 카드를 한 칸씩 보여줍니다. */
+@media (max-width: 700px) {
+    .suggestion-list {
+        grid-template-columns: 1fr;
+    }
+}
