@@ -1,11 +1,20 @@
 import React, { useEffect, useState } from "react";
 
 const blankSchedule = {
-  title: "", department: "개발팀", manager: "", collaboratingDepartment: "", startDate: "2026-10-21",
-  endDate: "2026-10-21", status: "예정", priority: "보통", description: "", color: "#eaf1ff",
+  title: "",
+  department: "개발팀",
+  manager: "",
+  collaboratingDepartment: "",
+  startDate: "2026-10-22",
+  endDate: "2026-10-22",
+  status: "예정",
+  priority: "보통",
+  description: "",
+  color: "#eaf1ff",
+  projectId: ""
 };
 
-export default function ScheduleForm({ schedule, onClose, onSave }) {
+export default function ScheduleForm({ schedule, projects = [], onClose, onSave }) {
   const [form, setForm] = useState(schedule || blankSchedule);
   const [error, setError] = useState("");
 
@@ -29,7 +38,9 @@ export default function ScheduleForm({ schedule, onClose, onSave }) {
             <input name="title" value={form.title} onChange={change} placeholder="예: 주간 업무 회의" />
           </label>
           <label>담당 부서
-            <select name="department" value={form.department} onChange={change}>
+            <select name="department" 
+            value={form.department} 
+            onChange={change}>
               <option>개발팀</option>
               <option>기획팀</option>
               <option>인사팀</option>
@@ -39,6 +50,23 @@ export default function ScheduleForm({ schedule, onClose, onSave }) {
               <option>상품기획팀</option>
               <option>연구개발팀</option>
               <option>품질관리팀</option>
+            </select>
+          </label>
+          <label>연결 프로젝트
+            <select
+              name="projectId"
+              value={form.projectId ?? ""}
+              onChange={change}>
+              <option value="">프로젝트 미지정</option>
+
+              {projects.map(project => (
+                <option
+                  key={project.id}
+                  value={String(project.id)}
+                >
+                  {project.name}
+                </option>
+              ))}
             </select>
           </label>
           <label>담당자 <b>*</b>

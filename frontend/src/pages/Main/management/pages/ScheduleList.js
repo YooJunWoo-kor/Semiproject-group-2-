@@ -5,7 +5,7 @@ function StatusBadge({ status }) {
   return <span>{status}</span>;
 }
 
-export default function ScheduleList({ schedules, keyword, setKeyword, department, setDepartment, onSelect }) {
+export default function ScheduleList({ schedules, projects = [], keyword, setKeyword, department, setDepartment, onSelect }) {
   return <div>
     <div>
       <div>
@@ -46,6 +46,14 @@ export default function ScheduleList({ schedules, keyword, setKeyword, departmen
             <div>
               <span />
               <strong>{item.title}</strong>
+
+              <small>
+                {projects.find(
+                  project =>
+                    String(project.id) === String(item.projectId)
+                )?.name || "프로젝트 미지정"}
+              </small>
+
               <small>{item.description}</small>
             </div>
           </td>

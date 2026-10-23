@@ -12,7 +12,8 @@ import FreeBoardPage from './community/FreeBoardPage';
 import TechLibraryPage from './community/TechLibraryPage';
 import QnAPage from './community/QnAPage';
 import SuggestionPage from './community/SuggestionPage';
-import OperationalModule from './shared/OperationalModule';
+
+import ProjectManagementPage from './project/ProjectManagementPage';
 
 function MainApp() {
     return (
@@ -43,8 +44,7 @@ function MainApp() {
                     <Route path="/community/tech" element={<TechLibraryPage />} />
                     <Route path="/community/qa" element={<QnAPage />} />
                     <Route path="/community/suggestion" element={<SuggestionPage />} />
-                    <Route path="/project" element={<OperationalModule type="project" />} />
-                    <Route path="/crm" element={<OperationalModule type="crm" />} />
+                    <Route path="/project" element={<ProjectManagementPage />} />
                     <Route path="*" element={<Navigate to="/main" replace />} />
                 </Routes>
             </div>
