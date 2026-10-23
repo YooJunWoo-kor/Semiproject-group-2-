@@ -1,7 +1,7 @@
-<<<<<<< HEAD
 import "../../../../css/suggestion.css";
 
 function DataDistributor({ data = [], isSuggestion = false }) {
+  // isSuggestion이 true일 때만 데이터를 화면에 보여줍니다.
   if (!isSuggestion) {
     return null;
   }
@@ -20,24 +20,4 @@ function DataDistributor({ data = [], isSuggestion = false }) {
 }
 
 export default DataDistributor;
-=======
-function DataDistributor( props ){
-
-    return(
-    <div>
-        {props.data.map(
-          (item)=>(
-            <div>
-              <div>아이디 : {item.id}</div>
-              <div>내용 : {item.content}</div>
-              <div>이름 : {item.name}</div>
-            </div>
-          )
-        )}
-      </div>
-    )
-  }
-
-  export default DataDistributor;
   
->>>>>>> dc756df83a6fb7de274b5334c8eba37dfa55c2f2
