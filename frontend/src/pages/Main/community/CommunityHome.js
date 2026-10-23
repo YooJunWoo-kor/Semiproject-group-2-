@@ -2,6 +2,15 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 function CommunityHome() {
+  const data = [
+    {id : 1, number : 3, }
+    ,{id : 1, number : 3, }
+    ,{id : 1, number : 3, }
+    ,{id : 1, number : 3, }
+    ,{id : 1, number : 3, }
+    ,{id : 1, number : 3, }
+  ]
+
   const boards = [
     { path: "/main/community/notice", name: "공지사항", description: "생산, 출시, 품질·안전 및 사내 업무 공지" },
     { path: "/main/community/free", name: "자유게시판", description: "직원 간 업무 소통과 부서 협업 정보" },
@@ -22,7 +31,6 @@ function CommunityHome() {
           </li>
         ))}
       </ul>
-      
     </main>
   );
 }

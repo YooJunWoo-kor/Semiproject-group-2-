@@ -8,10 +8,22 @@ import {
   saveFile,
   saveItems,
 } from "./communityStorage";
+import DataDistributor from "./DataComponent/DataDistributor";
 
 const emptyForm = { title: "", category: resourceCategories[0], content: "", author: "임시 사용자", attachment: null };
 
+
+
 function TechLibraryPage() {
+  const data = [
+    {number : 1, content : "La", name: "la"}
+    ,{number : 2, content : "Lb", name: "lb"}
+    ,{number : 3, content : "Lc", name: "lc"}
+    ,{number : 4, content : "Ld", name: "ld"}
+    ,{number : 5, content : "Le", name: "le"}
+    ,{number : 6, content : "Lf", name: "lf"}
+  ]
+
   const [items, setItems] = useState(() => loadItems("resources"));
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("전체");
@@ -272,8 +284,15 @@ function TechLibraryPage() {
           <button type="button" onClick={() => setView(selected ? "detail" : "list")}>취소</button>
         </form>
       ) : null}
+
+          <DataDistributor data = {data}/>
+
     </main>
   );
+  
 }
+
+
+
 
 export default TechLibraryPage;

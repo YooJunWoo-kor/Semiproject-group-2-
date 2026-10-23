@@ -1,10 +1,20 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { loadItems, saveItems } from "./communityStorage";
+import DataDistributor from "./DataComponent/DataDistributor";
 
 const emptyForm = { title: "", author: "임시 사용자", content: "", status: "접수", result: "" };
 
 function SuggestionPage() {
+  const data = [
+    {id : 1, content : "sa?", name : "sa"}
+    ,{id : 2, content : "sb?", name : "sb"}
+    ,{id : 3, content : "sc?", name : "sc"}
+    ,{id : 4, content : "sd?", name : "sd"}
+    ,{id : 5, content : "se?", name : "se"}
+    ,{id : 6, content : "sf?", name : "sf"}
+  ]
+
   const [items, setItems] = useState(() => loadItems("suggestions")); //건의 사항 목록
   const [query, setQuery] = useState(""); //게시글 검색어
   const [status, setStatus] = useState("전체"); //처리 상태별 검색 필터
@@ -211,8 +221,12 @@ function SuggestionPage() {
           <button type="button" onClick={() => setView(selected ? "detail" : "list")}>취소</button>
         </form>
       ) : null}
+          <DataDistributor data = {data}/>
+      
     </main>
   );
 }
+
+
 
 export default SuggestionPage;

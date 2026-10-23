@@ -2,10 +2,21 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { noticeCategories } from "./communityConfig";
 import { loadItems, saveItems } from "./communityStorage";
+import DataDistributor from "./DataComponent/DataDistributor";
 
 const emptyForm = { title: "", category: noticeCategories[0], content: "", author: "임시 관리자", important: false };
 
 function NoticePage() {
+  const data = [
+    {id : 1, content : "Na", name : "Noti1" }
+    ,{id : 2, content : "Nb", name : "Noti2" }
+    ,{id : 3, content : "Nc", name : "Noti3" }
+    ,{id : 4, content : "Nd", name : "Noti4" }
+    ,{id : 5, content : "Ne", name : "Noti5" }
+    ,{id : 6, content : "Nf", name : "Noti6" }
+  ]
+
+
   const [items, setItems] = useState(() => loadItems("notices")); //공지사항 게시글 목록
   const [query, setQuery] = useState(""); //검색창에 입력한 검색어
   const [view, setView] = useState("list"); //현재 표시할 화면
@@ -86,14 +97,6 @@ function NoticePage() {
   const showDetail = view === "detail" && selected !== null;
   const showForm = view === "write" || view === "edit";
 
-
-
-
-
-
-
-
-
   return (
     <main className="community-page">
       <h1>공지사항</h1>
@@ -102,7 +105,6 @@ function NoticePage() {
         <Link to="/main/community">커뮤니티 메인</Link>
       </nav>
 
-     
       {message ? <p role="status">{message}</p> : null}
 
       {view === "list" ? (
@@ -159,7 +161,7 @@ function NoticePage() {
         </article>
       ) : null}
 
-      {showForm ? (
+      {/* {showForm ? (
         <form onSubmit={save}>
           <h2>{view === "edit" ? "공지 수정" : "공지 등록"}</h2>
 
@@ -222,7 +224,8 @@ function NoticePage() {
             취소
           </button>
         </form>
-      ) : null}
+      ) : null} */}
+      
     </main>
   );
 }
