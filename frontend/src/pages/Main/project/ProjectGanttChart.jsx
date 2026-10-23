@@ -12,7 +12,12 @@ export default function ProjectGanttChart({ projects, tasks, setTasks }) {
     setTasks(prev => [...prev, { id: Date.now(), projectId: Number(projectId), name: name.trim(), start: '', due, status: '예정', progress: 0, priority: '보통' }]);
     setName(''); setDue('');
   };
-  const save = id => { if (!draft.name?.trim() || !draft.due) return; setTasks(prev => prev.map(t => t.id === id ? { ...draft, progress: Math.max(0, Math.min(100, Number(draft.progress) || 0)) } : t)); setEditingId(null); };
+  const save = id => {
+    if (!draft.name?.trim() || !draft.due)
+      return; setTasks(prev => prev.map(t => t.id === id ? { ...draft, progress: Math.max(0, Math.min(100, Number(draft.progress) || 0)) } : t));
+      setEditingId(null);
+  };
+  
   return <div><h2>작업 분류 구조 관리</h2>
     <form onSubmit={add}>
       <select value={projectId} onChange={e => setProjectId(e.target.value)} required>

@@ -167,7 +167,6 @@ export default function ProjectBudget({
             <button type="submit">예산 저장</button>
           </form>
 
-          {/* 비용 등록 */}
           <h3>비용 등록</h3>
 
           <form onSubmit={addExpense}>
@@ -195,7 +194,6 @@ export default function ProjectBudget({
             <button type="submit">비용 등록</button>
           </form>
 
-          {/* 등록된 비용 내역 테이블 */}
           <h3>등록된 비용 내역</h3>
 
           <table className="project-summary-table">
@@ -224,8 +222,7 @@ export default function ProjectBudget({
                     <td>
                       <button
                         type="button"
-                        onClick={() => deleteExpense(e.id)}
-                      >
+                        onClick={() => deleteExpense(e.id)}>
                         삭제
                       </button>
                     </td>
