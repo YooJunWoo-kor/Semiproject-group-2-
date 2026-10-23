@@ -4,6 +4,7 @@ import Main from "./Main";
 import QualityTestList from "./QualityTestList";
 import ProductList from "./ProductList";
 import QualityTestGraph from "./QualityTestGraph";
+import ProductDetail from "./ProductDetail";
 
 function QaRouter() {
     return (
@@ -17,7 +18,8 @@ function QaRouter() {
             <Routes>
                 <Route index element={<Main />} />
                 <Route path="manage/*" element={<QualityTestList />} />
-                <Route path="products/*" element={<ProductList />} />
+                <Route path="products" element={<ProductList />} />
+                <Route path="products/:id" element={<ProductDetail />}/>
                 <Route path="test-list/*" element={<QualityTestList />} />
                 <Route path="graph/*" element={<QualityTestGraph />} />
                 <Route path="*" element={<Navigate to="/main/qa" replace />} />
