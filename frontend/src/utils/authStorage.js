@@ -14,7 +14,8 @@ export {
 
 export {
     getEmployeeAccounts,
-    saveEmployeeAccount
+    saveEmployeeAccount,
+    removeEmployeeAccount
 } from "../services/employeeAccountService";
 
 export {
