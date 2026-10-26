@@ -1,0 +1,94 @@
+name: Build Refactor Preview
+
+on:
+  push:
+    branches:
+      - yjw-refactor-preview
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare preview copy
+        shell: bash
+        run: |
+          set -e
+          rm -rf _preview
+          mkdir -p _preview
+          rsync -a --exclude='.git' --exclude='_preview' ./ _preview/
+
+          # Backup/legacy code is not part of the active React source tree.
+          if [ -d _preview/frontend/src/00dump ]; then
+            mkdir -p _preview/archive
+            mv _preview/frontend/src/00dump _preview/archive/00dump
+          fi
+
+          # These are exact copies of the canonical login/register pages and are
+          # not used by the quality router.
+          rm -f _preview/frontend/src/pages/Main/qualityControl/Home.js
+          rm -f _preview/frontend/src/pages/Main/qualityControl/RegisterPage.js
+
+          # Remove nested repository snapshot from the distributable package.
+          rm -f "_preview/Semiproject-group-2--yjw (2).zip"
+
+          # The packaging workflow itself is not part of the team project.
+          rm -rf _preview/.github
+
+          cat > _preview/STRUCTURE_GUIDE.md <<'EOF'
+          # ERP 프로젝트 구조 가이드
+
+          ## 원칙
+          - 기존 yjw 화면 디자인, CSS, 라우팅, 기능을 유지한다.
+          - 화면 컴포넌트가 localStorage/더미 데이터를 직접 다루는 코드를 줄인다.
+          - 데이터와 로직은 data / services 로 분리한다.
+          - 기존 import가 깨지지 않도록 utils/authStorage.js 는 호환 facade로 유지한다.
+          - 향후 DB 연결 시 services 내부 구현을 API 호출로 교체하는 방향을 사용한다.
+
+          ## 빠른 파일 찾기
+          - 로그인 화면: frontend/src/pages/Home.js
+          - 회원가입: frontend/src/pages/RegisterPage.js
+          - 메인 ERP 메뉴: frontend/src/pages/Main/MainModule.js
+          - 인사: frontend/src/pages/Main/hr/
+          - 품질: frontend/src/pages/Main/qualityControl/
+          - CRM: frontend/src/pages/Main/crm/
+          - 재무: frontend/src/pages/Main/finance/
+          - 일정/관리: frontend/src/pages/Main/management/
+          - 프로젝트: frontend/src/pages/Main/project/
+          - 커뮤니티: frontend/src/pages/Main/community/
+          - 공통 컴포넌트: frontend/src/components/
+          - 더미 계정 데이터: frontend/src/data/authAccounts.js
+          - 인증/직원 데이터 서비스: frontend/src/services/
+          - 기존 호환 진입점: frontend/src/utils/authStorage.js
+          - 백엔드: backend/
+
+          ## 데이터 흐름
+          화면 -> service -> 현재 localStorage/더미 데이터
+          화면 -> service -> 추후 API -> Node/Express -> MySQL
+          EOF
+
+      - name: Frontend build check
+        working-directory: _preview/frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Remove generated files
+        run: |
+          rm -rf _preview/frontend/node_modules
+          rm -rf _preview/frontend/build
+          rm -rf _preview/backend/node_modules
+
+      - name: Upload project ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: Semiproject-yjw-safe-refactor
+          path: _preview/
+          include-hidden-files: true
+          retention-days: 1
