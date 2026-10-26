@@ -77,7 +77,7 @@ jobs:
         working-directory: _preview/frontend
         run: |
           npm ci
-          npm run build
+          CI=false npm run build
 
       - name: Remove generated files
         run: |
