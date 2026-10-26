@@ -1,4 +1,4 @@
-import { MASTER_ACCOUNT, NORMAL_ACCOUNTS } from "../data/authAccounts";
+import { MASTER_ACCOUNT } from "../data/authAccounts";
 import { getEmployeeAccounts } from "./employeeAccountService";
 
 export function findLoginAccount(loginId, password) {
@@ -10,16 +10,6 @@ export function findLoginAccount(loginId, password) {
         inputPassword === MASTER_ACCOUNT.password
     ) {
         return MASTER_ACCOUNT;
-    }
-
-    const normalAccount = NORMAL_ACCOUNTS.find(
-        account =>
-            account.email === inputId &&
-            account.password === inputPassword
-    );
-
-    if (normalAccount) {
-        return normalAccount;
     }
 
     const employee = getEmployeeAccounts().find(
