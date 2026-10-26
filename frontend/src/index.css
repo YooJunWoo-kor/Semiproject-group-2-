@@ -83,7 +83,15 @@ table button { min-height: 32px; padding: 6px 10px; font-size: .82rem; }
 .main-content { width: min(1360px, calc(100% - 48px)); min-height: calc(100vh - 64px); margin: 0 auto !important; padding: 30px 0 56px; }
 
 /* 로그인 */
-.login-page { display: grid; min-height: 100vh; place-items: center; padding: 32px 20px; background: radial-gradient(ellipse at 15% 10%, #e8efff 0, transparent 34%), var(--color-canvas); }
+.login-page {
+  display: grid;
+  grid-template-rows: auto auto auto;
+  align-content: center;
+  justify-items: center;
+  min-height: 100vh;
+  padding: 32px 20px;
+  background: radial-gradient(ellipse at 15% 10%, #e8efff 0, transparent 34%), var(--color-canvas);
+}
 .login-page > header, .login-page > main, .login-page > footer { width: min(100%, 430px); }
 .login-page > header { padding: 32px 34px 10px; background: white; border: 1px solid var(--color-line); border-bottom: 0; border-radius: 18px 18px 0 0; }
 .login-page > header h2 { margin-bottom: 6px; color: var(--color-brand); }
@@ -258,19 +266,3 @@ table button { min-height: 32px; padding: 6px 10px; font-size: .82rem; }
 .link-button { min-height: auto; padding: 0; color: var(--color-brand); background: transparent; border: 0; }
 .erp-form, .detail-card { display: grid; gap: 18px; padding: 22px; background: #fbfcfc; border: 1px solid var(--color-line); border-radius: 12px; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.button-row { display: flex; justify-content: flex-end; gap: 8px; }
-.danger-button { color: var(--color-danger); border-color: #f1cbd0; }
-.detail-card dl { display: grid; gap: 0; margin: 0; }
-.detail-card dl > div { display: grid; grid-template-columns: 140px 1fr; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--color-line); }
-.detail-card dt { color: var(--color-muted); font-weight: 700; }
-.detail-card dd { margin: 0; }
-.empty-state, .no-data { padding: 42px 20px; color: var(--color-muted); text-align: center; }
-.connection-status { margin: 16px 0; padding: 12px 14px; color: #305d56; background: var(--color-brand-soft); border: 1px solid #cce3de; border-radius: 10px; font-size: .9rem; }
-.connection-status.is-offline, .connection-status.is-error { color: #8a4d16; background: #fff7e8; border-color: #f0d7ad; }
-
-@media (max-width: 680px) {
-  .workspace-page { padding: 18px; }
-  .page-header, .filter-bar { align-items: stretch; flex-direction: column; }
-  .form-grid { grid-template-columns: 1fr; }
-  .detail-card dl > div { grid-template-columns: 1fr; gap: 5px; }
-}
