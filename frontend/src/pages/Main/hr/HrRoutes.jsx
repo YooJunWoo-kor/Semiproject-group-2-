@@ -3,7 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import Dashboard from './pages/Dashboard.jsx';
 import Employees from './pages/Employees.jsx';
 import Departments from './pages/Departments.jsx';
-import Attendance from './pages/Attendance.jsx';
+import Attendance from './pages/Attendance.js';
 import Payroll from './pages/Payroll.jsx';
 import SystemSettings from './pages/SystemSettings.jsx';
 import Nav from '../../../components/Nav.js';

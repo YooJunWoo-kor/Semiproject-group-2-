@@ -70,9 +70,7 @@ export default function Employees() {
     <div className="employees-wrapper">
       <div className="page-top-header">
         <div>
-          <div className="sub-title">HUMAN RESOURCES</div>
           <h1>직원 관리</h1>
-          <p>직원 정보를 조회하고 등록 및 관리할 수 있습니다.</p>
         </div>
 
         <button

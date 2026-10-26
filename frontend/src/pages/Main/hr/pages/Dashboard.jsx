@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import StatisticsCard from '../../../../components/StatisticsCard';
+
 
 const activities = [
   { color: 'blue', title: '신규 직원 등록', detail: '박서연 · 개발팀', time: '09:42' },
@@ -13,9 +15,7 @@ export default function Dashboard({ userName }) {
       {/* 상단 타이틀 영역 */}
       <div className="dashboard-top">
         <div>
-          <div className="date-badge">WEDNESDAY, OCTOBER 21, 2026</div>
-          <h1>안녕하세요, {userName}님 <span>✦</span></h1>
-          <p>오늘의 업무 현황을 확인하고 필요한 작업을 시작해 보세요.</p>
+          <span className='subtitle'>인사관리 대시보드</span>
         </div>
         <Link to="/main/hr/employees" className="register-btn">
           직원 등록하기
@@ -24,81 +24,11 @@ export default function Dashboard({ userName }) {
 
       {/* 통계 카드 섹션 */}
       <section className="stats-section">
-        <div className="stat-card">
-          <div className="stat-header">
-            <span>전체 직원</span>
-          </div>
-          <div className="stat-value">128<span>명</span></div>
-          <div className="stat-footer">
-            <span className="up">📈 4.8%</span>
-            <span>지난달 대비</span>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-header">
-            <span>오늘 출근</span>
-          </div>
-          <div className="stat-value">112<span>명</span></div>
-          <div className="stat-footer">
-            <span>출근율</span>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-header">
-            <span>휴가 사용</span>
-          </div>
-          <div className="stat-value">8<span>명</span></div>
-          <div className="stat-footer">
-            <span>전일 대비</span>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-header">
-            <span>운영 부서</span>
-          </div>
-          <div className="stat-value">12<span>개</span></div>
-          <div className="stat-footer">
-            <span /> 
-            <span>전체 조직 기준</span>
-          </div>
-        </div>
+        <StatisticsCard title={"전체직원"} count={"128"} stiyle={1}/>
+        <StatisticsCard title={"오늘출근"} count={"119"} stiyle={1}/>
+        <StatisticsCard title={"휴가사용"} count={"9"} stiyle={1}/>
+        <StatisticsCard title={"운용부서"} count={"12"} stiyle={0}/>
       </section>
-
-      {/* 빠른 메뉴 및 최근 활동 섹션 */}
-      <section className="content-section">
-        <div className="quick-menu-wrapper">
-          <div className="section-title-box">
-            <div>
-              <h2>빠른 메뉴</h2>
-              <p>자주 사용하는 업무로 바로 이동하세요.</p>
-            </div>
-          </div>
-          
-          <div className="menu-grid">
-            <Link to="/main/hr/employees" className="menu-card">
-              <strong>직원 관리</strong>
-              <small>직원 정보 조회 및 등록</small>
-            </Link>
-            
-            <Link to="/main/hr/departments" className="menu-card">
-              <strong>부서 관리</strong>
-              <small>조직 및 부서 정보 관리</small>
-            </Link>
-            
-            <Link to="/main/hr/attendance" className="menu-card">
-              <strong>근태 관리</strong>
-              <small>출퇴근 및 휴가 현황</small>
-            </Link>
-            
-            <Link to="/main/hr/payroll" className="menu-card">
-              <strong>급여 관리</strong>
-              <small>급여 내역 및 지급 현황</small>
-            </Link>
-          </div>
-        </div>
 
         <div className="recent-activity-wrapper">
           <div className="activity-header">
@@ -121,7 +51,7 @@ export default function Dashboard({ userName }) {
             ))}
           </div>
         </div>
-      </section>
+      
 
       {/* 시스템 안내 배너 */}
       <div className="system-notice-banner">
