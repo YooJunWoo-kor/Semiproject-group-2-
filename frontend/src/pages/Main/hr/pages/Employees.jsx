@@ -2,61 +2,10 @@ import { useState } from 'react';
 
 import {
     getLoginUser,
-    saveEmployeeAccount
+    getEmployeeAccounts,
+    saveEmployeeAccount,
+    removeEmployeeAccount
 } from '../../../../utils/authStorage';
-
-
-const initialEmployees = [
-    {
-        id: 'EMP-1001',
-        name: '김민준',
-        department: '개발팀',
-        position: '팀장',
-        email: 'minjun.kim@enova.co.kr',
-        status: '재직'
-    },
-    {
-        id: 'EMP-1002',
-        name: '이서연',
-        department: '인사팀',
-        position: '대리',
-        email: 'seoyeon.lee@enova.co.kr',
-        status: '재직'
-    },
-    {
-        id: 'EMP-1003',
-        name: '박지호',
-        department: '디자인팀',
-        position: '사원',
-        email: 'jiho.park@enova.co.kr',
-        status: '재직'
-    },
-    {
-        id: 'EMP-1004',
-        name: '최유진',
-        department: '마케팅팀',
-        position: '과장',
-        email: 'yujin.choi@enova.co.kr',
-        status: '휴직'
-    },
-    {
-        id: 'EMP-1005',
-        name: '정도윤',
-        department: '경영지원팀',
-        position: '대리',
-        email: 'doyun.jung@enova.co.kr',
-        status: '재직'
-    },
-    {
-        id: 'EMP-1006',
-        name: '한지우',
-        department: '개발팀',
-        position: '사원',
-        email: 'jiwoo.han@enova.co.kr',
-        status: '재직'
-    },
-];
-
 
 const departments = [
     '개발팀',
@@ -66,7 +15,6 @@ const departments = [
     '경영지원팀'
 ];
 
-
 const positions = [
     '사원',
     '대리',
@@ -75,34 +23,14 @@ const positions = [
     '부장'
 ];
 
-
 const columns = [
-    {
-        key: 'id',
-        label: '사번'
-    },
-    {
-        key: 'name',
-        label: '이름'
-    },
-    {
-        key: 'department',
-        label: '부서'
-    },
-    {
-        key: 'position',
-        label: '직급'
-    },
-    {
-        key: 'email',
-        label: '이메일'
-    },
-    {
-        key: 'status',
-        label: '상태'
-    },
+    { key: 'id', label: '사번' },
+    { key: 'name', label: '이름' },
+    { key: 'department', label: '부서' },
+    { key: 'position', label: '직급' },
+    { key: 'email', label: '이메일' },
+    { key: 'status', label: '상태' },
 ];
-
 
 const emptyForm = {
     employeeKey: '',
@@ -113,447 +41,233 @@ const emptyForm = {
     password: ''
 };
 
+function accountToEmployee(account) {
+    return {
+        id: account.employeeKey,
+        name: account.name,
+        department: account.department,
+        position: account.position,
+        email: account.email,
+        status: account.status || '재직'
+    };
+}
 
 export default function Employees() {
+    const loginUser = getLoginUser();
+    const isMaster = loginUser?.role === 'MASTER';
 
-    const loginUser =
-        getLoginUser();
+    const [employees, setEmployees] = useState(() =>
+        getEmployeeAccounts().map(accountToEmployee)
+    );
+    const [search, setSearch] = useState('');
+    const [showForm, setShowForm] = useState(false);
+    const [form, setForm] = useState(emptyForm);
 
-
-    const isMaster =
-        loginUser?.role === 'MASTER';
-
-
-    const [employees, setEmployees] =
-        useState(initialEmployees);
-
-    const [search, setSearch] =
-        useState('');
-
-    const [showForm, setShowForm] =
-        useState(false);
-
-    const [form, setForm] =
-        useState(emptyForm);
-
-
-    const filteredEmployees =
-        employees.filter(
-            (employee) =>
-
-                `${employee.id} ${employee.name} ${employee.department} ${employee.email}`
-
-                    .toLowerCase()
-
-                    .includes(
-                        search.toLowerCase()
-                    )
-        );
-
+    const filteredEmployees = employees.filter((employee) =>
+        `${employee.id} ${employee.name} ${employee.department} ${employee.email}`
+            .toLowerCase()
+            .includes(search.toLowerCase())
+    );
 
     function addEmployee(event) {
-
         event.preventDefault();
 
-
-        // 코드상으로도 MASTER가 아니면 차단
         if (!isMaster) {
-
-            alert(
-                'MASTER 계정만 직원을 등록할 수 있습니다.'
-            );
-
+            alert('MASTER 계정만 직원을 등록할 수 있습니다.');
             return;
         }
-
 
         const account = {
-
-            employeeKey:
-                form.employeeKey,
-
-            name:
-                form.name,
-
-            department:
-                form.department,
-
-            position:
-                form.position,
-
-            email:
-                form.email,
-
-            password:
-                form.password,
-
-            role:
-                'USER'
+            employeeKey: form.employeeKey,
+            name: form.name,
+            department: form.department,
+            position: form.position,
+            email: form.email,
+            password: form.password,
+            role: 'USER',
+            status: '재직'
         };
 
-
-        const result =
-            saveEmployeeAccount(
-                account
-            );
-
+        const result = saveEmployeeAccount(account);
 
         if (!result.success) {
-
-            alert(
-                result.message
-            );
-
+            alert(result.message);
             return;
         }
 
-
-        setEmployees([
-
-            ...employees,
-
-            {
-                id:
-                    form.employeeKey,
-
-                name:
-                    form.name,
-
-                department:
-                    form.department,
-
-                position:
-                    form.position,
-
-                email:
-                    form.email,
-
-                status:
-                    '재직'
-            }
-
-        ]);
-
-
-        alert(
-            '직원 등록이 완료되었습니다.'
+        setEmployees(
+            getEmployeeAccounts().map(accountToEmployee)
         );
 
-
-        setForm(
-            emptyForm
-        );
-
-        setShowForm(
-            false
-        );
+        alert('직원 등록이 완료되었습니다.');
+        setForm(emptyForm);
+        setShowForm(false);
     }
 
-
     function removeEmployee(id) {
+        if (!isMaster) {
+            alert('MASTER 계정만 직원을 삭제할 수 있습니다.');
+            return;
+        }
 
-        if (
-            window.confirm(
-                '이 직원을 목록에서 삭제할까요?'
-            )
-        ) {
-
+        if (window.confirm('이 직원을 목록에서 삭제할까요?')) {
+            removeEmployeeAccount(id);
             setEmployees(
-                employees.filter(
-                    employee =>
-                        employee.id !== id
-                )
+                getEmployeeAccounts().map(accountToEmployee)
             );
-
         }
     }
 
-
     return (
-
         <div className="employees-wrapper">
-
             <div className="page-top-header">
-
                 <div>
-
-                    <h1>
-                        직원 관리
-                    </h1>
-
+                    <h1>직원 관리</h1>
                 </div>
 
-
-                {/* MASTER에게만 보임 */}
                 {isMaster && (
-
                     <button
                         className="action-btn"
-                        onClick={() =>
-                            setShowForm(
-                                !showForm
-                            )
-                        }
+                        onClick={() => setShowForm(!showForm)}
                     >
-
-                        {showForm
-                            ? '등록 취소'
-                            : '직원 등록'
-                        }
-
+                        {showForm ? '등록 취소' : '직원 등록'}
                     </button>
-
                 )}
-
             </div>
 
-
-            {/* MASTER에게만 폼 표시 */}
             {isMaster && showForm && (
-
-                <form
-                    onSubmit={addEmployee}
-                    className="employee-form"
-                >
-
+                <form onSubmit={addEmployee} className="employee-form">
                     <div className="form-header">
-
-                        <h2>
-                            신규 직원 등록
-                        </h2>
-
-
+                        <h2>신규 직원 등록</h2>
                         <button
                             type="button"
-                            onClick={() =>
-                                setShowForm(
-                                    false
-                                )
-                            }
+                            onClick={() => setShowForm(false)}
                         >
                             닫기
                         </button>
-
                     </div>
 
-
                     <div className="form-inputs">
-
                         <label>
-
                             사원 Key
-
                             <input
-                                value={
-                                    form.employeeKey
-                                }
+                                value={form.employeeKey}
                                 onChange={(event) =>
                                     setForm({
                                         ...form,
-
-                                        employeeKey:
-                                            event.target.value
+                                        employeeKey: event.target.value
                                     })
                                 }
                                 placeholder="예: EMP-1007"
                                 required
                             />
-
                         </label>
 
-
                         <label>
-
                             이름
-
                             <input
-                                value={
-                                    form.name
-                                }
+                                value={form.name}
                                 onChange={(event) =>
                                     setForm({
                                         ...form,
-
-                                        name:
-                                            event.target.value
+                                        name: event.target.value
                                     })
                                 }
                                 placeholder="직원 이름"
                                 required
                             />
-
                         </label>
 
-
                         <label>
-
                             부서
-
                             <select
-                                value={
-                                    form.department
-                                }
+                                value={form.department}
                                 onChange={(event) =>
                                     setForm({
                                         ...form,
-
-                                        department:
-                                            event.target.value
+                                        department: event.target.value
                                     })
                                 }
                             >
-
-                                {departments.map(
-                                    department => (
-
-                                        <option
-                                            key={
-                                                department
-                                            }
-                                            value={
-                                                department
-                                            }
-                                        >
-                                            {department}
-                                        </option>
-
-                                    )
-                                )}
-
+                                {departments.map(department => (
+                                    <option key={department} value={department}>
+                                        {department}
+                                    </option>
+                                ))}
                             </select>
-
                         </label>
 
-
                         <label>
-
                             직급
-
                             <select
-                                value={
-                                    form.position
-                                }
+                                value={form.position}
                                 onChange={(event) =>
                                     setForm({
                                         ...form,
-
-                                        position:
-                                            event.target.value
+                                        position: event.target.value
                                     })
                                 }
                             >
-
-                                {positions.map(
-                                    position => (
-
-                                        <option
-                                            key={
-                                                position
-                                            }
-                                            value={
-                                                position
-                                            }
-                                        >
-                                            {position}
-                                        </option>
-
-                                    )
-                                )}
-
+                                {positions.map(position => (
+                                    <option key={position} value={position}>
+                                        {position}
+                                    </option>
+                                ))}
                             </select>
-
                         </label>
 
-
                         <label>
-
                             발급 이메일
-
                             <input
                                 type="email"
-                                value={
-                                    form.email
-                                }
+                                value={form.email}
                                 onChange={(event) =>
                                     setForm({
                                         ...form,
-
-                                        email:
-                                            event.target.value
+                                        email: event.target.value
                                     })
                                 }
                                 placeholder="name@company.co.kr"
                                 required
                             />
-
                         </label>
 
-
                         <label>
-
                             비밀번호
-
                             <input
                                 type="password"
-                                value={
-                                    form.password
-                                }
+                                value={form.password}
                                 onChange={(event) =>
                                     setForm({
                                         ...form,
-
-                                        password:
-                                            event.target.value
+                                        password: event.target.value
                                     })
                                 }
                                 placeholder="초기 비밀번호"
                                 required
                             />
-
                         </label>
-
                     </div>
 
-
-                    <button
-                        type="submit"
-                        className="submit-btn"
-                    >
+                    <button type="submit" className="submit-btn">
                         등록 완료
                     </button>
-
                 </form>
-
             )}
 
-
             <div className="table-container-box">
-
                 <div className="table-toolbar">
-
                     <div className="total-count">
-
                         전체 직원{' '}
-
-                        <strong>
-                            {employees.length}명
-                        </strong>
-
+                        <strong>{employees.length}명</strong>
                     </div>
 
-
                     <div className="toolbar-actions">
-
                         <input
                             value={search}
-                            onChange={(event) =>
-                                setSearch(
-                                    event.target.value
-                                )
-                            }
+                            onChange={(event) => setSearch(event.target.value)}
                             placeholder="이름, 부서, 이메일 검색"
                         />
-
 
                         <button
                             className="export-btn"
@@ -565,117 +279,59 @@ export default function Employees() {
                         >
                             내보내기
                         </button>
-
                     </div>
-
                 </div>
 
-
                 <div className="table-wrapper">
-
                     <table>
-
                         <thead>
-
                             <tr>
-
-                                {columns.map(
-                                    column => (
-
-                                        <th
-                                            key={
-                                                column.key
-                                            }
-                                        >
-                                            {column.label}
-                                        </th>
-
-                                    )
-                                )}
-
-                                <th>
-                                    관리
-                                </th>
-
+                                {columns.map(column => (
+                                    <th key={column.key}>{column.label}</th>
+                                ))}
+                                <th>관리</th>
                             </tr>
-
                         </thead>
 
-
                         <tbody>
+                            {filteredEmployees.map(employee => (
+                                <tr key={employee.id}>
+                                    {columns.map(column => (
+                                        <td key={column.key}>
+                                            {employee[column.key]}
+                                        </td>
+                                    ))}
 
-                            {filteredEmployees.map(
-                                employee => (
-
-                                    <tr
-                                        key={
-                                            employee.id
-                                        }
-                                    >
-
-                                        {columns.map(
-                                            column => (
-
-                                                <td
-                                                    key={
-                                                        column.key
-                                                    }
-                                                >
-                                                    {
-                                                        employee[
-                                                            column.key
-                                                        ]
-                                                    }
-                                                </td>
-
-                                            )
-                                        )}
-
-
-                                        <td>
-
+                                    <td>
+                                        {isMaster ? (
                                             <button
                                                 className="delete-btn"
                                                 onClick={() =>
-                                                    removeEmployee(
-                                                        employee.id
-                                                    )
+                                                    removeEmployee(employee.id)
                                                 }
                                             >
                                                 삭제
                                             </button>
-
-                                        </td>
-
-                                    </tr>
-
-                                )
-                            )}
-
+                                        ) : (
+                                            '-'
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
-
                     </table>
 
-
                     {filteredEmployees.length === 0 && (
-
                         <div className="no-data">
                             검색 결과가 없습니다.
                         </div>
-
                     )}
-
                 </div>
-
 
                 <div className="table-footer">
-
                     전체 {filteredEmployees.length}명의 직원이 표시됩니다.
-
                 </div>
-
             </div>
-
         </div>
     );
 }
