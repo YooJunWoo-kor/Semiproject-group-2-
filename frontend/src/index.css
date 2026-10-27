@@ -96,20 +96,13 @@ hr { border: 0; border-top: 1px solid var(--color-line); }
 .register-page table { margin-top: 18px; overflow: hidden; border: 1px solid var(--color-line); border-radius: 12px; }
 
 /* 메인 모듈 */
-.erp-dashboard { padding: 34px clamp(20px, 5vw, 72px); }
-.erp-dashboard > header > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.erp-dashboard > header h1 { margin: 0; }
-.erp-dashboard > header span { margin-left: auto; color: var(--color-muted); }
-.erp-dashboard > main { max-width: 1280px; margin: 44px auto; }
-.erp-dashboard .board-grid {
+.board-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; padding: 0; list-style: none;
 }
-.erp-dashboard  .board-card {
+.board-card {
   min-height: 190px; padding: 22px; background: white; border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card);
 }
-.erp-dashboard h3, .board-card h2 { margin-bottom: 9px; }
-.erp-dashboard button { margin-top: 10px; color: var(--color-brand); background: var(--color-brand-soft); border-color: transparent; }
-.erp-dashboard > footer { color: var(--color-muted); text-align: center; }
+.board-card h2 { margin-bottom: 9px; }
 
 /* 공통 카드와 페이지 폭 */
 .community-page, .quality-page, .schedule-page { min-width: 0; }
@@ -207,9 +200,7 @@ hr { border: 0; border-top: 1px solid var(--color-line); }
   .erp-top-nav a, .select-bar a { padding: 9px; white-space: nowrap; font-size: .8rem; }
   .main-content { width: calc(100% - 24px); padding-top: 16px; }
   .community-page, .product-list-page, .quality-graph-page { padding: 18px; }
-  .erp-dashboard { padding: 20px; }
-  .erp-dashboard > header > div, .page-top-header, .dashboard-top { align-items: flex-start; flex-direction: column; }
-  .erp-dashboard > header span { margin-left: 0; }
+  .page-top-header, .dashboard-top { align-items: flex-start; flex-direction: column; }
   .stats-section, .attendance-stats, .payroll-stats, .dept-summary-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .content-section { grid-template-columns: 1fr; }
   .search-box, .toolbar-actions { flex-wrap: wrap; }

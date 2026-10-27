@@ -1,25 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-
-import {
-    getLoginUser,
-    logoutUser
-} from '../../utils/authStorage';
-
+import { getLoginUser, logoutUser } from '../../utils/authStorage';
 
 function MainModule() {
-
-    const navigate =
-        useNavigate();
-
-    const url =
-        '/main';
-
-
-    const loginUser =
-        getLoginUser();
-
-
+    const navigate = useNavigate();
+    const url = '/main';
+    const loginUser = getLoginUser();
     const modules = [
         {
             id: 'hr',
@@ -65,130 +51,51 @@ function MainModule() {
         }
     ];
 
-
     const handleNavigate = (path) => {
-
         navigate(path);
     };
 
-
+    // 로그아웃 기능
     const handleLogout = () => {
-
         logoutUser();
-
         alert(
             '로그아웃 되었습니다.'
         );
-
         navigate('/');
     };
 
-
     return (
-
-        <div className="erp-dashboard">
-
-            <header>
-
-                <div>
-
-                    <h1>
-                        ERP 통합 시스템
-                    </h1>
-
-
-                    <span>
-
-                        접속자:{' '}
-
-                        {loginUser?.role === 'MASTER'
-                            ? 'MASTER'
-                            : `${loginUser?.name || '사용자'} (${loginUser?.department || '-'} / ${loginUser?.position || '-'})`
-                        }
-
-                    </span>
-
-
-                    <button
-                        type="button"
-                        onClick={handleLogout}
-                    >
-                        로그아웃
-                    </button>
-
-                </div>
-
-                <hr />
-
-            </header>
-
-
+        <div>
             <main>
+                <ul className="module-grid">
+                    {modules.map((item) => (
+                        <li
+                            key={item.id}
+                            className="module-card"
+                        >
+                            <h3> {item.title} </h3>
+                            <p> {item.description} </p>
 
-                <section>
-
-                    <h2>
-                        업무 모듈 바로가기
-                    </h2>
-
-                    <p>
-                        작업할 모듈을 선택하여 세부 업무 화면으로 이동하세요.
-                    </p>
-
-
-                    <ul className="module-grid">
-
-                        {modules.map((item) => (
-
-                            <li
-                                key={item.id}
-                                className="module-card"
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    handleNavigate(
+                                        item.path
+                                    )
+                                }
                             >
-
-                                <h3>
-                                    {item.title}
-                                </h3>
-
-                                <p>
-                                    {item.description}
-                                </p>
-
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        handleNavigate(
-                                            item.path
-                                        )
-                                    }
-                                >
-                                    {item.title} 바로가기
-                                </button>
-
-                            </li>
-
-                        ))}
-
-                    </ul>
-
-                </section>
-
+                                {item.title} 바로가기
+                            </button>
+                        </li>
+                    ))}
+                </ul>
             </main>
-
-
             <footer>
-
                 <hr />
-
-                <p>
-                    ERP 시스템 버전: v1.0.0 | 문의: 시스템운영팀 (내선 1004)
-                </p>
-
+                <p> ERP 시스템 버전: v1.0.0 | 문의: 시스템운영팀 (내선 1004) </p>
             </footer>
-
         </div>
     );
 }
-
 
 export default MainModule;
