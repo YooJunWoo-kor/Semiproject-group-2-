@@ -1,6 +1,7 @@
 @import './css/ColorList.css';
 @import './css/SubMain.css';
 @import './css/Table.css';
+@import "./css/Header.css";
 
 :root {
   --shadow-card: 0 10px 30px rgb(29 45 86 / 7%);
