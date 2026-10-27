@@ -57,10 +57,6 @@ function MainModule() {
         navigate(path);
     };
 
-    const handleLogout = () => {
-        alert('로그아웃 되었습니다.');
-        navigate('/');
-    };
 
     return (
         <div className="erp-dashboard">

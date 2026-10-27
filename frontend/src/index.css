@@ -1,3 +1,5 @@
+@import "./css/Header.css";
+
 :root {
   --color-brand: #244f6b;
   --color-brand-dark: #1685c5;
@@ -44,17 +46,6 @@ p { color: var(--color-muted); line-height: 1.65; }
 li{
   list-style: none;
 }
-
-/* 각 기능별 네비 + container */
-.sub-main-contain{}
-/* 각 기능별 네비게이션 */
-.sub-main-nav{}
-/* 각 기능별 컨텐츠 노출 컨테이너 */
-.sub-container{}
-/* 각 업무 메인 카드 */
-.module-card{}
-/* 카드를 감싼 레이어 */
-.module-grid{}
 
 .module-grid{
   display: flex;

@@ -1,0 +1,23 @@
+/* 헤더 전체 */
+.erp-top-header {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0 30px;
+  }
+  
+  /* 상단 메뉴 */
+  .erp-top-nav {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  
+  /* 접속자 정보 + 로그아웃 버튼 */
+  .erp-header-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto; /* 오른쪽 끝으로 이동 */
+  }

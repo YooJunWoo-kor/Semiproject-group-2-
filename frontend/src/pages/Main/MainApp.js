@@ -14,12 +14,9 @@ import QnAPage from './community/QnAPage';
 import SuggestionPage from './community/SuggestionPage';
 import CrmHome from './crm/CrmHome';
 import CrmRoutes from './crm/CrmRoutes';
-<<<<<<< HEAD
-import MyPage from './MyPage';
-=======
+import MyPage from './mypage/MyPage';
 // 파일 상단 import 목록에 추가
 import ProjectManagementPage from './project/ProjectManagementPage';
->>>>>>> 98317d7250d01438e9694a7f0f6de18c0744cd8d
 
 function MainApp() {
 
@@ -50,7 +47,7 @@ function MainApp() {
 
 
 
-                <div className="erp-nav-user">
+                <div className="erp-header-user">
                     {/* 접속자 클릭 시 마이페이지 이동 */}
                     <NavLink to="/main/profile" className="erp-user-link">
                         접속자: 홍길동 (재무·회계팀 / 사원)
@@ -79,11 +76,8 @@ function MainApp() {
                     <Route path="/community/qa" element={<QnAPage />} />
                     <Route path="/community/*suggestion" element={<SuggestionPage />} />
                     <Route path="/crm/*" element={<CrmRoutes />} />
-<<<<<<< HEAD
-                    <Route path="/profile" element={<MyPage />} />
-=======
                     <Route path="/project/*" element={<ProjectManagementPage />} />
->>>>>>> 98317d7250d01438e9694a7f0f6de18c0744cd8d
+                    <Route path="/profile" element={<MyPage />} />
                     <Route path="*" element={<Navigate to="/main" replace />} />
                 </Routes>
             </div>
