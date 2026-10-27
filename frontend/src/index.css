@@ -32,7 +32,7 @@ p { color: var(--color-muted); line-height: 1.65; }
 li{
   margin: 0;
   padding: 0;
-  text-align: center;
+  text-align: left;
   list-style: none;
 }
 
