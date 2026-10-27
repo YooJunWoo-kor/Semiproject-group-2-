@@ -20,7 +20,7 @@ export default function ProjectBudget({
 
   // 선택한 프로젝트의 지출 내역
   const items = expenses.filter(
-    e => Number(e.projectId) === id
+    e => String(e.projectId) === String(id)
   );
 
   // 총 집행 금액
@@ -63,8 +63,8 @@ export default function ProjectBudget({
       return;
     }
 
-    setExpenses([
-      ...expenses,
+    setExpenses(prev => [
+      ...prev,
       {
         id: Date.now(),
         projectId: id,
@@ -72,7 +72,7 @@ export default function ProjectBudget({
         amount: Number(amount)
       }
     ]);
-
+    
     setAmount('');
   }
 

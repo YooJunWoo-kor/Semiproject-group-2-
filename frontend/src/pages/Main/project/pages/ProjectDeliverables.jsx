@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+
 export default function ProjectDeliverables({ projects, outputs, setOutputs }) {
+  
   const [form, setForm] = useState({ projectId: '', name: '', owner: '', due: '', status: '작성 중' });
   const [editingId, setEditingId] = useState(null);
   const change = e => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -9,6 +11,7 @@ export default function ProjectDeliverables({ projects, outputs, setOutputs }) {
     else setOutputs(prev => [...prev, { ...form, id: Date.now(), projectId: Number(form.projectId) }]);
     setEditingId(null); setForm({ projectId: '', name: '', owner: '', due: '', status: '작성 중' });
   };
+  
   return <div><h2>산출물 관리</h2><form onSubmit={save}>
     <select name="projectId" value={form.projectId} onChange={change} required>
       <option value="">프로젝트 선택</option>

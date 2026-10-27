@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./ScheduleCalendar.css";
+import "../ScheduleManagement.css";
 
 export default function ScheduleCalendar() {
   //new Date(): 사용자가 접속한 현제 날짜 기준으로 날짜 데이터 값 생성

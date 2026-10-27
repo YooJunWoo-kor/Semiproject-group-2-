@@ -1,11 +1,4 @@
 /* 프로젝트 관리 화면 전용 임시 스타일 */
-.project-page {
-    padding: 24px;
-    color: #203047;
-    background: #f4f7f6;
-    min-height: 100%;
-    font-family: 'Noto Sans KR', sans-serif;
-}
 
 .project-page * {
     box-sizing: border-box;
@@ -153,7 +146,7 @@
 
 /* 프로젝트 전용 왼쪽 메뉴 + 한 화면 홈 */
 .project-page {
-    padding: 18px 24px;
+    padding: 0;
     min-height: 0;
 }
 
@@ -335,29 +328,117 @@
     .project-page .project-content {
         width: 100%;
     }
-    
-/* 프로젝트 상세 현황 테이블 */
-.project-summary-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 12px 0 20px;
-    font-size: 14px;
-  }
-  
-  .project-summary-table th,
-  .project-summary-table td {
-    padding: 12px 14px;
-    border: 1px solid #e2e8f0;
-    text-align: left;
-  }
-  
-  .project-summary-table th {
-    background-color: #f1f5f9;
-    font-weight: 600;
-  }
-  
-  .project-summary-table tbody tr:hover {
-    background-color: #f8fafc;
-  }
-  
+
+    /* 프로젝트 상세 현황 테이블 */
+    .project-summary-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 12px 0 20px;
+        font-size: 14px;
+    }
+
+    .project-summary-table th,
+    .project-summary-table td {
+        padding: 12px 14px;
+        border: 1px solid #e2e8f0;
+        text-align: left;
+    }
+
+    .project-summary-table th {
+        background-color: #f1f5f9;
+        font-weight: 600;
+    }
+
+    .project-summary-table tbody tr:hover {
+        background-color: #f8fafc;
+    }
+
+}
+
+/* Finance-style project navigation */
+.project-page .project-shell {
+    display: flex;
+    gap: 20px;
+    align-items: stretch;
+    min-height: 680px;
+    padding: 0;
+    background: transparent;
+}
+
+.project-page .project-nav {
+    flex: 0 0 250px;
+    background: #0b4d79;
+    color: #fff;
+    border-radius: 12px;
+    padding: 30px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px
+}
+
+.project-page .project-nav h2 {
+    color: white;
+    margin: 14px 12px 20px;
+    font-size: 22px
+}
+
+.project-page .project-nav a {
+    display: block;
+    color: white;
+    text-decoration: none;
+    padding: 13px 16px;
+    border-radius: 8px;
+    font-weight: 600
+}
+
+.project-page .project-nav a:hover,
+.project-page .project-nav a.active {
+    background: #166b94;
+    color: white
+}
+
+.project-page .project-main {
+    flex: 1;
+    min-width: 0;
+    background: #f0fbfb;
+    border: 1px solid #b3d8dd;
+    border-radius: 12px;
+    padding: 26px
+}
+
+.project-page .project-module .module-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px
+}
+
+.project-page .project-module .module-card {
+    background: white;
+    border: 1px solid #b4d9df;
+    border-radius: 12px;
+    padding: 22px;
+    text-align: center;
+    box-shadow: 0 3px 6px #0001
+}
+
+.project-page .project-module .module-card h3 {
+    margin-top: 8px
+}
+
+.project-page .project-module .module-card p {
+    min-height: 45px
+}
+
+@media(max-width:850px) {
+    .project-page .project-shell {
+        flex-direction: column
+    }
+
+    .project-page .project-nav {
+        flex: auto
+    }
+
+    .project-page .project-main {
+        padding: 15px
+    }
 }
