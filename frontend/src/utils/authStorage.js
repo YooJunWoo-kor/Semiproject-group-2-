@@ -82,7 +82,6 @@ export const NORMAL_ACCOUNTS = [
 // 로그인 사용자 저장
 // =============================
 export function saveLoginUser(user) {
-
     localStorage.setItem(
         LOGIN_USER_KEY,
         JSON.stringify(user)

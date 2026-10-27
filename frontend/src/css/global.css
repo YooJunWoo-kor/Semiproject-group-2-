@@ -1,0 +1,10 @@
+:root {
+    --shadow-card: 0 10px 30px rgb(29 45 86 / 7%);
+    --radius-card: 14px;
+    --layer-radius: 10px;
+    --layer-shadow: 0px 10px 10px #527d8a55;
+    --card-shadow: 0px 3px 5px #527d8a33;
+    --button-radius: 5px;
+    --subtitle-color: #11718a;
+    --nav-radius: 6px;
+}

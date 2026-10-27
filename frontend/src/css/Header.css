@@ -5,19 +5,87 @@
     width: 100%;
     box-sizing: border-box;
     padding: 0 30px;
-  }
-  
-  /* 상단 메뉴 */
-  .erp-top-nav {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-  }
-  
-  /* 접속자 정보 + 로그아웃 버튼 */
-  .erp-header-user {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-left: auto; /* 오른쪽 끝으로 이동 */
-  }
+}
+
+/* 상단 메뉴 */
+.erp-top-nav {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  color: #566176;
+  font-size: .9rem; font-weight: 600;
+}
+
+.erp-top-nav a{
+  display: block;
+  padding: 5px 15px;
+  margin: 5px;
+  border-radius: var(--nav-radius);
+}
+
+.erp-top-nav a:hover{
+  background-color: var(--color-brand-dark);
+  color: var(--color-brand-soft);
+}
+
+.erp-top-nav a.active{
+  background-color: var(--color-brand);
+  color: white;
+}
+
+/* 접속자 정보 + 로그아웃 버튼 */
+.erp-header-user {
+  display: flex;
+  align-items: center;
+  margin-left: auto; /* 오른쪽 끝으로 이동 */
+
+  position: relative;
+  display: inline;
+}
+
+.erp-header-user a{
+  display: flex;
+  justify-content: center; /* 가로 중앙 */
+  align-items: center;     /* 세로 중앙 */
+  color:var(--color-brand-soft);
+  width: 40px;
+  height: 40px;
+  background-color: var(--color-brand);
+  border-radius: 50%;
+  text-align: center;
+}
+
+.erp-header-user a:hover{
+  background-color: var(--color-brand-dark);
+  color: white;
+  border-radius: 50%;
+}
+
+/* 상단 내 이름에 마우스 올렸을 때 */
+.hoverList {
+  display: none;             /* 평소에는 숨김 */
+  position: absolute;
+  top: 100%;                 /* a 생성 위치 */
+  right: 0;                  /* 헤더 우측 끝 정렬 */
+  min-width: 140px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: var(--card-shadow);
+  padding: 8px 0;
+  z-index: 1000;             /* 다른 레이아웃 위에 올라오도록 설정 */
+}
+
+/* 메뉴와 a 태그 사이 빈 공간으로 마우스가 지나갈 때 꺼지지 않도록 가상 투명 다리 생성 */
+.hoverList::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 0;
+  width: 100%;
+  height: 8px;
+}
+
+.erp-header-user:hover .hoverList {
+  display: block;
+}

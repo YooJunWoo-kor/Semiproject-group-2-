@@ -1,10 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import {
-    findLoginAccount,
-    saveLoginUser
-} from "../utils/authStorage";
+import { findLoginAccount, saveLoginUser } from "../utils/authStorage";
 
 
 function Home() {

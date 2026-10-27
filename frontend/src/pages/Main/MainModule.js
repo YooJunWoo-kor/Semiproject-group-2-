@@ -55,15 +55,6 @@ function MainModule() {
         navigate(path);
     };
 
-    // 로그아웃 기능
-    const handleLogout = () => {
-        logoutUser();
-        alert(
-            '로그아웃 되었습니다.'
-        );
-        navigate('/');
-    };
-
     return (
         <div>
             <main>
