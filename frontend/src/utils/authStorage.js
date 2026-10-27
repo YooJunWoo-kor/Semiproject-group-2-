@@ -219,7 +219,6 @@ export function findLoginAccount(
     const inputPassword =
         password.trim();
 
-
     // -----------------------------
     // MASTER 로그인
     // -----------------------------
@@ -230,7 +229,6 @@ export function findLoginAccount(
 
         return MASTER_ACCOUNT;
     }
-
 
     // -----------------------------
     // 기본 직원 로그인
@@ -243,11 +241,9 @@ export function findLoginAccount(
                 account.password === inputPassword
         );
 
-
     if (normalAccount) {
         return normalAccount;
     }
-
 
     // -----------------------------
     // MASTER가 등록한 직원 로그인
@@ -256,7 +252,6 @@ export function findLoginAccount(
     const employeeAccounts =
         getEmployeeAccounts();
 
-
     const employee =
         employeeAccounts.find(
             account =>
@@ -264,11 +259,9 @@ export function findLoginAccount(
                 account.password === inputPassword
         );
 
-
     if (employee) {
         return employee;
     }
-
 
     return null;
 }
