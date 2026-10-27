@@ -1,30 +1,16 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { resourceCategories } from "./communityConfig";
-import {
-  deleteFile,
-  downloadFile,
-  loadItems,
-  saveFile,
-  saveItems,
-} from "./communityStorage";
-import DataDistributor from "./DataComponent/DataDistributor";
+import useCommunityItems from "./useCommunityItems";
+import { deleteFile, downloadFile, saveFile } from "./communityStorage";
 
 const emptyForm = { title: "", category: resourceCategories[0], content: "", author: "임시 사용자", attachment: null };
 
 
 
 function TechLibraryPage() {
-  const data = [
-    {number : 1, content : "La", name: "la"}
-    ,{number : 2, content : "Lb", name: "lb"}
-    ,{number : 3, content : "Lc", name: "lc"}
-    ,{number : 4, content : "Ld", name: "ld"}
-    ,{number : 5, content : "Le", name: "le"}
-    ,{number : 6, content : "Lf", name: "lf"}
-  ]
-
-  const [items, setItems] = useState(() => loadItems("resources"));
+  // 1. 게시판별 글 목록과 공통 추가/수정/삭제 기능을 준비합니다.
+  const { items, addItem, updateItem, removeItem } = useCommunityItems("resources");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("전체");
   const [view, setView] = useState("list");
@@ -33,23 +19,7 @@ function TechLibraryPage() {
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState("");
 
-  const addItem = (item) => {
-    const nextItems = [item, ...items];
-    saveItems("resources", nextItems);
-    setItems(nextItems);
-  };
-
-  const updateItem = (item) => {
-    const nextItems = items.map((oldItem) => oldItem.id === item.id ? item : oldItem);
-    saveItems("resources", nextItems);
-    setItems(nextItems);
-  };
-
-  const removeItem = (id) => {
-    const nextItems = items.filter((item) => item.id !== id);
-    saveItems("resources", nextItems);
-    setItems(nextItems);
-  };
+  // 2. 검색어와 필요한 분류/상태 조건으로 목록을 좁힙니다.
   const filtered = items.filter((item) => {
     const searchText = `${item.title} ${item.content} ${item.author}`.toLowerCase();
     const matchesSearch = searchText.includes(query.toLowerCase());
@@ -63,6 +33,7 @@ function TechLibraryPage() {
     setMessage("");
   };
 
+  // 3. 자료 정보와 선택한 첨부파일을 저장합니다.
   const save = async (event) => {
     event.preventDefault();
 
@@ -114,19 +85,22 @@ function TechLibraryPage() {
     }
   };
 
-  const remove = async () => {
-    if (!window.confirm("이 자료와 첨부파일을 삭제할까요?")) {
+  // 목록 또는 상세에서 자료를 삭제합니다. 첨부파일이 있으면 저장소에서도 함께 지웁니다.
+  const remove = async (itemToRemove = selected) => {
+    if (!itemToRemove || !window.confirm("이 자료와 첨부파일을 삭제할까요?")) {
       return;
     }
 
     try {
-      if (selected.attachment ? selected.attachment.id : null) {
-        await deleteFile(selected.attachment.id);
+      if (itemToRemove.attachment ? itemToRemove.attachment.id : null) {
+        await deleteFile(itemToRemove.attachment.id);
       }
 
-      removeItem(selected.id);
-      setSelected(null);
-      setView("list");
+      removeItem(itemToRemove.id);
+      if (selected && selected.id === itemToRemove.id) {
+        setSelected(null);
+        setView("list");
+      }
       setMessage("자료가 삭제되었습니다.");
     } catch (error) {
       setMessage(error.message);
@@ -195,6 +169,10 @@ function TechLibraryPage() {
                 </button>
                 <span> — {item.author} </span>
                 <small>{item.updatedAt}</small>
+              
+                {/* 목록에서 수정하거나 자료와 첨부파일을 함께 삭제할 수 있습니다. */}
+                <button type="button" onClick={() => openForm(item)}>수정</button>
+                <button className="danger-button" type="button" onClick={() => remove(item)}>삭제</button>
               </li>
             ))}
           </ul>
@@ -284,10 +262,7 @@ function TechLibraryPage() {
           <button type="button" onClick={() => setView(selected ? "detail" : "list")}>취소</button>
         </form>
       ) : null}
-
-          <DataDistributor data = {data}/>
-
-    </main>
+</main>
   );
   
 }

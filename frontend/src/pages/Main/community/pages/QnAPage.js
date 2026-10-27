@@ -1,21 +1,12 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { loadItems, saveItems } from "./communityStorage";
-import DataDistributor from "./DataComponent/DataDistributor";
+import useCommunityItems from "./useCommunityItems";
 
 const emptyForm = { title: "", author: "임시 사용자", content: "", status: "답변 대기" };
 
 function QnAPage() {
-  const data = [
-    {id : 1, content : "Qa", name : "qd1" }
-    ,{id : 2, content : "Qb", name : "qd2" }
-    ,{id : 3, content : "Qc", name : "qd3" }
-    ,{id : 4, content : "Qd", name : "qd4" }
-    ,{id : 5, content : "Qe", name : "qd5" }
-    ,{id : 6, content : "Qf", name : "qd6" }
-  ]
-
-  const [items, setItems] = useState(() => loadItems("questions")); //문의글 목록 저장
+  // 1. 게시판별 글 목록과 공통 추가/수정/삭제 기능을 준비합니다.
+  const { items, addItem, updateItem, removeItem } = useCommunityItems("questions");
   const [query, setQuery] = useState(""); //제목,내용 등의 검색어
   const [status, setStatus] = useState("전체"); //문의 처리 상태 필터
   const [view, setView] = useState("list"); //목록, 상세, 작성 화면 구분
@@ -24,23 +15,7 @@ function QnAPage() {
   const [answer, setAnswer] = useState(""); // 관리자 답변 입력값
   const [message, setMessage] = useState(""); //저장, 삭제 결과 안내
 
-  const addItem = (item) => {
-    const nextItems = [item, ...items];
-    saveItems("questions", nextItems);
-    setItems(nextItems);
-  };
-
-  const updateItem = (item) => {
-    const nextItems = items.map((oldItem) => oldItem.id === item.id ? item : oldItem);
-    saveItems("questions", nextItems);
-    setItems(nextItems);
-  };
-
-  const removeItem = (id) => {
-    const nextItems = items.filter((item) => item.id !== id);
-    saveItems("questions", nextItems);
-    setItems(nextItems);
-  };
+  // 2. 검색어와 필요한 분류/상태 조건으로 목록을 좁힙니다.
   const filtered = items.filter((item) => {
     const matchesTitle = item.title.toLowerCase().includes(query.toLowerCase());
     const matchesStatus = status === "전체" || item.status === status;
@@ -52,6 +27,7 @@ function QnAPage() {
     setMessage("");
   };
 
+  // 3. 폼 내용을 검사하고, 신규 글은 추가하고 기존 글은 갱신합니다.
   const save = (event) => {
     event.preventDefault();
 
@@ -84,14 +60,17 @@ function QnAPage() {
     setMessage("질문이 등록되었습니다.");
   };
 
-  const remove = () => {
-    if (!window.confirm("질문과 답변을 모두 삭제할까요?")) {
+  // 목록에서 부르면 전달된 글을, 상세 화면에서 부르면 기본값인 selected 글을 삭제합니다.
+  const remove = (itemToRemove = selected) => {
+    if (!itemToRemove || !window.confirm("질문과 답변을 모두 삭제할까요?")) {
       return;
     }
 
-    removeItem(selected.id);
-    setSelected(null);
-    setView("list");
+    removeItem(itemToRemove.id);
+    if (selected && selected.id === itemToRemove.id) {
+      setSelected(null);
+      setView("list");
+    }
     setMessage("질문이 삭제되었습니다.");
   };
 
@@ -123,7 +102,7 @@ function QnAPage() {
     const savedItem = {
       ...selected,
       status: "답변 완료",
-      answers: [...selected.answers, newAnswer],
+      answers: [...(selected.answers || []), newAnswer],
       updatedAt: new Date().toISOString().slice(0, 10),
     };
 
@@ -138,7 +117,7 @@ function QnAPage() {
       return;
     }
 
-    const nextAnswers = selected.answers.filter((item) => item.id !== id);
+    const nextAnswers = (selected.answers || []).filter((item) => item.id !== id);
     const savedItem = {
       ...selected,
       answers: nextAnswers,
@@ -190,7 +169,7 @@ function QnAPage() {
 
           <ul>
             {filtered.map((item) => (
-              <li>
+              <li key={item.id}>
                 <strong>[{item.status}] </strong>
                 <button
                   type="button"
@@ -203,6 +182,10 @@ function QnAPage() {
                   {item.title}
                 </button>
                 <span> — {item.author}</span>
+              
+                {/* 목록에서도 바로 수정할 수 있고, 삭제 버튼은 확인창을 거칩니다. */}
+                <button type="button" onClick={() => openForm(item)}>수정/처리</button>
+                <button className="danger-button" type="button" onClick={() => remove(item)}>삭제</button>
               </li>
             ))}
           </ul>
@@ -237,15 +220,15 @@ function QnAPage() {
           <section>
             <h3>답변</h3>
             <ul>
-              {selected.answers.map((answerItem) => (
+              {(selected.answers || []).map((answerItem) => (
                 <li key={answerItem.id}>
                   {answerItem.content} — {answerItem.author} ({answerItem.createdAt})
                   <button type="button" onClick={() => removeAnswer(answerItem.id)}>삭제</button>
-                </li>
+              </li>
               ))}
             </ul>
 
-            {selected.answers.length === 0 ? <p>아직 답변이 없습니다.</p> : null}
+            {(selected.answers || []).length === 0 ? <p>아직 답변이 없습니다.</p> : null}
 
             <textarea
               rows="4"
@@ -285,10 +268,7 @@ function QnAPage() {
           <button type="button" onClick={() => setView(selected ? "detail" : "list")}>취소</button>
         </form>
       ) : null}
-
-        <DataDistributor data = {data}/>
-      
-    </main>
+</main>
   );
 }
 

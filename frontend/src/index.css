@@ -106,21 +106,21 @@ table button { min-height: 32px; padding: 6px 10px; font-size: .82rem; }
 .erp-dashboard > header h1 { margin: 0; }
 .erp-dashboard > header span { margin-left: auto; color: var(--color-muted); }
 .erp-dashboard > main { max-width: 1280px; margin: 44px auto; }
-.erp-dashboard .community-home .board-grid {
+.erp-dashboard .board-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; padding: 0; list-style: none;
 }
-.erp-dashboard .community-home .board-card {
+.erp-dashboard  .board-card {
   min-height: 190px; padding: 22px; background: white; border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card);
 }
-.erp-dashboard h3, .community-home .board-card h2 { margin-bottom: 9px; }
+.erp-dashboard h3, .board-card h2 { margin-bottom: 9px; }
 .erp-dashboard button { margin-top: 10px; color: var(--color-brand); background: var(--color-brand-soft); border-color: transparent; }
 .erp-dashboard > footer { color: var(--color-muted); text-align: center; }
 
 /* 공통 카드와 페이지 폭 */
 .community-page, .finance-page, .quality-page, .schedule-page { min-width: 0; }
-.community-home, .community-page, .finance-page, .product-list-page, .main-container, .quality-graph-page { padding: 28px; background: white; border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+.community-page, .finance-page, .product-list-page, .main-container, .quality-graph-page { padding: 28px; background: white; border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
 .community-page h1, .finance-page h1, .product-list-page h1, .main-container h1 { margin-bottom: 7px; }
-.community-page section, .finance-page section, .community-page form, .finance-page form { margin-top: 20px; }
+.community-page section, .finance-page section, .finance-page form { margin-top: 20px; }
 .community-page > nav { display: flex; gap: 10px; margin: 12px 0 18px; }
 .community-page > nav a { color: var(--color-brand); font-weight: 600; }
 .community-page > section > div, .finance-page > section > div { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
@@ -140,8 +140,8 @@ table button { min-height: 32px; padding: 6px 10px; font-size: .82rem; }
 .community-page form, .finance-page form { display: grid; gap: 15px; }
 .community-page form label, .finance-page form label { width: 100%; }
 .community-page form button, .finance-page form button { justify-self: start; }
-.community-home .board-card { min-height: 150px; }
-.community-home .board-card h2 a { color: var(--color-brand); }
+.board-card { min-height: 150px; }
+.board-card h2 a { color: var(--color-brand); }
 .product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 18px; }
 .product-card { overflow: hidden; background: #fff; border: 1px solid var(--color-line); border-radius: 14px; box-shadow: var(--shadow-card); }
 .product-info { padding: 16px 18px 0; }
@@ -222,7 +222,7 @@ table button { min-height: 32px; padding: 6px 10px; font-size: .82rem; }
   .erp-top-nav, .select-bar { gap: 2px; overflow-x: auto; padding: 8px 12px; }
   .erp-top-nav a, .select-bar a { padding: 9px; white-space: nowrap; font-size: .8rem; }
   .main-content { width: calc(100% - 24px); padding-top: 16px; }
-  .community-home, .community-page, .finance-page, .product-list-page, .main-container, .quality-graph-page { padding: 18px; }
+  .community-page, .finance-page, .product-list-page, .main-container, .quality-graph-page { padding: 18px; }
   .erp-dashboard { padding: 20px; }
   .erp-dashboard > header > div, .page-top-header, .dashboard-top { align-items: flex-start; flex-direction: column; }
   .erp-dashboard > header span { margin-left: 0; }

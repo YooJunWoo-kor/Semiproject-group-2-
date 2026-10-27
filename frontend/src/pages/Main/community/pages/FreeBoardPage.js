@@ -1,50 +1,19 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { loadItems, saveItems } from "./communityStorage";
-import DataDistributor from "./DataComponent/DataDistributor";
+import useCommunityItems from "./useCommunityItems";
 
 const emptyForm = { title: "", author: "임시 사용자", content: "" };
 
 function FreeBoardPage() {
-  const data = [
-    {id : 1, content : "Fa", name : "Free1" }
-    ,{id : 2, content : "Fb", name : "Free2" }
-    ,{id : 3, content : "Fc", name : "Free3" }
-    ,{id : 4, content : "Fd", name : "Free4" }
-    ,{id : 5, content : "Fe", name : "Free5" }
-    ,{id : 6, content : "Ff", name : "Free6" }
-  ]
-
-  const [items, setItems] = useState(() => loadItems("free-posts")); //전체 게시글 배열
+  // 1. 게시판별 글 목록과 공통 추가/수정/삭제 기능을 준비합니다.
+  const { items, addItem, updateItem, removeItem } = useCommunityItems("free-posts");
   const [query, setQuery] = useState(""); //사용자가 입력한 검색어
   const [view, setView] = useState("list"); //현재 표시할 화면
   const [selected, setSelected] = useState(null); //사용자가 선택한 게시글
   const [form, setForm] = useState(emptyForm); //글쓰기 ,수정 입력 데이터
   const [comment, setComment] = useState(""); //현재 작성중인 댓글
   const [message, setMessage] = useState(""); //등록,수정, 삭제 안내 메세지
-
-//   등록
-  const addItem = (item) => {
-    const nextItems = [item, ...items];
-    saveItems("free-posts", nextItems);
-    setItems(nextItems);
-  };
-
-//   수정
-  const updateItem = (item) => {
-    const nextItems = items.map((oldItem) => oldItem.id === item.id ? item : oldItem);
-    saveItems("free-posts", nextItems);
-    setItems(nextItems);
-  };
-
-//   삭제
-  const removeItem = (id) => {
-    const nextItems = items.filter((item) => item.id !== id);
-    saveItems("free-posts", nextItems);
-    setItems(nextItems);
-  };
-
-//   게시글 검색 및 글쓰기 또는 수정 화면 준비
+  // 2. 검색어와 필요한 분류/상태 조건으로 목록을 좁힙니다.
   const filtered = items.filter((item) => `${item.title} ${item.author}`.toLowerCase().includes(query.toLowerCase()));
   
   const openForm = (item) => {
@@ -53,6 +22,7 @@ function FreeBoardPage() {
     setMessage("");
   };
 
+  // 3. 폼 내용을 검사하고, 신규 글은 추가하고 기존 글은 갱신합니다.
   const save = (event) => {
     event.preventDefault();
 
@@ -86,14 +56,17 @@ function FreeBoardPage() {
     setMessage("글이 등록되었습니다.");
   };
 
-  const remove = () => {
-    if (!window.confirm("이 글을 삭제할까요?")) {
+  // 목록에서 부르면 전달된 글을, 상세 화면에서 부르면 기본값인 selected 글을 삭제합니다.
+  const remove = (itemToRemove = selected) => {
+    if (!itemToRemove || !window.confirm("이 글을 삭제할까요?")) {
       return;
     }
 
-    removeItem(selected.id);
-    setSelected(null);
-    setView("list");
+    removeItem(itemToRemove.id);
+    if (selected && selected.id === itemToRemove.id) {
+      setSelected(null);
+      setView("list");
+    }
     setMessage("글이 삭제되었습니다.");
   };
 
@@ -114,7 +87,7 @@ function FreeBoardPage() {
     // 기존 게시글에 댓글 추가
     const savedItem = {
       ...selected,
-      comments: [...selected.comments, newComment],
+      comments: [...(selected.comments || []), newComment],
       updatedAt: new Date().toISOString().slice(0, 10),
     };
 
@@ -131,7 +104,7 @@ function FreeBoardPage() {
 
     const savedItem = {
       ...selected,
-      comments: selected.comments.filter((item) => item.id !== id),
+      comments: (selected.comments || []).filter((item) => item.id !== id),
       updatedAt: new Date().toISOString().slice(0, 10),
     };
 
@@ -175,7 +148,7 @@ function FreeBoardPage() {
 
           <ul>
             {filtered.map((item) => (
-              <li>
+              <li key={item.id}>
                 <button
                   type="button"
                   onClick={() => {
@@ -188,6 +161,10 @@ function FreeBoardPage() {
                 </button>
                 <span> — {item.author} </span>
                 <small>{item.updatedAt}</small>
+              
+                {/* 목록에서도 바로 수정할 수 있고, 삭제 버튼은 확인창을 거칩니다. */}
+                <button type="button" onClick={() => openForm(item)}>수정</button>
+                <button className="danger-button" type="button" onClick={() => remove(item)}>삭제</button>
               </li>
             ))}
           </ul>
@@ -209,17 +186,17 @@ function FreeBoardPage() {
           <section>
             <h3>댓글</h3>
             <ul>
-              {selected.comments.map((commentItem) => (
+              {(selected.comments || []).map((commentItem) => (
                 <li key={commentItem.id}>
                   {commentItem.content} — {commentItem.author} ({commentItem.createdAt})
                   <button type="button" onClick={() => removeComment(commentItem.id)}>
                     삭제
                   </button>
-                </li>
+              </li>
               ))}
             </ul>
 
-            {selected.comments.length === 0 ? <p>댓글이 없습니다.</p> : null}
+            {(selected.comments || []).length === 0 ? <p>댓글이 없습니다.</p> : null}
 
             <input
               value={comment}
@@ -267,10 +244,7 @@ function FreeBoardPage() {
           <button type="button" onClick={() => setView(selected ? "detail" : "list")}>취소</button>
         </form>
       ) : null}
-
-        <DataDistributor data = {data}/>
-
-    </main>
+</main>
   );
 }
 
