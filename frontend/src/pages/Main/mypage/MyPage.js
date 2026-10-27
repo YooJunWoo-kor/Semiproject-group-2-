@@ -17,6 +17,8 @@ const tasks = [
     { id: 3, title: '부서 주간회의 자료 작성', module: '일정관리', dueDate: '2026-10-30', status: '완료' },
 ];
 
+
+
 function MyPage() {
     const [employee, setEmployee] = useState(initialEmployee);
     const [form, setForm] = useState({
@@ -25,6 +27,9 @@ function MyPage() {
     });
     const [isEditing, setIsEditing] = useState(false);
     const [message, setMessage] = useState('');
+    const [profileImage, setProfileImage] = useState(null);
+
+
 
     function handleChange(event) {
         const { name, value } = event.target;
@@ -33,11 +38,26 @@ function MyPage() {
 
     function handleSave(event) {
         event.preventDefault();
-        setEmployee((currentEmployee) => ({
-            ...currentEmployee,
-            email: form.email.trim(),
-            phone: form.phone.trim(),
-        }));
+
+        const email = form.email.trim();
+        const phone = form.phone.trim();
+
+        if (email === '' || phone === '') {
+            setMessage('이메일과 전화번호를 입력해주세요.');
+            return;
+        }
+
+        setEmployee({
+            ...employee,
+            email: email,
+            phone: phone,
+        });
+
+        setForm({
+            email: email,
+            phone: phone,
+        });
+
         setIsEditing(false);
         setMessage('개인정보가 화면에 반영되었습니다.');
     }
@@ -47,6 +67,37 @@ function MyPage() {
         setIsEditing(false);
         setMessage('');
     }
+
+
+    function handleImageChange(event) {
+        const file = event.target.files[0];
+
+        if (!file) {
+            return;
+        }
+
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+            setMessage('JPG, PNG, WEBP 사진만 등록할 수 있습니다.');
+            return;
+        }
+
+        if (file.size > 2 * 1024 * 1024) {
+            setMessage('2MB 이하의 사진을 등록해주세요.');
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function () {
+            setProfileImage(reader.result);
+            setMessage('프로필 사진이 등록되었습니다.');
+        };
+
+        reader.readAsDataURL(file);
+        event.target.value = '';
+    }
+
+
 
 
 
@@ -61,7 +112,40 @@ function MyPage() {
             <section className="mypage-card">
                 <h2>기본 인사정보</h2>
                 <div className="mypage-profile">
-                    <div className="mypage-avatar" aria-hidden="true">👤</div>
+
+                    <div className="mypage-photo-area">
+                        <div className="mypage-avatar">
+                            {profileImage ? (
+                                <img src={profileImage} alt="프로필 사진" />
+                            ) : (
+                                <span aria-hidden="true">👤</span>
+                            )}
+                        </div>
+
+                        <label htmlFor="profile-upload">
+                            프로필 사진 등록
+                        </label>
+
+                        <input
+                            id="profile-upload"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={handleImageChange}
+                        />
+
+                        {profileImage && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setProfileImage(null);
+                                    setMessage('기본 프로필 이미지로 변경되었습니다.');
+                                }}
+                            >
+                                사진 삭제
+                            </button>
+                        )}
+                    </div>
+
                     <div>
                         <h3>{employee.name}</h3>
                         <p>{employee.department} / {employee.position}</p>
@@ -90,11 +174,11 @@ function MyPage() {
                 {isEditing ? (
                     <form onSubmit={handleSave} className="mypage-form">
                         <label>
-                            이메일 
+                            이메일
                             <input type="email" name="email" value={form.email} onChange={handleChange} required />
                         </label>
                         <label>
-                            전화번호 
+                            전화번호
                             <input type="tel" name="phone" value={form.phone} onChange={handleChange} required />
                         </label>
                         <div className="mypage-actions">
