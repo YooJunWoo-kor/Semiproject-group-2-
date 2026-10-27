@@ -16,23 +16,25 @@ import HeaderNav from '../../components/HeaderNav';
 function MainApp() {
     
     return (
-        <div className="erp-shell">
+        <div className="main-sell">
             <HeaderNav />
             {/* 실제 화면 라우팅 연결 영역 */}
-            <div className="main-content">
-                <Routes>
-                    <Route path="/" element={<MainModule />} />
-                    <Route path="/finance/*" element={<FinanceHome />} />
-                    <Route path="/hr/*" element={<HrRoutes />} />
-                    <Route path="/qa/*" element={<QaRouter />} />
-                    <Route path="/schedule/*" element={<ScheduleHome />} />
-                    <Route path="/community/*" element={<CommunityHome />} />
-                    <Route path="/crm/*" element={<CrmRoutes />} />
-                    <Route path="/project/*" element={<ProjectHome />} />
-                    <Route path="/profile" element={<MyPage />} />
-                    <Route path="*" element={<Navigate to="/main" replace />} />
-                </Routes>
-            </div>
+            <Routes>
+                <Route path="/" element={<MainModule />} />
+                <Route path="/finance/*" element={<FinanceHome />} />
+                <Route path="/hr/*" element={<HrRoutes />} />
+                <Route path="/qa/*" element={<QaRouter />} />
+                <Route path="/schedule/*" element={<ScheduleHome />} />
+                <Route path="/community/*" element={<CommunityHome />} />
+                <Route path="/crm/*" element={<CrmRoutes />} />
+                <Route path="/project/*" element={<ProjectHome />} />
+                <Route path="/profile" element={<MyPage />} />
+                <Route path="*" element={<Navigate to="/main" replace />} />
+            </Routes>
+            <footer>
+                <hr />
+                <p> ERP 시스템 버전: v1.0.0 | 문의: 시스템운영팀 (내선 1004) </p>
+            </footer>
         </div>
     );
 }
