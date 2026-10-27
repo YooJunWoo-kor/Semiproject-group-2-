@@ -14,29 +14,31 @@ export default function Attendance() {
   return (
     <div className="sub-container">
       <span className='subtitle'>근태관리</span>
-      <table>
-        <thead>
-          <tr>
-            {list.map(
-              (item)=>(
-                <td>{item}</td>
-              )
-            )}
-          </tr>
-        </thead>
-
-        <tbody>
-          {rows.map((row) => ( //map방식으로 편하게 관리함
-            <tr key={row[0]}>
-              <td>{row[0]}</td>
-              <td>{row[1]}</td>
-              <td>{row[2]}</td>
-              <td>{row[3]}</td>
-              <td>{row[4]}</td>
+      <div className="table-shell">
+        <table>
+          <thead>
+            <tr>
+              {list.map(
+                (item)=>(
+                  <th>{item}</th>
+                )
+              )}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+
+          <tbody>
+            {rows.map((row) => ( //map방식으로 편하게 관리함
+              <tr key={row[0]}>
+                <td>{row[0]}</td>
+                <td>{row[1]}</td>
+                <td>{row[2]}</td>
+                <td>{row[3]}</td>
+                <td>{row[4]}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

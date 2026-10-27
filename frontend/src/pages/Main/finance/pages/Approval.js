@@ -66,7 +66,7 @@ function Approval() {
     };
 
     return (
-        <div className="finance-page">
+        <div>
             {/* 1. 상단 타이틀 및 집계 요약 */}
             <header>
                 <h2>결제(지출) 승인 관리</h2>
@@ -106,7 +106,7 @@ function Approval() {
             <br />
 
             {/* 3. 결제 지출 승인 목록 테이블 */}
-            <main>
+            <div className='table-shell'>
                 <table >
                     <thead>
                         <tr >
@@ -177,7 +177,7 @@ function Approval() {
                         ))}
                     </tbody>
                 </table>
-            </main>
+            </div>
         </div>
     );
 }

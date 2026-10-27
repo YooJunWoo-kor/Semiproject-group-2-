@@ -1,0 +1,17 @@
+/* 공통 데이터 표 */
+table { width: 100%; border-collapse: separate; border-spacing: 0; color: #344054; background: #fff; font-size: .92rem; }
+th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #edf0f5; }
+th { color: #657086; background: #f7f8fb; font-size: .82rem; font-weight: 700; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+tbody tr:hover { background: #fafbfe; }
+table button { min-height: 32px; padding: 6px 10px; font-size: .82rem; }
+
+.table-shell { overflow-x: auto; border: 1px solid var(--color-line); border-radius: 12px; }
+.table-shell tbody tr { cursor: pointer; }
+
+/* 상태표시관련 */
+.status-badge.status-danger { color: var(--color-danger); background: #fff0f1; }
+.status-badge.status-pending { color: var(--color-warning); background: #fff6e8; }
+
+/* 데이터가 없을 시 */
+.no-data { padding: 42px 20px; color: var(--color-muted); text-align: center; }
