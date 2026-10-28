@@ -1,5 +1,5 @@
 import React from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 
 function HeaderNav(){
     //  페이지 이동 기능 사용
@@ -48,17 +48,18 @@ function HeaderNav(){
                 <NavLink to="/main/project">프로젝트</NavLink>
                 <NavLink to="/main/crm">고객관리</NavLink>
                 <NavLink to="/main/community">커뮤니티</NavLink>
-
+                
+                <NavLink to="/main/mytesk" className='mypage-link'>내업무 관리</NavLink>
                 <div className="erp-header-user">
                     {/* 접속자 클릭 시 마이페이지 이동 */}
-                    <NavLink to="/main/profile">
+                    <NavLink to="/main/profile" className="profil-icon">
                         {userFName}
                     </NavLink>
 
                     <div className="hoverList">
                         <ul>
-                            <li>1</li>
-                            <li>2</li>
+                            <li><Link to="/main/profile">마이페이지</Link></li>
+                            <li><Link to="/main/mytesk">내업무 관리</Link></li>
                             <li>
                                 <button type="button" onClick={handleLogout}>
                                     로그아웃

@@ -1,3 +1,5 @@
+import ADComp from "../../../../components/ADComp";
+
 //근태관리 배열구조로 만들었음
 const rows = [
   ['김민준', '개발팀', '08:48', '-', '정상'],
@@ -14,6 +16,14 @@ export default function Attendance() {
   return (
     <div className="sub-container">
       <span className='subtitle'>근태관리</span>
+
+      <hr/>
+        근태관리 수정기능 추가
+      <hr/>
+      <hr/>
+        근태관리 수정요청
+      <hr/>
+
       <div className="table-shell">
         <table>
           <thead>

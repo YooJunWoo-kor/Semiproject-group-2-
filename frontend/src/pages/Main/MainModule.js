@@ -10,23 +10,8 @@ function MainModule() {
     const modules = [
         {
             id: 'hr',
-            title: '인적관리',
+            title: '인사',
             path: url + '/hr'
-        },
-        {
-            id: 'project',
-            title: '프로젝트관리',
-            path: url + '/project'
-        },
-        {
-            id: 'schedule',
-            title: '일정관리',
-            path: url + '/schedule'
-        },
-        {
-            id: 'crm',
-            title: '고객관계관리',
-            path: url + '/crm'
         },
         {
             id: 'finance',
@@ -35,13 +20,33 @@ function MainModule() {
         },
         {
             id: 'qa',
-            title: '품질보증관리',
+            title: '품질보증',
             path: url + '/qa'
+        },
+        {
+            id: 'schedule',
+            title: '일정',
+            path: url + '/schedule'
+        },
+        {
+            id: 'project',
+            title: '프로젝트',
+            path: url + '/project'
+        },
+        {
+            id: 'crm',
+            title: '고객관계',
+            path: url + '/crm'
         },
         {
             id: 'community',
             title: '커뮤니티',
             path: url + '/community'
+        },
+        {
+            id: 'mytesk',
+            title: '내업무',
+            path: url + '/mytesk'
         }
     ];
 

@@ -51,6 +51,7 @@ export default function Payroll() {
       <div className="payroll-notice-card">
         <h2>급여 지급 일정</h2>
         <p>10월 급여는 2026년 10월 25일 지급 예정으로 설정되어 있습니다.</p>
+        <p>급여지금 날짜 수정기능 추가</p>
         <small>
           이 화면의 금액과 일정은 디자인 확인용 예시이며 실제 급여 데이터가 아닙니다.
         </small>

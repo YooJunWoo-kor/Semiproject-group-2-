@@ -1,0 +1,15 @@
+.grouborad{
+    display: flex;
+}
+
+.grouplist{
+    width: min(100px);
+    margin-right: 30px;
+}
+
+.grouplist button{
+    width: 100%;
+    background-color: aqua;
+    border-radius: 0;
+    border: 0;
+}

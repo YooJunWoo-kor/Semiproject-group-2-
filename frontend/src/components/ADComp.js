@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { getLoginUser } from "../utils/authStorage";
 
-function ADComp(){
+function ADComp({style}){
     const user = getLoginUser();
     const userName = user?.name;
     
@@ -14,10 +14,15 @@ function ADComp(){
     useEffect(()=>{
         const timer = setInterval(() => {
             setTime(new Date());
-          }, 1000)});
+          }, 1000);
+
+          return ()=>{
+            clearInterval(timer);
+          };
+        }, []);
 
     return(
-        <div>
+        <div style={style}>
             출결현황 달력 : 주, 달<br/>
             출결관리
             {userName}님

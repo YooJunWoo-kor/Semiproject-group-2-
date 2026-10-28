@@ -12,6 +12,7 @@ import MyPage from './mypage/MyPage';
 // 파일 상단 import 목록에 추가
 import ProjectHome from './project/ProjectHome';
 import HeaderNav from '../../components/HeaderNav';
+import MyTeskList from './mytesk/MyTeskList';
 
 function MainApp() {
     
@@ -29,6 +30,7 @@ function MainApp() {
                 <Route path="/crm/*" element={<CrmRoutes />} />
                 <Route path="/project/*" element={<ProjectHome />} />
                 <Route path="/profile" element={<MyPage />} />
+                <Route path="/mytesk" element={<MyTeskList />} />
                 <Route path="*" element={<Navigate to="/main" replace />} />
             </Routes>
             <footer>

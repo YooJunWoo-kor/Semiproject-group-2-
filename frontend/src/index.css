@@ -4,6 +4,7 @@
 @import './css/Header.css';
 @import './css/global.css';
 @import './css/MainApp.css';
+@import './css/GroupBord.css';
 
 :root {
   font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
@@ -152,7 +153,7 @@ hr { border: 0; border-top: 1px solid var(--color-line); }
 .page-top-header, .dashboard-top { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 .sub-title, .date-badge { color: var(--color-brand); font-size: .73rem; font-weight: 700; letter-spacing: .12em; }
 .stats-section, .attendance-stats, .payroll-stats, .dept-summary-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-.stat-box, .summary-card, .recent-activity-wrapper, .dept-card, .payroll-notice-card, .setting-item-btn {
+.stat-box, .summary-card, .dept-card, .payroll-notice-card, .setting-item-btn {
   padding: 20px; background: white; border: 1px solid var(--color-line); border-radius: 14px; box-shadow: var(--shadow-card);
 }
 .stat-value, .stat-num { margin: 14px 0 8px; color: var(--color-ink); font-size: 1.8rem; font-weight: 700; }

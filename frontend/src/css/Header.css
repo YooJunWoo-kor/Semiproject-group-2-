@@ -37,13 +37,13 @@
 .erp-header-user {
   display: flex;
   align-items: center;
-  margin-left: auto; /* 오른쪽 끝으로 이동 */
+  /* margin-left: auto; 오른쪽 끝으로 이동 */
 
   position: relative;
   display: inline;
 }
 
-.erp-header-user a{
+.erp-header-user .profil-icon{
   display: flex;
   justify-content: center; /* 가로 중앙 */
   align-items: center;     /* 세로 중앙 */
@@ -55,10 +55,9 @@
   text-align: center;
 }
 
-.erp-header-user a:hover{
+.erp-header-user .profil-icon:hover{
   background-color: var(--color-brand-dark);
   color: white;
-  border-radius: 50%;
 }
 
 /* 상단 내 이름에 마우스 올렸을 때 */
@@ -76,6 +75,15 @@
   z-index: 1000;             /* 다른 레이아웃 위에 올라오도록 설정 */
 }
 
+.hoverList a{
+  text-align: center;
+}
+
+.hoverList a:hover{
+  background-color: var(--color-brand-soft);
+  color:var(--color-brand) !important;
+}
+
 /* 메뉴와 a 태그 사이 빈 공간으로 마우스가 지나갈 때 꺼지지 않도록 가상 투명 다리 생성 */
 .hoverList::before {
   content: '';
@@ -86,6 +94,35 @@
   height: 8px;
 }
 
+.hoverList li{
+  display: flex;
+  justify-content: center; /* 가로 가운데 정렬 */
+  align-items: center;     /* 세로 가운데 정렬 */
+  width: 100%
+}
+
+.hoverList li button{
+  width: 80%;
+}
+
 .erp-header-user:hover .hoverList {
   display: block;
+}
+
+
+
+.mypage-link{
+  margin-left: auto !important;
+}
+
+.mypage-link:hover{
+  background-color:var(--color-brand-soft) !important;
+  color:var(--color-brand) !important;
+  margin-left: auto !important;
+}
+
+.mypage-link.active{
+  background-color: var(--color-brand-soft) !important;
+  color:var(--color-brand) !important;
+  margin-left: auto !important;
 }
