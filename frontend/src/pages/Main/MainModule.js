@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getLoginUser, logoutUser } from '../../utils/authStorage';
+import ADComp from '../../components/ADComp';
+import Dashboard from './hr/pages/Dashboard';
+import ProjectModul from './project/ProjectModul';
 
 function MainModule() {
     const navigate = useNavigate();
     const url = '/main';
-    const loginUser = getLoginUser();
     const modules = [
         {
             id: 'hr',
@@ -48,11 +49,32 @@ function MainModule() {
         navigate(path);
     };
 
+    // 유저에 따라 보드에 노출 목록 관리할 예정.
+    const [index, setindex] = useState(0);
+    const boardList = [
+        <ADComp />,
+        <Dashboard />
+      ];
+
     return (
         <div className='main-content'>
+            
             <div className='main-bord'>
-                전체 데시보드
+                <div className='main-bord-content'>
+                    {boardList[index]}
+                    {/* 화살표를 누르면, 인덱스 초기화. 해당 인덱스의 boardList의 컴포넌트 출력 */}
+                    <button onClick = {()=>{
+                        let newindex = (index -1) % boardList.length;
+                        if(newindex < 0) newindex = boardList.length-1;
+                        setindex(newindex)
+                    }}>&lt;</button>
+                    <button onClick = {()=>{
+                        let newindex = (index + 1)  % boardList.length;
+                        setindex(newindex)
+                    }}>&gt;</button>
+                </div>
             </div>
+
             <main className='nav-bord'>
                 <ul className="main-grid">
                     {modules.map((item) => (
