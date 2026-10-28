@@ -5,12 +5,12 @@ import MainModule from './MainModule';
 import FinanceHome from './finance/FinanceHom';
 import HrRoutes from './hr/HrRoutes';
 import QaRouter from './qualityControl/QaRouter';
-import SchedulePage from './management/SchedulePage';
+import ScheduleHome from './management/ScheduleHome';
 import CommunityHome from './community/CommunityHome';
 import CrmRoutes from './crm/CrmRoutes';
 import MyPage from './mypage/MyPage';
 // 파일 상단 import 목록에 추가
-import ProjectManagementPage from './project/ProjectManagementPage';
+import ProjectHome from './project/ProjectHome';
 import HeaderNav from '../../components/HeaderNav';
 
 function MainApp() {
@@ -25,10 +25,10 @@ function MainApp() {
                     <Route path="/finance/*" element={<FinanceHome />} />
                     <Route path="/hr/*" element={<HrRoutes />} />
                     <Route path="/qa/*" element={<QaRouter />} />
-                    <Route path="/schedule/*" element={<SchedulePage />} />
+                    <Route path="/schedule/*" element={<ScheduleHome />} />
                     <Route path="/community/*" element={<CommunityHome />} />
                     <Route path="/crm/*" element={<CrmRoutes />} />
-                    <Route path="/project/*" element={<ProjectManagementPage />} />
+                    <Route path="/project/*" element={<ProjectHome />} />
                     <Route path="/profile" element={<MyPage />} />
                     <Route path="*" element={<Navigate to="/main" replace />} />
                 </Routes>

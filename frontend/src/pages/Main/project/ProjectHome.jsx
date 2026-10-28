@@ -1,68 +1,82 @@
+
 import React from 'react';
+import { Routes, Route, Navigate, NavLink } from 'react-router-dom';
 
-const priorityOrder = { '긴급': 0, '높음': 1, '보통': 2, '낮음': 3 };
-const dateDiff = (date) => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const due = new Date(date + 'T00:00:00');
-  return Math.round((due - today) / 86400000);
-};
+import { ProjectProvider, useProject } from './ProjectContext';
+import ProjectWorkspace from './pages/ProjectWorkspace';
+import ProjectGanttChart from './pages/ProjectGanttChart';
+import ProjectResource from './pages/ProjectResource';
+import ProjectDeliverables from './pages/ProjectDeliverables';
+import ProjectBudget from './pages/ProjectBudget';
+import ProjectRisk from './pages/ProjectRisk';
+import ProjectModul, { projectMenus } from './ProjectModul';
 
-export default function ProjectHome({ projects = [], tasks = [], onSelect }) {
-  // 완료되지 않은 프로젝트 중 마감이 임박했거나 지연된 2건
-  const activeProjects = projects.filter(p => p.status !== '완료' && p.due);
-  const upcoming = activeProjects
-    .map(p => ({ ...p, remaining: dateDiff(p.due) }))
-    .filter(p => p.remaining <= 7)
-    .sort((a, b) => a.remaining - b.remaining)
-    .slice(0, 2);
+import './ProjectManagementPage.css';
 
-  // 완료되지 않은 작업을 우선순위, 마감일 순으로 정렬하여 5건 표시
-  const important = tasks
-    .filter(t => t.status !== '완료')
-    .sort((a, b) =>
-      (priorityOrder[a.priority || '보통'] ?? 2) -
-      (priorityOrder[b.priority || '보통'] ?? 2) ||
-      (a.due || '9999').localeCompare(b.due || '9999')
-    )
-    .slice(0, 5);
+function ProjectRoutes() {
 
-  const projectName = id =>
-    projects.find(p => p.id === id)?.name || '프로젝트 없음';
+    const {
+        projects,
+        tasks,
+        setTasks,
+        resources,
+        setResources,
+        outputs,
+        setOutputs,
+        budgets,
+        setBudgets,
+        expenses,
+        setExpenses,
+        risks,
+        setRisks
+    } = useProject();
 
-  return (
-    <div className="project-home">
-      <header className="project-home-header">
-        <h2>프로젝트 홈</h2>
-        <p>마감 일정과 우선 처리 업무를 확인하세요.</p>
-      </header>
-      <section className="project-home-alert" aria-label="마감일 알림">
-        <div className="project-home-section-title">
-          <h3>🔔 마감일 알림</h3>
-          <span>{upcoming.length}건</span>
+    return (
+        <div className="project-page">
+            <div className="project-shell">
+
+                {/* 왼쪽 프로젝트 메뉴 */}
+                <aside className="project-nav">
+                    <h2>프로젝트 관리</h2>
+
+                    <NavLink end to="/main/project">
+                        프로젝트 홈
+                    </NavLink>
+
+                    {projectMenus.map(m => (
+                        <NavLink
+                            key={m.path}
+                            to={'/main/project/' + m.path}
+                        >
+                            {m.title}
+                        </NavLink>
+                    ))}
+                </aside>
+
+                {/* 오른쪽 프로젝트 화면 */}
+                <div className="project-main">
+
+                    <Routes>
+                        <Route index element={<ProjectModul />} />
+                        <Route path="manage/*" element={<ProjectWorkspace />} />
+                        <Route path="tasks/*" element={<ProjectGanttChart projects={projects} tasks={tasks} setTasks={setTasks} />} />
+                        <Route path="resources/*" element={<ProjectResource projects={projects} records={resources} setRecords={setResources} />} />
+                        <Route path="deliverables/*" element={<ProjectDeliverables projects={projects} outputs={outputs} setOutputs={setOutputs} />} />
+                        <Route path="budget/*" element={<ProjectBudget projects={projects} budgets={budgets} setBudgets={setBudgets} expenses={expenses} setExpenses={setExpenses} />} />
+                        <Route path="risk/*" element={<ProjectRisk projects={projects} risks={risks} setRisks={setRisks} />} />
+                        <Route path="*" element={<Navigate to="/main/project" replace />} />
+                    </Routes>
+
+                </div>
+            </div>
         </div>
-        {upcoming.length ? upcoming.map(p =>
-          <button key={p.id} className="project-home-alert-row" onClick={() => onSelect(p)}>
-            <span>{p.name}</span>
-            <strong>{p.remaining < 0 ? `D+${-p.remaining} 지연` : p.remaining === 0 ? 'D-Day' : `D-${p.remaining}`}</strong></button>) :
-          <p className="project-home-empty">7일 이내 마감 또는 지연된 프로젝트가 없습니다.</p>}
-      </section>
-      <section className="project-home-tasks" aria-label="중요 업무">
-        <div className="project-home-section-title">
-          <h3>중요 업무 TOP 5</h3>
-          <span>중요도 · 마감일순</span>
-        </div>
-        {important.length ? important.map(t =>
-          <button key={t.id} className="project-home-task-row"
-            onClick={() => { const p = projects.find(p => p.id === t.projectId); if (p) onSelect(p); }}>
-            <span className={'project-home-priority priority-' + (t.priority || '보통')}>{t.priority || '보통'}</span>
-            <span className="project-home-task-name">
-              <strong>{t.name}</strong>
-              <small>{projectName(t.projectId)}</small>
-            </span>
-            <span className="project-home-due">{t.due || '미정'}</span>
-          </button>) : <p className="project-home-empty">진행할 업무가 없습니다.</p>}
-      </section>
-    </div>
-  );
+    );
+}
+
+export default function ProjectHome() {
+    return (
+        <ProjectProvider>
+            <ProjectRoutes />
+        </ProjectProvider>
+    );
 }
