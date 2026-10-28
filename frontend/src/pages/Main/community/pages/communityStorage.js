@@ -6,28 +6,36 @@ const FILE_STORE = "attachments";
 export function loadItems(name) {
   const savedItems = localStorage.getItem(STORAGE_NAME + name);
 
-  if (savedItems) {
-    const items = JSON.parse(savedItems);
+  if (savedItems !== null) {
+    try {
+      const items = JSON.parse(savedItems);
 
-    // 이전 버전에서 저장된 Q&A 예시만 삭제합니다.
-    if (name === "questions") {
-      const exampleTitles = [
-        "비타민 C 원료 보관 조건이 궁금합니다",
-        "완제품 미생물 검사 주기를 확인해 주세요",
-      ];
+      if (!Array.isArray(items)) {
+        return null;
+      }
 
-      const nextItems = items.filter((item) => {
-        return !exampleTitles.includes(item.title);
-      });
+      // 이전 버전에서 저장된 Q&A 예시만 삭제합니다.
+      if (name === "questions") {
+        const exampleTitles = [
+          "비타민 C 원료 보관 조건이 궁금합니다",
+          "완제품 미생물 검사 주기를 확인해 주세요",
+        ];
 
-      localStorage.setItem(STORAGE_NAME + name, JSON.stringify(nextItems));
-      return nextItems;
+        const nextItems = items.filter((item) => {
+          return !exampleTitles.includes(item.title);
+        });
+
+        localStorage.setItem(STORAGE_NAME + name, JSON.stringify(nextItems));
+        return nextItems;
+      }
+
+      return items;
+    } catch (error) {
+      return null;
     }
-
-    return items;
   }
 
-  return [];
+  return null;
 }
 
 // 게시판 데이터를 localStorage에 저장합니다.

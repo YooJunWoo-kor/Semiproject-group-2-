@@ -1,20 +1,21 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { resourceCategories } from "./communityConfig";
-import useCommunityItems from "./useCommunityItems";
 import { deleteFile, downloadFile, saveFile } from "./communityStorage";
 
 const emptyForm = { title: "", category: resourceCategories[0], content: "", author: "임시 사용자", attachment: null };
 
 
 
-function TechLibraryPage() {
+function TechLibraryPage({ communityItems }) {
   // 1. 게시판별 글 목록과 공통 추가/수정/삭제 기능을 준비합니다.
-  const { items, addItem, updateItem, removeItem } = useCommunityItems("resources");
+  const { items, addItem, updateItem, removeItem } = communityItems;
+  const location = useLocation();
+  const initialSelected = items.find((item) => item.id === location.state?.selectedItemId) || null;
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("전체");
-  const [view, setView] = useState("list");
-  const [selected, setSelected] = useState(null);
+  const [view, setView] = useState(initialSelected ? "detail" : "list");
+  const [selected, setSelected] = useState(initialSelected);
   const [form, setForm] = useState(emptyForm);
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState("");
@@ -56,12 +57,7 @@ function TechLibraryPage() {
       const date = new Date().toISOString().slice(0, 10);
 
       if (view === "edit") {
-        const savedItem = {
-          ...form,
-          attachment,
-          updatedAt: date,
-        };
-
+        const savedItem = { ...form, attachment, updatedAt: date };
         updateItem(savedItem);
         setSelected(savedItem);
         setView("detail");
@@ -69,15 +65,7 @@ function TechLibraryPage() {
         return;
       }
 
-      const newItem = {
-        ...form,
-        attachment,
-        id: Date.now(),
-        createdAt: date,
-        updatedAt: date,
-      };
-
-      addItem(newItem);
+      addItem({ ...form, attachment, id: Date.now(), createdAt: date, updatedAt: date });
       setView("list");
       setMessage("자료가 등록되었습니다.");
     } catch (error) {
@@ -85,7 +73,7 @@ function TechLibraryPage() {
     }
   };
 
-  // 목록 또는 상세에서 자료를 삭제합니다. 첨부파일이 있으면 저장소에서도 함께 지웁니다.
+  // 목록 또는 상세에서 자료와 첨부파일을 함께 삭제합니다.
   const remove = async (itemToRemove = selected) => {
     if (!itemToRemove || !window.confirm("이 자료와 첨부파일을 삭제할까요?")) {
       return;
@@ -124,7 +112,7 @@ function TechLibraryPage() {
       <h1>업무 자료실</h1>
       <nav><Link to="/main/community">커뮤니티 메인</Link></nav>
 
-      <p><small>작성한 자료는 브라우저 저장소에 임시 저장됩니다.</small></p>
+      <p><small>자료 정보는 현재 화면 상태에, 첨부파일은 브라우저 파일 저장소에 임시 보관됩니다.</small></p>
 
       {message ? <p role="status">{message}</p> : null}
 

@@ -1,0 +1,96 @@
+
+/* 달력 전체 */
+.basic-calendar {
+    width: 100%;
+    padding: 20px;
+    background-color: white;
+    box-sizing: border-box;
+  }
+  
+  /* 상단 */
+  .basic-calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  /* 월 이동 */
+  .basic-calendar-navigation {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .arrowButton{
+    font-size: 10px;
+  }
+
+  .curront-button{
+    font-size: 13px;
+  }
+  
+  .basic-calendar-navigation h2 {
+    margin: 0;
+    font-size: 18px;
+  }
+  
+  .basic-calendar-header-space {
+    width: 50px;
+  }
+  
+  /* 버튼 */
+  .basic-calendar button {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: white;
+    cursor: pointer;
+  }
+  
+  .basic-calendar button:hover {
+    background-color: #f1f5f9;
+  }
+  
+  /* 달력 테이블 */
+  .basic-calendar-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+  }
+  
+  /* 요일 */
+  .basic-calendar-table th {
+    padding: 12px;
+    border: 1px solid #ddd;
+    background-color: #f8fafc;
+    text-align: center;
+  }
+  
+  /* 날짜 칸 */
+  .basic-calendar-table td {
+    height: max(80px, calc(100%));
+    padding: 8px;
+    font-size: 10px;
+    color: #ddd;
+    border: 1px solid #ddd;
+    vertical-align: top;
+  }
+  
+  /* 일요일 */
+  .basic-calendar-table th:first-child,
+  .basic-calendar-table td:first-child .basic-calendar-date {
+    color: #dc2626;
+  }
+  
+  /* 토요일 */
+  .basic-calendar-table th:last-child,
+  .basic-calendar-table td:last-child .basic-calendar-date {
+    color: #2563eb;
+  }
+  
+  /* 날짜 숫자 */
+  .basic-calendar-date {
+    font-weight: bold;
+  }
+  

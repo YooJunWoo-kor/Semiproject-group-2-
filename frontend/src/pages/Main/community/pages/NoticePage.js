@@ -1,13 +1,12 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { noticeCategories } from "./communityConfig";
-import useCommunityItems from "./useCommunityItems";
 
 const emptyForm = { title: "", category: noticeCategories[0], content: "", author: "임시 관리자", important: false };
 
-function NoticePage() {
+function NoticePage({ communityItems }) {
   // 1. 게시판별 글 목록과 공통 추가/수정/삭제 기능을 준비합니다.
-  const { items, addItem, updateItem, removeItem } = useCommunityItems("notices");
+  const { items, addItem, updateItem, removeItem } = communityItems;
   const [query, setQuery] = useState(""); //검색창에 입력한 검색어
   const [view, setView] = useState("list"); //현재 표시할 화면
   const [selected, setSelected] = useState(null); //사용자가 선택한 게시글

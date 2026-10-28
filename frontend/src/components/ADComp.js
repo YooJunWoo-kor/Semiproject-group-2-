@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { getLoginUser } from "../utils/authStorage";
+import BasicCalendar from "../components/calendar/BasicCalendar.js";
 
 function ADComp({style}){
     const user = getLoginUser();
@@ -24,6 +25,7 @@ function ADComp({style}){
     return(
         <div style={style}>
             출결현황 달력 : 주, 달<br/>
+            <BasicCalendar />
             출결관리
             {userName}님
             {timeString}

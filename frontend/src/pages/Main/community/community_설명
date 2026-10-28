@@ -22,7 +22,7 @@ communityDummy.json            더미데이터             게시판별 초기 �
 
 communityConfig.js             게시판 설정            공지사항·업무자료실 카테고리 관리
 
-CommunityHome.css              커뮤니티 디자인       메뉴·카드·버튼·화면 배치 스타일 관리
+Community.css              커뮤니티 디자인       메뉴·카드·버튼·화면 배치 스타일 관리
 
 
 

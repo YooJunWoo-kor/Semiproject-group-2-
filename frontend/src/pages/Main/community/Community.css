@@ -1,0 +1,359 @@
+/* 커뮤니티 전체 배치 */
+.community-layout {
+    align-items: stretch;
+    gap: 20px;
+    width: 100%;
+    min-width: 0;
+  }
+  
+  .community-layout .community-content {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  
+  /* 공통 메뉴의 최소 높이 800px이 커뮤니티 화면에 적용되지 않도록 조정 */
+  .community-layout .sub-main-nav {
+    min-height: 0;
+    height: auto;
+    align-self: stretch;
+  }
+  
+  /* 게시판 페이지와 통합게시판이 함께 사용하는 기본 영역 */
+  .community-page {
+    width: 100%;
+    max-width: none;
+    padding: 18px 20px;
+    border: 1px solid #e1e8ef;
+    border-radius: 12px;
+    background: #f7f9fb;
+    box-sizing: border-box;
+  }
+  
+  /* 통합게시판 제목 */
+  .community-page .community-header {
+    margin-bottom: 14px;
+  }
+  
+  .community-page .community-header h1 {
+    margin: 0 0 5px;
+    color: #183b56;
+    font-size: 24px;
+  }
+  
+  .community-page .community-header p {
+    margin: 0;
+    color: #6b7c8d;
+    font-size: 14px;
+  }
+  
+  /* 상단: 게시판 현황과 중요 공지를 전체 폭으로 쌓아 배치 */
+  .community-page .community-summary-stack {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  
+  /* 하단: 게시판 네 개를 2×2로 배치 */
+  .community-page .community-board-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  
+  /* 통합게시판의 각 영역 */
+  .community-page .board-status-section,
+  .community-page .important-notice-section,
+  .community-page .community-preview-card {
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 15px 16px;
+    border: 1px solid #dfe7ee;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 3px 10px rgba(42, 65, 88, 0.05);
+    box-sizing: border-box;
+  }
+
+  .community-page .community-preview-card {
+    height: 100%;
+  }
+  
+  .community-page .board-status-section h2,
+  .community-page .important-notice-section h2,
+  .community-page .community-preview-card h2 {
+    margin: 0 0 11px;
+    color: #23445e;
+    font-size: 17px;
+  }
+  
+  /* 제목은 왼쪽, 전체 보기 버튼은 오른쪽 */
+  .community-page .community-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 30px;
+    margin-bottom: 6px;
+  }
+  
+  .community-page .community-section-heading h2 {
+    margin-bottom: 0;
+  }
+  
+  .community-page .community-view-all {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-width: 68px;
+    min-height: 28px;
+    padding: 4px 9px;
+    border: 1px solid #d8e8f3;
+    border-radius: 6px;
+    background: #eef5fa;
+    color: #246b98;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  }
+  
+  .community-page .community-view-all:hover {
+    border-color: #a9cde3;
+    background: #e0eff8;
+  }
+  
+  .community-page .community-view-all:focus-visible,
+  .community-page .board-status-card:focus-visible,
+  .community-page .community-post-link:focus-visible,
+  .community-page .important-notice-title:focus-visible {
+    outline: 2px solid #2478aa;
+    outline-offset: 2px;
+  }
+  
+  /* 게시판 현황 카드 5개 */
+  .community-page .board-status-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  
+  .community-page .board-status-card {
+    display: block;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+  }
+  
+  .community-page .board-status-card .content-card {
+    width: 100%;
+    min-width: 0;
+    min-height: 92px;
+    height: 100%;
+    margin: 0;
+    padding: 13px 14px;
+    border: 1px solid #d9e5ee;
+    border-radius: 7px;
+    background: #f0f6fa;
+    box-shadow: none;
+    box-sizing: border-box;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  
+  .community-page .board-status-card:hover .content-card {
+    border-color: #8cb9d5;
+    background: #e5f1f8;
+  }
+  
+  .community-page .board-status-card .content-card p {
+    min-height: 2.3em;
+    color: #40566b;
+    font-size: 12px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+  
+  .community-page .board-status-card .content-card span {
+    color: #183b56;
+    font-size: 26px !important;
+  }
+  
+  /* 중요 공지 및 게시판 미리보기 목록 */
+  .community-page .important-notice-section ul,
+  .community-page .community-preview-card ul {
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  
+  .community-page .important-notice-section li,
+  .community-page .community-preview-card li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-height: 28px;
+    padding: 5px 0;
+    border-bottom: 1px solid #edf1f5;
+  }
+  
+  .community-page .important-notice-section li:last-child,
+  .community-page .community-preview-card li:last-child {
+    border-bottom: 0;
+  }
+  
+  .community-page .important-notice-title,
+  .community-page .community-post-link {
+    min-width: 0;
+    color: #246b98;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  
+  .community-page .important-notice-title {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  
+  .community-page .community-post-link {
+    text-decoration: none;
+  }
+  
+  .community-page .important-notice-title:hover,
+  .community-page .community-post-link:hover {
+    color: #0b4b74;
+    text-decoration: underline;
+  }
+  
+  .community-page .important-notice-section small,
+  .community-page .community-preview-card small {
+    color: #738596;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .community-page .important-notice-section ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .community-page .important-notice-section li,
+  .community-page .important-notice-section li:last-child {
+    min-height: 42px;
+    padding: 9px 11px;
+    border: 1px solid #e1e9ef;
+    border-radius: 7px;
+    background: #f8fbfd;
+    box-sizing: border-box;
+  }
+  
+  .community-page .community-empty-message {
+    margin: 14px 0 4px;
+    color: #7a8997;
+    font-size: 14px;
+  }
+  
+  /* 중요 공지를 눌렀을 때 열리는 상세 내용 */
+  .community-page .important-notice-detail {
+    max-height: 170px;
+    margin-top: 10px;
+    padding: 12px 14px;
+    overflow-y: auto;
+    border-left: 4px solid #2478aa;
+    border-radius: 6px;
+    background: #eef6fb;
+  }
+  
+  .community-page .important-notice-detail h3 {
+    margin: 0 0 9px;
+    color: #183b56;
+    font-size: 16px;
+  }
+  
+  .community-page .important-notice-detail p {
+    margin: 6px 0;
+    color: #42586b;
+    line-height: 1.5;
+  }
+  
+  .community-page .notice-close-button {
+    display: block;
+    min-height: 34px;
+    margin: 10px 0 0 auto;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 6px;
+    background: #2478aa;
+    color: #ffffff;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  
+  .community-page .notice-close-button:hover {
+    background: #175f8c;
+  }
+  
+  .community-page .notice-close-button:focus-visible {
+    outline: 2px solid #175f8c;
+    outline-offset: 2px;
+  }
+  
+  /* 화면이 좁아지면 세로 배치 */
+  @media (max-width: 900px) {
+    .community-layout {
+      flex-direction: column;
+    }
+  
+    .community-layout .sub-main-nav {
+      width: 100%;
+      min-width: 0;
+      margin-right: 0;
+      align-self: flex-start;
+      box-sizing: border-box;
+    }
+  
+    .community-layout .community-content {
+      width: 100%;
+    }
+  
+    .community-page .community-board-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .community-page .community-board-grid {
+      grid-auto-rows: auto;
+    }
+  }
+  
+  @media (max-width: 620px) {
+    .community-page {
+      padding: 16px;
+    }
+  
+    .community-page .board-status-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  
+    .community-page .important-notice-section li,
+    .community-page .community-preview-card li {
+      grid-template-columns: 1fr;
+      gap: 3px;
+    }
+
+    .community-page .important-notice-section ul {
+      grid-template-columns: 1fr;
+    }
+  }

@@ -1,15 +1,16 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import useCommunityItems from "./useCommunityItems";
+import { Link, useLocation } from "react-router-dom";
 
 const emptyForm = { title: "", author: "임시 사용자", content: "" };
 
-function FreeBoardPage() {
+function FreeBoardPage({ communityItems }) {
   // 1. 게시판별 글 목록과 공통 추가/수정/삭제 기능을 준비합니다.
-  const { items, addItem, updateItem, removeItem } = useCommunityItems("free-posts");
+  const { items, addItem, updateItem, removeItem } = communityItems;
+  const location = useLocation();
+  const initialSelected = items.find((item) => item.id === location.state?.selectedItemId) || null;
   const [query, setQuery] = useState(""); //사용자가 입력한 검색어
-  const [view, setView] = useState("list"); //현재 표시할 화면
-  const [selected, setSelected] = useState(null); //사용자가 선택한 게시글
+  const [view, setView] = useState(initialSelected ? "detail" : "list"); //현재 표시할 화면
+  const [selected, setSelected] = useState(initialSelected); //사용자가 선택한 게시글
   const [form, setForm] = useState(emptyForm); //글쓰기 ,수정 입력 데이터
   const [comment, setComment] = useState(""); //현재 작성중인 댓글
   const [message, setMessage] = useState(""); //등록,수정, 삭제 안내 메세지

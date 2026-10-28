@@ -1,16 +1,17 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import useCommunityItems from "./useCommunityItems";
+import { Link, useLocation } from "react-router-dom";
 
 const emptyForm = { title: "", author: "임시 사용자", content: "", status: "답변 대기" };
 
-function QnAPage() {
+function QnAPage({ communityItems }) {
   // 1. 게시판별 글 목록과 공통 추가/수정/삭제 기능을 준비합니다.
-  const { items, addItem, updateItem, removeItem } = useCommunityItems("questions");
+  const { items, addItem, updateItem, removeItem } = communityItems;
+  const location = useLocation();
+  const initialSelected = items.find((item) => item.id === location.state?.selectedItemId) || null;
   const [query, setQuery] = useState(""); //제목,내용 등의 검색어
   const [status, setStatus] = useState("전체"); //문의 처리 상태 필터
-  const [view, setView] = useState("list"); //목록, 상세, 작성 화면 구분
-  const [selected, setSelected] = useState(null); //현재 선택한 문의 글
+  const [view, setView] = useState(initialSelected ? "detail" : "list"); //목록, 상세, 작성 화면 구분
+  const [selected, setSelected] = useState(initialSelected); //현재 선택한 문의 글
   const [form, setForm] = useState(emptyForm); // 문의글 작성, 수정 입력값
   const [answer, setAnswer] = useState(""); // 관리자 답변 입력값
   const [message, setMessage] = useState(""); //저장, 삭제 결과 안내
