@@ -64,21 +64,38 @@ function MainModule() {
     return (
         <div className='main-content'>
             
-            <div className='main-bord'>
-                <div className='main-bord-content'>
-                    {boardList[index]}
-                    {/* 화살표를 누르면, 인덱스 초기화. 해당 인덱스의 boardList의 컴포넌트 출력 */}
-                    <button onClick = {()=>{
-                        let newindex = (index -1) % boardList.length;
-                        if(newindex < 0) newindex = boardList.length-1;
-                        setindex(newindex)
-                    }}>&lt;</button>
-                    <button onClick = {()=>{
-                        let newindex = (index + 1)  % boardList.length;
-                        setindex(newindex)
-                    }}>&gt;</button>
+            <div className="main-board">
+                <div className="board-header">
+                    <span className="board-title">출결관리</span>
+
+                    <div className="board-btn-group">
+                    <button
+                        type="button"
+                        className="board-arrow-btn"
+                        onClick={() => {
+                        let newindex = (index - 1) % boardList.length;
+                        if (newindex < 0) newindex = boardList.length - 1;
+                        setindex(newindex);
+                        }}
+                    >
+                        &lt;
+                    </button>
+
+                    <button
+                        type="button"
+                        className="board-arrow-btn"
+                        onClick={() => {
+                        let newindex = (index + 1) % boardList.length;
+                        setindex(newindex);
+                        }}
+                    >
+                        &gt;
+                    </button>
+                    </div>
                 </div>
-            </div>
+
+                {boardList[index]}
+                </div>
 
             <main className='nav-bord'>
                 <ul className="main-grid">

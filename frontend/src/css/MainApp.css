@@ -7,10 +7,12 @@
     justify-content: center;
     padding: 10px 50px;
     width: calc(100%);
-    height: min(800px);
+    min-height: 80vh;
     margin: 0 auto;
-    gap:10px;
+    gap:50px;
 }
+
+.main-board{}
 
 /* 화면 너비가 500이하로 줄어들 때 */
 @media (max-width: 900px){
@@ -23,11 +25,62 @@
 .main-bord{
     padding: 30px;
     width: min(800px, calc(100% - 78px));
-    background-color: #fff;
-    box-shadow: var(--card-shadow);
+    background-color: red;
     border-radius: var(--radius-card);
-    border: 1px solid var(--color-line);
 }
+
+/* 헤더 전체: 제목(좌)과 버튼 묶음(우) 양 끝 배치 */
+.board-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 12px;
+  }
+
+  /* 제목 폰트 */
+.board-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+  }
+
+/* 우측 버튼 2개 묶음 */
+.board-btn-group {
+    display: flex;
+    align-items: center;
+    gap: 6px; /* 버튼 사이 여백 */
+  }
+
+  /* 동글동글한 화살표 버튼 */
+.board-arrow-btn {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;  
+    min-height: 26px; 
+    flex-shrink: 0;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 50%;
+    font-size: 11px;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+  }
+  
+  .board-arrow-btn:hover {
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #0f172a;
+  }
+
+  .board-arrow-btn:active {
+    transform: scale(0.95);
+  }
 
 .nav-bord{
     width: min(480px, calc(100%));
