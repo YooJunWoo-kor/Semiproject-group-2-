@@ -26,6 +26,45 @@ ChartJS.register(
 
 const ANIMATION_DURATION = 900;
 
+const barValuePlugin = {
+    id: "barValuePlugin",
+    afterDatasetsDraw(chart) {
+        const { ctx, scales } = chart;
+        const yScale = scales.y;
+        const dataset = chart.data.datasets[0];
+        const meta = chart.getDatasetMeta(0);
+
+        if (!yScale || !dataset || !meta) {
+            return;
+        }
+
+        ctx.save();
+        ctx.fillStyle = "#172033";
+        ctx.font = '700 14px "DM Sans", "Noto Sans KR", sans-serif';
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+
+        meta.data.forEach((bar, index) => {
+            const targetValue = Number(dataset.data[index]) || 0;
+            const currentValue = Math.max(
+                0,
+                Math.min(
+                    targetValue,
+                    Math.round(yScale.getValueForPixel(bar.y))
+                )
+            );
+
+            ctx.fillText(
+                String(currentValue),
+                bar.x,
+                bar.y - 8
+            );
+        });
+
+        ctx.restore();
+    }
+};
+
 function QualityTestGraph() {
     const [graphType, setGraphType] = useState("result");
     const [animationKey, setAnimationKey] = useState(0);
@@ -270,6 +309,7 @@ function QualityTestGraph() {
                                 key={`bar-${animationKey}`}
                                 data={resultData}
                                 options={barOptions}
+                                plugins={[barValuePlugin]}
                             />
                         </div>
                     </>
