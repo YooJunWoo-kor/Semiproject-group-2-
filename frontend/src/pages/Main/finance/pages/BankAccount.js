@@ -59,7 +59,7 @@ function BankAccount() {
         .reduce((sum, acc) => sum + acc.balance, 0);
 
     return (
-        <div>
+        <div className="finance-page">
             {/* 1. 상단 타이틀 및 액션 */}
             <header>
                 <h2>회사 계좌 관리</h2>
@@ -120,8 +120,8 @@ function BankAccount() {
             <br />
 
             {/* 4. 회사 계좌 목록 테이블 */}
-            <div className='table-shell'>
-                <table>
+            <main>
+                <table >
                     <thead>
                         <tr >
                             <th>계좌 ID</th>
@@ -164,7 +164,7 @@ function BankAccount() {
                         ))}
                     </tbody>
                 </table>
-            </div>
+            </main>
         </div>
     );
 }

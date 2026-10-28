@@ -33,7 +33,7 @@ function CorpCard() {
     ]);
 
     return (
-        <div>
+        <div className="finance-page">
             {/* 1. 상단 제목 및 액션 버튼 */}
             <header>
                 <h2>법인카드 관리</h2>
@@ -71,7 +71,7 @@ function CorpCard() {
             <br />
 
             {/* 3. 법인카드 리스트 테이블 */}
-            <div className='table-shell'>
+            <main>
                 <table >
                     <thead>
                         <tr >
@@ -115,7 +115,7 @@ function CorpCard() {
                         })}
                     </tbody>
                 </table>
-            </div>
+            </main>
         </div>
     );
 }
