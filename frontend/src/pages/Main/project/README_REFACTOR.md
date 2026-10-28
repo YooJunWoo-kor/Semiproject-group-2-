@@ -1,34 +1,69 @@
 # 프로젝트 관리 모듈 리팩터링
 
-기존 `project(7).zip`의 업무 화면과 CSS를 보존했습니다.
+## 현재 구조
 
-- `ProjectHome.jsx`: 기존 `/main/project/*` 하위 라우트
-- `ProjectModul.jsx`: 메뉴 및 홈
-- `ProjectContext.jsx`: 공통 상태, 변경 시 localStorage 자동 저장
-- `pages/`: 기존 업무별 화면
-- `components/ProjectDashboard.jsx`: 홈에서 사용하는 대시보드 UI
-- `services/projectService.js`: 저장/불러오기 구현 (향후 API 전환 지점)
-- `data/projectDummyData.js`: 최초 접속 시 기본 데이터
-- `utils/projectUtils.js`: 공통 날짜 계산
+프로젝트 모듈은 `ProjectProvider`가 공통 상태와 CRUD 함수를 관리하고,
+각 업무 화면은 `useProject()`를 통해 필요한 상태와 함수만 꺼내 사용합니다.
 
-기존 경로 호환을 위해 `pages/ProjectContext.jsx`, `pages/ProjectDashboard.jsx`, `projectData.js`는 재내보내기 파일로 남겼습니다.
+- `ProjectHome.jsx`: `/main/project/*` 라우팅과 Provider 경계
+- `ProjectContext.jsx`: 공통 상태 + 프로젝트/작업/인력/산출물/예산/비용/리스크 CRUD API
+- `pages/`: 화면 입력값과 화면 전용 상태만 관리
+- `components/ProjectDashboard.jsx`: 표시 중심 대시보드 컴포넌트
+- `services/projectService.js`: 저장/불러오기 구현, 향후 REST API 교체 지점
+- `data/projectDummyData.js`: 최초 접속 기본 데이터
+- `utils/projectUtils.js`: 공통 계산 유틸리티
 
-## 적용
-1. 기존 `project` 폴더를 별도 백업하고 이 폴더로 교체합니다.
-2. `MainApp.js`에서 `<Route path="/project/*" element={<ProjectHome />} />` 등록 여부를 확인합니다.
-3. 기존 CSS import는 `ProjectHome.jsx`에서 유지됩니다.
-4. `frontend`에서 `npm install`, `npm start`로 확인하세요.
+기존 경로 호환을 위해 `pages/ProjectContext.jsx`, `pages/ProjectDashboard.jsx`, `projectData.js`는 재내보내기 파일로 유지합니다.
+
+## 데이터 흐름
+
+화면(Page) -> `useProject()` -> `ProjectContext` -> `projectService` -> 현재 localStorage / 향후 REST API
+
+페이지는 더 이상 `setTasks`, `setRisks`, `setExpenses` 같은 raw setter를 props로 전달받지 않습니다. 등록/수정/삭제는 Context의 명시적인 함수로 처리합니다.
+
+예:
+- 작업 등록: `addTask`
+- 작업 수정: `updateTask`
+- 작업 삭제: `removeTask`
+- 프로젝트 저장: `saveProject`
+- 프로젝트 삭제: `removeProject`
+- 예산 저장: `saveBudget`
+- 리스크 상태 변경: `updateRisk`
+
+## 이번 리팩터링에서 해결한 문제
+
+1. Context와 props drilling을 동시에 사용하던 이중 구조 제거
+2. 각 페이지에 흩어진 상태 변경 로직을 Context CRUD 함수로 통합
+3. 숫자/문자열 ID 비교가 섞이던 부분을 문자열 비교 기준으로 안전하게 통일
+4. 프로젝트 삭제 시 연결된 작업/산출물/인력/비용/리스크/예산을 함께 정리
+5. 작업 공정률을 0~100 범위로 Context에서 보정
+6. 예산 키를 문자열 기준으로 저장해 localStorage 복원 후에도 안정적으로 조회
+7. Context 외부에서 `useProject()` 호출 시 명확한 오류 메시지 제공
 
 ## 저장 동작
-- 키: `erp.project.v1`
-- 브라우저별 localStorage 저장이며 다른 PC/브라우저와 동기화되지 않습니다.
-- 저장 데이터가 없다면 `data/projectDummyData.js`의 샘플 데이터로 시작합니다.
-- 기존 ZIP은 메모리 상태만 사용했으므로, 그 당시 새로고침으로 사라진 데이터는 복원할 수 없습니다.
-- 테스트 초기화: 브라우저 개발자도구 콘솔에서 `localStorage.removeItem('erp.project.v1')` 실행 후 새로고침.
-- 저장 용량 초과/차단 시 콘솔 경고만 출력되고 메모리 상태로 계속 동작합니다.
 
-## MySQL 연동 시
-`services/projectService.js`의 동기 localStorage 함수는 서버 API용 비동기 함수로 교체해야 합니다. 이때 `ProjectContext.jsx`도 비동기 초기 로딩, 저장 중/실패 상태, CRUD 호출 방식으로 함께 수정해야 합니다. 프런트엔드에서 MySQL에 직접 연결하지 않습니다.
+- localStorage 키: `erp.project.v1`
+- 브라우저별 저장이며 다른 PC/브라우저와 자동 동기화되지 않습니다.
+- 저장 데이터가 없으면 `data/projectDummyData.js`의 샘플 데이터로 시작합니다.
+- 테스트 초기화: `localStorage.removeItem('erp.project.v1')` 실행 후 새로고침합니다.
 
-## 범위
-원본 ZIP에는 전체 ERP 및 package.json이 없어 통합 빌드/다른 팀 모듈 충돌 검증은 수행하지 않았습니다.
+## MySQL / API 연동 시
+
+프런트엔드에서 MySQL에 직접 연결하지 않습니다.
+
+현재: `Page -> Context -> projectService -> localStorage`
+
+향후: `Page -> Context -> projectService -> REST API -> Node/Express -> MySQL`
+
+따라서 API 전환 시 화면 컴포넌트보다 `ProjectContext.jsx`와 `services/projectService.js`를 중심으로 변경하면 됩니다.
+
+## 유지보수 원칙
+
+- 화면 입력값, 모달 열림/닫힘, 편집 중 draft: Page local state
+- 프로젝트 업무 데이터: ProjectContext state
+- 업무 데이터 변경 함수: ProjectContext CRUD API
+- 브라우저 저장/API 통신: projectService
+- 순수 계산: utils
+- 표시만 하는 UI: components
+
+모듈 규모가 더 커지면 Context를 `ProjectDataContext`와 `ProjectActionsContext`로 분리하거나 `useReducer`를 도입할 수 있습니다. 현재 규모에서는 단일 Context + 명시적 CRUD API가 가장 이해하기 쉽고 유지보수하기 쉽습니다.
