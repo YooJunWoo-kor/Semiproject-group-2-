@@ -24,6 +24,7 @@
 
   .arrowButton{
     font-size: 10px;
+    border-radius: 50%;
   }
 
   .curront-button{
@@ -32,11 +33,15 @@
   
   .basic-calendar-navigation h2 {
     margin: 0;
-    font-size: 18px;
+    font-size: 15px;
   }
   
   .basic-calendar-header-space {
     width: 50px;
+  }
+
+  .basic-calendar-table th{
+    font-size: 10px;
   }
   
   /* 버튼 */
@@ -62,18 +67,16 @@
   /* 요일 */
   .basic-calendar-table th {
     padding: 12px;
-    border: 1px solid #ddd;
     background-color: #f8fafc;
     text-align: center;
   }
   
   /* 날짜 칸 */
   .basic-calendar-table td {
-    height: max(80px, calc(100%));
+    height: max(80px);
     padding: 8px;
-    font-size: 10px;
+    font-size: 13px;
     color: #ddd;
-    border: 1px solid #ddd;
     vertical-align: top;
   }
   
