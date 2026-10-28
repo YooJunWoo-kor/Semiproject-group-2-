@@ -1,92 +1,79 @@
-
 import React, { useState } from 'react';
+import { useProject } from '../ProjectContext';
 
-export default function ProjectBudget({
-  projects,
-  budgets,
-  setBudgets,
-  expenses,
-  setExpenses
-}) {
+export default function ProjectBudget() {
+  const {
+    projects,
+    budgets,
+    expenses,
+    saveBudget,
+    addExpense,
+    removeExpense
+  } = useProject();
+
   const [projectId, setProjectId] = useState('');
   const [budgetInput, setBudgetInput] = useState('');
   const [category, setCategory] = useState('패키지비');
   const [amount, setAmount] = useState('');
 
-  const id = Number(projectId);
+  const selectedProjectId = projectId ? Number(projectId) : null;
+  const budget = selectedProjectId === null
+    ? 0
+    : Number(budgets[selectedProjectId] || 0);
 
-  // 선택한 프로젝트의 예산
-  const budget = Number(budgets[id] || 0);
+  const items = selectedProjectId === null
+    ? []
+    : expenses.filter(expense =>
+        Number(expense.projectId) === Number(selectedProjectId)
+      );
 
-  // 선택한 프로젝트의 지출 내역
-  const items = expenses.filter(
-    e => String(e.projectId) === String(id)
-  );
-
-  // 총 집행 금액
   const used = items.reduce(
-    (sum, e) => sum + Number(e.amount || 0), 0
+    (sum, expense) => sum + Number(expense.amount || 0),
+    0
   );
 
-  // 잔여 예산
   const remaining = budget - used;
-
-  // 집행률
   const rate = budget > 0
-    ? Math.round(used / budget * 100)
+    ? Math.round((used / budget) * 100)
     : 0;
 
-  // 예산 초과 여부
-  const hasBudget = Object.prototype.hasOwnProperty.call(budgets, id);
+  const hasBudget = selectedProjectId !== null &&
+    Object.prototype.hasOwnProperty.call(budgets, selectedProjectId);
+
   const isOverBudget = hasBudget && used > budget;
   const hasUnbudgetedExpense = !hasBudget && used > 0;
 
-  function saveBudget(e) {
+  function handleSaveBudget(e) {
     e.preventDefault();
 
-    if (!id || budgetInput === '' || Number(budgetInput) < 0) {
+    if (selectedProjectId === null || budgetInput === '' || Number(budgetInput) < 0) {
       return;
     }
 
-    setBudgets({
-      ...budgets,
-      [id]: Number(budgetInput)
-    });
-
+    saveBudget(selectedProjectId, budgetInput);
     setBudgetInput('');
   }
 
-  function addExpense(e) {
+  function handleAddExpense(e) {
     e.preventDefault();
 
-    if (!id || !category || Number(amount) <= 0) {
+    if (selectedProjectId === null || !category || Number(amount) <= 0) {
       return;
     }
 
-    setExpenses(prev => [
-      ...prev,
-      {
-        id: Date.now(),
-        projectId: id,
-        category,
-        amount: Number(amount)
-      }
-    ]);
-    
-    setAmount('');
-  }
+    addExpense({
+      projectId: selectedProjectId,
+      category,
+      amount
+    });
 
-  function deleteExpense(expenseId) {
-    setExpenses(
-      expenses.filter(e => e.id !== expenseId)
-    );
+    setAmount('');
   }
 
   return (
     <div>
       <h2>예산 · 비용 관리</h2>
 
-      {/* 프로젝트 선택 */}
       <select
         value={projectId}
         onChange={e => {
@@ -95,16 +82,15 @@ export default function ProjectBudget({
         }}
       >
         <option value="">프로젝트 선택</option>
-        {projects.map(p => (
-          <option key={p.id} value={p.id}>
-            {p.name}
+        {projects.map(project => (
+          <option key={project.id} value={project.id}>
+            {project.name}
           </option>
         ))}
       </select>
 
-      {id > 0 && (
+      {selectedProjectId !== null && (
         <>
-          {/* 예산 현황 테이블 */}
           <h3>예산 현황</h3>
 
           <table className="project-summary-table">
@@ -116,14 +102,11 @@ export default function ProjectBudget({
                 <th>집행률</th>
               </tr>
             </thead>
-
             <tbody>
               <tr>
                 <td>{budget.toLocaleString()}원</td>
                 <td>{used.toLocaleString()}원</td>
-                <td style={{
-                  color: remaining < 0 ? 'red' : 'inherit'
-                }}>
+                <td style={{ color: remaining < 0 ? 'red' : 'inherit' }}>
                   {remaining.toLocaleString()}원
                 </td>
                 <td style={{
@@ -142,20 +125,15 @@ export default function ProjectBudget({
             </tbody>
           </table>
 
-          {/* 예산 초과 및 미설정 경고 */}
           {(isOverBudget || hasUnbudgetedExpense) && (
-            <p style={{
-              color: 'red',
-              fontWeight: 'bold'
-            }}>
+            <p style={{ color: 'red', fontWeight: 'bold' }}>
               {hasUnbudgetedExpense
                 ? `⚠️ 예산이 설정되지 않았지만 ${used.toLocaleString()}원이 지출되었습니다.`
                 : `⚠️ 예산이 ${Math.abs(remaining).toLocaleString()}원 초과되었습니다.`}
             </p>
           )}
 
-          {/* 예산 저장 */}
-          <form onSubmit={saveBudget}>
+          <form onSubmit={handleSaveBudget}>
             <input
               type="number"
               min="0"
@@ -169,7 +147,7 @@ export default function ProjectBudget({
 
           <h3>비용 등록</h3>
 
-          <form onSubmit={addExpense}>
+          <form onSubmit={handleAddExpense}>
             <select
               value={category}
               onChange={e => setCategory(e.target.value)}
@@ -204,25 +182,21 @@ export default function ProjectBudget({
                 <th>관리</th>
               </tr>
             </thead>
-
             <tbody>
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={3}>
-                    등록된 비용 내역이 없습니다.
-                  </td>
+                  <td colSpan={3}>등록된 비용 내역이 없습니다.</td>
                 </tr>
               ) : (
-                items.map(e => (
-                  <tr key={e.id}>
-                    <td>{e.category}</td>
-                    <td>
-                      {Number(e.amount).toLocaleString()}원
-                    </td>
+                items.map(expense => (
+                  <tr key={expense.id}>
+                    <td>{expense.category}</td>
+                    <td>{Number(expense.amount).toLocaleString()}원</td>
                     <td>
                       <button
                         type="button"
-                        onClick={() => deleteExpense(e.id)}>
+                        onClick={() => removeExpense(expense.id)}
+                      >
                         삭제
                       </button>
                     </td>

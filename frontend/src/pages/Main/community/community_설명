@@ -1,0 +1,44 @@
+파일명                         담당 기능              주요 역할
+
+CommunityHome.jsx              커뮤니티 홈            통합게시판, 게시판 현황, 중요 공지, 최근 게시글 표시
+
+CommunityMenu.jsx              커뮤니티 메뉴          공지사항·자유게시판·업무자료실·Q&A·개선 건의 이동
+
+NoticePage.jsx                 공지사항 관리          공지 등록·수정·삭제, 중요 공지 관리
+
+FreeBoardPage.jsx              자유게시판 관리        게시글 등록·수정·삭제, 검색, 댓글 관리
+
+TechLibraryPage.jsx            업무자료실 관리        자료 등록·수정·삭제, 카테고리, 첨부파일 관리
+
+QnAPage.jsx                    질문·답변 관리         질문 등록·수정·삭제, 답변 등록, 답변 상태 관리
+
+SuggestionPage.jsx             개선 건의 관리         건의 등록·수정·삭제, 처리 상태 관리
+
+useCommunityItems.js           데이터 관리            게시판 데이터 조회, 등록·수정·삭제 기능 연결
+
+communityStorage.js            저장소 관리            localStorage 저장·불러오기, 첨부파일 저장
+
+communityDummy.json            더미데이터             게시판별 초기 게시글 데이터 관리
+
+communityConfig.js             게시판 설정            공지사항·업무자료실 카테고리 관리
+
+CommunityHome.css              커뮤니티 디자인       메뉴·카드·버튼·화면 배치 스타일 관리
+
+
+
+MainApp.js에 다음 Route를 추가해주세요.
+
+<Route
+  path="/main/community/*"
+  element={<CommunityHome />}
+/>
+
+
+커뮤니티 페이지 이동 경로
+
+통합게시판       /main/community
+공지사항         /main/community/notice
+자유게시판       /main/community/free
+업무자료실       /main/community/tech
+Q&A              /main/community/qa
+개선 건의         /main/community/suggestion

@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Bar, Pie } from "react-chartjs-2";
 import products from "./product";
+import "./QualityTestGraph.css";
 
 import {
     Chart as ChartJS,
@@ -13,7 +14,6 @@ import {
     Legend
 } from "chart.js";
 
-
 ChartJS.register(
     CategoryScale,
     LinearScale,
@@ -24,11 +24,50 @@ ChartJS.register(
     Legend
 );
 
+const ANIMATION_DURATION = 900;
+
+const barValuePlugin = {
+    id: "barValuePlugin",
+    afterDatasetsDraw(chart) {
+        const { ctx, chartArea } = chart;
+        const dataset = chart.data.datasets[0];
+        const meta = chart.getDatasetMeta(0);
+
+        if (!dataset || !meta || meta.hidden) {
+            return;
+        }
+
+        ctx.save();
+        ctx.fillStyle = "#172033";
+        ctx.font = '700 14px "DM Sans", "Noto Sans KR", sans-serif';
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+
+        meta.data.forEach((bar, index) => {
+            const value = Number(dataset.data[index]) || 0;
+
+            if (value <= 0) {
+                return;
+            }
+
+            const labelY = Math.max(bar.y - 8, chartArea.top + 18);
+            ctx.fillText(String(value), bar.x, labelY);
+        });
+
+        ctx.restore();
+    }
+};
 
 function QualityTestGraph() {
-
     const [graphType, setGraphType] = useState("result");
-
+    const [animationKey, setAnimationKey] = useState(0);
+    const [animatedValues, setAnimatedValues] = useState({
+        total: 0,
+        pass: 0,
+        fail: 0,
+        wait: 0,
+        rate: 0
+    });
 
     const passCount = products.filter(
         product => product.qualityStatus === "통과"
@@ -42,275 +81,291 @@ function QualityTestGraph() {
         product => product.qualityStatus === "미실시"
     ).length;
 
-
     const testedCount = passCount + failCount;
 
-    const passRate =
-        testedCount === 0
-            ? 0
-            : Math.round((passCount / testedCount) * 100);
-            // 통과율 계산식
+    const passRate = testedCount === 0
+        ? 0
+        : Math.round((passCount / testedCount) * 100);
 
+    const maxBarValue = Math.max(notTestedCount, passCount, failCount, 1);
+
+    const targetValues = useMemo(() => ({
+        total: products.length,
+        pass: passCount,
+        fail: failCount,
+        wait: notTestedCount,
+        rate: passRate
+    }), [passCount, failCount, notTestedCount, passRate]);
+
+    useEffect(() => {
+        let animationFrameId;
+        const startedAt = performance.now();
+
+        const animateCount = (now) => {
+            const progress = Math.min((now - startedAt) / ANIMATION_DURATION, 1);
+            const easedProgress = 1 - Math.pow(1 - progress, 3);
+
+            setAnimatedValues({
+                total: Math.round(targetValues.total * easedProgress),
+                pass: Math.round(targetValues.pass * easedProgress),
+                fail: Math.round(targetValues.fail * easedProgress),
+                wait: Math.round(targetValues.wait * easedProgress),
+                rate: Math.round(targetValues.rate * easedProgress)
+            });
+
+            if (progress < 1) {
+                animationFrameId = requestAnimationFrame(animateCount);
+            }
+        };
+
+        setAnimatedValues({
+            total: 0,
+            pass: 0,
+            fail: 0,
+            wait: 0,
+            rate: 0
+        });
+
+        animationFrameId = requestAnimationFrame(animateCount);
+
+        return () => cancelAnimationFrame(animationFrameId);
+    }, [graphType, targetValues]);
+
+    const handleGraphChange = (e) => {
+        setGraphType(e.target.value);
+        setAnimationKey((prev) => prev + 1);
+    };
 
     const resultData = {
-
-        labels: [
-            "미실시",
-            "통과",
-            "불합격"
-        ],
-
+        labels: ["미실시", "통과", "불합격"],
         datasets: [
             {
                 label: "제품 수",
-
                 data: [
-                    notTestedCount,
-                    passCount,
-                    failCount
-                ]
+                    animatedValues.wait,
+                    animatedValues.pass,
+                    animatedValues.fail
+                ],
+                backgroundColor: ["#8aa4b8", "#1685c5", "#c0394b"],
+                borderColor: ["#6f8798", "#0c4485", "#9f2f3f"],
+                borderWidth: 1,
+                borderRadius: 8,
+                maxBarThickness: 72
             }
         ]
     };
 
-
     const passRateData = {
-
-        labels: [
-            "통과",
-            "불합격"
-        ],
-
+        labels: ["통과", "불합격"],
         datasets: [
             {
                 label: "검사 제품 수",
-
-                data: [
-                    passCount,
-                    failCount
-                ]
+                data: [passCount, failCount],
+                backgroundColor: ["#1685c5", "#c0394b"],
+                borderColor: ["#ffffff", "#ffffff"],
+                borderWidth: 4,
+                hoverOffset: 10
             }
         ]
     };
 
-
     const barOptions = {
-
         responsive: true,
-
         maintainAspectRatio: false,
-
+        animation: false,
         plugins: {
-
             legend: {
-                position: "top"
+                display: false
             },
-
             title: {
-                display: true,
-                text: "품질검사 결과 현황"
+                display: false
+            },
+            tooltip: {
+                backgroundColor: "#172033",
+                padding: 12,
+                cornerRadius: 8
             }
         },
-
         scales: {
-
+            x: {
+                grid: {
+                    display: false
+                },
+                border: {
+                    display: false
+                }
+            },
             y: {
                 beginAtZero: true,
-
+                suggestedMax: maxBarValue + 1,
                 ticks: {
-                    precision: 0
+                    precision: 0,
+                    stepSize: 1
+                },
+                grid: {
+                    color: "rgba(23, 32, 51, 0.08)"
+                },
+                border: {
+                    display: false
                 }
             }
         }
     };
-    // Chart.js에서 막대그래프 모양과 동작을 설정하는 옵션 객체
-
 
     const pieOptions = {
-
         responsive: true,
-
         maintainAspectRatio: false,
-
+        animation: {
+            animateRotate: true,
+            animateScale: true,
+            duration: 1400,
+            easing: "easeOutQuart"
+        },
         plugins: {
-
             legend: {
-                position: "bottom"
+                position: "bottom",
+                labels: {
+                    usePointStyle: true,
+                    padding: 22
+                }
             },
-
             title: {
-                display: true,
-                text: "품질검사 통과 비율"
+                display: false
+            },
+            tooltip: {
+                backgroundColor: "#172033",
+                padding: 12,
+                cornerRadius: 8
             }
         }
     };
-    // 원형그래프 모양과 동작을 설정하는 옵션 객체
-
 
     return (
-
         <div className="quality-graph-page">
-
-
-            <div className="page-header">
-
-                <h1>
-                    품질검사 분석
-                </h1>
-
-                <p>
-                    품질검사 결과와 통과 비율을 분석합니다.
-                </p>
-
+            <div className="page-header quality-graph-header">
+                <div>
+                    <span className="eyebrow">QUALITY ANALYTICS</span>
+                    <h1>품질검사 분석</h1>
+                    <p>품질검사 결과와 통과 비율을 한눈에 확인합니다.</p>
+                </div>
             </div>
 
-
-            <div className="graph-summary">
-
+            <div className="graph-summary" aria-live="polite">
                 <div className="graph-summary-card">
                     <span>전체 제품</span>
-                    <strong>
-                        {products.length}
-                    </strong>
+                    <strong>{animatedValues.total}</strong>
+                    <small>등록 제품 기준</small>
                 </div>
 
-
-                <div className="graph-summary-card">
+                <div className="graph-summary-card is-pass">
                     <span>통과</span>
-                    <strong>
-                        {passCount}
-                    </strong>
+                    <strong>{animatedValues.pass}</strong>
+                    <small>검사 통과 제품</small>
                 </div>
 
-
-                <div className="graph-summary-card">
+                <div className="graph-summary-card is-fail">
                     <span>불합격</span>
-                    <strong>
-                        {failCount}
-                    </strong>
+                    <strong>{animatedValues.fail}</strong>
+                    <small>재검토 필요 제품</small>
                 </div>
 
-
-                <div className="graph-summary-card">
+                <div className="graph-summary-card is-rate">
                     <span>통과율</span>
-                    <strong>
-                        {passRate}%
-                    </strong>
+                    <strong>{animatedValues.rate}%</strong>
+                    <small>검사 완료 제품 기준</small>
+                </div>
+            </div>
+
+            <div className="graph-control-card">
+                <div>
+                    <strong>분석 그래프</strong>
+                    <p>확인할 지표를 선택하면 그래프와 수치가 다시 애니메이션됩니다.</p>
                 </div>
 
-            </div>
-
-
-            <div className="graph-control">
-
-                <label>
-                    그래프 선택
+                <label className="graph-control">
+                    <span>그래프 선택</span>
+                    <select
+                        value={graphType}
+                        onChange={handleGraphChange}
+                    >
+                        <option value="result">검사 결과 현황</option>
+                        <option value="passRate">품질검사 통과 비율</option>
+                    </select>
                 </label>
-
-                <select
-                    value={graphType}
-                    onChange={(e) =>
-                        setGraphType(e.target.value)
-                    }
-                >
-
-                    <option value="result">
-                        검사 결과 현황
-                    </option>
-
-                    <option value="passRate">
-                        품질검사 통과 비율
-                    </option>
-
-                </select>
-
             </div>
-
 
             <div className="graph-card">
-
-
                 {graphType === "result" && (
-
                     <>
-                        <h2>
-                            검사 결과 현황
-                        </h2>
+                        <div className="graph-card-heading">
+                            <div>
+                                <span className="graph-card-kicker">RESULT STATUS</span>
+                                <h2>검사 결과 현황</h2>
+                            </div>
+                            <span className="graph-card-badge">총 {products.length}개 제품</span>
+                        </div>
 
                         <div className="quality-chart">
-
                             <Bar
                                 data={resultData}
                                 options={barOptions}
+                                plugins={[barValuePlugin]}
                             />
-                            {/* resultData
-                                → 그래프에 들어갈 실제 데이터
-
-                                barOptions
-                                → 그래프를 어떻게 보여줄지 설정
-
-                                ↓ 둘 다 전달
-
-                                <Bar />
-
-                                ↓
-                                막대그래프 출력 */}
-
                         </div>
                     </>
-
                 )}
-
 
                 {graphType === "passRate" && (
-
                     <>
                         <div className="pass-rate-header">
-
                             <div>
-
-                                <h2>
-                                    품질검사 통과 비율
-                                </h2>
-
-                                <p>
-                                    검사가 완료된 제품을 기준으로 계산합니다.
-                                </p>
-
+                                <span className="graph-card-kicker">PASS RATE</span>
+                                <h2>품질검사 통과 비율</h2>
+                                <p>검사가 완료된 제품을 기준으로 계산합니다.</p>
                             </div>
-
 
                             <div className="pass-rate-number">
+                                <strong>{animatedValues.rate}%</strong>
+                                <span>통과율</span>
+                            </div>
+                        </div>
 
-                                <strong>
-                                    {passRate}%
-                                </strong>
-
-                                <span>
-                                    통과율
-                                </span>
-
+                        <div className="pie-layout">
+                            <div className="pie-chart">
+                                <Pie
+                                    key={`pie-${animationKey}`}
+                                    data={passRateData}
+                                    options={pieOptions}
+                                />
                             </div>
 
+                            <div className="pie-summary-list">
+                                <div>
+                                    <span className="summary-dot is-pass" />
+                                    <div>
+                                        <small>통과</small>
+                                        <strong>{passCount}개</strong>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span className="summary-dot is-fail" />
+                                    <div>
+                                        <small>불합격</small>
+                                        <strong>{failCount}개</strong>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span className="summary-dot is-wait" />
+                                    <div>
+                                        <small>미실시</small>
+                                        <strong>{notTestedCount}개</strong>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-
-
-                        <div className="pie-chart">
-
-                            <Pie
-                                data={passRateData}
-                                options={pieOptions}
-                            />
-
-                        </div>
-
                     </>
-
                 )}
-
-
             </div>
-
         </div>
     );
 }

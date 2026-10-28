@@ -1,45 +1,241 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { loadProjectData, saveProjectData } from './services/projectService';
+import { sampleProjects, sampleTasks } from './data/projectDummyData';
 
-const Context = createContext(null);
+const ProjectContext = createContext(null);
+const STORAGE_KEY = 'erp.project.v1';
 
-export function ProjectProvider({ children }) {
-  // 최초 렌더링 시 한 번만 읽고, 이후 상태 변경 시 자동 저장합니다.
-  const [initial] = useState(loadProjectData);
-  const [projects, setProjects] = useState(initial.projects);
-  const [tasks, setTasks] = useState(initial.tasks);
-  const [outputs, setOutputs] = useState(initial.outputs);
-  const [resources, setResources] = useState(initial.resources);
-  const [budgets, setBudgets] = useState(initial.budgets);
-  const [expenses, setExpenses] = useState(initial.expenses);
-  const [risks, setRisks] = useState(initial.risks);
-
-  useEffect(() => {
-    saveProjectData({ projects, tasks, outputs, resources, budgets, expenses, risks });
-  }, [projects, tasks, outputs, resources, budgets, expenses, risks]);
-
-  const deleteProject = (id) => {
-    if (!window.confirm('프로젝트를 삭제할까요?')) return false;
-    const keep = x => String(x.projectId) !== String(id);
-    setProjects(v => v.filter(x => String(x.id) !== String(id)));
-    setTasks(v => v.filter(keep));
-    setOutputs(v => v.filter(keep));
-    setResources(v => v.filter(keep));
-    setExpenses(v => v.filter(keep));
-    setRisks(v => v.filter(keep));
-    setBudgets(v => { const next = { ...v }; delete next[id]; return next; });
-    return true;
+function loadData() {
+  const basicData = {
+    projects: sampleProjects,
+    tasks: sampleTasks,
+    outputs: [],
+    resources: [],
+    budgets: {},
+    expenses: [],
+    risks: []
   };
 
-  return <Context.Provider value={{
-    projects, setProjects, tasks, setTasks, outputs, setOutputs,
-    resources, setResources, budgets, setBudgets, expenses, setExpenses,
-    risks, setRisks, deleteProject
-  }}>{children}</Context.Provider>;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return basicData;
+
+    const parsed = JSON.parse(saved);
+
+    return {
+      projects: Array.isArray(parsed.projects) ? parsed.projects : basicData.projects,
+      tasks: Array.isArray(parsed.tasks) ? parsed.tasks : basicData.tasks,
+      outputs: Array.isArray(parsed.outputs) ? parsed.outputs : [],
+      resources: Array.isArray(parsed.resources) ? parsed.resources : [],
+      budgets: parsed.budgets || {},
+      expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
+      risks: Array.isArray(parsed.risks) ? parsed.risks : []
+    };
+  } catch (error) {
+    console.log('프로젝트 데이터 불러오기 실패', error);
+    return basicData;
+  }
+}
+
+export function ProjectProvider({ children }) {
+  const [initialData] = useState(loadData);
+
+  const [projects, setProjects] = useState(initialData.projects);
+  const [tasks, setTasks] = useState(initialData.tasks);
+  const [outputs, setOutputs] = useState(initialData.outputs);
+  const [resources, setResources] = useState(initialData.resources);
+  const [budgets, setBudgets] = useState(initialData.budgets);
+  const [expenses, setExpenses] = useState(initialData.expenses);
+  const [risks, setRisks] = useState(initialData.risks);
+
+  useEffect(() => {
+    const data = {
+      projects,
+      tasks,
+      outputs,
+      resources,
+      budgets,
+      expenses,
+      risks
+    };
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }, [projects, tasks, outputs, resources, budgets, expenses, risks]);
+
+  function saveProject(project) {
+    if (project.id) {
+      setProjects(projects.map(item =>
+        Number(item.id) === Number(project.id) ? project : item
+      ));
+      return project.id;
+    }
+
+    const newProject = {
+      ...project,
+      id: Date.now()
+    };
+
+    setProjects([...projects, newProject]);
+    return newProject.id;
+  }
+
+  function removeProject(id) {
+    setProjects(projects.filter(item => Number(item.id) !== Number(id)));
+    setTasks(tasks.filter(item => Number(item.projectId) !== Number(id)));
+    setOutputs(outputs.filter(item => Number(item.projectId) !== Number(id)));
+    setResources(resources.filter(item => Number(item.projectId) !== Number(id)));
+    setExpenses(expenses.filter(item => Number(item.projectId) !== Number(id)));
+    setRisks(risks.filter(item => Number(item.projectId) !== Number(id)));
+
+    const nextBudgets = { ...budgets };
+    delete nextBudgets[id];
+    setBudgets(nextBudgets);
+  }
+
+  function addTask(task) {
+    const newTask = {
+      ...task,
+      id: Date.now(),
+      projectId: Number(task.projectId),
+      progress: Number(task.progress || 0)
+    };
+
+    setTasks([...tasks, newTask]);
+  }
+
+  function updateTask(id, changedTask) {
+    setTasks(tasks.map(task => {
+      if (Number(task.id) !== Number(id)) return task;
+
+      let progress = Number(changedTask.progress || 0);
+      if (changedTask.status === '완료') progress = 100;
+      if (changedTask.status === '예정') progress = 0;
+      if (progress < 0) progress = 0;
+      if (progress > 100) progress = 100;
+
+      return {
+        ...task,
+        ...changedTask,
+        projectId: Number(changedTask.projectId),
+        progress
+      };
+    }));
+  }
+
+  function removeTask(id) {
+    setTasks(tasks.filter(task => Number(task.id) !== Number(id)));
+  }
+
+  function addResource(resource) {
+    const newResource = {
+      ...resource,
+      id: Date.now(),
+      projectId: Number(resource.projectId),
+      days: Number(resource.days),
+      capacity: Number(resource.capacity)
+    };
+
+    setResources([...resources, newResource]);
+  }
+
+  function removeResource(id) {
+    setResources(resources.filter(item => Number(item.id) !== Number(id)));
+  }
+
+  function saveOutput(output) {
+    const savedOutput = {
+      ...output,
+      id: output.id || Date.now(),
+      projectId: Number(output.projectId)
+    };
+
+    if (output.id) {
+      setOutputs(outputs.map(item =>
+        Number(item.id) === Number(output.id) ? savedOutput : item
+      ));
+    } else {
+      setOutputs([...outputs, savedOutput]);
+    }
+  }
+
+  function removeOutput(id) {
+    setOutputs(outputs.filter(item => Number(item.id) !== Number(id)));
+  }
+
+  function saveBudget(projectId, amount) {
+    setBudgets({
+      ...budgets,
+      [projectId]: Number(amount)
+    });
+  }
+
+  function addExpense(expense) {
+    const newExpense = {
+      ...expense,
+      id: Date.now(),
+      projectId: Number(expense.projectId),
+      amount: Number(expense.amount)
+    };
+
+    setExpenses([...expenses, newExpense]);
+  }
+
+  function removeExpense(id) {
+    setExpenses(expenses.filter(item => Number(item.id) !== Number(id)));
+  }
+
+  function addRisk(risk) {
+    const newRisk = {
+      ...risk,
+      id: Date.now(),
+      projectId: Number(risk.projectId),
+      status: '미해결'
+    };
+
+    setRisks([...risks, newRisk]);
+  }
+
+  function updateRisk(id, changedRisk) {
+    setRisks(risks.map(risk =>
+      Number(risk.id) === Number(id)
+        ? { ...risk, ...changedRisk }
+        : risk
+    ));
+  }
+
+  function removeRisk(id) {
+    setRisks(risks.filter(item => Number(item.id) !== Number(id)));
+  }
+
+  return (
+    <ProjectContext.Provider value={{
+      projects,
+      tasks,
+      outputs,
+      resources,
+      budgets,
+      expenses,
+      risks,
+      saveProject,
+      removeProject,
+      addTask,
+      updateTask,
+      removeTask,
+      addResource,
+      removeResource,
+      saveOutput,
+      removeOutput,
+      saveBudget,
+      addExpense,
+      removeExpense,
+      addRisk,
+      updateRisk,
+      removeRisk
+    }}>
+      {children}
+    </ProjectContext.Provider>
+  );
 }
 
 export function useProject() {
-  const value = useContext(Context);
-  if (!value) throw new Error('ProjectProvider가 필요합니다.');
-  return value;
+  return useContext(ProjectContext);
 }
