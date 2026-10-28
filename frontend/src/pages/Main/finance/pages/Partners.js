@@ -104,50 +104,52 @@ function Partners() {
                         <button type="button">검색</button>
                     </div>
                     <br />
-                    <table >
-                        <thead>
-                            <tr >
-                                <th>거래처 ID</th>
-                                <th>거래처명</th>
-                                <th>구분</th>
-                                <th>사업자번호</th>
-                                <th>대표자/연락처</th>
-                                <th>마감 구분</th>
-                                <th>정기 마감일</th>
-                                <th>미정산 잔액 (미수/미지급)</th>
-                                <th>관리/선택</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {partnersList.map((item) => (
-                                <tr
-                                    key={item.id}
-                                    
-                                    onClick={() => setSelectedPartnerId(item.id)}
-                                >
-                                    <td>{item.id}</td>
-                                    <td><strong>{item.name}</strong></td>
-                                    <td>{item.type}</td>
-                                    <td>{item.bizNumber}</td>
-                                    <td>{item.ceo} ({item.contact})</td>
-                                    <td>
-                                        <span className={`settlement-badge ${item.settlementType === '입금 마감' ? 'is-income' : 'is-expense'}`}>
-                                            {item.settlementType}
-                                        </span>
-                                    </td>
-                                    <td><strong>{item.closingDate}</strong></td>
-                                    <td >
-                                        {item.outstandingAmount.toLocaleString()}원
-                                    </td>
-                                    <td>
-                                        <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedPartnerId(item.id); }}>
-                                            상세/거래내역
-                                        </button>
-                                    </td>
+                    <div className='table-shell'>
+                        <table >
+                            <thead>
+                                <tr >
+                                    <th>거래처 ID</th>
+                                    <th>거래처명</th>
+                                    <th>구분</th>
+                                    <th>사업자번호</th>
+                                    <th>대표자/연락처</th>
+                                    <th>마감 구분</th>
+                                    <th>정기 마감일</th>
+                                    <th>미정산 잔액 (미수/미지급)</th>
+                                    <th>관리/선택</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {partnersList.map((item) => (
+                                    <tr
+                                        key={item.id}
+                                        
+                                        onClick={() => setSelectedPartnerId(item.id)}
+                                    >
+                                        <td>{item.id}</td>
+                                        <td><strong>{item.name}</strong></td>
+                                        <td>{item.type}</td>
+                                        <td>{item.bizNumber}</td>
+                                        <td>{item.ceo} ({item.contact})</td>
+                                        <td>
+                                            <span className={`settlement-badge ${item.settlementType === '입금 마감' ? 'is-income' : 'is-expense'}`}>
+                                                {item.settlementType}
+                                            </span>
+                                        </td>
+                                        <td><strong>{item.closingDate}</strong></td>
+                                        <td >
+                                            {item.outstandingAmount.toLocaleString()}원
+                                        </td>
+                                        <td>
+                                            <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedPartnerId(item.id); }}>
+                                                상세/거래내역
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </section>
             ) : (
                 <section>

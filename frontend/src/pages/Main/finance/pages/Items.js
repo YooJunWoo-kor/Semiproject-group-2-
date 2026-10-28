@@ -164,53 +164,51 @@ function Items() {
             <br />
 
             {/* 4. 품목 리스트 테이블 */}
-            <main>
-                <table >
-                    <thead>
-                        <tr >
-                            <th>품목 번호</th>
-                            <th>구분</th>
-                            <th>거래일자</th>
-                            <th>거래처(고객명)</th>
-                            <th>물품명 (품목명)</th>
-                            <th>규격/수량</th>
-                            <th>단가</th>
-                            <th>공급가액</th>
-                            <th>부가세(VAT)</th>
-                            <th>총 합계금액</th>
-                            <th>결제/정산상태</th>
-                            <th>관리</th>
+            <main className='table-shell'>
+                <thead>
+                    <tr >
+                        <th>품목 번호</th>
+                        <th>구분</th>
+                        <th>거래일자</th>
+                        <th>거래처(고객명)</th>
+                        <th>물품명 (품목명)</th>
+                        <th>규격/수량</th>
+                        <th>단가</th>
+                        <th>공급가액</th>
+                        <th>부가세(VAT)</th>
+                        <th>총 합계금액</th>
+                        <th>결제/정산상태</th>
+                        <th>관리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {filteredList.map((item) => (
+                    <tr key={item.id}>
+                            <td>{item.id}</td>
+                            <td>
+                                <strong className={`finance-type ${item.type === 'SALES' ? 'is-sales' : 'is-purchase'}`}>
+                                    {item.type === 'SALES' ? '매출' : '매입'}
+                                </strong>
+                            </td>
+                            <td>{item.date}</td>
+                            <td><strong>{item.customer}</strong></td>
+                            <td>{item.itemName}</td>
+                            <td>{item.spec} ({item.quantity}개)</td>
+                            <td >{item.unitPrice.toLocaleString()}원</td>
+                            <td >{item.supplyAmount.toLocaleString()}원</td>
+                            <td >{item.vat.toLocaleString()}원</td>
+                            <td >
+                                {item.totalAmount.toLocaleString()}원
+                            </td>
+                            <td>{item.status}</td>
+                            <td>
+                                <button type="button" onClick={() => alert(`${item.itemName} 전표 확인`)}>
+                                    전표조회
+                                </button>
+                                </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        {filteredList.map((item) => (
-                            <tr key={item.id}>
-                                <td>{item.id}</td>
-                                <td>
-                                    <strong className={`finance-type ${item.type === 'SALES' ? 'is-sales' : 'is-purchase'}`}>
-                                        {item.type === 'SALES' ? '매출' : '매입'}
-                                    </strong>
-                                </td>
-                                <td>{item.date}</td>
-                                <td><strong>{item.customer}</strong></td>
-                                <td>{item.itemName}</td>
-                                <td>{item.spec} ({item.quantity}개)</td>
-                                <td >{item.unitPrice.toLocaleString()}원</td>
-                                <td >{item.supplyAmount.toLocaleString()}원</td>
-                                <td >{item.vat.toLocaleString()}원</td>
-                                <td >
-                                    {item.totalAmount.toLocaleString()}원
-                                </td>
-                                <td>{item.status}</td>
-                                <td>
-                                    <button type="button" onClick={() => alert(`${item.itemName} 전표 확인`)}>
-                                        전표조회
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                    ))}
+                </tbody>
             </main>
         </div>
     );
