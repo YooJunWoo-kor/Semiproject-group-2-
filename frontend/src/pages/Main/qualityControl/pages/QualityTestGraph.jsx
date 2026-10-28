@@ -29,12 +29,11 @@ const ANIMATION_DURATION = 900;
 const barValuePlugin = {
     id: "barValuePlugin",
     afterDatasetsDraw(chart) {
-        const { ctx, scales } = chart;
-        const yScale = scales.y;
+        const { ctx, chartArea } = chart;
         const dataset = chart.data.datasets[0];
         const meta = chart.getDatasetMeta(0);
 
-        if (!yScale || !dataset || !meta) {
+        if (!dataset || !meta || meta.hidden) {
             return;
         }
 
@@ -45,20 +44,14 @@ const barValuePlugin = {
         ctx.textBaseline = "bottom";
 
         meta.data.forEach((bar, index) => {
-            const targetValue = Number(dataset.data[index]) || 0;
-            const currentValue = Math.max(
-                0,
-                Math.min(
-                    targetValue,
-                    Math.round(yScale.getValueForPixel(bar.y))
-                )
-            );
+            const value = Number(dataset.data[index]) || 0;
 
-            ctx.fillText(
-                String(currentValue),
-                bar.x,
-                bar.y - 8
-            );
+            if (value <= 0) {
+                return;
+            }
+
+            const labelY = Math.max(bar.y - 8, chartArea.top + 18);
+            ctx.fillText(String(value), bar.x, labelY);
         });
 
         ctx.restore();
@@ -72,6 +65,7 @@ function QualityTestGraph() {
         total: 0,
         pass: 0,
         fail: 0,
+        wait: 0,
         rate: 0
     });
 
@@ -93,12 +87,15 @@ function QualityTestGraph() {
         ? 0
         : Math.round((passCount / testedCount) * 100);
 
+    const maxBarValue = Math.max(notTestedCount, passCount, failCount, 1);
+
     const targetValues = useMemo(() => ({
         total: products.length,
         pass: passCount,
         fail: failCount,
+        wait: notTestedCount,
         rate: passRate
-    }), [passCount, failCount, passRate]);
+    }), [passCount, failCount, notTestedCount, passRate]);
 
     useEffect(() => {
         let animationFrameId;
@@ -112,6 +109,7 @@ function QualityTestGraph() {
                 total: Math.round(targetValues.total * easedProgress),
                 pass: Math.round(targetValues.pass * easedProgress),
                 fail: Math.round(targetValues.fail * easedProgress),
+                wait: Math.round(targetValues.wait * easedProgress),
                 rate: Math.round(targetValues.rate * easedProgress)
             });
 
@@ -120,7 +118,14 @@ function QualityTestGraph() {
             }
         };
 
-        setAnimatedValues({ total: 0, pass: 0, fail: 0, rate: 0 });
+        setAnimatedValues({
+            total: 0,
+            pass: 0,
+            fail: 0,
+            wait: 0,
+            rate: 0
+        });
+
         animationFrameId = requestAnimationFrame(animateCount);
 
         return () => cancelAnimationFrame(animationFrameId);
@@ -136,7 +141,11 @@ function QualityTestGraph() {
         datasets: [
             {
                 label: "제품 수",
-                data: [notTestedCount, passCount, failCount],
+                data: [
+                    animatedValues.wait,
+                    animatedValues.pass,
+                    animatedValues.fail
+                ],
                 backgroundColor: ["#8aa4b8", "#1685c5", "#c0394b"],
                 borderColor: ["#6f8798", "#0c4485", "#9f2f3f"],
                 borderWidth: 1,
@@ -160,22 +169,13 @@ function QualityTestGraph() {
         ]
     };
 
-    const commonAnimation = {
-        duration: 1200,
-        easing: "easeOutQuart"
-    };
-
     const barOptions = {
         responsive: true,
         maintainAspectRatio: false,
-        animation: commonAnimation,
+        animation: false,
         plugins: {
             legend: {
-                position: "top",
-                labels: {
-                    usePointStyle: true,
-                    padding: 18
-                }
+                display: false
             },
             title: {
                 display: false
@@ -197,6 +197,7 @@ function QualityTestGraph() {
             },
             y: {
                 beginAtZero: true,
+                suggestedMax: maxBarValue + 1,
                 ticks: {
                     precision: 0,
                     stepSize: 1
@@ -306,7 +307,6 @@ function QualityTestGraph() {
 
                         <div className="quality-chart">
                             <Bar
-                                key={`bar-${animationKey}`}
                                 data={resultData}
                                 options={barOptions}
                                 plugins={[barValuePlugin]}
