@@ -6,7 +6,7 @@ function Attendance(){
         <div>
             <h2>출결관리</h2>
 
-            <ADcomp />
+            <ADComp />
             <button type="button">
                 수정요청
             </button>
