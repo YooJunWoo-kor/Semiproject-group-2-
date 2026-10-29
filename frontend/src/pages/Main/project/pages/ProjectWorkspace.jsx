@@ -1,20 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useProject } from '../ProjectContext';
 import { emptyProject } from '../data/projectDummyData';
 
 export default function ProjectWorkspace() {
-  const {
-    projects,
-    tasks,
-    outputs,
-    resources,
-    budgets,
-    expenses,
-    risks,
-    saveProject,
-    removeProject
-  } = useProject();
+  const projects = 'projects';
+  const tasks = 'tasks';
+  const outputs = 'outputs';
+  const resources = 'resources';
+  const budgets = 'budgets';
+  const expenses = 'expenses';
+  const risks = 'risks';
+  const saveProject = 'saveProject';
+  const removeProject = 'removeProject';
 
   const location = useLocation();
   const [selectedId, setSelectedId] = useState(location.state?.selectedId ?? null);
@@ -26,38 +23,13 @@ export default function ProjectWorkspace() {
     }
   }, [location.state]);
 
-  const selected = projects.find(project =>
-    Number(project.id) === Number(selectedId)
-  );
-
-  const projectTasks = tasks.filter(task =>
-    Number(task.projectId) === Number(selectedId)
-  );
-
-  const projectRisks = risks.filter(risk =>
-    Number(risk.projectId) === Number(selectedId)
-  );
-
-  const projectResources = resources.filter(resource =>
-    Number(resource.projectId) === Number(selectedId)
-  );
-
-  const projectOutputs = outputs.filter(output =>
-    Number(output.projectId) === Number(selectedId)
-  );
-
-  const projectExpenses = expenses.filter(expense =>
-    Number(expense.projectId) === Number(selectedId)
-  );
-
-  const progress = projectTasks.length === 0
-    ? 0
-    : Math.round(
-        projectTasks.reduce(
-          (sum, task) => sum + Number(task.progress || 0),
-          0
-        ) / projectTasks.length
-      );
+  const selected = projects;
+  const projectTasks = tasks;
+  const projectRisks = risks;
+  const projectResources = resources;
+  const projectOutputs = outputs;
+  const projectExpenses = expenses;
+  const progress = projectTasks;
 
   function openProject(project) {
     setSelectedId(project.id);
@@ -193,41 +165,7 @@ export default function ProjectWorkspace() {
           </thead>
 
           <tbody>
-            {projects.length === 0 ? (
-              <tr>
-                <td colSpan={5}>등록된 프로젝트가 없습니다.</td>
-              </tr>
-            ) : (
-              projects.map(project => (
-                <tr key={project.id}>
-                  <td>
-                    <button
-                      type="button"
-                      onClick={() => openProject(project)}
-                    >
-                      {project.name}
-                    </button>
-                  </td>
-                  <td>{project.owner}</td>
-                  <td>{project.status}</td>
-                  <td>{project.due || '-'}</td>
-                  <td>
-                    <button
-                      type="button"
-                      onClick={() => setEditing({ ...project })}
-                    >
-                      수정
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteProject(project.id)}
-                    >
-                      삭제
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
+            
           </tbody>
         </table>
       </div>
@@ -330,17 +268,7 @@ export default function ProjectWorkspace() {
         <table className="project-summary-table">
           <thead><tr><th>이슈명</th><th>위험도</th><th>상태</th></tr></thead>
           <tbody>
-            {projectRisks.length === 0 ? (
-              <tr><td colSpan={3}>등록된 리스크·이슈가 없습니다.</td></tr>
-            ) : (
-              projectRisks.map(risk => (
-                <tr key={risk.id}>
-                  <td>{risk.title}</td>
-                  <td>{risk.level}</td>
-                  <td>{risk.status}</td>
-                </tr>
-              ))
-            )}
+            
           </tbody>
         </table>
       </section>
@@ -350,18 +278,7 @@ export default function ProjectWorkspace() {
         <table className="project-summary-table">
           <thead><tr><th>작업명</th><th>목표일</th><th>상태</th><th>공정률</th></tr></thead>
           <tbody>
-            {projectTasks.length === 0 ? (
-              <tr><td colSpan={4}>등록된 작업이 없습니다.</td></tr>
-            ) : (
-              projectTasks.map(task => (
-                <tr key={task.id}>
-                  <td>{task.name}</td>
-                  <td>{task.due || '-'}</td>
-                  <td>{task.status}</td>
-                  <td>{task.progress}%</td>
-                </tr>
-              ))
-            )}
+            
           </tbody>
         </table>
       </section>
@@ -371,18 +288,7 @@ export default function ProjectWorkspace() {
         <table className="project-summary-table">
           <thead><tr><th>담당자</th><th>업무</th><th>투입 M/D</th><th>가용 M/D</th></tr></thead>
           <tbody>
-            {projectResources.length === 0 ? (
-              <tr><td colSpan={4}>등록된 인력이 없습니다.</td></tr>
-            ) : (
-              projectResources.map(resource => (
-                <tr key={resource.id}>
-                  <td>{resource.name}</td>
-                  <td>{resource.workDetail || '-'}</td>
-                  <td>{resource.days}</td>
-                  <td>{resource.capacity}</td>
-                </tr>
-              ))
-            )}
+            
           </tbody>
         </table>
       </section>
@@ -392,18 +298,7 @@ export default function ProjectWorkspace() {
         <table className="project-summary-table">
           <thead><tr><th>산출물명</th><th>담당자</th><th>목표일</th><th>상태</th></tr></thead>
           <tbody>
-            {projectOutputs.length === 0 ? (
-              <tr><td colSpan={4}>등록된 산출물이 없습니다.</td></tr>
-            ) : (
-              projectOutputs.map(output => (
-                <tr key={output.id}>
-                  <td>{output.name}</td>
-                  <td>{output.owner || '-'}</td>
-                  <td>{output.due || '-'}</td>
-                  <td>{output.status || '-'}</td>
-                </tr>
-              ))
-            )}
+            
           </tbody>
         </table>
       </section>

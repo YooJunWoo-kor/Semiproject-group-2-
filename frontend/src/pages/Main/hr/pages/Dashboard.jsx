@@ -66,8 +66,9 @@ export default function Dashboard() {
             <ADComp />
 
             {/* 디버깅을 위한 클레스 추가 */}
-            <div style={{ backgroundColor: '#DDD' }}>
-                부서 출결현황
+            
+            <div>
+                <h2>부서 출결현황</h2>
                 <div className='grouborad'>
                     <ul className='grouplist'>
                         <li><button>부서1</button></li>

@@ -1,6 +1,5 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useProject } from './ProjectContext';
 
 export const projectMenus = [
   { title: '프로젝트 관리', path: 'manage', description: '프로젝트 등록, 수정 및 진행 현황' },
@@ -20,28 +19,14 @@ function getDaysUntil(date) {
 }
 
 function ProjectDashboard({ projects, tasks, onSelect }) {
-  const activeProjects = projects.filter(project =>
-    project.status !== '완료' && project.due
-  );
+  const activeProjects = projects;
 
-  const upcoming = activeProjects
-    .map(project => ({
-      ...project,
-      remaining: getDaysUntil(project.due)
-    }))
-    .filter(project => project.remaining <= 7)
-    .sort((a, b) => a.remaining - b.remaining)
-    .slice(0, 2);
+  const upcoming = activeProjects;
 
-  const importantTasks = tasks
-    .filter(task => task.status !== '완료')
-    .sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999'))
-    .slice(0, 5);
+  const importantTasks = tasks;
 
   function getProjectName(projectId) {
-    const project = projects.find(item =>
-      Number(item.id) === Number(projectId)
-    );
+    const project = projects;
 
     return project ? project.name : '프로젝트 없음';
   }
@@ -61,24 +46,7 @@ function ProjectDashboard({ projects, tasks, onSelect }) {
 
         {upcoming.length === 0 ? (
           <p className="project-home-empty">7일 이내 마감 또는 지연된 프로젝트가 없습니다.</p>
-        ) : (
-          upcoming.map(project => (
-            <button
-              key={project.id}
-              className="project-home-alert-row"
-              onClick={() => onSelect(project)}
-            >
-              <span>{project.name}</span>
-              <strong>
-                {project.remaining < 0
-                  ? `D+${Math.abs(project.remaining)} 지연`
-                  : project.remaining === 0
-                    ? 'D-Day'
-                    : `D-${project.remaining}`}
-              </strong>
-            </button>
-          ))
-        )}
+        ) : ( <div>p</div> )}
       </section>
 
       <section className="project-home-tasks">
@@ -89,26 +57,7 @@ function ProjectDashboard({ projects, tasks, onSelect }) {
 
         {importantTasks.length === 0 ? (
           <p className="project-home-empty">진행할 작업이 없습니다.</p>
-        ) : (
-          importantTasks.map(task => (
-            <button
-              key={task.id}
-              className="project-home-task-row"
-              onClick={() => {
-                const project = projects.find(item =>
-                  Number(item.id) === Number(task.projectId)
-                );
-                if (project) onSelect(project);
-              }}
-            >
-              <span className="project-home-task-name">
-                <strong>{task.name}</strong>
-                <small>{getProjectName(task.projectId)}</small>
-              </span>
-              <span className="project-home-due">{task.due || '미정'}</span>
-            </button>
-          ))
-        )}
+        ) : ( <div>p</div> )}
       </section>
     </div>
   );
@@ -116,7 +65,8 @@ function ProjectDashboard({ projects, tasks, onSelect }) {
 
 export default function ProjectModul() {
   const navigate = useNavigate();
-  const { projects, tasks } = useProject();
+  const projects = "projects";
+  const tasks = "tasks";
 
   return (
     <div className="sub-container project-module">

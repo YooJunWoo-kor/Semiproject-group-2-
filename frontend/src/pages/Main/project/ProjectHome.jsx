@@ -1,7 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate, NavLink } from 'react-router-dom';
 
-import { ProjectProvider } from './ProjectContext';
 import ProjectWorkspace from './pages/ProjectWorkspace';
 import ProjectGanttChart from './pages/ProjectGanttChart';
 import ProjectResource from './pages/ProjectResource';
@@ -23,14 +22,6 @@ function ProjectRoutes() {
             프로젝트 홈
           </NavLink>
 
-          {projectMenus.map(menu => (
-            <NavLink
-              key={menu.path}
-              to={'/main/project/' + menu.path}
-            >
-              {menu.title}
-            </NavLink>
-          ))}
         </aside>
 
         <div className="project-main">
@@ -52,8 +43,8 @@ function ProjectRoutes() {
 
 export default function ProjectHome() {
   return (
-    <ProjectProvider>
+    <div>
       <ProjectRoutes />
-    </ProjectProvider>
+    </div>
   );
 }

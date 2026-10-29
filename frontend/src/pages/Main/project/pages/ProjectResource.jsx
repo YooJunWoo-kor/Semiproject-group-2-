@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
-import { useProject } from '../ProjectContext';
 
 export default function ProjectResource() {
-  const {
-    projects,
-    resources,
-    addResource,
-    removeResource
-  } = useProject();
+  const projects = "projects";
+  const resources = "resources";
+  const addResource = "addResource";
+  const removeResource = "removeResource";
 
   const [projectId, setProjectId] = useState('');
   const [name, setName] = useState('');
@@ -48,9 +45,7 @@ export default function ProjectResource() {
       <form onSubmit={add}>
         <select value={projectId} onChange={e => setProjectId(e.target.value)} required>
           <option value="">프로젝트 선택</option>
-          {projects.map(project => (
-            <option key={project.id} value={project.id}>{project.name}</option>
-          ))}
+          
         </select>
 
         <input placeholder="담당자" value={name} onChange={e => setName(e.target.value)} required />
@@ -88,21 +83,7 @@ export default function ProjectResource() {
           </tr>
         </thead>
         <tbody>
-          {resources.length === 0 ? (
-            <tr><td colSpan={7}>등록된 인력·공수 정보가 없습니다.</td></tr>
-          ) : (
-            resources.map(record => (
-              <tr key={record.id}>
-                <td>{projects.find(project => String(project.id) === String(record.projectId))?.name || '-'}</td>
-                <td>{record.name}</td>
-                <td>{record.workDetail || '-'}</td>
-                <td>{record.days} M/D</td>
-                <td>{record.capacity} M/D</td>
-                <td>{Number(record.days) > Number(record.capacity) ? '과부하' : '정상'}</td>
-                <td><button type="button" onClick={() => removeResource(record.id)}>삭제</button></td>
-              </tr>
-            ))
-          )}
+          
         </tbody>
       </table>
     </div>

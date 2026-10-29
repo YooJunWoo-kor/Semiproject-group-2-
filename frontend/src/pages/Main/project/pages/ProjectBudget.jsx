@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
-import { useProject } from '../ProjectContext';
 
 export default function ProjectBudget() {
-  const {
-    projects,
-    budgets,
-    expenses,
-    saveBudget,
-    addExpense,
-    removeExpense
-  } = useProject();
+  const projects = "projects";
+  const budgets = "budgets";
+  const expenses = "expenses";
+  const saveBudget = "saveBudget";
+  const addExpense = "addExpense";
+  const removeExpense = "removeExpense";
+  
 
   const [projectId, setProjectId] = useState('');
   const [budgetInput, setBudgetInput] = useState('');
@@ -82,11 +80,7 @@ export default function ProjectBudget() {
         }}
       >
         <option value="">프로젝트 선택</option>
-        {projects.map(project => (
-          <option key={project.id} value={project.id}>
-            {project.name}
-          </option>
-        ))}
+        
       </select>
 
       {selectedProjectId !== null && (
@@ -183,26 +177,7 @@ export default function ProjectBudget() {
               </tr>
             </thead>
             <tbody>
-              {items.length === 0 ? (
-                <tr>
-                  <td colSpan={3}>등록된 비용 내역이 없습니다.</td>
-                </tr>
-              ) : (
-                items.map(expense => (
-                  <tr key={expense.id}>
-                    <td>{expense.category}</td>
-                    <td>{Number(expense.amount).toLocaleString()}원</td>
-                    <td>
-                      <button
-                        type="button"
-                        onClick={() => removeExpense(expense.id)}
-                      >
-                        삭제
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
+              
             </tbody>
           </table>
         </>
