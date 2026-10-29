@@ -1,34 +1,44 @@
 import React from 'react';
-import { useSchedules } from '../ScheduleContext';
 import ScheduleForm from './ScheduleForm';
 import ScheduleDetail from './ScheduleDetail';
-import ScheduleAdjustment from './ScheduleAdjustment';
 
-export default function ScheduleDialogs() {
-  const schedule = useSchedules();
+export default function ScheduleDialogs(props) {
+  const selectedSchedule = props.selectedSchedule;
+  const editingSchedule = props.editingSchedule;
+  const formOpen = props.formOpen;
+  const rooms = props.rooms;
 
-  // 팝업이 없으면 회색 배경도 표시하지 않습니다.
-  const isOpen = schedule.selected || schedule.formOpen || schedule.adjustmentOpen;
-  if (!isOpen) return null;
+  const onCloseDetail = props.onCloseDetail;
+  const onCloseForm = props.onCloseForm;
+  const onEdit = props.onEdit;
+  const onDelete = props.onDelete;
+  const onSave = props.onSave;
+
+//selectedSchedule:상세보기에서 보여줄 선택한 데이터, editingSchedule:수정일정or새일정, formOpen
+//formOpen:등록or수정폼을 열고 닫는 값(참or거짓), onCloseDetail:상세보기 닫기 함수
+//onEdit:일정 수정 시작 함수, onDelete:일정 삭제 함수, onSave:입력한 일정 저장 함수
+//rooms: 회의실 목록 배열
+
+
+  if (!selectedSchedule && !formOpen) return null;
 
   return (
     <div className="schedule-dialog-layer">
-      {schedule.selected && (
-        <ScheduleDetail
-          item={schedule.selected}
-          onClose={() => schedule.setSelectedId(null)}
-        />
-      )}
-      {schedule.formOpen && (
+      {formOpen ? (
         <ScheduleForm
-          key={schedule.editing?.id || 'new'}
-          item={schedule.editing}
-          defaults={schedule.draft}
-          onClose={() => schedule.setFormOpen(false)}
+          key={editingSchedule?.id ?? 'new'}
+          item={editingSchedule}
+          onSave={onSave}
+          onClose={onCloseForm}
+          rooms={rooms}
         />
-      )}
-      {schedule.adjustmentOpen && (
-        <ScheduleAdjustment onClose={() => schedule.setAdjustmentOpen(false)} />
+      ) : (
+        <ScheduleDetail
+          selectedSchedule={selectedSchedule}
+          onClose={onCloseDetail}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       )}
     </div>
   );

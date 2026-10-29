@@ -1,135 +1,159 @@
 import React from 'react';
-import { useSchedules } from '../ScheduleContext';
 
-// item: 상세보기할 일정 한 개
-export default function ScheduleDetail({ item, onClose }) {
+function ScheduleDetail({
+    selectedSchedule,
+    onClose,
+    onEdit,
+    onDelete
+}) {
 
-  const schedule = useSchedules();
-
-  // 상세보기할 일정이 없으면 화면을 표시하지 않음
-  if (!item) {
-    return null;
-  }
-
-  // 1. 일정 삭제
-  function remove() {
-    if (window.confirm('일정을 삭제할까요?')) {
-      schedule.deleteSchedule(item.id);
-      onClose();
+    // 선택한 일정이 없으면 상세보기를 표시하지 않음
+    if (!selectedSchedule) {
+        return null;
     }
-  }
 
-  // 2. 참석자 목록을 문자열로 변환
-  const attendees = (item.attendees || []).map(person => {
-    return typeof person === 'string'
-      ? person
-      : `${person.name}(${person.status})`;
-  }).join(', ') || '없음';
+    // 참석자 목록
+    const attendees = (selectedSchedule.attendees || []).map(person => {
 
-  // 3. 화면 출력
-  return (
-    <section
-      className="schedule-dialog"
-      role="dialog"
-      aria-modal="true"
-    >
-      <h2>{item.title}</h2>
+        // 참석자가 이름만 저장된 경우
+        if (typeof person === 'string') {
+            return person;
+        }
 
-      {/* 일정 상세정보 테이블 */}
-      <table className="schedule-detail-table">
-        <tbody>
+        // 참석자 이름과 상태가 저장된 경우
+        return `${person.name}(${person.status})`;
 
-          <tr>
-            <th>유형</th>
-            <td>{item.type || '-'}</td>
-          </tr>
+    }).join(', ') || '없음';
 
-          <tr>
-            <th>상태</th>
-            <td>{item.status || '-'}</td>
-          </tr>
+    // 수정 버튼
+    function handleEdit() {
+        if (onEdit) {
+            onEdit(selectedSchedule.id);
+        }
+    }
 
-          <tr>
-            <th>우선순위</th>
-            <td>{item.priority || '-'}</td>
-          </tr>
+    // 삭제 버튼
+    function handleDelete() {
 
-          <tr>
-            <th>담당 부서</th>
-            <td>{item.department || '-'}</td>
-          </tr>
+        const confirmed = window.confirm('일정을 삭제할까요?');
 
-          <tr>
-            <th>담당자</th>
-            <td>{item.manager || '-'}</td>
-          </tr>
+        if (confirmed) {
 
-          <tr>
-            <th>회의실</th>
-            <td>{item.room || '사용 안 함'}</td>
-          </tr>
+            // 선택한 일정 삭제
+            if (onDelete) {
+                onDelete(selectedSchedule.id);
+            }
 
-          <tr>
-            <th>시작일</th>
-            <td>
-              {item.startDate || '-'}
-              {item.startTime ? ` ${item.startTime}` : ''}
-            </td>
-          </tr>
+            // 상세보기 닫기
+            if (onClose) {
+                onClose();
+            }
+        }
+    }
 
-          <tr>
-            <th>종료일</th>
-            <td>
-              {item.endDate || '-'}
-              {item.endTime ? ` ${item.endTime}` : ''}
-            </td>
-          </tr>
+    return (
+        <section className="schedule-dialog">
 
-          {/* 회의 일정인 경우에만 표시 */}
-          {item.type === '회의' && (
-            <>
-              <tr>
-                <th>회의실</th>
-                <td>{item.room || '예약된 회의실 없음'}</td>
-              </tr>
+            <h2>{selectedSchedule.title}</h2>
 
-              {item.type === '회의' && (
-                <tr>
-                  <th>참석자</th>
-                  <td>{attendees}</td>
-                </tr>
-              )}
-            </>
-          )}
+            {/* 일정 상세정보 */}
+            <table className="schedule-detail-table">
+                <tbody>
 
-          <tr>
-            <th>설명</th>
-            <td>{item.description || '없음'}</td>
-          </tr>
+                    <tr>
+                        <th>유형</th>
+                        <td>{selectedSchedule.type || '-'}</td>
+                    </tr>
 
-        </tbody>
-      </table>
+                    <tr>
+                        <th>상태</th>
+                        <td>{selectedSchedule.status || '-'}</td>
+                    </tr>
 
-      {/* 기존 버튼 기능 유지 */}
-      <div className="schedule-detail-actions">
+                    <tr>
+                        <th>우선순위</th>
+                        <td>{selectedSchedule.priority || '-'}</td>
+                    </tr>
 
-        <button type="button" onClick={onClose}>
-          닫기
-        </button>
+                    <tr>
+                        <th>담당 부서</th>
+                        <td>{selectedSchedule.department || '-'}</td>
+                    </tr>
 
-        <button
-          type="button"
-          onClick={() => schedule.openEdit(item.id)}
-        >
-          수정
-        </button>
+                    <tr>
+                        <th>담당자</th>
+                        <td>{selectedSchedule.manager || '-'}</td>
+                    </tr>
 
-        <button type="button" onClick={remove}>
-          삭제
-        </button>
+                    <tr>
+                        <th>시작일</th>
+                        <td>
+                            {selectedSchedule.startDate || '-'}
+                            {selectedSchedule.startTime
+                                ? ` ${selectedSchedule.startTime}`
+                                : ''}
+                        </td>
+                    </tr>
 
-      </div>
+                    <tr>
+                        <th>종료일</th>
+                        <td>
+                            {selectedSchedule.endDate || '-'}
+                            {selectedSchedule.endTime
+                                ? ` ${selectedSchedule.endTime}`
+                                : ''}
+                        </td>
+                    </tr>
 
-    </section>
-  );
+                    {/* 모든 일정 유형에서 표시 */}
+                    <tr>
+                        <th>회의실 / 장소</th>
+                        <td>
+                            {selectedSchedule.room || '선택된 회의실 없음'}
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th>참석자</th>
+                        <td>{attendees}</td>
+                    </tr>
+
+                    <tr>
+                        <th>설명</th>
+                        <td>{selectedSchedule.description || '없음'}</td>
+                    </tr>
+
+                </tbody>
+            </table>
+
+            {/* 상세보기 버튼 */}
+            <div className="schedule-detail-actions">
+
+                <button
+                    type="button"
+                    onClick={onClose}
+                >
+                    닫기
+                </button>
+
+                <button
+                    type="button"
+                    onClick={handleEdit}
+                >
+                    수정
+                </button>
+
+                <button
+                    type="button"
+                    onClick={handleDelete}
+                >
+                    삭제
+                </button>
+
+            </div>
+
+        </section>
+    );
 }
+
+export default ScheduleDetail;

@@ -47,6 +47,8 @@ function ADComp(){
     const seconds = String(time.getSeconds()).padStart(2,'0');
     const timeString = hours + ":" + minutes + ":" + seconds;
 
+    const [isCalStyile, setCalStyile] = useState(0);
+
     useEffect(()=>{
         const timer = setInterval(() => {
             setTime(new Date());
@@ -68,8 +70,17 @@ function ADComp(){
           }}>
             {/* 좌측: 달력 컴포넌트 */}
             <div className="attendance-card">
-              <BasicCalendar schedule={data} />
-              <WeeklyCalendar />
+              <div>
+                <button onClick ={()=>{
+                  setCalStyile(0);
+                }}>달력</button>
+                <button onClick ={()=>{
+                  setCalStyile(1);
+                }}>리스트</button>
+              </div>
+              {isCalStyile == 0 ?
+                (<BasicCalendar schedule={data} />)
+                :(<WeeklyCalendar schedule={data}/>) }
             </div>
         
             {/* 우측: 출결 관리 카드 */}
