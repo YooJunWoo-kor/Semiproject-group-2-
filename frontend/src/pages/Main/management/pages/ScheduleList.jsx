@@ -1,62 +1,56 @@
-import React from 'react';
-import { useSchedules } from '../ScheduleContext';
+import { useOutletContext } from 'react-router-dom';
+import React, { useState } from 'react';
 import { departments, types } from '../utils/scheduleUtils';
 
-export default function ScheduleList() {
-  // 1. 일정관리 공통 데이터
-  const schedule = useSchedules();
+function ScheduleList() {
+  const { schedules: scheduleList, onSelectSchedule } = useOutletContext();
+  const [keyword, setKeyword] = useState('');
+  const [department, setDepartment] = useState('전체');
+  const [type, setType] = useState('전체');
 
-  // 2. 검색 및 필터
-  function changeKeyword(event) {
-    schedule.setKeyword(event.target.value);
-  }
+  // 검색어, 부서, 유형을 모두 만족하는 일정만 표시
+  const filteredList = scheduleList.filter(scheduleItem => {
+    const searchMatch =
+      String(scheduleItem.title || '').includes(keyword) ||
+      String(scheduleItem.manager || '').includes(keyword);
+    const departmentMatch = department === '전체' || scheduleItem.department === department;
+    const typeMatch = type === '전체' || scheduleItem.type === type;
+    return searchMatch && departmentMatch && typeMatch;
+  });
 
   return (
-    <section>
-      <h1>일정 목록</h1>
-      <button onClick={() => schedule.openCreate()}>일정 등록</button>
-      <button onClick={() => schedule.setAdjustmentOpen(true)}>기간 조정</button>
-
+    <section className="sub-container">
+      <h2>일정 목록</h2>
       <p>
-        <input
-          aria-label="검색"
-          value={schedule.keyword}
-          onChange={changeKeyword}
-          placeholder="일정명·담당자 검색"
-        />
-        <select value={schedule.department} onChange={e => schedule.setDepartment(e.target.value)}>
+        <input aria-label="일정 검색" value={keyword} onChange={event => setKeyword(event.target.value)} placeholder="일정명·담당자 검색" />
+        <select value={department} onChange={event => setDepartment(event.target.value)}>
           {['전체', ...departments].map(name => <option key={name}>{name}</option>)}
         </select>
-        <select value={schedule.type} onChange={e => schedule.setType(e.target.value)}>
+        <select value={type} onChange={event => setType(event.target.value)}>
           {['전체', ...types].map(name => <option key={name}>{name}</option>)}
         </select>
       </p>
-
-      {/* 3. 일정 목록 테이블 */}
-      <p>총 {schedule.filtered.length}건</p>
-      <table className="schedule-data-table">
-        <thead>
-          <tr>
-            {['일정명', '유형', '담당 부서', '담당자', '기간', '우선순위', '상태', '상세'].map(name => (
-              <th key={name}>{name}</th>
+      <p>총 {filteredList.length}건</p>
+      <div className="table-shell schedule-table-shell">
+        <table className="schedule-data-table">
+          <thead><tr>
+            <th>일정명</th><th>유형</th><th>담당 부서</th><th>담당자</th>
+            <th>기간</th><th>우선순위</th><th>상태</th><th>상세</th>
+          </tr></thead>
+          <tbody>
+            {filteredList.map(scheduleItem => (
+              <tr key={scheduleItem.id}>
+                <td>{scheduleItem.title}</td><td>{scheduleItem.type}</td>
+                <td>{scheduleItem.department}</td><td>{scheduleItem.manager}</td>
+                <td>{scheduleItem.startDate} ~ {scheduleItem.endDate}</td>
+                <td>{scheduleItem.priority}</td><td>{scheduleItem.status}</td>
+                <td><button onClick={() => onSelectSchedule && onSelectSchedule(scheduleItem)}>조회</button></td>
+              </tr>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {schedule.filtered.map(item => (
-            <tr key={item.id}>
-              <td>{item.title}</td>
-              <td>{item.type}</td>
-              <td>{item.department}</td>
-              <td>{item.manager}</td>
-              <td>{item.startDate} ~ {item.endDate}</td>
-              <td>{item.priority}</td>
-              <td>{item.status}</td>
-              <td><button onClick={() => schedule.setSelectedId(item.id)}>조회</button></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
+export default ScheduleList;

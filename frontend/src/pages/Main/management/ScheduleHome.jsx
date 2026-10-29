@@ -1,38 +1,54 @@
+
 import React from 'react';
-import './ScheduleManagement.css';
-import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
-import { ScheduleProvider } from './ScheduleContext';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Nav from '../../../components/Nav';
 import ScheduleModul from './ScheduleModul';
 import ScheduleCalendar from './pages/ScheduleCalendar';
 import ScheduleList from './pages/ScheduleList';
-import ScheduleDialogs from './components/ScheduleDialogs';
 import ScheduleRoomTimetable from './pages/ScheduleRoomTimetable';
+import SchedulePage from './components/SchedulePage';
+import MySchedule from './pages/MySchedule';
+import MeetingRoomManagement from './pages/MeetingRoomManagement';
 
-const menu = [
-    ['', '일정 홈'],
-    ['calendar', '달력'],
-    ['list', '일정 목록'],
-    ['rooms', '회의실 시간표']
-];
+function ScheduleHome() {
 
-export default function ScheduleHome() {
-    return <ScheduleProvider><div className="schedule-page">
-        <nav className="schedule-sidebar" aria-label="일정관리 메뉴">
-            <h2>일정관리</h2>
-            {menu.map(([path, title]) => <p key={path}>
-                <NavLink end={!path} to={path ? `/main/schedule/${path}` : '/main/schedule'}>{title}</NavLink>
-            </p>)}
-        </nav>
-        <main className="schedule-content">
+    const mainUrl = '/main/schedule';
+
+    const urlList = [
+        { name: '대시보드', url: mainUrl },
+        { name: '일정 달력', url: mainUrl + '/calendar' },
+        { name: '일정 목록', url: mainUrl + '/list' },
+        { name: '회의실 시간표', url: mainUrl + '/room' },
+        { name: '내 일정', url: mainUrl + '/my' },
+        { name: '회의실 관리', url: mainUrl + '/rooms' },
+    ];
+
+    return (
+        <div className="sub-main-contain">
+
+            {/* 왼쪽 메뉴 */}
+            <Nav urlist={urlList} />
+
+            {/* 오른쪽 화면 */}
             <Routes>
-                <Route index element={<ScheduleModul />} />
-                <Route path="calendar" element={<ScheduleCalendar />} />
-                <Route path="list" element={<ScheduleList />} />
-                <Route path="rooms" element={<ScheduleRoomTimetable />} />
-                <Route path="*" element={<Navigate to="/main/schedule" replace />} />
+                <Route element={<SchedulePage />}>
+                    <Route index element={<ScheduleModul />} />
+                    <Route path="calendar/*" element={<ScheduleCalendar />} />
+                    <Route path="list/*" element={<ScheduleList />} />
+                    <Route path="room/*" element={<ScheduleRoomTimetable />} />
+                    <Route path="my" element={<MySchedule />} />
+                    <Route path="rooms" element={<MeetingRoomManagement />} />
+                </Route>
+
+                <Route
+                    path="*"
+                    element={<Navigate to={mainUrl} replace />}
+                />
             </Routes>
-        </main>
-        <ScheduleDialogs />
-    </div>
-    </ScheduleProvider>
+
+        </div>
+
+    );
 }
+
+export default ScheduleHome;
