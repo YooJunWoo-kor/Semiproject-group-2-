@@ -1,56 +1,296 @@
-
+/* 월간 달력과 같은 흰색 배경, 슬레이트 색상, 작은 여백을 사용합니다. */
 .weekly-calendar {
-    padding: 20px;
-    background: white;
-    box-sizing: border-box;
-    width: 100%;
+  width: 100%;
+  min-width: 0;
+  min-height: 456px;
+  padding: 0;
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.weekly-calendar,
+.weekly-calendar * {
+  box-sizing: border-box;
+}
+
+.weekly-calendar .weekly-calendar-header {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  min-height: 24px;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 10px;
+}
+
+.weekly-calendar .weekly-calendar-navigation {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.weekly-calendar h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.weekly-calendar .weekly-calendar-navigation h2 {
+  min-width: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.weekly-calendar h3 {
+  margin: 18px 0 8px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.weekly-calendar button {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #475569;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+}
+
+.weekly-calendar button:hover {
+  background: #f1f5f9;
+}
+
+.weekly-calendar button:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.weekly-calendar .weekly-calendar-header > button {
+  justify-self: start;
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.weekly-calendar .weekly-calendar-navigation button {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 11px;
+}
+
+/* 세로형 주간 달력의 구조는 유지하고 간격만 월간 달력에 맞춥니다. */
+.weekly-calendar .weekly-calendar-body {
+  display: grid;
+  grid-template-columns: minmax(0, 45fr) minmax(0, 55fr);
+  align-items: start;
+  gap: 14px;
+  min-height: 420px;
+  max-height: 480px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.weekly-calendar .weekly-calendar-main,
+.weekly-calendar .weekly-calendar-details {
+  min-width: 0;
+}
+
+.weekly-calendar .weekly-calendar-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid #f1f5f9;
+  border-radius: 6px;
+}
+
+.weekly-calendar .weekly-calendar-list > li {
+  margin: 0;
+}
+
+.weekly-calendar .weekly-calendar-list > li + li {
+  border-top: 1px solid #f1f5f9;
+}
+
+.weekly-calendar .weekly-calendar-day {
+  display: grid;
+  grid-template-columns: 20px 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  text-align: left;
+  font-size: 11px;
+}
+
+.weekly-calendar .weekly-calendar-weekday {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.weekly-calendar .weekly-calendar-date {
+  color: #334155;
+  font-weight: 600;
+}
+
+.weekly-calendar .weekly-calendar-summary {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.weekly-calendar .weekly-calendar-list > li:first-child .weekly-calendar-weekday,
+.weekly-calendar .weekly-calendar-list > li:first-child .weekly-calendar-date {
+  color: #ef4444;
+}
+
+.weekly-calendar .weekly-calendar-list > li:last-child .weekly-calendar-weekday,
+.weekly-calendar .weekly-calendar-list > li:last-child .weekly-calendar-date {
+  color: #3b82f6;
+}
+
+.weekly-calendar .weekly-calendar-day[aria-pressed="true"] {
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+
+.weekly-calendar .weekly-calendar-day[aria-current="date"] .weekly-calendar-date {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.weekly-calendar .weekly-calendar-details {
+  padding: 12px;
+  border: 1px solid #f1f5f9;
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+
+.weekly-calendar .weekly-calendar-details p {
+  margin: 6px 0;
+  color: #64748b;
+}
+
+.weekly-calendar .weekly-calendar-details > p:first-of-type {
+  color: #334155;
+  font-weight: 600;
+}
+
+.weekly-calendar .weekly-calendar-details ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.weekly-calendar .weekly-calendar-details li {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  background: #eff6ff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #334155;
+}
+
+.weekly-calendar .weekly-calendar-event {
+  display: block;
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.weekly-calendar .weekly-calendar-memo {
+  min-height: 100px;
+  margin-top: 16px;
+  padding: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+.weekly-calendar .weekly-calendar-memo h3 {
+  margin-top: 0;
+}
+
+.weekly-calendar .weekly-calendar-memo > div + div {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.weekly-calendar .weekly-calendar-memo p {
+  white-space: pre-wrap;
+}
+
+/* BasicCalendar의 CALENDAR_COLORS와 같은 typeId 색상을 사용합니다. */
+.weekly-calendar .weekly-calendar-status {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.weekly-calendar .weekly-calendar-status[data-type] {
+  min-height: 20px;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 10px;
+  background: #64748b;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 14px;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.weekly-calendar .weekly-calendar-status[data-type="0"] { background: #3b82f6; }
+.weekly-calendar .weekly-calendar-status[data-type="1"] { background: #f59e0b; }
+.weekly-calendar .weekly-calendar-status[data-type="2"] { background: #ef4444; }
+.weekly-calendar .weekly-calendar-status[data-type="3"] { background: #10b981; }
+.weekly-calendar .weekly-calendar-status[data-type="4"] { background: #06b6d4; }
+.weekly-calendar .weekly-calendar-status[data-type="5"] { background: #6366f1; }
+.weekly-calendar .weekly-calendar-status[data-type="6"] { background: #14b8a6; }
+.weekly-calendar .weekly-calendar-status[data-type="7"] { background: #8b5cf6; }
+.weekly-calendar .weekly-calendar-status[data-type="8"] { background: #d946ef; }
+.weekly-calendar .weekly-calendar-status[data-type="9"] { background: #64748b; }
+
+/* 모바일에서는 날짜 목록 다음에 상세 정보를 표시합니다. */
+@media (max-width: 768px) {
+  .weekly-calendar .weekly-calendar-body {
+    grid-template-columns: minmax(0, 1fr);
   }
-  .weekly-calendar-main { flex: 1; min-width: 0; }
-  .weekly-calendar-header,
-  .weekly-calendar-navigation { display: flex; align-items: center; gap: 12px; }
-  .weekly-calendar-header { margin-bottom: 20px; flex-wrap: wrap; }
-  .weekly-calendar-navigation { flex: 1; min-width: 0; }
-  .weekly-calendar-navigation h2 { overflow-wrap: anywhere; }
-  /* 날짜 목록과 메모 영역을 나란히 배치합니다. */
-  .weekly-calendar-body { display: flex; align-items: stretch; gap: 24px; }
-  .weekly-calendar h2 { margin: 0; font-size: 18px; }
-  .weekly-calendar h3 { font-size: 15px; }
-  .weekly-calendar button {
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    background: white;
-    color: inherit;
-    cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  .weekly-calendar .weekly-calendar-header {
+    grid-template-columns: 40px minmax(0, 1fr);
   }
-  .weekly-calendar button:hover { background: #f1f5f9; }
-  .weekly-calendar button:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
-  .weekly-calendar-navigation button { font-size: 10px; flex-shrink: 0; }
-  .weekly-calendar-list { list-style: none; padding: 0; margin: 16px 0 0; }
-  .weekly-calendar-list li { margin-bottom: 8px; }
-  .weekly-calendar-list .weekly-calendar-day {
-    display: flex; align-items: center; gap: 12px;
-    width: 100%; min-height: 56px; text-align: left;
+
+  .weekly-calendar .weekly-calendar-navigation h2 {
+    font-size: 12px;
   }
-  .weekly-calendar-weekday { flex: 0 0 20px; font-weight: bold; }
-  .weekly-calendar-date { flex: 0 0 48px; }
-  .weekly-calendar-summary { min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
-  .weekly-calendar-list li:first-child .weekly-calendar-weekday,
-  .weekly-calendar-list li:first-child .weekly-calendar-date { color: #dc2626; }
-  .weekly-calendar-list li:last-child .weekly-calendar-weekday,
-  .weekly-calendar-list li:last-child .weekly-calendar-date { color: #2563eb; }
-  .weekly-calendar-day[aria-pressed="true"] { background: #eff6ff; border-color: #2563eb; }
-  .weekly-calendar-day[aria-current="date"] .weekly-calendar-date { font-weight: bold; text-decoration: underline; }
-  .weekly-calendar-event { display: block; margin-top: 6px; color: #334155; overflow-wrap: anywhere; font-size: 12px; }
-  .weekly-calendar-details { flex: 1; min-width: 0; padding: 20px; border: 1px solid #ddd; box-sizing: border-box; overflow-wrap: anywhere; }
-  .weekly-calendar-details ul { padding-left: 20px; }
-  .weekly-calendar-details li { margin-bottom: 12px; }
-  .weekly-calendar-memo { margin-top: 24px; padding: 16px; border: 1px solid #e2e8f0; background: #fffbeb; }
-  .weekly-calendar-memo h3 { margin-top: 0; }
-  /* 좁은 화면에서는 메모 영역을 날짜 목록 아래로 옮깁니다. */
-  @media (max-width: 768px) {
-    .weekly-calendar-body { flex-direction: column; }
-    .weekly-calendar-main,
-    .weekly-calendar-details { width: 100%; flex: auto; }
-    .weekly-calendar-navigation h2 { font-size: 14px; }
+
+  .weekly-calendar .weekly-calendar-day {
+    gap: 6px;
+    padding: 6px;
   }
+}
