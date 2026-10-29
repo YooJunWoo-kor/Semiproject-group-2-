@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import './Calendar.css';
+import WeeklyCalendar from './WeeklyCalendar';
 
-function BasicCalendar({ schedule = [] }) {
+function BasicCalendar({ schedule = [], showWeekly = false }) {
 
   // 현재 보고 있는 연도와 월
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -68,6 +69,7 @@ function BasicCalendar({ schedule = [] }) {
   const weekdays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   return (
+    <>
     <div className="basic-calendar">
 
       {/* 달력 상단 */}
@@ -136,6 +138,8 @@ function BasicCalendar({ schedule = [] }) {
       </table>
 
     </div>
+    {showWeekly && <WeeklyCalendar schedule={schedule} />}
+    </>
   );
 }
 

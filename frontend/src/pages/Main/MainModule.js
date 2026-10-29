@@ -57,7 +57,7 @@ function MainModule() {
     // 유저에 따라 보드에 노출 목록 관리할 예정.
     const [index, setindex] = useState(0);
     const boardList = [
-        <ADComp />,
+        <ADComp showWeekly />,
         <Dashboard />
       ];
 

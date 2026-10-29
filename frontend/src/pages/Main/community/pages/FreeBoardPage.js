@@ -115,12 +115,6 @@ function FreeBoardPage({ communityItems }) {
   };
 
 
-
-
-
-
-
-
   const showDetail = view === "detail" && selected !== null;
   const showForm = view === "write" || view === "edit";
 
