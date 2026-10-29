@@ -1,6 +1,6 @@
 import React from "react";
 
-function DraftReceived({}) {
+function DraftReceived({ drafts, setDrafts, loginUser }) {
     const receivedDrafts = drafts.filter((draft) => {
         return (
             draft.approverId === loginUser.id && draft.status === "요청"
@@ -35,7 +35,7 @@ function DraftReceived({}) {
                         <div key={draft.id}>
                             <p>작성자 : {draft.writerName}</p>
                             <p>제목 : {draft.title}</p>
-                            <p>문서 종류 : {draft.content}</p>
+                            <p>문서 종류 : {draft.draftType}</p>
                             <p>작성일 : {draft.createdAt}</p>
                             <p>상태 : {draft.status}</p>
 
