@@ -1,41 +1,13 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import ScheduleAddButton from './ScheduleAddButton';
 import ScheduleDialogs from './ScheduleDialogs';
 import { initialSchedules } from '../data/schedules';
+import { initialRooms } from '../data/rooms';
 import { normalizeSchedule, addSchedule, updateSchedule, removeSchedule } from '../services/scheduleService';
 import { conflicts } from '../utils/scheduleUtils';
 import '../ScheduleManagement.css';
 
-const initialRooms = [
-  {
-    id: 'room-a',
-    name: 'A회의실',
-    location: '본관 2층',
-    capacity: 6,
-    equipment: '모니터, 화이트보드',
-    available: true
-  },
-  {
-    id: 'room-b',
-    name: 'B회의실',
-    location: '본관 3층',
-    capacity: 10,
-    equipment: '프로젝터',
-    available: true
-  },
-  {
-    id: 'room-c',
-    name: 'C회의실',
-    location: '본관 3층',
-    capacity: 4,
-    equipment: '모니터',
-    available: true
-  }
-];
-
-
-export default function SchedulePage() {
+export default function ScheduleManager() {
   // --------------------------------------------------
   // 1. 화면에서 사용할 데이터와 상태
   // --------------------------------------------------
@@ -57,29 +29,25 @@ export default function SchedulePage() {
   // 컴포넌트 안: 회의실 상태 
   const [rooms, setRooms] = useState(initialRooms);
 
-  // --------------------------------------------------
-  // 2. 화면에 보여줄 내용
-  // --------------------------------------------------
+
+  // 공용 메뉴·버튼·팝업은 이 레이아웃에서 한 번만 표시합니다.
 
   return (
     <div className="schedule-page">
       <div className="schedule-content">
-        {/* 상단: 일정 등록 버튼 */}
-        <div className="schedule-add-area">
-          <ScheduleAddButton onClick={openCreate} />
-        </div>
+        <button type="button" onClick={openCreate}>
+          + 일정 등록
+        </button>
 
-        {/* 본문: 선택한 메뉴의 화면 */}
         <Outlet
           context={{
             schedules,
-            onSelectSchedule: selectSchedule,
             rooms,
-            setRooms
+            setRooms,
+            onSelectSchedule: selectSchedule
           }}
         />
 
-        {/* 팝업: 등록·수정·상세보기 */}
         <ScheduleDialogs
           selectedSchedule={selectedSchedule}
           editingSchedule={editingSchedule}
@@ -160,4 +128,5 @@ export default function SchedulePage() {
 
     closeDetail();
   }
+
 }

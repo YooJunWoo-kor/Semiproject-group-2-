@@ -3,7 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import React, { useState } from 'react';
 import { todayISO } from '../utils/scheduleUtils';
 
-const rooms = ['A회의실', 'B회의실', 'C회의실'];
+
 
 const slots = Array.from({ length: 22 }, (_, index) => {
   const start = 9 * 60 + index * 30;
@@ -12,7 +12,8 @@ const slots = Array.from({ length: 22 }, (_, index) => {
 });
 
 export default function ScheduleRoomTimetable() {
-  const { schedules: scheduleList } = useOutletContext();
+  const { schedules: scheduleList, rooms: roomList } = useOutletContext();
+  const rooms = roomList.map(room => room.name);
 
   const [selectedDate, setSelectedDate] = useState(() => todayISO());
 
@@ -82,7 +83,7 @@ export default function ScheduleRoomTimetable() {
                 return (
                   <td key={room}>
                     {items.length === 0 ? (
-                      <span>예약 가능</span>
+                      <span>{roomList.find(item => item.name === room)?.available ? '예약 가능' : '사용 중지'}</span>
                     ) : (
                       <span className="status-badge status-danger">
                         예약 불가

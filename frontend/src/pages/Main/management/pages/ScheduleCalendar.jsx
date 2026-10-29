@@ -1,5 +1,5 @@
-import React from 'react';
 import { useOutletContext } from 'react-router-dom';
+import React from 'react';
 import BasicCalendar from '../../../../components/calendar/BasicCalendar.js';
 
 export default function ScheduleCalendar() {

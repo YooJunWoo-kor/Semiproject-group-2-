@@ -7,6 +7,7 @@ function ScheduleModul() {
 
     // 일정관리 메뉴
     const scheduleMenus = [
+        { title: '일정 알림', description: '마감이 가까운 일정과 중요한 일정을 확인합니다.', path: 'notifications' },
         {
             title: '일정 달력',
             description: '월간 달력에서 부서별 일정과 업무 일정을 확인합니다.',
@@ -23,15 +24,11 @@ function ScheduleModul() {
             path: 'room'
         },
         {
-            title: '내 일정',
-            description: '담당자별 오늘 일정과 이번 주 일정을 확인합니다.',
-            path: 'my'
-        },
-        {
             title: '회의실 관리',
             description: '회의실 정보와 운영 상태를 관리합니다.',
             path: 'rooms'
-        }
+        },
+        
     ];
 
     return (
