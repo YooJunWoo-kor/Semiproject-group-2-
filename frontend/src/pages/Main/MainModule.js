@@ -3,9 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import ADComp from '../../components/ADComp';
 import Dashboard from './hr/pages/Dashboard';
 import ProjectModul from './project/ProjectModul';
+import { useSchedules } from './management/ScheduleContext';
 
 function MainModule() {
     const navigate = useNavigate();
+    const scheduleContext = useSchedules();
+
+    // 원본 일정은 그대로 두고 달력에서 사용하는 속성명으로 바꿉니다.
+    const schedule = scheduleContext.schedules.map(function (item) {
+        return {
+            id: item.id,
+            title: item.title,
+            start: item.startDate,
+            end: item.endDate,
+            description: item.description
+        };
+    });
+
     const url = '/main';
     const modules = [
         {
@@ -57,7 +71,7 @@ function MainModule() {
     // 유저에 따라 보드에 노출 목록 관리할 예정.
     const [index, setindex] = useState(0);
     const boardList = [
-        <ADComp showWeekly />,
+        <ADComp schedule={schedule} showWeekly={true} />,
         <Dashboard />
       ];
 

@@ -1,7 +1,6 @@
 import React from 'react';
 import './ScheduleManagement.css';
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
-import { ScheduleProvider } from './ScheduleContext';
 import ScheduleModul from './ScheduleModul';
 import ScheduleCalendar from './pages/ScheduleCalendar';
 import ScheduleList from './pages/ScheduleList';
@@ -16,7 +15,7 @@ const menu = [
 ];
 
 export default function ScheduleHome() {
-    return <ScheduleProvider><div className="schedule-page">
+    return <div className="schedule-page">
         <nav className="schedule-sidebar" aria-label="일정관리 메뉴">
             <h2>일정관리</h2>
             {menu.map(([path, title]) => <p key={path}>
@@ -34,5 +33,4 @@ export default function ScheduleHome() {
         </main>
         <ScheduleDialogs />
     </div>
-    </ScheduleProvider>
 }
