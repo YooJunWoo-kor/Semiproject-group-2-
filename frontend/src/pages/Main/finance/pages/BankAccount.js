@@ -59,11 +59,10 @@ function BankAccount() {
         .reduce((sum, acc) => sum + acc.balance, 0);
 
     return (
-        <div>
-            {/* 1. 상단 타이틀 및 액션 */}
-            <header>
-                <h2>회사 계좌 관리</h2>
-                <p>법인 소유의 모든 입출금/예적금 계좌 현황 및 잔액을 관리합니다.</p>
+        <div className="sub-container">
+            <header className="dashboard-header">
+                <span className='subtitle'>회사 계좌 관리</span>
+            </header>
                 <div>
                     <button type="button" onClick={() => alert('신규 계좌 등록 폼 열기')}>
                         + 법인 계좌 신규 등록
@@ -72,7 +71,6 @@ function BankAccount() {
                         실시간 잔액 동기화
                     </button>
                 </div>
-            </header>
 
             <hr />
 

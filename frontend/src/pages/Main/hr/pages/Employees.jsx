@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getLoginUser, saveEmployeeAccount } from '../../../../utils/authStorage';
+import { Link } from 'react-router-dom';
 
 const initialEmployees = [
     {
@@ -188,29 +189,24 @@ export default function Employees() {
     }
 
     return (
-        <div className="employees-wrapper">
-            <div className="page-top-header">
-                <h1>
-                    직원 관리
-                </h1>
-
-                {/* MASTER에게만 보임 */}
-                {isMaster && (
-                    <button
-                        className="action-btn"
-                        onClick={() =>
-                            setShowForm(
-                                !showForm
-                            )
-                        }
-                    >
-                        {showForm
-                            ? '등록 취소'
-                            : '직원 등록'
-                        }
-                    </button>
-                )}
-
+        
+        <div className="sub-container">
+            <div >
+                <header className="dashboard-header">
+                    <span className='subtitle'>직원관리</span>
+                 <span className='subtext'> 직원현황 </span>
+                 <div className="dashboard-top">
+                             {/* MASTER에게만 표시 */}
+                             {isMaster && (
+                                 <Link
+                                     to="/main/hr/employees"
+                                     className="register-btn"
+                                 >
+                                     직원등록
+                                 </Link>
+                             )}
+                         </div>
+                 </header>
             </div>
 
             {/* MASTER에게만 폼 표시 */}
@@ -510,13 +506,6 @@ export default function Employees() {
                         </div>
 
                     )}
-
-                </div>
-
-
-                <div className="table-footer">
-
-                    전체 {filteredEmployees.length}명의 직원이 표시됩니다.
 
                 </div>
 

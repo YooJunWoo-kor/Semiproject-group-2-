@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ADComp from '../../components/ADComp';
-import Dashboard from './hr/pages/Dashboard';
-import ProjectModul from './project/ProjectModul';
+import Dashboard from './hr/Dashboard';
 
 function MainModule() {
     const navigate = useNavigate();

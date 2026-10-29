@@ -59,11 +59,10 @@ function Partners() {
     const currentPartner = partnersList.find((p) => p.id === selectedPartnerId) || partnersList[0];
 
     return (
-        <div className="finance-page">
-            {/* 1. 상단 타이틀 및 뷰 모드 전환 버튼 */}
-            <header>
-                <h2>거래처 관리 및 입출금 마감 센터</h2>
-                <p>매출처/매입처 정보, 결제 수취 계좌 관리 및 입출금 정산 마감일을 관리합니다.</p>
+        <div className="sub-container">
+            <header className="dashboard-header">
+                <span className='subtitle'>거래처 관리</span>
+            </header>
                 <div>
                     <button
                         type="button"
@@ -85,7 +84,6 @@ function Partners() {
                         + 신규 거래처 등록
                     </button>
                 </div>
-            </header>
 
             <hr />
 

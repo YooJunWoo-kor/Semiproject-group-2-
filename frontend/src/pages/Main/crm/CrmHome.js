@@ -197,23 +197,27 @@ export default function CrmHome(props) {
         </div>
       </header>
 
-      <div className="crm-summary" aria-label="CRM 현황">
-        <div>
+      <div className="stats-grid" aria-label="CRM 현황">
+
+        <div className="stat-copy content-card">
           <span>전체 고객</span>
           <strong>{data.customers.length}</strong>
           <small>명</small>
         </div>
-        <div>
+
+        <div className="stat-copy content-card">
           <span>거래처</span>
           <strong>{data.partners.length}</strong>
           <small>곳</small>
         </div>
-        <div>
+
+        <div className="stat-copy content-card">
           <span>상담</span>
           <strong>{data.consultations.length}</strong>
           <small>건</small>
         </div>
-        <div>
+        
+        <div className="stat-copy content-card">
           <span>클레임</span>
           <strong>{data.claims.length}</strong>
           <small>건</small>
@@ -224,21 +228,21 @@ export default function CrmHome(props) {
         <h2>업무 메뉴</h2>
         <p>작업할 메뉴를 선택하세요.</p>
       </div>
-      <div className="crm-menu-grid">
+      <div className="module-grid">
         {menus.map(function (menu, index) {
           return (
-            <Link
-              className="crm-menu-card"
-              to={'/main/crm/' + menu.path}
-              key={menu.path}
-            >
-              <span className="crm-menu-number">{index + 1}</span>
-              <div>
-                <h3>{menu.title}</h3>
-                <p>{menu.description}</p>
-              </div>
-              <span className="crm-menu-arrow" aria-hidden="true">›</span>
+            <div className="module-card" key={menu.path}>
+            <span className="crm-menu-number">{index + 1}</span>
+          
+            <div>
+              <h3>{menu.title}</h3>
+              <p>{menu.description}</p>
+            </div>
+          
+            <Link to={'/main/crm/' + menu.path}>
+              {menu.title} 이동
             </Link>
+          </div>
           );
         })}
       </div>

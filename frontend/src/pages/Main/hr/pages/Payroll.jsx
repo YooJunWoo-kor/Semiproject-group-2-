@@ -1,4 +1,6 @@
+import { Link } from "react-router-dom";
 import StatisticsCard from "../../../../components/StatisticsCard";
+import { getLoginUser } from "../../../../utils/authStorage";
 
 //
 const payrollStats = [
@@ -21,22 +23,25 @@ const payrollStats = [
 ];
 
 export default function Payroll() {
-  return (
-    <div>
-      <div className="page-top-header">
-        <div>
-          <h1>급여 관리</h1>
-        </div>
+  const loginUser = getLoginUser();
+  const isMaster = loginUser?.role === 'MASTER';
 
-        <button
-          className="action-btn"
-          onClick={() =>
-            window.alert('급여 계산은 실제 급여 시스템 연결 후 사용할 수 있습니다.')
-          }
-        >
-          급여 명세서 생성
-        </button>
-      </div>
+  return (
+    <div className="sub-container">
+      <header className="dashboard-header">
+          <span className='subtitle'>급여관리 </span>
+          <div className="dashboard-top">
+                    {/* MASTER에게만 표시 */}
+                    {isMaster && (
+                        <Link
+                            to="/main/hr/employees"
+                            className="register-btn"
+                        >
+                            근태수정
+                        </Link>
+                    )}
+                 </div>
+      </header>
 
       <div className="dept-grid"
         style={{

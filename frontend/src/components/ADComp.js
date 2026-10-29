@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { getLoginUser } from "../utils/authStorage";
 import BasicCalendar from "../components/calendar/BasicCalendar.js";
+import WeeklyCalendar from "../components/weeklycalendar/WeeklyCalendar.js";
 import './ADComp.css';
 
 const data = [
@@ -62,13 +63,13 @@ function ADComp(){
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'stretch',
-            width: '100%',
             gap: '20px',                /* 달력과 출퇴근 카드 사이 간격 */
             boxSizing: 'border-box'
           }}>
             {/* 좌측: 달력 컴포넌트 */}
             <div className="attendance-card">
               <BasicCalendar schedule={data} />
+              <WeeklyCalendar />
             </div>
         
             {/* 우측: 출결 관리 카드 */}
