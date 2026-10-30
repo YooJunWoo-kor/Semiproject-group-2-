@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { NORMAL_ACCOUNTS, getEmployeeAccounts } from "../../../../utils/authStorage";
 
 function DraftCreate({ drafts, setDrafts, loginUser }) {
     const [title, setTitle] = useState("");
@@ -24,28 +25,15 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
     const [useDate, setUseDate] = useState("");
 
     const employees = [
-        {
-            id: 201,
-            name: "김철수",
-            department: "개발팀",
-            position: "팀장"
-        },
-        {
-            id: 202,
-            name: "이영희",
-            department: "개발팀",
-            position: "본부장"
-        },
-        {
-            id: 203,
-            name: "박민수",
-            department: "인사팀",
-            position: "팀장"
-        }
-
+        ...NORMAL_ACCOUNTS,
+        ...getEmployeeAccounts()
     ]
 
-    const departments = ["개발팀", "인사팀"];
+    const departments = [
+        ...new Set( // 중복된 부서 자동제거 (Set)
+            employees.map((employee) => employee.department)
+        )
+    ];
 
     function handleSubmit(e, saveType) {
         e.preventDefault();
@@ -103,16 +91,16 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
             content: content,
             status: saveType === "temporary" ? "임시저장" : "1차결재대기", //
             createdAt: new Date().toLocaleDateString(), // 작성일이며 toLocaleDateString : 읽기 쉬운 문자열로 바꾸는 함수
-            writerId: loginUser.id,
+            writerEmployeeKey : loginUser.employeeKey,
             writerName: loginUser.name,
             writerDepartment: loginUser.department,
             writerPosition: loginUser.position,
-            firstApproverId: firstApprover.id ? firstApprover.id : null,
+            firstApproverEmployeeKey : firstApprover ? firstApprover.employeeKey : null,
             firstApproverName: firstApprover.name ? firstApprover.name : "",
             firstApproverDepartment: firstApprover.department ? firstApprover.department : "",
             firstApproverPosition: firstApprover.position ? firstApprover.position : "",
 
-            secondApproverId: secondApprover ? secondApprover.id : null,
+            secondApproverEmployeeKey: secondApprover ? secondApprover.employeeKey : null,
             secondApproverName: secondApprover ? secondApprover.name : "",
             secondApproverDepartment: secondApprover ? secondApprover.department : "",
             secondApproverPosition: secondApprover ? secondApprover.position : "",
@@ -291,7 +279,7 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
                                 return employee.department === selectedDepartment;
                             })
                                 .map((employee) => (
-                                    <div key={employee.id}>
+                                    <div key={employee.employeeKey}>
                                         <label>
                                             <input type="radio" name="approver" onChange={() => setTempApprover(employee)} />
 

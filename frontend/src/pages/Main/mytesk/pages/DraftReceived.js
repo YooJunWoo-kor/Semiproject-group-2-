@@ -4,12 +4,12 @@ function DraftReceived({ drafts, setDrafts, loginUser }) {
 
     const receivedDrafts = drafts.filter((draft) => {
         return (
-            draft.firstApproverId === loginUser.id &&
+            draft.firstApproverEmployeeKey === loginUser.employeeKey &&
             draft.status === "1차결재대기"
         )
         ||
         (
-            draft.secondApproverId === loginUser.id &&
+            draft.secondApproverEmployeeKey === loginUser.employeeKey &&
             draft.status === "2차결재대기"
         )
     });
@@ -19,16 +19,25 @@ function DraftReceived({ drafts, setDrafts, loginUser }) {
         const updatedDrafts = drafts.map((draft) => {
 
             if (draft.id === id) {
-                return {
-                    ...draft,
-                    status: "2차결재대기"
-                };
-            }
 
-            if (draft.secondApproverId === loginUser.id && draft.status === "2차결재대기"){
-                return {
-                    ...draft,
-                    status: "최종승인"
+                if (
+                    draft.firstApproverEmployeeKey === loginUser.employeeKey &&
+                    draft.status === "1차결재대기"
+                ) {
+                    return {
+                        ...draft,
+                        status: "2차결재대기"
+                    };
+                }
+
+                if (
+                    draft.secondApproverEmployeeKey === loginUser.employeeKey &&
+                    draft.status === "2차결재대기"
+                ) {
+                    return {
+                        ...draft,
+                        status: "최종승인"
+                    };
                 }
             }
 
@@ -37,7 +46,7 @@ function DraftReceived({ drafts, setDrafts, loginUser }) {
 
         setDrafts(updatedDrafts);
     }
-
+    
     return (
         <div>
             <h2>요청이 온 기안서</h2>

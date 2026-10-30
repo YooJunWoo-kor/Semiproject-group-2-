@@ -9,15 +9,11 @@ import DraftReq from "./pages/DraftReq";
 import DraftComp from "./pages/DraftComp";
 import DraftReceived from "./pages/DraftReceived";
 import DraftApproved from "./pages/DraftApproved";
+import { getLoginUser } from "../../../utils/authStorage";
 
 function MyTeskList() {
 
-    const loginUser = {
-        id: 101,
-        name: "홍길동",
-        department: "개발팀",
-        position: "사원",
-    };
+    const loginUser = getLoginUser();
 
     const mainUrl = "/main/mytesk";
     const [drafts, setDrafts] = useState(() => {
