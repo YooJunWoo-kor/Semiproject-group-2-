@@ -2,7 +2,7 @@ import React from "react";
 
 function DraftReceived({ drafts, setDrafts, loginUser }) {
 
-    
+
 
     const receivedDrafts = drafts.filter((draft) => {
         const currentApproval = draft.approvers[draft.currentApprovalStep];
@@ -10,7 +10,7 @@ function DraftReceived({ drafts, setDrafts, loginUser }) {
         return (
             currentApproval &&
             currentApproval.employeeKey === loginUser.employeeKey &&
-            draft.status === "결재대기"   
+            draft.status === "결재대기"
         )
     });
 
@@ -25,48 +25,52 @@ function DraftReceived({ drafts, setDrafts, loginUser }) {
             if (draft.id === id) {
 
                 const nextStep = draft.currentApprovalStep + 1;
-    
+
                 if (nextStep < draft.approvers.length) {
                     return {
                         ...draft,
                         currentApprovalStep: nextStep
                     };
                 }
-    
+
                 return {
                     ...draft,
                     status: "최종승인"
                 };
             }
-    
+
             return draft;
         });
-    
+
         setDrafts(updatedDrafts);
     }
 
-    function handleReject(id){
+    function handleReject(id) {
 
         const rejectionReason = prompt("반려 사유를 입력해주세요.");
 
-        if(rejectionReason == null){
+        if (rejectionReason == null) {
             return;
         }
 
-        if(rejectionReason.trim() === ""){
+        if (rejectionReason.trim() === "") {
             alert("반려 사유를 입력해주세요");
             return;
         }
 
         const updatedDrafts = drafts.map((draft) => {
-           if(draft.id === id){
-            return {
-                ...draft,
-                status : "반려"
+            if (draft.id === id) {
+                return {
+                    ...draft,
+                    status: "반려",
+                    rejectedByEmployeeKey: loginUser.employeeKey,
+                    rejectedByName: loginUser.name,
+                    rejectionReason: rejectionReason,
+                    rejectedAt: new Date().toLocaleString() // 보기좋은 문자열로 바꾸기
+                }
             }
-           }
 
-           return draft;
+            return draft;
         })
 
         setDrafts(updatedDrafts);
@@ -88,10 +92,10 @@ function DraftReceived({ drafts, setDrafts, loginUser }) {
                             <p>문서 종류 : {draft.draftType}</p>
                             <p>작성일 : {draft.createdAt}</p>
                             <p>상태 : {draft.status}</p>
-                            
+
                             {draft.approvers.map((approver, index) => (
                                 <p key={approver.employeeKey}>
-                                    {index + 1}단계 결재자 : 
+                                    {index + 1}단계 결재자 :
                                     {approver.position} {approver.name}                                </p>
                             ))}
 
