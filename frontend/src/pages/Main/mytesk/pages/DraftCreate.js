@@ -4,7 +4,12 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
     const [title, setTitle] = useState("");
     const [draftType, setDraftType] = useState("일반");
     const [content, setContent] = useState("");
-    const [selectedApprover, setSelectedApprover] = useState(null);
+
+    const [approverStep, setApproverStep] = useState(null)
+
+    const [firstApprover, setFirstApprover] = useState(null)
+    const [secondApprover, setSecondApprover] = useState(null)
+
     const [showApproverModal, setShowApproverModal] = useState(false);
     const [selectedDepartment, setSelectedDepartment] = useState("");
     const [tempApprover, setTempApprover] = useState(null);
@@ -42,19 +47,32 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
 
     const departments = ["개발팀", "인사팀"];
 
-    function handleSubmit(e) {
+    function handleSubmit(e, saveType) {
         e.preventDefault();
+
+        if(title.trim() === ""){
+            alert("임시저장하려면 제목을 입력해주세요");
+            return;
+        }
 
         if (title.trim() === "" || content.trim() === "") {
             alert("제목과 내용을 입력해주세요");
             return;
         }
 
-        if (!selectedApprover) {
-            alert("결재자를 선택해주세요");
+        if (!firstApprover || !secondApprover) {
+            alert("1차, 2차 결재자 모두 선택해주세요");
             return;
         }
-        
+
+
+        if (saveType === "submit") {
+            if (!firstApprover || !secondApprover) {
+                alert("1차, 2차 결재자 모두 선택해주세요");
+                return;
+            }
+        }
+
         // 유효성 검사
         if (draftType === "휴가") {
             if (startDate === "" || endDate === "") {
@@ -62,14 +80,14 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
                 return;
             }
         }
-        
+
         if (draftType === "구매") {
             if (itemName.trim() === "" || quantity === "") {
                 alert("물품명과 수량을 입력해주세요.");
                 return;
             }
         }
-        
+
         if (draftType === "비용") {
             if (useDate === "" || amount === "") {
                 alert("사용일과 금액을 입력해주세요.");
@@ -83,23 +101,26 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
             title: title,
             draftType: draftType,
             content: content,
-            status: "요청", //
+            status: saveType === "temporary" ? "임시저장" : "1차결재대기", //
             createdAt: new Date().toLocaleDateString(), // 작성일이며 toLocaleDateString : 읽기 쉬운 문자열로 바꾸는 함수
             writerId: loginUser.id,
             writerName: loginUser.name,
-            approverId: selectedApprover.id,
-            approverName: selectedApprover.name,
-            approverDepartment: selectedApprover.department,
-            approverPosition: selectedApprover.position,
             writerDepartment: loginUser.department,
             writerPosition: loginUser.position,
+            firstApproverId: firstApprover.id ? firstApprover.id : null,
+            firstApproverName: firstApprover.name ? firstApprover.name : "",
+            firstApproverDepartment: firstApprover.department ? firstApprover.department : "",
+            firstApproverPosition: firstApprover.position ? firstApprover.position : "",
+
+            secondApproverId: secondApprover ? secondApprover.id : null,
+            secondApproverName: secondApprover ? secondApprover.name : "",
+            secondApproverDepartment: secondApprover ? secondApprover.department : "",
+            secondApproverPosition: secondApprover ? secondApprover.position : "",
 
             startDate: startDate,
             endDate: endDate,
-
             itemName: itemName,
             quantity: quantity,
-
             useDate: useDate,
             amount: amount,
         };
@@ -114,7 +135,8 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
         setTitle("");
         setDraftType("일반");
         setContent("");
-        setSelectedApprover(null);
+        setFirstApprover(null);
+        setSecondApprover(null);
 
         setStartDate("");
         setEndDate("");
@@ -130,7 +152,7 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
 
         <div>
             <h2>기안서 작성</h2>
-            <form onSubmit={handleSubmit}>
+            <form>
                 <div>
                     <p>작성자 : {loginUser.name}</p>
                     <p>부서 : {loginUser.department}</p>
@@ -220,20 +242,34 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
                     />
                 </label>
 
-                <button type="button" onClick={() => setShowApproverModal(true)}>
-                    결재자 선택
+                <button type="button" onClick={() => {
+                    setApproverStep(1);
+                    setShowApproverModal(true);
+                }}>
+                    1차 결재자 선택
+                </button>
+
+                <button type="button" onClick={() => {
+                    setApproverStep(2);
+                    setShowApproverModal(true);
+                }}>
+                    2차 결재자 선택
                 </button>
 
 
-                <button type="submit">
-                    기안서 등록
+                <button type="button" onClick={ (e) => handleSubmit(e, "temporary")}>
+                    임시저장
+                </button>
+
+                <button type="button" onClick={ (e) => handleSubmit(e, "submit")}>
+                    결재 요청
                 </button>
 
             </form>
 
             {showApproverModal && (
                 <div>
-                    <h3>결재자 선택</h3>
+                    <h3>{approverStep === 1 ? "1차 결재자 선택" : "2차 결재자 선택"}</h3>
 
                     <h4>부서 선택</h4>
 
@@ -273,10 +309,17 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
                             return;
                         }
 
-                        setSelectedApprover(tempApprover);
+                        if (approverStep === 1) {
+                            setFirstApprover(tempApprover);
+                        }
+                        else if (approverStep === 2) {
+                            setSecondApprover(tempApprover);
+                        }
+
                         setShowApproverModal(false);
                         setSelectedDepartment("");
                         setTempApprover(null);
+                        setApproverStep(null);
                     }}>
                         결재자 선택
 
@@ -294,12 +337,22 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
             )}
 
 
-            {selectedApprover && (
+            {firstApprover && (
                 <p>
-                    결재자 :
-                    {selectedApprover.name} / {selectedApprover.position}
+                    1차 결재자 :
+                    {firstApprover.name} / {firstApprover.position}
+
                 </p>
             )}
+
+            {secondApprover && (
+                <p>
+                    2차 결재자 :
+                    {secondApprover.name} / {secondApprover.position}
+                </p>
+            )}
+
+
 
         </div>
     )

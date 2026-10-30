@@ -16,12 +16,12 @@ function MyTeskList() {
         id: 101,
         name: "홍길동",
         department: "개발팀",
-        position: "사원"
+        position: "사원",
     };
 
     const mainUrl = "/main/mytesk";
     const [drafts, setDrafts] = useState(() => {
-        const savedDrafts = localStorage.getItem("drafts");
+    const savedDrafts = localStorage.getItem("drafts");
 
         if (savedDrafts) {
             return JSON.parse(savedDrafts);
@@ -33,11 +33,11 @@ function MyTeskList() {
 
     const urlList = [
         { name: "출결관리", url: mainUrl },
-        { name: "기안서 작성", url: mainUrl + "/draft-create" },
-        { name: "요청된 기안서", url: mainUrl + "/draft-request" },
-        { name: "완료된 기안서", url: mainUrl + "/draft-complete" },
-        { name: "요청이 온 기안서", url: mainUrl + "/draft-received" },
-        { name: "승인한 기안서", url: mainUrl + "/draft-approved" }
+        { name : "결재 대시보드", url : mainUrl + "/approval-dashboard"},
+        { name: "기안 작성", url: mainUrl + "/draft-create" },
+        { name: "내 결재 요청", url: mainUrl + "/draft-request" },
+        { name: "결재할 문서", url: mainUrl + "/draft-received" },
+        { name: "결재 완료", url: mainUrl + "/draft-approved" }
     ];
 
     useEffect(() => {
