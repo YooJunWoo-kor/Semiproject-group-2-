@@ -8,12 +8,13 @@ import DraftCreate from "./pages/DraftCreate";
 import DraftReq from "./pages/DraftReq";
 import DraftComp from "./pages/DraftComp";
 import DraftReceived from "./pages/DraftReceived";
+import DraftApproved from "./pages/DraftApproved";
 
 function MyTeskList() {
 
     const loginUser = {
-        id : 101,
-        name : "홍길동",
+        id: 101,
+        name: "홍길동",
         department: "개발팀",
         position: "사원"
     };
@@ -31,11 +32,12 @@ function MyTeskList() {
 
 
     const urlList = [
-        { name: "출결관리", url: mainUrl},
-        { name: "기안서 작성", url: mainUrl + "/draft-create"},
-        { name : "요청된 기안서", url: mainUrl + "/draft-request" },
-        { name : "완료된 기안서", url: mainUrl + "/draft-complete"},
-        { name : "요청이 온 기안서", url: mainUrl + "/draft-received"},
+        { name: "출결관리", url: mainUrl },
+        { name: "기안서 작성", url: mainUrl + "/draft-create" },
+        { name: "요청된 기안서", url: mainUrl + "/draft-request" },
+        { name: "완료된 기안서", url: mainUrl + "/draft-complete" },
+        { name: "요청이 온 기안서", url: mainUrl + "/draft-received" },
+        { name: "승인한 기안서", url: mainUrl + "/draft-approved" }
     ];
 
     useEffect(() => {
@@ -45,26 +47,31 @@ function MyTeskList() {
 
     return (
         <div className="sub-main-contain">
-            <Nav urlist={urlList}/>
+            <Nav urlist={urlList} />
 
             <div className="sub-container">
                 <Routes>
-                    <Route index element = {
+                    <Route index element={
                         <div>
                             <h2>출결관리</h2>
-                            <ADComp/>
+                            <ADComp />
                         </div>
-                    }/>
+                    } />
 
-                    <Route path="draft-create" element={<DraftCreate drafts={drafts} setDrafts={setDrafts} loginUser = {loginUser}/>}/>
-                    
-                    <Route path="draft-complete" element={<DraftComp drafts={drafts}/>}/>
+                    <Route path="draft-create" element={<DraftCreate drafts={drafts} setDrafts={setDrafts} loginUser={loginUser} />} />
 
-                    <Route path="draft-request" element={<DraftReq drafts = {drafts} setDrafts={setDrafts} />}/>
+                    <Route path="draft-complete" element={<DraftComp drafts={drafts} />} />
+
+                    <Route path="draft-request" element={<DraftReq drafts={drafts} setDrafts={setDrafts} />} />
+
+                    <Route path="draft-received" element={<DraftReceived
+                        drafts={drafts} setDrafts={setDrafts} loginUser={loginUser}
+                    />} />
+
+                    <Route path="draft-approved" element={<DraftApproved drafts={drafts} loginUser={loginUser}/>
                     
-                    <Route path="draft-received" element={<DraftReceived 
-                    drafts = {drafts}  setDrafts = {setDrafts} loginUser = {loginUser}
-                    />}/>
+                }
+                    />
 
                 </Routes>
             </div>

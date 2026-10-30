@@ -6,6 +6,17 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
     const [content, setContent] = useState("");
     const [selectedApprover, setSelectedApprover] = useState(null);
     const [showApproverModal, setShowApproverModal] = useState(false);
+    const [selectedDepartment, setSelectedDepartment] = useState("");
+    const [tempApprover, setTempApprover] = useState(null);
+
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+
+    const [itemName, setItemName] = useState("");
+    const [quantity, setQuantity] = useState("");
+
+    const [amount, setAmount] = useState("");
+    const [useDate, setUseDate] = useState("");
 
     const employees = [
         {
@@ -26,19 +37,44 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
             department: "인사팀",
             position: "팀장"
         }
+
     ]
+
+    const departments = ["개발팀", "인사팀"];
 
     function handleSubmit(e) {
         e.preventDefault();
 
-        if(title.trim() === "" || content.trim() === "") {
+        if (title.trim() === "" || content.trim() === "") {
             alert("제목과 내용을 입력해주세요");
             return;
         }
 
-        if(!selectedApprover) {
+        if (!selectedApprover) {
             alert("결재자를 선택해주세요");
             return;
+        }
+        
+        // 유효성 검사
+        if (draftType === "휴가") {
+            if (startDate === "" || endDate === "") {
+                alert("휴가 기간을 선택해주세요.");
+                return;
+            }
+        }
+        
+        if (draftType === "구매") {
+            if (itemName.trim() === "" || quantity === "") {
+                alert("물품명과 수량을 입력해주세요.");
+                return;
+            }
+        }
+        
+        if (draftType === "비용") {
+            if (useDate === "" || amount === "") {
+                alert("사용일과 금액을 입력해주세요.");
+                return;
+            }
         }
 
 
@@ -50,14 +86,25 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
             status: "요청", //
             createdAt: new Date().toLocaleDateString(), // 작성일이며 toLocaleDateString : 읽기 쉬운 문자열로 바꾸는 함수
             writerId: loginUser.id,
-            writerName : loginUser.name,
+            writerName: loginUser.name,
             approverId: selectedApprover.id,
-            approverName : selectedApprover.name,
+            approverName: selectedApprover.name,
             approverDepartment: selectedApprover.department,
-            approverPosition : selectedApprover.position,
+            approverPosition: selectedApprover.position,
+            writerDepartment: loginUser.department,
+            writerPosition: loginUser.position,
+
+            startDate: startDate,
+            endDate: endDate,
+
+            itemName: itemName,
+            quantity: quantity,
+
+            useDate: useDate,
+            amount: amount,
         };
 
-        
+
 
         setDrafts([
             ...drafts,
@@ -67,6 +114,16 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
         setTitle("");
         setDraftType("일반");
         setContent("");
+        setSelectedApprover(null);
+
+        setStartDate("");
+        setEndDate("");
+
+        setItemName("");
+        setQuantity("");
+
+        setUseDate("");
+        setAmount("");
     }
 
     return (
@@ -74,6 +131,12 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
         <div>
             <h2>기안서 작성</h2>
             <form onSubmit={handleSubmit}>
+                <div>
+                    <p>작성자 : {loginUser.name}</p>
+                    <p>부서 : {loginUser.department}</p>
+                    <p>직책 : {loginUser.position}</p>
+                </div>
+
                 <label>
                     제목
                     <input type="text" value={title} onChange={e => setTitle(e.target.value)} />
@@ -88,6 +151,64 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
                         <option>구매</option>
                         <option>비용</option>
                     </select>
+
+                    {draftType === "휴가" && (
+                        <div>
+                            <label>
+                                휴가 시작일
+                                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                            </label>
+
+                            <label>
+                                휴가 종료일
+                                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                            </label>
+                        </div>
+                    )}
+
+                    {draftType === "구매" && (
+                        <div>
+                            <label>
+                                물품명
+                                <input
+                                    type="text"
+                                    value={itemName}
+                                    onChange={e => setItemName(e.target.value)}
+                                />
+                            </label>
+
+                            <label>
+                                수량
+                                <input
+                                    type="number"
+                                    value={quantity}
+                                    onChange={e => setQuantity(e.target.value)}
+                                />
+                            </label>
+                        </div>
+                    )}
+
+                    {draftType === "비용" && (
+                        <div>
+                            <label>
+                                사용일
+                                <input
+                                    type="date"
+                                    value={useDate}
+                                    onChange={e => setUseDate(e.target.value)}
+                                />
+                            </label>
+
+                            <label>
+                                금액
+                                <input
+                                    type="number"
+                                    value={amount}
+                                    onChange={e => setAmount(e.target.value)}
+                                />
+                            </label>
+                        </div>
+                    )}
                 </label>
 
                 <label>
@@ -114,25 +235,64 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
                 <div>
                     <h3>결재자 선택</h3>
 
-                    {employees.map((employee) => (
-                        <div key={employee.id}>
-                            <span>
-                                {employee.department} /
-                                {employee.position} /
-                                {employee.name}
-                            </span>
+                    <h4>부서 선택</h4>
 
-                            <button type="button" onClick={() => {
-                                setSelectedApprover(employee);
-                                setShowApproverModal(false);
-                            }}>
-                                선택
-
-                            </button>
-                        </div>
+                    {departments.map((department) => (
+                        <button type="button" key={department}
+                            onClick={() => {
+                                setSelectedDepartment(department);
+                                setTempApprover(null);
+                            }}
+                        >
+                            {department}
+                        </button>
                     ))}
-                    </div>
+                    {selectedDepartment && (
+                        <div>
+                            <h4>{selectedDepartment}</h4>
+
+                            {employees.filter((employee) => {
+                                return employee.department === selectedDepartment;
+                            })
+                                .map((employee) => (
+                                    <div key={employee.id}>
+                                        <label>
+                                            <input type="radio" name="approver" onChange={() => setTempApprover(employee)} />
+
+                                            {employee.name} / {employee.position}
+                                        </label>
+                                    </div>
+                                ))
+                            }
+                        </div>
+                    )}
+
+                    <button type="button" onClick={() => {
+                        if (!tempApprover) {
+                            alert("결제자를 선택해주세요");
+                            return;
+                        }
+
+                        setSelectedApprover(tempApprover);
+                        setShowApproverModal(false);
+                        setSelectedDepartment("");
+                        setTempApprover(null);
+                    }}>
+                        결재자 선택
+
+                    </button>
+
+                    <button type="button" onClick={() => {
+                        setShowApproverModal(false);
+                        setSelectedDepartment("");
+                        setTempApprover(null);
+                    }}>
+                        취소
+                    </button>
+
+                </div>
             )}
+
 
             {selectedApprover && (
                 <p>
@@ -140,7 +300,7 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
                     {selectedApprover.name} / {selectedApprover.position}
                 </p>
             )}
-            
+
         </div>
     )
 }

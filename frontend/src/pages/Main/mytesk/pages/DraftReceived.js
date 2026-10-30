@@ -33,6 +33,8 @@ function DraftReceived({ drafts, setDrafts, loginUser }) {
                 receivedDrafts.map((draft) => {
                     return(
                         <div key={draft.id}>
+                             <p>결재요청자 : {draft.writerName}</p>
+
                             <p>작성자 : {draft.writerName}</p>
                             <p>제목 : {draft.title}</p>
                             <p>문서 종류 : {draft.draftType}</p>

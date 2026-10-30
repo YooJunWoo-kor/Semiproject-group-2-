@@ -121,6 +121,7 @@ function DraftReq({ drafts, setDrafts }) {
                             ) : (
 
                                 <div>
+                                    <p>결재자 : {draft.approverPosition} {draft.approverName}</p>
 
                                     <p>제목 : {draft.title}</p>
                                     <p>문서 종류 : {draft.draftType}</p>
