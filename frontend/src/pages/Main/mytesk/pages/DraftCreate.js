@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { NORMAL_ACCOUNTS, getEmployeeAccounts } from "../../../../utils/authStorage";
 
-function DraftCreate({ drafts, setDrafts, loginUser, editingDraft }) {
+function DraftCreate({ drafts, setDrafts, loginUser, editingDraft, setEditingDraft }) {
     const [title, setTitle] = useState("");
     const [draftType, setDraftType] = useState("일반");
     const [content, setContent] = useState("");
@@ -124,19 +124,19 @@ function DraftCreate({ drafts, setDrafts, loginUser, editingDraft }) {
             amount: amount,
         };
 
-        if(editingDraft){
+        if (editingDraft) {
             const updatedDrafts = drafts.map((draft) => {
-                if(draft.id === editingDraft.id) {
+                if (draft.id === editingDraft.id) {
                     return {
                         ...draftData,
-                        id : editingDraft.id
+                        id: editingDraft.id
                     }
                 }
                 return draft;
             })
-            
+
             setDrafts(updatedDrafts);
-            
+
         }
 
         else {
@@ -159,6 +159,7 @@ function DraftCreate({ drafts, setDrafts, loginUser, editingDraft }) {
 
         setUseDate("");
         setAmount("");
+        setEditingDraft(null);
     }
 
     return (
@@ -267,10 +268,23 @@ function DraftCreate({ drafts, setDrafts, loginUser, editingDraft }) {
 
 
                         {approvers.map((approver, index) => (
-                            <p key={approver.employeeKey}>
-                                {index + 1}단계 결재자 :
-                                {approver.position} {approver.name}
-                            </p>
+                            <div>
+                                <span>
+                                    {index + 1}단계 결재자 :
+                                    {approver.position} {approver.name}
+                                </span>
+
+                                <button type="button"
+                                onClick={() => {
+                                    setApprovers(
+                                        approver.filter((item) => {
+                                            return item.employeeKey !== approver.employeeKey;
+                                        })
+                                    )
+                                }}>
+                                    삭제
+                                </button>
+                            </div>
                         ))}
                     </div>
                 )}
@@ -325,6 +339,16 @@ function DraftCreate({ drafts, setDrafts, loginUser, editingDraft }) {
                     <button type="button" onClick={() => {
                         if (!tempApprover) {
                             alert("결제자를 선택해주세요");
+                            return;
+                        }
+
+                        const isDuplicate = approvers.some((approver) => {
+                            return approver.employeeKey === tempApprover.employeeKey
+                        })
+                        //some => 배열 안에 조건을 만족하는 값이 하나라도 있는지 (true or false 반환)
+
+                        if (isDuplicate) {
+                            alert("이미 추가된 결재자입니다.")
                             return;
                         }
 

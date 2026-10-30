@@ -18,7 +18,7 @@ function DraftApproved({ drafts, loginUser }) {
             ) : (
                 approvedDrafts.map((draft) => {
                     return (
-                        <div key={draft.id}>
+                        <div key={draft.id} className="draft-item">
                             <p>작성자 : {draft.writerName}</p>
                             <p>제목 : {draft.title}</p>
                             <p>문서 종류 : {draft.draftType}</p>

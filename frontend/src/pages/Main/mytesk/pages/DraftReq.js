@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 
 function DraftReq({ drafts, setDrafts, loginUser, setEditingDraft }) {
 
@@ -8,6 +8,7 @@ function DraftReq({ drafts, setDrafts, loginUser, setEditingDraft }) {
     const [editContent, setEditContent] = useState("");
     const [editDraftType, setEditDraftType] = useState("");
     const [searchText, setsearchText] = useState("");
+    const navigate = useNavigate();
 
     function handleEdit(draft) {
         setEditId(draft.id);
@@ -142,7 +143,7 @@ function DraftReq({ drafts, setDrafts, loginUser, setEditingDraft }) {
                                         <div>
                                             <button type="button" onClick={() => {
                                                 setEditingDraft(draft);
-                                                Navigate("/main/mytesk/draft-create");
+                                                navigate("/main/mytesk/draft-create");
                                             }}
                                             >
                                                 이어서 작성
