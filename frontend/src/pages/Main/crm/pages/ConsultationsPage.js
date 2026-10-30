@@ -6,6 +6,18 @@ export default function ConsultationsPage(props) {
   const setData = props.setData;
   const navigate = useNavigate();
   const [selectedConsultation, setSelectedConsultation] = useState(null);
+  const today = formatSeoulDate(new Date()); // 변경: 오늘 날짜를 한국 시간 기준으로 계산
+  const todayAnsweredCount = data.consultations.filter(function (consultation) {
+    return consultation.status === '답변 완료'
+      && consultation.answeredAt
+      && formatSeoulDate(consultation.answeredAt) === today;
+  }).length; // 변경: 오늘 답변 완료 건수 계산
+  const newCount = data.consultations.filter(function (consultation) {
+    return consultation.status === '신규';
+  }).length; // 변경: 신규 상담 건수 계산
+  const answeredCount = data.consultations.filter(function (consultation) {
+    return consultation.status === '답변 완료';
+  }).length; // 변경: 전체 답변 완료 건수 계산
 
   function findCustomerName(customerId) {
     const customer = data.customers.find(function (item) {
@@ -37,18 +49,34 @@ export default function ConsultationsPage(props) {
     <section className="workspace-page crm-page">
       <header className="page-header">
         <div>
-          <span className="eyebrow">CRM</span>
-          <h1>상담 관리</h1>
-          <p>일반 구매자의 문의, 답변 및 처리 상태를 관리합니다.</p>
+
+          <h1>상담 관리</h1> 
+           {/* 변경: CRM 작은 라벨과 설명 문구는 제거하고 페이지 제목만 남겼습니다. */}
+
         </div>
-        <button
-          className="erp-primary-button"
-          type="button"
-          onClick={function () { navigate('/main/crm/consultations/new'); }}
-        >
-          상담 등록
-        </button>
+
+        {/* 변경: 목록 상단의 상담 등록 버튼 제거 */}
       </header>
+
+      {/* 변경: 기존 CSS 클래스를 이용한 상담 현황 카드 */}
+      <div className="stats-grid" aria-label="상담 현황">
+        <div className="stat-copy content-card">
+          <span>전체 상담</span>
+          <strong>{data.consultations.length}<small>건</small></strong>
+        </div>
+        <div className="stat-copy content-card">
+          <span>오늘 답변 완료</span>
+          <strong>{todayAnsweredCount}<small>건</small></strong>
+        </div>
+        <div className="stat-copy content-card">
+          <span>신규</span>
+          <strong>{newCount}<small>건</small></strong>
+        </div>
+        <div className="stat-copy content-card">
+          <span>답변 완료</span>
+          <strong>{answeredCount}<small>건</small></strong>
+        </div>
+      </div>
 
       {!data.customers.length && (
         <p className="connection-status is-offline">
@@ -63,6 +91,7 @@ export default function ConsultationsPage(props) {
               <th>고객</th>
               <th>문의 내용</th>
               <th>답변</th>
+              <th>답변일</th>{/* 변경: 답변 완료 날짜 열 추가 */}
               <th>상태</th>
               <th>관리</th>
             </tr>
@@ -78,6 +107,7 @@ export default function ConsultationsPage(props) {
                   <td>{findCustomerName(consultation.customerId)}</td>
                   <td>{consultation.inquiry}</td>
                   <td>{consultation.answer || '-'}</td>
+                  <td>{formatSeoulDate(consultation.answeredAt)}</td>{/* 변경: 날짜 표시, 없으면 '-' */}
                   <td><span className="status-badge">{consultation.status}</span></td>
                   <td onClick={function (event) { event.stopPropagation(); }}>
                     <button
@@ -100,7 +130,7 @@ export default function ConsultationsPage(props) {
               );
             })}
             {!data.consultations.length && (
-              <tr><td colSpan="5" className="no-data">등록된 상담이 없습니다.</td></tr>
+              <tr><td colSpan="6" className="no-data">등록된 상담이 없습니다.</td></tr>
             )}
           </tbody>
         </table>
@@ -115,6 +145,20 @@ export default function ConsultationsPage(props) {
       )}
     </section>
   );
+}
+
+// 변경: UTC 날짜/시간을 한국 날짜(YYYY-MM-DD)로 표시합니다.
+function formatSeoulDate(value) {
+  if (!value) {
+    return '-';
+  }
+
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(value));
 }
 
 function ConsultationDetail(props) {

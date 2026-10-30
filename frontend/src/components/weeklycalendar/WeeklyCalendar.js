@@ -68,7 +68,7 @@ function WeeklyCalendar(props) {
   }
 
   return (
-    <section className="weekly-calendar" aria-label="주간 달력">
+    <div className="weekly-calendar" aria-label="주간 달력">
       <div className="weekly-calendar-header">
         <button type="button" onClick={goToday}>
           오늘
@@ -128,7 +128,11 @@ function WeeklyCalendar(props) {
                       {date.getMonth() + 1}/{date.getDate()}
                     </span>
 
-                    <span className="weekly-calendar-summary">
+                    {/* 기존 근무 유형 번호는 색상 표시에만 사용합니다. */}
+                    <span
+                      className="weekly-calendar-summary weekly-calendar-status"
+                      data-type={daySchedules.length === 1 ? daySchedules[0].typeId : undefined}
+                    >
                       {daySchedules.length === 0
                         ? '일정 없음'
                         : daySchedules.length === 1
@@ -154,7 +158,9 @@ function WeeklyCalendar(props) {
               {selectedSchedules.map(function (item, index) {
                 return (
                   <li key={index}>
-                    {item.title}
+                    <span className="weekly-calendar-status" data-type={item.typeId}>
+                      {item.title}
+                    </span>
                     <span className="weekly-calendar-event">
                       {item.start} ~ {item.end}
                     </span>
@@ -174,7 +180,9 @@ function WeeklyCalendar(props) {
               selectedSchedules.map(function (item) {
                 return (
                   <div key={item.id}>
-                    <strong>{item.title}</strong>
+                    <strong className="weekly-calendar-status" data-type={item.typeId}>
+                      {item.title}
+                    </strong>
                     <p>{item.description || '등록된 업무 내용이 없습니다.'}</p>
                   </div>
                 );
@@ -189,7 +197,7 @@ function WeeklyCalendar(props) {
           <p>데이터 미연결</p>
         </aside>
       </div>
-    </section>
+    </div>
   );
 }
 

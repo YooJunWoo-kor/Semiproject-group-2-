@@ -8,7 +8,7 @@ function ProjectRoutes() {
   const projectlist = [
     {
       "id": "proj-001",
-      "title": "ERP 결제 및 정산 모듈 긴급 오류 패치",
+      "title": "결제/정산 모듈 패치",
       "typeId": 1,
       "start": "2026-10-25",
       "end": "2026-11-05",
@@ -19,7 +19,7 @@ function ProjectRoutes() {
     },
     {
       "id": "proj-002",
-      "title": "대시보드 메인 위젯 UI/UX 리뉴얼",
+      "title": "UI/UX 리뉴얼",
       "typeId": 2,
       "start": "2026-11-01",
       "end": "2026-11-20",
@@ -30,7 +30,7 @@ function ProjectRoutes() {
     },
     {
       "id": "proj-003",
-      "title": "부서별 근태 및 출결 데이터 마이그레이션",
+      "title": "데이터 마이그레이션",
       "typeId": 0,
       "start": "2026-10-01",
       "end": "2026-10-20",
@@ -41,7 +41,7 @@ function ProjectRoutes() {
     },
     {
       "id": "proj-004",
-      "title": "CRM 고객 회원 데이터 자동 동기화 기능 검증",
+      "title": "회원 데이터 동기화",
       "typeId": 3,
       "start": "2026-11-10",
       "end": "2026-11-28",
@@ -52,7 +52,7 @@ function ProjectRoutes() {
     },
     {
       "id": "proj-005",
-      "title": "2027 상반기 재고 물류 최적화 시스템 기획",
+      "title": "재고 물류 최적화",
       "typeId": 4,
       "start": "2026-12-01",
       "end": "2026-12-30",

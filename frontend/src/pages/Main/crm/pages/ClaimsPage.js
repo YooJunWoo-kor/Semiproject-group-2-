@@ -6,6 +6,16 @@ export default function ClaimsPage(props) {
   const setData = props.setData;
   const navigate = useNavigate();
   const [selectedClaim, setSelectedClaim] = useState(null);
+  const today = getLocalDateString();
+  const completedTodayCount = data.claims.filter(function (claim) {
+    return claim.status === '처리 완료' && claim.completedAt === today;
+  }).length;
+  const newClaimCount = data.claims.filter(function (claim) {
+    return claim.status === '신규';
+  }).length;
+  const completedClaimCount = data.claims.filter(function (claim) {
+    return claim.status === '처리 완료';
+  }).length;
 
   function findCustomerName(customerId) {
     const customer = data.customers.find(function (item) {
@@ -43,18 +53,31 @@ export default function ClaimsPage(props) {
     <section className="workspace-page crm-page">
       <header className="page-header">
         <div>
-          <span className="eyebrow">CRM</span>
+             {/* 변경: CRM 작은 라벨과 설명 문구는 제거하고 페이지 제목만 남겼습니다. */}
           <h1>클레임 관리</h1>
-          <p>고객의 실제 구매 건에 연결해 클레임을 처리합니다.</p>
+     
         </div>
-        <button
-          className="erp-primary-button"
-          type="button"
-          onClick={function () { navigate('/main/crm/claims/new'); }}
-        >
-          클레임 등록
-        </button>
+       
       </header>
+
+      <div className="stats-grid" aria-label="클레임 현황">
+        <div className="stat-copy content-card">
+          <span>전체 클레임</span>
+          <strong>{data.claims.length}<small>건</small></strong>
+        </div>
+        <div className="stat-copy content-card">
+          <span>오늘 처리 완료</span>
+          <strong>{completedTodayCount}<small>건</small></strong>
+        </div>
+        <div className="stat-copy content-card">
+          <span>신규</span>
+          <strong>{newClaimCount}<small>건</small></strong>
+        </div>
+        <div className="stat-copy content-card">
+          <span>처리 완료</span>
+          <strong>{completedClaimCount}<small>건</small></strong>
+        </div>
+      </div>
 
       {!data.purchases.length && (
         <p className="connection-status is-offline">
@@ -121,6 +144,14 @@ export default function ClaimsPage(props) {
       )}
     </section>
   );
+}
+
+function getLocalDateString() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return year + '-' + month + '-' + day;
 }
 
 function ClaimDetail(props) {

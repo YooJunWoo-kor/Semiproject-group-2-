@@ -30,7 +30,7 @@ function MainApp() {
                 <Route path="/crm/*" element={<CrmRoutes />} />
                 <Route path="/project/*" element={<ProjectHome />} />
                 <Route path="/profile" element={<MyPage />} />
-                <Route path="/mytesk" element={<MyTeskList />} />
+                <Route path="/mytesk/*" element={<MyTeskList />} />
                 <Route path="*" element={<Navigate to="/main" replace />} />
             </Routes>
             <footer>
