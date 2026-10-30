@@ -2,17 +2,21 @@ import React from "react";
 
 function DraftReceived({ drafts, setDrafts, loginUser }) {
 
+    
+
     const receivedDrafts = drafts.filter((draft) => {
+        const currentApproval = draft.approvers[draft.currentApprovalStep];
+
         return (
-            draft.firstApproverEmployeeKey === loginUser.employeeKey &&
-            draft.status === "1차결재대기"
-        )
-        ||
-        (
-            draft.secondApproverEmployeeKey === loginUser.employeeKey &&
-            draft.status === "2차결재대기"
+            currentApproval &&
+            currentApproval.employeeKey === loginUser.employeeKey &&
+            draft.status === "결재대기"   
         )
     });
+
+    console.log("drafts:", drafts);
+    console.log("loginUser:", loginUser);
+    console.log("receivedDrafts:", receivedDrafts);
 
     function handleApprove(id) {
 
@@ -20,33 +24,27 @@ function DraftReceived({ drafts, setDrafts, loginUser }) {
 
             if (draft.id === id) {
 
-                if (
-                    draft.firstApproverEmployeeKey === loginUser.employeeKey &&
-                    draft.status === "1차결재대기"
-                ) {
+                const nextStep = draft.currentApprovalStep + 1;
+    
+                if (nextStep < draft.approvers.length) {
                     return {
                         ...draft,
-                        status: "2차결재대기"
+                        currentApprovalStep: nextStep
                     };
                 }
-
-                if (
-                    draft.secondApproverEmployeeKey === loginUser.employeeKey &&
-                    draft.status === "2차결재대기"
-                ) {
-                    return {
-                        ...draft,
-                        status: "최종승인"
-                    };
-                }
+    
+                return {
+                    ...draft,
+                    status: "최종승인"
+                };
             }
-
+    
             return draft;
         });
-
+    
         setDrafts(updatedDrafts);
     }
-    
+
     return (
         <div>
             <h2>요청이 온 기안서</h2>
@@ -63,15 +61,12 @@ function DraftReceived({ drafts, setDrafts, loginUser }) {
                             <p>문서 종류 : {draft.draftType}</p>
                             <p>작성일 : {draft.createdAt}</p>
                             <p>상태 : {draft.status}</p>
-                            <p>
-                                1차 결재자 :
-                                {draft.firstApproverPosition} {draft.firstApproverName}
-                            </p>
-
-                            <p>
-                                2차 결재자 :
-                                {draft.secondApproverPosition} {draft.secondApproverName}
-                            </p>
+                            
+                            {draft.approvers.map((approver, index) => (
+                                <p key={approver.employeeKey}>
+                                    {index + 1}단계 결재자 : 
+                                    {approver.position} {approver.name}                                </p>
+                            ))}
 
                             <button
                                 type="button"
