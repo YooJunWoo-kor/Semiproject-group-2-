@@ -58,7 +58,7 @@ function MyTeskList() {
 
                     <Route path="draft-complete" element={<DraftComp drafts={drafts} />} />
 
-                    <Route path="draft-request" element={<DraftReq drafts={drafts} setDrafts={setDrafts} />} />
+                    <Route path="draft-request" element={<DraftReq drafts={drafts} setDrafts={setDrafts} loginUser = {loginUser} />} />
 
                     <Route path="draft-received" element={<DraftReceived
                         drafts={drafts} setDrafts={setDrafts} loginUser={loginUser}

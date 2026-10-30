@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-function DraftReq({ drafts, setDrafts }) {
+function DraftReq({ drafts, setDrafts, loginUser }) {
 
     const [editId, setEditId] = useState(null);
     const [editTitle, setEditTitle] = useState("");
@@ -32,7 +32,7 @@ function DraftReq({ drafts, setDrafts }) {
 
     const requestedDrafts = drafts.filter((draft) => {
         return (
-            draft.status === "요청" &&
+            draft.writerEmployeeKey === loginUser.employeekey &&
             draft.title.includes(searchText)
         );
     });
