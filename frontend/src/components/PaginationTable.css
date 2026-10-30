@@ -1,0 +1,61 @@
+.pagination-table-wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 16px;
+  }
+  
+  /* 하단 컨트롤러 래퍼 */
+  .pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0;
+  }
+  
+  .page-numbers {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  /* 공통 버튼 스타일 */
+  .page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+  }
+  
+  .page-btn:hover:not(:disabled) {
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
+    color: #1e293b;
+  }
+  
+  /* 현재 활성화된 페이지 번호 */
+  .page-btn.active {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+    color: #ffffff;
+    font-weight: 700;
+  }
+  
+  /* 이전/다음 비활성화 처리 */
+  .page-btn:disabled {
+    color: #cbd5e1;
+    border-color: #f1f5f9;
+    background-color: #f8fafc;
+    cursor: not-allowed;
+  }

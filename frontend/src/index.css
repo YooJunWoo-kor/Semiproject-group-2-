@@ -5,6 +5,7 @@
 @import './css/global.css';
 @import './css/MainApp.css';
 @import './css/GroupBord.css';
+@import './css/Schedul.css';
 
 :root {
   font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
@@ -62,10 +63,10 @@ button {
 }
 button:hover { border-color: #bcc7dc; background: #f8faff; }
 button:active { transform: translateY(1px); }
-button[type='submit'], .action-btn, .register-btn, .submit-btn, .erp-primary-button {
+button[type='submit'], .action-btn, .submit-btn, .erp-primary-button {
   color: #fff; background: var(--color-brand); border-color: var(--color-brand);
 }
-button[type='submit']:hover, .action-btn:hover, .register-btn:hover, .submit-btn:hover, .erp-primary-button:hover {
+button[type='submit']:hover, .action-btn:hover, .submit-btn:hover, .erp-primary-button:hover {
   color: #fff; background: var(--color-brand-dark); border-color: var(--color-brand-dark);
 }
 hr { border: 0; border-top: 1px solid var(--color-line); }

@@ -1,4 +1,3 @@
-import { useOutletContext } from 'react-router-dom';
 // 선택한 날짜의 회의실 예약 현황을 보여줍니다.
 import React, { useState } from 'react';
 import { todayISO } from '../utils/scheduleUtils';
@@ -12,7 +11,8 @@ const slots = Array.from({ length: 22 }, (_, index) => {
 });
 
 export default function ScheduleRoomTimetable() {
-  const { schedules: scheduleList, rooms: roomList } = useOutletContext();
+  const roomList = [];
+  const scheduleList = [];
   const rooms = roomList.map(room => room.name);
 
   const [selectedDate, setSelectedDate] = useState(() => todayISO());

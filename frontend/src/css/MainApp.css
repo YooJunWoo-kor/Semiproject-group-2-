@@ -101,3 +101,8 @@
     border-radius: var(--radius-card);
     background-color: #fff;
 }
+
+.link-icon-wrapper {
+  margin-bottom: 8px;
+  color: #3b82f6; /* 브랜드 테마 컬러 */
+}

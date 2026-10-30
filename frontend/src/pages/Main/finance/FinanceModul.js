@@ -1,6 +1,8 @@
 import React from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import StatisticsCard from '../../../components/StatisticsCard';
+import ScheduleBoard from '../../../components/ScheduleBoard';
+import BasicTable from '../../../components/BasicTable';
 
 function FinanceModul() {
     const navigate = useNavigate();
@@ -33,6 +35,73 @@ function FinanceModul() {
         }
     ];
 
+    //결제 요청관련 외부데이터 형태 예시
+    const data1 = [
+        {
+            title: "10월 ERP 서버 호스팅 및 인프라 비용 청구",
+            amount: "2,500,000원",
+            author: "홍길동",
+            start: "2026-10-15",
+            end: "2026-10-31",
+            isPaid: false
+        }
+        ,{
+            title: "10월 ERP 서버 호스팅 및 인프라 비용 청구",
+            amount: "2,500,000원",
+            author: "홍길동",
+            start: "2026-10-15",
+            end: "2026-10-31",
+            isPaid: false
+        }
+        ,{
+            title: "10월 ERP 서버 호스팅 및 인프라 비용 청구",
+            amount: "2,500,000원",
+            author: "홍길동",
+            start: "2026-10-15",
+            end: "2026-10-31",
+            isPaid: false
+        }
+        ,{
+            title: "10월 ERP 서버 호스팅 및 인프라 비용 청구",
+            amount: "2,500,000원",
+            author: "홍길동",
+            start: "2026-10-15",
+            end: "2026-10-31",
+            isPaid: false
+        }
+        ,{
+            title: "10월 ERP 서버 호스팅 및 인프라 비용 청구",
+            amount: "2,500,000원",
+            author: "홍길동",
+            start: "2026-10-15",
+            end: "2026-10-31",
+            isPaid: false
+        }
+        ,{
+            title: "10월 ERP 서버 호스팅 및 인프라 비용 청구",
+            amount: "2,500,000원",
+            author: "홍길동",
+            start: "2026-10-15",
+            end: "2026-10-31",
+            isPaid: false
+        }
+    ]
+
+    //결제요청 테이블 1관련 자료형 변환
+    const tHeader1 = ["요청 내용","금액","작성자","요청일","마감일","승인"];
+    const tData1 = data1.slice(0,5).map((item) => {
+        let list = [];
+        list.push(item.title);
+        list.push(item.amount);
+        list.push(item.author);
+        list.push(item.start);
+        list.push(item.end);
+        list.push(item.isPaid ? '지급완료' : '미지급');
+        
+        return { content: list }; // conent -> content 오타 수정
+      });
+    
+
     return (
         <div className="sub-container">
             <header className="dashboard-header">
@@ -40,38 +109,50 @@ function FinanceModul() {
                 <span className='subtext'> 처리할 세부 재무 항목을 선택하세요. </span>
             </header>
 
+            <div>
+                <section className="stats-section">
+                    <StatisticsCard
+                        title="법인카드"
+                        count="3"
+                        stiyle={2}
+                    />
+                    <StatisticsCard
+                        title="회사계좌"
+                        count="5"
+                        stiyle={2}
+                    />
+                    <StatisticsCard
+                        title="신규 기안"
+                        count="3"
+                        stiyle={2}
+                    />
+                    <StatisticsCard
+                        title="거래처"
+                        count="3"
+                        stiyle={2}
+                    />
+                    <StatisticsCard
+                        title="관리 품목"
+                        count="3"
+                        stiyle={2}
+                    />
+                    지급총액
+                    일간
+                    주간
+                    월간
+                    지급예정
+                    일간
+                    주간
+                    월간
+                </section>
+            </div>
             <section className="stats-section">
-                <StatisticsCard
-                    title="법인카드"
-                    count="3"
-                    stiyle={2}
-                />
-                <StatisticsCard
-                    title="회사계좌 현황"
-                    count="5"
-                    stiyle={2}
-                />
-                <StatisticsCard
-                    title="신규 기안"
-                    count="3"
-                    stiyle={2}
-                />
-                <StatisticsCard
-                    title="거래처"
-                    count="3"
-                    stiyle={2}
-                />
-                <StatisticsCard
-                    title="관리 품목"
-                    count="3"
-                    stiyle={2}
-                />
+                <ScheduleBoard/>
+                <div style={{display:"flex",flexFlow:"column",gap:"10px"}}>
+                    <BasicTable title={"비용청구"}th = {tHeader1} td={tData1}/>
+                    <BasicTable title={"구매요청"} th = {tHeader1} td={tData1}/>
+                </div>
             </section>
-            <div> 달력추가 예정 </div>
-            <div> 신규기안 리스트 </div>
-            <div> 주요 거래처 리스트 </div>
-            <div> 신규 매입 </div>
-            <div> 신규 매출 </div>
         </div>
     );
 }
