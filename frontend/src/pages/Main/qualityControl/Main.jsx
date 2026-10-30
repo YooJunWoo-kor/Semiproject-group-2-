@@ -11,14 +11,9 @@ function Main() {
     const failedProducts = products.filter(product => product.qualityStatus === "불합격");
 
     return (
-        <div className="quality-dashboard-page">
-            <header className="quality-page-header">
-                <div>
-                    <span className="quality-eyebrow">QUALITY CONTROL</span>
-                    <h1>품질보증 관리</h1>
-                    <p>제품의 품질검사 현황과 주요 이슈를 한눈에 확인합니다.</p>
-                </div>
-                <div className="quality-header-badge">실시간 품질 현황</div>
+        <div className="sub-container">
+            <header className="dashboard-header">
+                <span className='subtitle'>품질보증 관리</span>
             </header>
 
             <section className="quality-summary-grid">

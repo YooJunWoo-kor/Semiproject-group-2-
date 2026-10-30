@@ -7,9 +7,12 @@ function Attendance(){
             <h2>출결관리</h2>
 
             <ADComp />
+
             <button type="button">
                 수정요청
             </button>
         </div>
     )
 }
+
+export default Attendance;

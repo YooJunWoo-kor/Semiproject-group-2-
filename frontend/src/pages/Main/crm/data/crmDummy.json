@@ -299,7 +299,7 @@
       "customerId": "customer-002",
       "inquiry": "선크림 재입고 일정을 알고 싶습니다.",
       "answer": "재고 확인 후 안내드리겠습니다.",
-      "status": "처리 중"
+      "status": "신규"
     },
     {
       "id": "consultation-003",
@@ -313,7 +313,7 @@
       "customerId": "customer-003",
       "inquiry": "립 틴트 색상을 다른 색상으로 변경할 수 있나요?",
       "answer": "",
-      "status": "접수"
+      "status": "신규"
     },
     {
       "id": "consultation-005",
@@ -327,7 +327,7 @@
       "customerId": "customer-006",
       "inquiry": "시카 수분 크림의 유통기한을 확인하고 싶습니다.",
       "answer": "제품 하단의 제조번호와 사용기한을 확인 중입니다.",
-      "status": "처리 중"
+      "status": "신규"
     },
     {
       "id": "consultation-007",
@@ -341,14 +341,14 @@
       "customerId": "customer-008",
       "inquiry": "톤업 선크림 사용 후 피부가 건조합니다.",
       "answer": "",
-      "status": "접수"
+      "status": "신규"
     },
     {
       "id": "consultation-009",
       "customerId": "customer-009",
       "inquiry": "토너 정기 구매 시 할인 혜택이 있나요?",
       "answer": "현재 적용 가능한 프로모션을 확인하고 있습니다.",
-      "status": "처리 중"
+      "status": "신규"
     },
     {
       "id": "consultation-010",
@@ -375,7 +375,7 @@
       "type": "교환",
       "content": "주문한 수량과 배송 수량이 다릅니다.",
       "resolution": "출고 내역 확인 중입니다.",
-      "status": "검토 중"
+      "status": "신규"
     },
     {
       "id": "claim-003",
@@ -384,7 +384,7 @@
       "type": "환불",
       "content": "배송 중 용기가 파손되었습니다.",
       "resolution": "파손 사진을 접수했습니다.",
-      "status": "접수"
+      "status": "신규"
     },
     {
       "id": "claim-004",
@@ -402,7 +402,7 @@
       "type": "제품 불량",
       "content": "아이크림 용기의 펌프가 정상적으로 작동하지 않습니다.",
       "resolution": "불량 여부를 확인하고 있습니다.",
-      "status": "검토 중"
+      "status": "신규"
     },
     {
       "id": "claim-006",
@@ -411,7 +411,7 @@
       "type": "교환",
       "content": "주문한 제품과 다른 종류의 수분 크림이 배송되었습니다.",
       "resolution": "",
-      "status": "접수"
+      "status": "신규"
     },
     {
       "id": "claim-007",
@@ -420,7 +420,7 @@
       "type": "불만 사항",
       "content": "비타민 C 앰플의 제품 포장이 훼손된 상태로 배송되었습니다.",
       "resolution": "배송 및 포장 과정을 확인 중입니다.",
-      "status": "검토 중"
+      "status": "신규"
     },
     {
       "id": "claim-008",
@@ -438,7 +438,7 @@
       "type": "제품 불량",
       "content": "토너 용기 뚜껑이 제대로 닫히지 않아 내용물이 새어 나옵니다.",
       "resolution": "",
-      "status": "접수"
+      "status": "신규"
     },
     {
       "id": "claim-010",
@@ -447,7 +447,7 @@
       "type": "교환",
       "content": "로션 제품의 외부 포장에 심한 눌림이 있어 교환을 요청합니다.",
       "resolution": "교환 가능 여부를 검토하고 있습니다.",
-      "status": "검토 중"
+      "status": "신규"
     }
   ]
 }

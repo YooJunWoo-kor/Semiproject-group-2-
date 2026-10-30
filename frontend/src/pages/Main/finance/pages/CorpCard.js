@@ -33,16 +33,9 @@ function CorpCard() {
     ]);
 
     return (
-        <div>
-            {/* 1. 상단 제목 및 액션 버튼 */}
-            <header>
-                <h2>법인카드 관리</h2>
-                <p>부서별 법인카드 발급 현황 및 사용 한도를 관리합니다.</p>
-                <div>
-                    <button type="button" onClick={() => alert('신규 카드 등록 폼 열기')}>
-                        + 신규 법인카드 등록
-                    </button>
-                </div>
+        <div className="sub-container">
+            <header className="dashboard-header">
+                <span className='subtitle'>법인카드 관리</span>
             </header>
 
             <hr />

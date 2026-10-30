@@ -5,6 +5,16 @@ export default function PartnersPage(props) {
   const setData = props.setData;
   const navigate = useNavigate();
 
+  // 변경: 실제 거래처 데이터를 종류별로 세어 요약 카드에 표시합니다.
+  const partnerTypeCounts = ['유통사', '대리점', '납품처'].map(function (type) {
+    return {
+      type: type,
+      count: data.partners.filter(function (partner) {
+        return partner.type === type;
+      }).length,
+    };
+  });
+
   function deletePartner(partner) {
     if (!window.confirm('이 거래처를 삭제하시겠습니까?')) {
       return;
@@ -24,9 +34,9 @@ export default function PartnersPage(props) {
     <section className="workspace-page crm-page">
       <header className="page-header">
         <div>
-          <span className="eyebrow">CRM</span>
+          
           <h1>거래처 관리</h1>
-          <p>등록된 거래처 정보를 확인합니다.</p>
+              {/* 변경: CRM 작은 라벨과 설명 문구는 제거하고 페이지 제목만 남겼습니다. */}
         </div>
         <button
           className="erp-primary-button"
@@ -36,6 +46,22 @@ export default function PartnersPage(props) {
           거래처 등록
         </button>
       </header>
+
+      {/* 변경: 고정 CSS 클래스만 사용해 전체 및 유형별 거래처 수를 추가합니다. */}
+      <div className="stats-grid" aria-label="거래처 현황">
+        <div className="stat-copy content-card">
+          <span>전체 거래처</span>
+          <strong>{data.partners.length}<small>곳</small></strong>
+        </div>
+        {partnerTypeCounts.map(function (item) {
+          return (
+            <div className="stat-copy content-card" key={item.type}>
+              <span>{item.type}</span>
+              <strong>{item.count}<small>곳</small></strong>
+            </div>
+          );
+        })}
+      </div>
 
       <div className="table-shell">
         <table>

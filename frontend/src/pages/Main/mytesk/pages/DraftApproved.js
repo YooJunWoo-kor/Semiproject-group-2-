@@ -1,13 +1,13 @@
 import React from "react";
 
-function DraftApproved({ drafts, loginUser }){
+function DraftApproved({ drafts, loginUser }) {
+
     const approvedDrafts = drafts.filter((draft) => {
-        return(
+        return (
             draft.approverId === loginUser.id &&
             draft.status === "승인"
         )
-    
-    })
+    });
 
     return (
         <div>

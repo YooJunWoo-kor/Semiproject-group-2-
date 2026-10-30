@@ -1,0 +1,103 @@
+/* 출결 관리 영역 (배경, 그림자, 보더 제거) */
+.attendance-card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    padding: 16px 18px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex: 2;                  /* 60% 비율 */
+    max-width: 460px;         /* 너무 퍼지지 않는 적정 상한 */
+    min-width: 150px;
+  }
+
+  .attendance-card:first-child{
+    flex:8;
+  }
+  
+  /* 뱃지 상단 */
+  .attendance-card-header {
+    display: flex;
+    justify-content: flex-start;
+  }
+  
+  .attendance-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: #3b82f6;
+    background-color: #eff6ff;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  
+  /* 유저 인사말 (위아래 형태) */
+  .attendance-user-info {
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.4;
+  }
+  
+  .attendance-user-info .user-greeting {
+    display: block;
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 2px;
+  }
+  
+  .attendance-user-info .user-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  
+  /* 현재 시각 (세로 적층) */
+  .attendance-clock-box {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .clock-label {
+    font-size: 11px;
+    color: #94a3b8;
+  }
+  
+  .clock-time {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: 0.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  
+  /* 버튼: 전체 너비 채우기 */
+  .attendance-action-group {
+    margin-top: 4px;
+  }
+  
+  .btn-attendance {
+    width: 100%;
+    padding: 10px 0;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+  }
+  
+  .btn-attendance.check-in {
+    background-color: #3b82f6;
+    color: #ffffff;
+  }
+  
+  .btn-attendance.check-in:hover {
+    background-color: #2563eb;
+  }
+  
+  .btn-attendance.check-in:active {
+    transform: translateY(1px);
+  }

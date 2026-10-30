@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
+import StatisticsCard from '../../../components/StatisticsCard';
 
 function FinanceModul() {
     const navigate = useNavigate();
@@ -34,28 +35,43 @@ function FinanceModul() {
 
     return (
         <div className="sub-container">
-            <header>
+            <header className="dashboard-header">
                 <span className='subtitle'>대시보드</span>
                 <span className='subtext'> 처리할 세부 재무 항목을 선택하세요. </span>
-
             </header>
 
-            <main>
-                <div className="module-grid">
-                    {financeMenus.map((menu) => (
-                        <div key={menu.id} className="module-card">
-                            <h3>{menu.title}</h3>
-                            <p>{menu.description}</p>
-                            <button
-                                type="button"
-                                onClick={() => navigate(menu.path)}
-                            >
-                                {menu.title} 이동
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            </main>
+            <section className="stats-section">
+                <StatisticsCard
+                    title="법인카드"
+                    count="3"
+                    stiyle={2}
+                />
+                <StatisticsCard
+                    title="회사계좌 현황"
+                    count="5"
+                    stiyle={2}
+                />
+                <StatisticsCard
+                    title="신규 기안"
+                    count="3"
+                    stiyle={2}
+                />
+                <StatisticsCard
+                    title="거래처"
+                    count="3"
+                    stiyle={2}
+                />
+                <StatisticsCard
+                    title="관리 품목"
+                    count="3"
+                    stiyle={2}
+                />
+            </section>
+            <div> 달력추가 예정 </div>
+            <div> 신규기안 리스트 </div>
+            <div> 주요 거래처 리스트 </div>
+            <div> 신규 매입 </div>
+            <div> 신규 매출 </div>
         </div>
     );
 }

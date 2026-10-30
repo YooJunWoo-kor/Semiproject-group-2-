@@ -1,8 +1,9 @@
+import { useOutletContext } from 'react-router-dom';
+// 선택한 날짜의 회의실 예약 현황을 보여줍니다.
 import React, { useState } from 'react';
-import { useSchedules } from '../ScheduleContext';
 import { todayISO } from '../utils/scheduleUtils';
 
-const rooms = ['A회의실', 'B회의실', 'C회의실'];
+
 
 const slots = Array.from({ length: 22 }, (_, index) => {
   const start = 9 * 60 + index * 30;
@@ -11,14 +12,17 @@ const slots = Array.from({ length: 22 }, (_, index) => {
 });
 
 export default function ScheduleRoomTimetable() {
-  const schedule = useSchedules();
-  const [selectedDate, setSelectedDate] = useState(todayISO());
+  const { schedules: scheduleList, rooms: roomList } = useOutletContext();
+  const rooms = roomList.map(room => room.name);
+
+  const [selectedDate, setSelectedDate] = useState(() => todayISO());
 
   // 선택한 날짜의 회의실 예약 조회
-  const reservations = schedule.schedules.filter(item =>
-    item.room &&
-    item.startDate <= selectedDate &&
-    selectedDate <= item.endDate &&
+  const reservations = scheduleList.filter(item =>
+    rooms.includes(String(item.room || "").trim()) &&
+    item.startDate && item.endDate &&
+    item.startDate.slice(0, 10) <= selectedDate &&
+    selectedDate <= item.endDate.slice(0, 10) &&
     item.startTime &&
     item.endTime
   );
@@ -29,7 +33,7 @@ export default function ScheduleRoomTimetable() {
     const slotEnd = slot.end;
 
     return reservations.filter(item => {
-      if (item.room !== room) return false;
+      if (String(item.room).trim() !== room) return false;
 
       const [startH, startM] = item.startTime.split(':').map(Number);
       const [endH, endM] = item.endTime.split(':').map(Number);
@@ -55,6 +59,7 @@ export default function ScheduleRoomTimetable() {
         />
       </label>
 
+      <div className="table-shell schedule-table-shell">
       <table className="schedule-data-table">
         <thead>
           <tr>
@@ -78,9 +83,9 @@ export default function ScheduleRoomTimetable() {
                 return (
                   <td key={room}>
                     {items.length === 0 ? (
-                      <span>예약 가능</span>
+                      <span>{roomList.find(item => item.name === room)?.available ? '예약 가능' : '사용 중지'}</span>
                     ) : (
-                      <span style={{ color: "red", fontWeight: "bold" }}>
+                      <span className="status-badge status-danger">
                         예약 불가
                       </span>
                     )}
@@ -92,6 +97,7 @@ export default function ScheduleRoomTimetable() {
           ))}
         </tbody>
       </table>
+      </div>
 
       <p>
         ※ 회의실 예약은 일정 등록 화면에서만 가능합니다.
