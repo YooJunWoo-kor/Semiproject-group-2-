@@ -45,6 +45,33 @@ function DraftReceived({ drafts, setDrafts, loginUser }) {
         setDrafts(updatedDrafts);
     }
 
+    function handleReject(id){
+
+        const rejectionReason = prompt("반려 사유를 입력해주세요.");
+
+        if(rejectionReason == null){
+            return;
+        }
+
+        if(rejectionReason.trim() === ""){
+            alert("반려 사유를 입력해주세요");
+            return;
+        }
+
+        const updatedDrafts = drafts.map((draft) => {
+           if(draft.id === id){
+            return {
+                ...draft,
+                status : "반려"
+            }
+           }
+
+           return draft;
+        })
+
+        setDrafts(updatedDrafts);
+    }
+
     return (
         <div>
             <h2>요청이 온 기안서</h2>
@@ -73,6 +100,10 @@ function DraftReceived({ drafts, setDrafts, loginUser }) {
                                 onClick={() => handleApprove(draft.id)}
                             >
                                 승인
+                            </button>
+
+                            <button type="button" onClick={() => handleReject(draft.id)}>
+                                반려
                             </button>
 
                         </div>

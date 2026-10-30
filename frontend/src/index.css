@@ -247,3 +247,26 @@ hr { border: 0; border-top: 1px solid var(--color-line); }
   margin-left: 10px;
   font-weight: bold;
 }
+
+/* 전자결재 공통 배치 */
+
+.draft-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.draft-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.draft-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}

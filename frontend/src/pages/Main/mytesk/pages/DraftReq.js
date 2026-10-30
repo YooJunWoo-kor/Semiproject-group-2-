@@ -21,6 +21,7 @@ function DraftReq({ drafts, setDrafts, loginUser, setEditingDraft }) {
     const requestedDrafts = drafts.filter((draft) => {
         return (
             draft.writerEmployeeKey === loginUser.employeeKey &&
+            draft.status !== "최종승인" &&
             draft.title.includes(searchText)
         );
     });
@@ -138,9 +139,17 @@ function DraftReq({ drafts, setDrafts, loginUser, setEditingDraft }) {
                                         )}
                                     </p>
 
+                                    {draft.status === "반려" && (
+                                        <div>
+                                            <p>반려자 : {draft.rejectedByName}</p>
+                                            <p>반려 사유 : {draft.rejectionReason}</p>
+                                            <p>반려일 : {draft.rejectedAt} </p>
+                                        </div>
+                                    )}
+
                                     {draft.status === "임시저장" && (
 
-                                        <div>
+                                        <div  className="draft-actions">
                                             <button type="button" onClick={() => {
                                                 setEditingDraft(draft);
                                                 navigate("/main/mytesk/draft-create");

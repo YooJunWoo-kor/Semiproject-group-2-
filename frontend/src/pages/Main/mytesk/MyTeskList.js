@@ -56,7 +56,7 @@ function MyTeskList() {
                         </div>
                     } />
 
-                    <Route path="draft-create" element={<DraftCreate drafts={drafts} setDrafts={setDrafts} loginUser={loginUser} setEditingDraft={setEditingDraft} />} editingDraft={editingDraft} />
+                    <Route path="draft-create" element={<DraftCreate drafts={drafts} setDrafts={setDrafts} loginUser={loginUser} setEditingDraft={setEditingDraft} editingDraft={editingDraft}/> } />
 
                     <Route path="draft-complete" element={<DraftComp drafts={drafts} />} />
 
