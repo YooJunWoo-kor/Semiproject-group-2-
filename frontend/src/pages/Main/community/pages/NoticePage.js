@@ -1,213 +1,154 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { noticeCategories } from "./communityConfig";
+import React, { useState } from 'react';
+import PaginationTable from '../../../../components/PaginationTable';
+import { noticeCategories } from './communityConfig';
 
-const emptyForm = { title: "", category: noticeCategories[0], content: "", author: "임시 관리자", important: false };
+const emptyForm = { title: '', category: noticeCategories[0], content: '', author: '관리자', important: false };
 
-function NoticePage({ communityItems }) {
-  // 1. 게시판별 글 목록과 공통 추가/수정/삭제 기능을 준비합니다.
+export default function NoticePage({ communityItems }) {
   const { items, addItem, updateItem, removeItem } = communityItems;
-  const [query, setQuery] = useState(""); //검색창에 입력한 검색어
-  const [view, setView] = useState("list"); //현재 표시할 화면
-  const [selected, setSelected] = useState(null); //사용자가 선택한 게시글
-  const [form, setForm] = useState(emptyForm); //게시글 작성 , 수정 입력값
-  const [message, setMessage] = useState(""); //저장,삭제, 결과 안내
+  const [query, setQuery] = useState('');
+  const [view, setView] = useState('list'); // 'list' | 'form' | 'detail'
+  const [selected, setSelected] = useState(null);
+  const [form, setForm] = useState(emptyForm);
 
-  const filtered = items
-    .filter((item) => {
-      const searchText = `${item.title} ${item.category}`.toLowerCase();
-      return searchText.includes(query.toLowerCase());
-    })
-    .sort((a, b) => Number(b.important) - Number(a.important));
-  const openForm = (item) => {
-    setForm(item ? { ...item } : emptyForm);
-    setView(item ? "edit" : "write");
-    setMessage("");
-  };
+  // 검색 필터링
+  const filtered = items.filter((item) => {
+    const searchText = (item.title + ' ' + item.content).toLowerCase();
+    return searchText.includes(query.trim().toLowerCase());
+  });
 
-  // 3. 폼 내용을 검사하고, 신규 글은 추가하고 기존 글은 갱신합니다.
-  const save = (event) => {
-    event.preventDefault();
+  const tableHeaders = ['중요', '분류', '제목', '작성자', '작성일', '조회수'];
 
-    if (!form.title.trim() || !form.content.trim() || !form.author.trim()) {
-      setMessage("제목, 내용, 작성자는 필수입니다.");
-      return;
-    }
-
-    const date = new Date().toISOString().slice(0, 10);
-
-    if (view === "edit") {
-      const savedItem = { ...form, updatedAt: date };
-      updateItem(savedItem);
-      setSelected(savedItem);
-      setView("detail");
-      setMessage("공지가 수정되었습니다.");
-      return;
-    }
-
-    const newItem = {
-      ...form,
-      id: Date.now(),
-      createdAt: date,
-      updatedAt: date,
-    };
-
-    addItem(newItem);
-    setView("list");
-    setMessage("공지가 등록되었습니다.");
-  };
-
-  // 목록에서 부르면 전달된 글을, 상세 화면에서 부르면 기본값인 selected 글을 삭제합니다.
-  const remove = (itemToRemove = selected) => {
-    if (!itemToRemove || !window.confirm("이 공지를 삭제할까요?")) {
-      return;
-    }
-
-    removeItem(itemToRemove.id);
-    if (selected && selected.id === itemToRemove.id) {
-      setSelected(null);
-      setView("list");
-    }
-    setMessage("공지가 삭제되었습니다.");
-  };
-  const showDetail = view === "detail" && selected !== null;
-  const showForm = view === "write" || view === "edit";
+  const tableData = filtered.map((item) => ({
+    content: [
+      item.important ? <span style={{ color: '#ef4444', fontWeight: 'bold' }}>[공지]</span> : '-',
+      item.category,
+      <span
+        style={{ cursor: 'pointer', fontWeight: 600, color: '#2563eb' }}
+        onClick={() => {
+          setSelected(item);
+          setView('detail');
+        }}
+      >
+        {item.title}
+      </span>,
+      item.author,
+      item.createdAt ? item.createdAt.slice(0, 10) : '-',
+      item.views || 0,
+    ],
+  }));
 
   return (
-    <main className="community-page">
-      <h1>공지사항</h1>
-
-      <nav>
-        <Link to="/main/community">커뮤니티 메인</Link>
-      </nav>
-
-      {message ? <p role="status">{message}</p> : null}
-
-      {view === "list" ? (
-        <section>
-          <h2>공지 목록</h2>
-
-          <label>
-            검색
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="제목 또는 분류"
-            />
-          </label>
-
-          <button type="button" onClick={() => openForm(null)}>
-            공지 등록
-          </button>
-
-          <ul>
-            {filtered.map((item) => (
-              <li key={item.id}>
-                {item.important ? <strong>[중요] </strong> : null}
-                <span>[{item.category}] </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelected(item);
-                    setView("detail");
-                    setMessage("");
-                  }}
-                >
-                  {item.title}
-                </button>
-                <small> {item.updatedAt}</small>
-              
-                {/* 목록에서도 바로 수정할 수 있고, 삭제 버튼은 확인창을 거칩니다. */}
-                <button type="button" onClick={() => openForm(item)}>수정</button>
-                <button className="danger-button" type="button" onClick={() => remove(item)}>삭제</button>
-              </li>
-            ))}
-          </ul>
-
-          {filtered.length === 0 ? <p>등록된 공지가 없습니다.</p> : null}
-        </section>
-      ) : null}
-
-      {showDetail ? (
-        <article>
-          <h2>{selected.title}</h2>
-          <p>{selected.category} | {selected.author}</p>
-          <p>작성 {selected.createdAt} / 수정 {selected.updatedAt}</p>
-          <p>{selected.content}</p>
-
-          <button type="button" onClick={() => openForm(selected)}>수정</button>
-          <button type="button" onClick={remove}>삭제</button>
-          <button type="button" onClick={() => setView("list")}>목록</button>
-        </article>
-      ) : null}
-
-      {showForm ? (
-        <form onSubmit={save}>
-          <h2>{view === "edit" ? "공지 수정" : "공지 등록"}</h2>
-
-          <label>
-            제목*
-            <input
-              value={form.title}
-              onChange={(event) => setForm({ ...form, title: event.target.value })}
-            />
-          </label>
-          <br />
-
-          <label>
-            분류
-            <select
-              value={form.category}
-              onChange={(event) => setForm({ ...form, category: event.target.value })}
+    <div className="sub-container">
+      <header className="dashboard-header">
+        <span className="subtitle">공지사항</span>
+        <div className="dashboard-top">
+          {view === 'list' && (
+            <button
+              type="button"
+              className="register-btn"
+              onClick={() => {
+                setForm(emptyForm);
+                setView('form');
+              }}
             >
-              {noticeCategories.map((categoryItem) => (
-                <option key={categoryItem}>{categoryItem}</option>
-              ))}
-            </select>
-          </label>
-          <br />
+              + 공지글 작성
+            </button>
+          )}
+          {view !== 'list' && (
+            <button type="button" onClick={() => setView('list')}>
+              목록으로
+            </button>
+          )}
+        </div>
+      </header>
 
-          <label>
-            작성자*
+      <hr />
+
+      {view === 'list' && (
+        <>
+          <section style={{ margin: '16px 0' }}>
+            <label htmlFor="search" style={{ marginRight: '8px', fontWeight: 600 }}>검색: </label>
             <input
-              value={form.author}
-              onChange={(event) => setForm({ ...form, author: event.target.value })}
+              id="search"
+              type="text"
+              placeholder="제목 또는 내용 검색"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{ padding: '6px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
             />
-          </label>
-          <br />
+          </section>
 
-          <label>
+          <PaginationTable
+            title="공지사항 목록"
+            th={tableHeaders}
+            allData={tableData}
+            itemsPerPage={5}
+          />
+        </>
+      )}
+
+      {/* 상세 보기 */}
+      {view === 'detail' && selected && (
+        <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+          <h3>{selected.title}</h3>
+          <p style={{ color: '#64748b', fontSize: '13px' }}>
+            작성자: {selected.author} | 분류: {selected.category} | 작성일: {selected.createdAt?.slice(0, 10)}
+          </p>
+          <hr />
+          <div style={{ minHeight: '120px', margin: '20px 0', whiteSpace: 'pre-wrap' }}>{selected.content}</div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              style={{ color: '#ef4444' }}
+              onClick={() => {
+                if (window.confirm('삭제하시겠습니까?')) {
+                  removeItem(selected.id);
+                  setView('list');
+                }
+              }}
+            >
+              삭제
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 작성 폼 */}
+      {view === 'form' && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            addItem(form);
+            setView('list');
+          }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '600px' }}
+        >
+          <div>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: '4px' }}>제목</label>
             <input
-              type="checkbox"
-              checked={form.important}
-              onChange={(event) => setForm({ ...form, important: event.target.checked })}
+              type="text"
+              required
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }}
             />
-            중요 공지
-          </label>
-          <br />
-
-          <label>
-            내용*
+          </div>
+          <div>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: '4px' }}>내용</label>
             <textarea
-              rows="7"
+              rows={6}
+              required
               value={form.content}
-              onChange={(event) => setForm({ ...form, content: event.target.value })}
+              onChange={(e) => setForm({ ...form, content: e.target.value })}
+              style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }}
             />
-          </label>
-          <br />
-
-          <button type="submit">저장</button>
-          <button
-            type="button"
-            onClick={() => setView(selected ? "detail" : "list")}
-          >
-            취소
+          </div>
+          <button type="submit" className="register-btn" style={{ alignSelf: 'flex-start' }}>
+            저장
           </button>
         </form>
-      ) : null}
-      
-    </main>
+      )}
+    </div>
   );
 }
-
-export default NoticePage;

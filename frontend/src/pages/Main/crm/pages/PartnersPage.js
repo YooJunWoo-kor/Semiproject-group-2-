@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import StatisticsCard from '../../../../components/StatisticsCard';
 
 export default function PartnersPage(props) {
   const data = props.data;
@@ -31,7 +32,7 @@ export default function PartnersPage(props) {
   }
 
   return (
-    <section className="workspace-page crm-page">
+    <section className="workspace-page   ">
       <header className="page-header">
         <div>
           
@@ -49,18 +50,22 @@ export default function PartnersPage(props) {
 
       {/* 변경: 고정 CSS 클래스만 사용해 전체 및 유형별 거래처 수를 추가합니다. */}
       <div className="stats-grid" aria-label="거래처 현황">
-        <div className="stat-copy content-card">
-          <span>전체 거래처</span>
-          <strong>{data.partners.length}<small>곳</small></strong>
-        </div>
-        {partnerTypeCounts.map(function (item) {
-          return (
-            <div className="stat-copy content-card" key={item.type}>
-              <span>{item.type}</span>
-              <strong>{item.count}<small>곳</small></strong>
-            </div>
-          );
-        })}
+        <section className="stats-section">
+            <StatisticsCard
+              title={"전체 거래처"}
+              count = {data.partners.length}
+            />
+        
+            {partnerTypeCounts.map(function (item) {
+              return (
+                <StatisticsCard
+                  title={item.type}
+                  count = {item.count}
+                />
+              );
+            })}
+          </section>
+        
       </div>
 
       <div className="table-shell">

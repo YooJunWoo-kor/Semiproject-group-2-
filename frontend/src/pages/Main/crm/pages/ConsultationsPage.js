@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import StatisticsCard from '../../../../components/StatisticsCard';
 
 export default function ConsultationsPage(props) {
   const data = props.data;
@@ -46,7 +47,7 @@ export default function ConsultationsPage(props) {
   }
 
   return (
-    <section className="workspace-page crm-page">
+    <section className="workspace-page   ">
       <header className="page-header">
         <div>
 
@@ -59,24 +60,26 @@ export default function ConsultationsPage(props) {
       </header>
 
       {/* 변경: 기존 CSS 클래스를 이용한 상담 현황 카드 */}
-      <div className="stats-grid" aria-label="상담 현황">
-        <div className="stat-copy content-card">
-          <span>전체 상담</span>
-          <strong>{data.consultations.length}<small>건</small></strong>
-        </div>
-        <div className="stat-copy content-card">
-          <span>오늘 답변 완료</span>
-          <strong>{todayAnsweredCount}<small>건</small></strong>
-        </div>
-        <div className="stat-copy content-card">
-          <span>신규</span>
-          <strong>{newCount}<small>건</small></strong>
-        </div>
-        <div className="stat-copy content-card">
-          <span>답변 완료</span>
-          <strong>{answeredCount}<small>건</small></strong>
-        </div>
-      </div>
+      <section className="stats-section">
+          <StatisticsCard
+            title={"전체 상담"}
+            count = {data.consultations.length}
+          />
+          <StatisticsCard
+            title={"답변완료"}
+            count = {todayAnsweredCount}
+          />
+          <StatisticsCard
+            title={"신규"}
+            count = {newCount}
+            stiyle ={"1"}
+          />
+          <StatisticsCard
+            title={"답변완료"}
+            count = {answeredCount}
+            stiyle ={"1"}
+          />
+        </section>
 
       {!data.customers.length && (
         <p className="connection-status is-offline">

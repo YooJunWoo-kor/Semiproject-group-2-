@@ -91,7 +91,7 @@ export default function ClaimFormPage(props) {
 
   if (isEdit && !savedClaim) {
     return (
-      <section className="workspace-page crm-page">
+      <section className="workspace-page   ">
         <div className="empty-state">
           <h2>클레임을 찾을 수 없습니다.</h2>
           <button type="button" onClick={function () { navigate('/main/crm/claims'); }}>
@@ -103,7 +103,7 @@ export default function ClaimFormPage(props) {
   }
 
   return (
-    <section className="workspace-page crm-page crm-form-page">
+    <section className="workspace-page    crm-form-page">
       <header className="page-header">
         <div>
           <span className="eyebrow">CRM · 클레임 관리</span>

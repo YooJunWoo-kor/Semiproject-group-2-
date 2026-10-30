@@ -71,7 +71,7 @@ export default function CustomerFormPage(props) {
 
   if (isEdit && !savedCustomer) {
     return (
-      <section className="workspace-page crm-page">
+      <section className="workspace-page   ">
         <div className="empty-state">
           <h2>고객을 찾을 수 없습니다.</h2>
           <button
@@ -85,16 +85,9 @@ export default function CustomerFormPage(props) {
     );
   }
 
-
-
-
-
-
-
-  
   return (
-    <section className="workspace-page crm-page crm-form-page">
-      <header className="page-header">
+    <section className="">
+      <header className="">
         <div>
           <span className="eyebrow">CRM 고객 관리</span>
           <h1>{isEdit ? '고객 정보 수정' : '고객 등록'}</h1>

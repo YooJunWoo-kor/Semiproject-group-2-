@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import StatisticsCard from '../../../components/StatisticsCard';
 
 // 변경: 아래 업무 메뉴 카드 영역을 제거해 더 이상 사용하지 않는 메뉴 배열도 삭제했습니다.
 export const initialCrmData = {
@@ -171,7 +172,7 @@ export default function CrmHome(props) {
   const data = props.data || initialCrmData;
 
   return (
-    <section className="workspace-page crm-page crm-home">
+    <div className="sub-container">
       <header className="page-header">
         <div>
           {/* 변경: CRM 작은 라벨과 설명 문구는 제거하고 페이지 제목만 남겼습니다. */}
@@ -181,36 +182,29 @@ export default function CrmHome(props) {
 
       {/* 변경: 기존 업무 메뉴 안내 문구와 카드 목록은 제거하고 요약 카드만 남겼습니다. */}
       <div className="stats-grid" aria-label="CRM 현황">
-
-        {/* 변경: 요약 카드를 Link로 만들어 고객 관리 페이지로 이동하게 합니다. */}
-        <Link className="stat-copy content-card" to="/main/crm/customers" style={{ color: 'inherit', textDecoration: 'none' }}>
-          <span>전체 고객</span>
-          <strong>{data.customers.length}</strong>
-          <small>명</small>
-        </Link>
-
-        {/* 변경: 거래처 요약 카드를 누르면 거래처 관리로 이동합니다. */}
-        <Link className="stat-copy content-card" to="/main/crm/partners" style={{ color: 'inherit', textDecoration: 'none' }}>
-          <span>거래처</span>
-          <strong>{data.partners.length}</strong>
-          <small>곳</small>
-        </Link>
-
-        {/* 변경: 상담 요약 카드를 누르면 상담 관리로 이동합니다. */}
-        <Link className="stat-copy content-card" to="/main/crm/consultations" style={{ color: 'inherit', textDecoration: 'none' }}>
-          <span>상담</span>
-          <strong>{data.consultations.length}</strong>
-          <small>건</small>
-        </Link>
-        
-        {/* 변경: 클레임 요약 카드를 누르면 클레임 관리로 이동합니다. */}
-        <Link className="stat-copy content-card" to="/main/crm/claims" style={{ color: 'inherit', textDecoration: 'none' }}>
-          <span>클레임</span>
-          <strong>{data.claims.length}</strong>
-          <small>건</small>
-        </Link>
+        <section className="stats-section">
+          <StatisticsCard
+            title={"회원"}
+            count = {"10"}
+            stiyle ={"1"}
+          />
+          <StatisticsCard
+            title={"거래처"}
+            count = {"10"}
+          />
+          <StatisticsCard
+            title={"상담"}
+            count = {"10"}
+            stiyle ={"1"}
+          />
+          <StatisticsCard
+            title={"클래임"}
+            count = {"10"}
+            stiyle ={"1"}
+          />
+        </section>
       </div>
 
-    </section>
+    </div>
   );
 }

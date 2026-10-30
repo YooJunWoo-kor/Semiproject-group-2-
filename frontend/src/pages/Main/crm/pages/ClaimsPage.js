@@ -1,176 +1,86 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import PaginationTable from '../../../../components/PaginationTable';
+import StatisticsCard from '../../../../components/StatisticsCard';
 
-export default function ClaimsPage(props) {
-  const data = props.data;
-  const setData = props.setData;
+export default function ClaimsPage({ data, setData }) {
   const navigate = useNavigate();
   const [selectedClaim, setSelectedClaim] = useState(null);
-  const today = getLocalDateString();
-  const completedTodayCount = data.claims.filter(function (claim) {
-    return claim.status === '처리 완료' && claim.completedAt === today;
-  }).length;
-  const newClaimCount = data.claims.filter(function (claim) {
-    return claim.status === '신규';
-  }).length;
-  const completedClaimCount = data.claims.filter(function (claim) {
-    return claim.status === '처리 완료';
-  }).length;
 
-  function findCustomerName(customerId) {
-    const customer = data.customers.find(function (item) {
-      return item.id === customerId;
-    });
+  const findCustomerName = (customerId) => {
+    const customer = (data.customers || []).find((c) => c.id === customerId);
     return customer ? customer.name : '삭제된 고객';
-  }
+  };
 
-  function findPurchase(purchaseId) {
-    return data.purchases.find(function (item) {
-      return item.id === purchaseId;
-    });
-  }
+  const findPurchase = (purchaseId) => {
+    return (data.purchases || []).find((p) => p.id === purchaseId);
+  };
 
-  function deleteClaim(claimId) {
-    if (!window.confirm('클레임을 삭제할까요?')) {
-      return;
-    }
+  const deleteClaim = (claimId) => {
+    if (!window.confirm('해당 클레임을 삭제하시겠습니까?')) return;
+    setData((current) => ({
+      ...current,
+      claims: current.claims.filter((c) => c.id !== claimId),
+    }));
+    if (selectedClaim?.id === claimId) setSelectedClaim(null);
+  };
 
-    setData(function (current) {
-      return {
-        ...current,
-        claims: current.claims.filter(function (item) {
-          return item.id !== claimId;
-        }),
-      };
-    });
+  const tableHeaders = ['고객명', '유형', '제품 / 구매일', '상태', '관리'];
 
-    if (selectedClaim && selectedClaim.id === claimId) {
-      setSelectedClaim(null);
-    }
-  }
+  const tableData = (data.claims || []).map((claim) => {
+    const purchase = findPurchase(claim.purchaseId);
+    return {
+      content: [
+        <strong>{findCustomerName(claim.customerId)}</strong>,
+        claim.type,
+        purchase ? `${purchase.productName} / ${purchase.date}` : '삭제된 구매 건',
+        <span className={`status-badge ${claim.status === '처리 완료' ? 'status-success' : 'status-danger'}`}>
+          {claim.status}
+        </span>,
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button
+            type="button"
+            onClick={() => navigate(`/main/crm/claims/edit/${claim.id}`)}
+          >
+            처리/수정
+          </button>
+          <button
+            type="button"
+            style={{ color: '#ef4444', borderColor: '#fca5a5' }}
+            onClick={() => deleteClaim(claim.id)}
+          >
+            삭제
+          </button>
+        </div>,
+      ],
+    };
+  });
 
   return (
-    <section className="workspace-page crm-page">
-      <header className="page-header">
-        <div>
-             {/* 변경: CRM 작은 라벨과 설명 문구는 제거하고 페이지 제목만 남겼습니다. */}
-          <h1>클레임 관리</h1>
-     
-        </div>
-       
+    <div className="sub-container">
+      <header className="dashboard-header">
+        <span className="subtitle">클레임 관리</span>
       </header>
 
-      <div className="stats-grid" aria-label="클레임 현황">
-        <div className="stat-copy content-card">
-          <span>전체 클레임</span>
-          <strong>{data.claims.length}<small>건</small></strong>
-        </div>
-        <div className="stat-copy content-card">
-          <span>오늘 처리 완료</span>
-          <strong>{completedTodayCount}<small>건</small></strong>
-        </div>
-        <div className="stat-copy content-card">
-          <span>신규</span>
-          <strong>{newClaimCount}<small>건</small></strong>
-        </div>
-        <div className="stat-copy content-card">
-          <span>처리 완료</span>
-          <strong>{completedClaimCount}<small>건</small></strong>
-        </div>
-      </div>
+      <hr />
 
-      {!data.purchases.length && (
-        <p className="connection-status is-offline">
-          클레임을 등록하려면 고객의 구매 이력이 먼저 필요합니다.
-        </p>
-      )}
-
-      <div className="table-shell">
-        <table>
-          <thead>
-            <tr>
-              <th>고객</th>
-              <th>유형</th>
-              <th>제품 / 구매일</th>
-              <th>상태</th>
-              <th>관리</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.claims.map(function (claim) {
-              const purchase = findPurchase(claim.purchaseId);
-              return (
-                <tr
-                  className="clickable-row"
-                  key={claim.id}
-                  onClick={function () { setSelectedClaim(claim); }}
-                >
-                  <td>{findCustomerName(claim.customerId)}</td>
-                  <td>{claim.type}</td>
-                  <td>{purchase ? purchase.productName + ' / ' + purchase.date : '삭제된 구매 건'}</td>
-                  <td><span className="status-badge">{claim.status}</span></td>
-                  <td onClick={function (event) { event.stopPropagation(); }}>
-                    <button
-                      type="button"
-                      onClick={function () { navigate('/main/crm/claims/edit/' + claim.id); }}
-                    >
-                      수정/처리
-                    </button>{' '}
-                    <button
-                      className="danger-button"
-                      type="button"
-                      onClick={function () { deleteClaim(claim.id); }}
-                    >
-                      삭제
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-            {!data.claims.length && (
-              <tr><td colSpan="5" className="no-data">등록된 클레임이 없습니다.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {selectedClaim && (
-        <ClaimDetail
-          claim={selectedClaim}
-          customerName={findCustomerName(selectedClaim.customerId)}
-          purchase={findPurchase(selectedClaim.purchaseId)}
-          onClose={function () { setSelectedClaim(null); }}
+      <div style={{ display: 'flex', gap: '12px', margin: '16px 0' }}>
+        <StatisticsCard title="전체 클레임" count={data?.claims?.length || 0} />
+        <StatisticsCard
+          title="신규 접수"
+          count={(data?.claims || []).filter((c) => c.status === '신규').length}
+          stiyle="1"
         />
-      )}
-    </section>
-  );
-}
-
-function getLocalDateString() {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  return year + '-' + month + '-' + day;
-}
-
-function ClaimDetail(props) {
-  return (
-    <article className="detail-card">
-      <div className="page-header">
-        <h2>클레임 상세</h2>
-        <button type="button" onClick={props.onClose}>닫기</button>
       </div>
-      <dl>
-        <div><dt>고객</dt><dd>{props.customerName}</dd></div>
-        <div>
-          <dt>구매 건</dt>
-          <dd>{props.purchase ? props.purchase.productName + ' / ' + props.purchase.date : '-'}</dd>
-        </div>
-        <div><dt>유형 / 상태</dt><dd>{props.claim.type} / {props.claim.status}</dd></div>
-        <div><dt>클레임 내용</dt><dd>{props.claim.content}</dd></div>
-        <div><dt>처리 내용</dt><dd>{props.claim.resolution || '처리 전'}</dd></div>
-      </dl>
-    </article>
+
+      <hr />
+
+      <PaginationTable
+        title="클레임 접수 목록"
+        th={tableHeaders}
+        allData={tableData}
+        itemsPerPage={5}
+      />
+    </div>
   );
 }
