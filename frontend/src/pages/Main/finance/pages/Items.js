@@ -86,20 +86,18 @@ function Items() {
         .reduce((sum, item) => sum + item.totalAmount, 0);
 
     return (
-        <div className="finance-page">
-            {/* 1. 상단 타이틀 및 액션 */}
-            <header>
-                <h2>매입한 품목 / 매출 품목 관리</h2>
-                <p>거래처별 매입 원자재/비품 및 판매된 완제품/용역 품목 내역을 집계합니다.</p>
-                <div>
-                    <button type="button" onClick={() => alert('신규 품목/거래 등록 모달')}>
-                        + 품목 거래내역 신규 등록
-                    </button>
-                    <button type="button" onClick={() => alert('엑셀 다운로드')} >
-                        엑셀(Excel) 다운로드
-                    </button>
-                </div>
+        <div className="sub-container">
+            <header className="dashboard-header">
+                <span className='subtitle'>매입/매출 품목관리</span>
             </header>
+            <div>
+                <button type="button" onClick={() => alert('신규 품목/거래 등록 모달')}>
+                    + 품목 거래내역 신규 등록
+                </button>
+                <button type="button" onClick={() => alert('엑셀 다운로드')} >
+                    엑셀(Excel) 다운로드
+                </button>
+            </div>
 
             <hr />
 

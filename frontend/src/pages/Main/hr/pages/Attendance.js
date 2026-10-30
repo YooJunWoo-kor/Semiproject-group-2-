@@ -1,4 +1,6 @@
+import { Link } from "react-router-dom";
 import ADComp from "../../../../components/ADComp";
+import { getLoginUser } from "../../../../utils/authStorage";
 
 //근태관리 배열구조로 만들었음
 const rows = [
@@ -13,18 +15,29 @@ const rows = [
 //테이블 형식으로 만들었음
 export default function Attendance() {
   const list = ["직원", "부서", "출근시간", "비고", "근태상태"];
+  const loginUser = getLoginUser();
+  const isMaster = loginUser?.role === 'MASTER';
   return (
     <div className="sub-container">
-      <span className='subtitle'>근태관리</span>
+      <header className="dashboard-header">
+          <span className='subtitle'>근태관리</span>
+          <span className='subtext'> 근태현황 </span>
+          <div className="dashboard-top">
+                    {/* MASTER에게만 표시 */}
+                    {isMaster && (
+                        <Link
+                            to="/main/hr/employees"
+                            className="register-btn"
+                        >
+                            근태수정
+                        </Link>
+                    )}
+                 </div>
+      </header>
 
-      <hr/>
-        근태관리 수정기능 추가
-      <hr/>
-      <hr/>
-        근태관리 수정요청
-      <hr/>
-
-      <div className="table-shell">
+      <div className="table-shell" style={{
+        marginTop:"30px"
+      }}>
         <table>
           <thead>
             <tr>

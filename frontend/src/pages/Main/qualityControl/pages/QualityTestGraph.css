@@ -8,15 +8,6 @@
     box-shadow: var(--shadow-card);
 }
 
-.quality-graph-header {
-    padding-bottom: 4px;
-    border-bottom: 1px solid rgba(180, 214, 214, 0.55);
-}
-
-.quality-graph-header p {
-    margin-bottom: 18px;
-}
-
 .graph-summary {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -281,11 +272,6 @@
 }
 
 @media (max-width: 680px) {
-    .quality-graph-page {
-        gap: 16px;
-        padding: 18px;
-    }
-
     .graph-summary {
         grid-template-columns: 1fr 1fr;
         gap: 10px;

@@ -1,4 +1,6 @@
+import { Link } from "react-router-dom";
 import StatisticsCard from "../../../../components/StatisticsCard";
+import { getLoginUser } from "../../../../utils/authStorage";
 
 //json구조 i
 const departments = [
@@ -47,6 +49,8 @@ const departments = [
 ];
 
 export default function Departments() {
+  const loginUser = getLoginUser();
+  const isMaster = loginUser?.role === 'MASTER';
   const totalEmployees = departments.reduce(
     (total, department) => total + department.count,
     0
@@ -57,19 +61,22 @@ export default function Departments() {
     : '0';
 
   return (
-    <div className="departments-wrapper">
-      <div className="page-top-header">
-        <div>
-          <span className='subtitle'>부서 관리</span>
-        </div>
-
-        <button
-          className="action-btn"
-          onClick={() => window.alert('부서 등록 기능은 추후 구현할 수 있습니다.')}
-        >
-          부서 등록
-        </button>
-      </div>
+    <div className="sub-container">
+      <header className="dashboard-header">
+          <span className='subtitle'>부서관리</span>
+          <span className='subtext'> 사내 부서관리 </span>
+          <div className="dashboard-top">
+                    {/* MASTER에게만 표시 */}
+                    {isMaster && (
+                        <Link
+                            to="/main/hr/employees"
+                            className="register-btn"
+                        >
+                            부서등록
+                        </Link>
+                    )}
+                 </div>
+      </header>
 
       <div className="dept-summary-cards">
         <StatisticsCard title={"전체부서"} count={"6"}/>

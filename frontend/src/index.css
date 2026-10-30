@@ -109,7 +109,7 @@ hr { border: 0; border-top: 1px solid var(--color-line); }
 
 /* 공통 카드와 페이지 폭 */
 .community-page, .quality-page, .schedule-page { min-width: 0; }
-.community-page, .product-list-page, .quality-graph-page { padding: 28px; background: white; border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+.community-page, .product-list-page{ padding: 28px; background: white; border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
 .community-page h1, h1, .product-list-page h1 { margin-bottom: 7px; }
 .community-page section, section{ margin-top: 20px; }
 .community-page > section > div { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
@@ -149,10 +149,9 @@ hr { border: 0; border-top: 1px solid var(--color-line); }
 .hr-topbar { display: flex; min-height: 68px; align-items: center; justify-content: space-between; gap: 15px; padding: 14px 30px; background: white; border-bottom: 1px solid var(--color-line); }
 .hr-topbar > div:last-child { display: flex; align-items: center; gap: 13px; }
 .page-container { width: min(1420px, 100%); margin: 0 auto; padding: 30px; }
-.dashboard-wrapper, .employees-wrapper, .departments-wrapper, .attendance-wrapper, .payroll-wrapper, .settings-wrapper { display: grid; gap: 22px; }
-.page-top-header, .dashboard-top { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.attendance-wrapper, .payroll-wrapper, .settings-wrapper { display: grid; gap: 22px; }
 .sub-title, .date-badge { color: var(--color-brand); font-size: .73rem; font-weight: 700; letter-spacing: .12em; }
-.stats-section, .attendance-stats, .payroll-stats, .dept-summary-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.attendance-stats, .payroll-stats, .dept-summary-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .stat-box, .summary-card, .dept-card, .payroll-notice-card, .setting-item-btn {
   padding: 20px; background: white; border: 1px solid var(--color-line); border-radius: 14px; box-shadow: var(--shadow-card);
 }
@@ -198,8 +197,7 @@ hr { border: 0; border-top: 1px solid var(--color-line); }
 @media (max-width: 680px) {
   .erp-top-nav, .select-bar { gap: 2px; overflow-x: auto; padding: 8px 12px; }
   .community-page, .product-list-page, .quality-graph-page { padding: 18px; }
-  .page-top-header, .dashboard-top { align-items: flex-start; flex-direction: column; }
-  .stats-section, .attendance-stats, .payroll-stats, .dept-summary-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .attendance-stats, .payroll-stats, .dept-summary-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .content-section { grid-template-columns: 1fr; }
   .search-box, .toolbar-actions { flex-wrap: wrap; }
   .hr-layout { grid-template-columns: 1fr; }
@@ -220,8 +218,6 @@ hr { border: 0; border-top: 1px solid var(--color-line); }
 .module-subnav { display: flex; gap: 6px; overflow-x: auto; padding: 10px; background: #fff; border: 1px solid var(--color-line); border-radius: 12px; }
 .module-subnav a { padding: 9px 12px; color: var(--color-muted); border-radius: 8px; font-size: .88rem; font-weight: 700; white-space: nowrap; }
 .module-subnav a:hover, .module-subnav a.active { color: var(--color-brand); background: var(--color-brand-soft); }
-.page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
-.page-header h1, .page-header h2 { margin: 4px 0 6px; }
 .eyebrow { color: var(--color-brand); font-size: .72rem; font-weight: 800; letter-spacing: .12em; }
 .link-button { min-height: auto; padding: 0; color: var(--color-brand); background: transparent; border: 0; }
 .detail-card { display: grid; gap: 18px; padding: 22px; background: #fbfcfc; border: 1px solid var(--color-line); border-radius: 12px; }
@@ -234,6 +230,5 @@ hr { border: 0; border-top: 1px solid var(--color-line); }
 .empty-state { padding: 42px 20px; color: var(--color-muted); text-align: center; }
 
 @media (max-width: 680px) {
-  .page-header{ align-items: stretch; flex-direction: column; }
   .detail-card dl > div { grid-template-columns: 1fr; gap: 5px; }
 }

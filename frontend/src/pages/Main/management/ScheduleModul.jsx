@@ -27,8 +27,7 @@ function ScheduleModul() {
             title: '회의실 관리',
             description: '회의실 정보와 운영 상태를 관리합니다.',
             path: 'rooms'
-        },
-        
+        }
     ];
 
     return (

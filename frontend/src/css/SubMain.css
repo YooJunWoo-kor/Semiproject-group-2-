@@ -4,8 +4,6 @@
 .sub-main-contain{}
 /* 각 기능별 네비게이션 */
 .sub-main-nav{}
-/* 각 기능별 컨텐츠 노출 컨테이너 */
-.sub-container{}
 /* 각 업무 메인 카드 */
 .module-card{}
 /* 카드를 감싼 레이어 */
@@ -37,6 +35,8 @@
 }
 
 .sub-container{
+  display: flex;
+  flex-flow: column;
   width: 100%;
   padding: 30px 50px;
   border: 1px solid var(--color-line);
@@ -101,6 +101,11 @@
   color: #66818d;
 }
 
+.stats-section{
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
 .content-card{
     background-color: #fff;
     border-radius: var(--radius-card);
@@ -109,5 +114,51 @@
     padding-bottom: 40px;
     min-width: 110px;
     min-height: 110px;
+    max-width: 150px;
     font-size: 15px;
+}
+
+/* 대시보드 헤더 래퍼: 좌측 텍스트와 우측 버튼 양 끝 배치 */
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border-bottom: 1px solid #e0e5eb;
+  box-sizing: border-box;
+  padding-bottom: 10px;
+  margin-left: auto; /* 👈 핵심: 우측 끝으로 밀어내기 */
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
+
+/* 직원 등록하기 버튼 스타일 */
+.dashboard-header .register-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #3b82f6;
+  border-radius: 8px;
+  text-decoration: none;
+  box-shadow: 0 1px 2px rgba(59, 130, 246, 0.2);
+  transition: all 0.15s ease-in-out;
+  white-space: nowrap;
+}
+
+.dashboard-header .register-btn:hover {
+  background-color: #2563eb;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+}
+
+.dashboard-header .register-btn:active {
+  transform: translateY(1px);
+}
+.dashboard-top {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
 }

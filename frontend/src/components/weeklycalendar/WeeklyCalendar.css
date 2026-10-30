@@ -1,0 +1,56 @@
+
+.weekly-calendar {
+    padding: 20px;
+    background: white;
+    box-sizing: border-box;
+    width: 100%;
+  }
+  .weekly-calendar-main { flex: 1; min-width: 0; }
+  .weekly-calendar-header,
+  .weekly-calendar-navigation { display: flex; align-items: center; gap: 12px; }
+  .weekly-calendar-header { margin-bottom: 20px; flex-wrap: wrap; }
+  .weekly-calendar-navigation { flex: 1; min-width: 0; }
+  .weekly-calendar-navigation h2 { overflow-wrap: anywhere; }
+  /* 날짜 목록과 메모 영역을 나란히 배치합니다. */
+  .weekly-calendar-body { display: flex; align-items: stretch; gap: 24px; }
+  .weekly-calendar h2 { margin: 0; font-size: 18px; }
+  .weekly-calendar h3 { font-size: 15px; }
+  .weekly-calendar button {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: white;
+    color: inherit;
+    cursor: pointer;
+  }
+  .weekly-calendar button:hover { background: #f1f5f9; }
+  .weekly-calendar button:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+  .weekly-calendar-navigation button { font-size: 10px; flex-shrink: 0; }
+  .weekly-calendar-list { list-style: none; padding: 0; margin: 16px 0 0; }
+  .weekly-calendar-list li { margin-bottom: 8px; }
+  .weekly-calendar-list .weekly-calendar-day {
+    display: flex; align-items: center; gap: 12px;
+    width: 100%; min-height: 56px; text-align: left;
+  }
+  .weekly-calendar-weekday { flex: 0 0 20px; font-weight: bold; }
+  .weekly-calendar-date { flex: 0 0 48px; }
+  .weekly-calendar-summary { min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+  .weekly-calendar-list li:first-child .weekly-calendar-weekday,
+  .weekly-calendar-list li:first-child .weekly-calendar-date { color: #dc2626; }
+  .weekly-calendar-list li:last-child .weekly-calendar-weekday,
+  .weekly-calendar-list li:last-child .weekly-calendar-date { color: #2563eb; }
+  .weekly-calendar-day[aria-pressed="true"] { background: #eff6ff; border-color: #2563eb; }
+  .weekly-calendar-day[aria-current="date"] .weekly-calendar-date { font-weight: bold; text-decoration: underline; }
+  .weekly-calendar-event { display: block; margin-top: 6px; color: #334155; overflow-wrap: anywhere; font-size: 12px; }
+  .weekly-calendar-details { flex: 1; min-width: 0; padding: 20px; border: 1px solid #ddd; box-sizing: border-box; overflow-wrap: anywhere; }
+  .weekly-calendar-details ul { padding-left: 20px; }
+  .weekly-calendar-details li { margin-bottom: 12px; }
+  .weekly-calendar-memo { margin-top: 24px; padding: 16px; border: 1px solid #e2e8f0; background: #fffbeb; }
+  .weekly-calendar-memo h3 { margin-top: 0; }
+  /* 좁은 화면에서는 메모 영역을 날짜 목록 아래로 옮깁니다. */
+  @media (max-width: 768px) {
+    .weekly-calendar-body { flex-direction: column; }
+    .weekly-calendar-main,
+    .weekly-calendar-details { width: 100%; flex: auto; }
+    .weekly-calendar-navigation h2 { font-size: 14px; }
+  }

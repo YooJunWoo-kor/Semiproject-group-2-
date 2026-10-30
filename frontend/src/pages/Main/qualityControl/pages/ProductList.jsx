@@ -13,13 +13,9 @@ function ProductList() {
     );
 
     return (
-        <div className="quality-products-page">
-            <header className="quality-page-header">
-                <div>
-                    <span className="quality-eyebrow">PRODUCTS</span>
-                    <h1>제품 목록</h1>
-                    <p>등록된 제품의 기본정보와 재고 현황을 확인합니다.</p>
-                </div>
+        <div className="sub-container">
+            <header className="dashboard-header">
+                <span className='subtitle'>제품목록</span>
                 <div className="quality-header-badge">{filteredProducts.length}개 제품</div>
             </header>
 
