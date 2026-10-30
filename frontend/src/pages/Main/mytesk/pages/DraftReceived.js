@@ -54,7 +54,13 @@ function DraftReceived({ drafts, setDrafts, loginUser }) {
             ) : (
                 receivedDrafts.map((draft) => {
                     return (
-                        <div key={draft.id}>
+                        <div key={draft.id}
+                        style={{
+                            borderBottom: "1px solid #ccc",
+                            padding: "15px 0",
+                            marginBottom: "15px"
+                        }}
+                        >
 
                             <p>결재요청자 : {draft.writerName}</p>
                             <p>제목 : {draft.title}</p>

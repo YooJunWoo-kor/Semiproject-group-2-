@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { NORMAL_ACCOUNTS, getEmployeeAccounts } from "../../../../utils/authStorage";
 
-function DraftCreate({ drafts, setDrafts, loginUser }) {
+function DraftCreate({ drafts, setDrafts, loginUser, editingDraft }) {
     const [title, setTitle] = useState("");
     const [draftType, setDraftType] = useState("일반");
     const [content, setContent] = useState("");
@@ -21,6 +21,27 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
     const [amount, setAmount] = useState("");
     const [useDate, setUseDate] = useState("");
 
+    useEffect(() => {
+
+        if (editingDraft) {
+            setTitle(editingDraft.title);
+            setDraftType(editingDraft.draftType);
+            setContent(editingDraft.content);
+
+            setApprovers(editingDraft.approvers || []);
+
+            setStartDate(editingDraft.startDate || "");
+            setEndDate(editingDraft.endDate || "");
+
+            setItemName(editingDraft.itemName || "");
+            setQuantity(editingDraft.quantity || "");
+
+            setUseDate(editingDraft.useDate || "");
+            setAmount(editingDraft.amount || "");
+        }
+
+    }, [editingDraft]); // 수정될 때마다 데이터를 임시저장하는 기능
+
     const employees = [
         ...NORMAL_ACCOUNTS,
         ...getEmployeeAccounts()
@@ -35,41 +56,48 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
     function handleSubmit(e, saveType) {
         e.preventDefault();
 
-        if(title.trim() === ""){
-            alert("임시저장하려면 제목을 입력해주세요");
-            return;
+        if (saveType === "temporary") {
+            if (title.trim() === "") {
+                alert("임시저장하려면 제목을 입력해주세요");
+                return;
+            }
         }
 
-        if (title.trim() === "" || content.trim() === "") {
-            alert("제목과 내용을 입력해주세요");
-            return;
+        if (saveType === "submit") {
+            if (title.trim() === "" || content.trim() === "") {
+                alert("제목과 내용을 입력해주세요");
+                return;
+            }
         }
 
-        if(saveType === "submit" && approvers.length === 0){
+        if (saveType === "submit" && approvers.length === 0) {
             alert("결재자를 한 명 이상 추가해주세요");
             return;
         }
 
 
         // 유효성 검사
-        if (draftType === "휴가") {
-            if (startDate === "" || endDate === "") {
-                alert("휴가 기간을 선택해주세요.");
-                return;
-            }
-        }
 
-        if (draftType === "구매") {
-            if (itemName.trim() === "" || quantity === "") {
-                alert("물품명과 수량을 입력해주세요.");
-                return;
+        if (saveType === "submit") {
+            if (draftType === "휴가") {
+                if (startDate === "" || endDate === "") {
+                    alert("휴가 기간을 선택해주세요.");
+                    return;
+                }
             }
-        }
 
-        if (draftType === "비용") {
-            if (useDate === "" || amount === "") {
-                alert("사용일과 금액을 입력해주세요.");
-                return;
+            if (draftType === "구매") {
+                if (itemName.trim() === "" || quantity === "") {
+                    alert("물품명과 수량을 입력해주세요.");
+                    return;
+                }
+            }
+
+            if (draftType === "비용") {
+                if (useDate === "" || amount === "") {
+                    alert("사용일과 금액을 입력해주세요.");
+                    return;
+                }
             }
         }
 
@@ -79,14 +107,14 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
             title: title,
             draftType: draftType,
             content: content,
-            status: saveType === "temporary" ? "임시저장" : "1차결재대기", //
+            status: saveType === "temporary" ? "임시저장" : "결재대기", //
             createdAt: new Date().toLocaleDateString(), // 작성일이며 toLocaleDateString : 읽기 쉬운 문자열로 바꾸는 함수
-            writerEmployeeKey : loginUser.employeeKey,
+            writerEmployeeKey: loginUser.employeeKey,
             writerName: loginUser.name,
             writerDepartment: loginUser.department,
             writerPosition: loginUser.position,
-            approvers : approvers,
-            currentApprovalStep : 0,
+            approvers: approvers,
+            currentApprovalStep: 0,
 
             startDate: startDate,
             endDate: endDate,
@@ -96,11 +124,27 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
             amount: amount,
         };
 
+        if(editingDraft){
+            const updatedDrafts = drafts.map((draft) => {
+                if(draft.id === editingDraft.id) {
+                    return {
+                        ...draftData,
+                        id : editingDraft.id
+                    }
+                }
+                return draft;
+            })
+            
+            setDrafts(updatedDrafts);
+            
+        }
 
-        setDrafts([
-            ...drafts,
-            draftData
-        ])
+        else {
+            setDrafts([
+                ...drafts,
+                draftData
+            ])
+        }
 
         setTitle("");
         setDraftType("일반");
@@ -217,12 +261,26 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
                     결재자 추가
                 </button>
 
+                {approvers.length > 0 && (
+                    <div>
+                        <h4>현재 결재자</h4>
 
-                <button type="button" onClick={ (e) => handleSubmit(e, "temporary")}>
+
+                        {approvers.map((approver, index) => (
+                            <p key={approver.employeeKey}>
+                                {index + 1}단계 결재자 :
+                                {approver.position} {approver.name}
+                            </p>
+                        ))}
+                    </div>
+                )}
+
+
+                <button type="button" onClick={(e) => handleSubmit(e, "temporary")}>
                     임시저장
                 </button>
 
-                <button type="button" onClick={ (e) => handleSubmit(e, "submit")}>
+                <button type="button" onClick={(e) => handleSubmit(e, "submit")}>
                     결재 요청
                 </button>
 
@@ -275,12 +333,12 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
                             tempApprover
                         ])
 
-                        
+
 
                         setShowApproverModal(false);
                         setSelectedDepartment("");
                         setTempApprover(null);
-                       
+
                     }}>
                         결재자 선택
 
@@ -298,9 +356,9 @@ function DraftCreate({ drafts, setDrafts, loginUser }) {
             )}
 
 
-            
 
-    
+
+
 
         </div>
     )

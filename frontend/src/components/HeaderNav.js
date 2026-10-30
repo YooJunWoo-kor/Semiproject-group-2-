@@ -6,7 +6,7 @@ function HeaderNav(){
     const navigate = useNavigate();
     // 로그아웃 함수 정의
     const handleLogout = () => {
-        localStorage.clear();
+        localStorage.removeItem("loginUser");
         alert('로그아웃 되었습니다.');
         navigate('/');
     };

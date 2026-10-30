@@ -1,6 +1,7 @@
 import React, { useState } from "react";
+import { Navigate } from "react-router-dom";
 
-function DraftReq({ drafts, setDrafts, loginUser }) {
+function DraftReq({ drafts, setDrafts, loginUser, setEditingDraft }) {
 
     const [editId, setEditId] = useState(null);
     const [editTitle, setEditTitle] = useState("");
@@ -72,7 +73,7 @@ function DraftReq({ drafts, setDrafts, loginUser }) {
 
     return (
         <div>
-            <h2>요청된 기안서</h2>
+            <h2>요청된 기안서 / 임시저장된 기안서</h2>
             <input type="text" placeholder="제목 검색" value={searchText} onChange={e => setsearchText(e.target.value)} />
 
             {requestedDrafts.length === 0 ? (
@@ -81,7 +82,8 @@ function DraftReq({ drafts, setDrafts, loginUser }) {
                 requestedDrafts.map((draft, index) => {
                     return (
 
-                        <div key={draft.id}>
+                        <div key={draft.id} className="draft-item">
+                            <h3 className="draft-item-title">기안서 #{index + 1}</h3>
 
                             {editId === draft.id ? (
                                 <div>
@@ -122,16 +124,32 @@ function DraftReq({ drafts, setDrafts, loginUser }) {
                                     <p>문서 종류 : {draft.draftType}</p>
                                     <p>내용 : {draft.content}</p>
                                     <p>작성일 : {draft.createdAt}</p>
-                                    <p>상태 : {draft.status}</p>
+                                    <p>
+                                        상태 :
+                                        {draft.status === "임시저장" ? (
+                                            <span className="draft-temp-badge">
+                                                [임시저장]
+                                            </span>
+                                        ) : (
+                                            <span style={{ marginLeft: "8px" }}>
+                                                {draft.status}
+                                            </span>
+                                        )}
+                                    </p>
 
                                     {draft.status === "임시저장" && (
+
                                         <div>
-                                            <button type="button" onClick={() => handleDelete(draft.id)}>
-                                                삭제
+                                            <button type="button" onClick={() => {
+                                                setEditingDraft(draft);
+                                                Navigate("/main/mytesk/draft-create");
+                                            }}
+                                            >
+                                                이어서 작성
                                             </button>
 
-                                            <button type="button" onClick={() => handleEdit(draft)}>
-                                                수정
+                                            <button type="button" onClick={() => handleDelete(draft.id)}>
+                                                삭제
                                             </button>
                                         </div>
                                     )}

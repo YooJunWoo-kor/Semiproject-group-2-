@@ -232,3 +232,18 @@ hr { border: 0; border-top: 1px solid var(--color-line); }
 @media (max-width: 680px) {
   .detail-card dl > div { grid-template-columns: 1fr; gap: 5px; }
 }
+
+.draft-item {
+  border-bottom: 1px solid #ccc;
+  padding: 15px 0;
+  margin-bottom: 15px;
+}
+
+.draft-item-title {
+  margin-bottom: 10px;
+}
+
+.draft-temp-badge {
+  margin-left: 10px;
+  font-weight: bold;
+}

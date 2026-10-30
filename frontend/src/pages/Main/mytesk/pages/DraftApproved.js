@@ -5,16 +5,16 @@ function DraftApproved({ drafts, loginUser }) {
     const approvedDrafts = drafts.filter((draft) => {
         return (
             draft.approverId === loginUser.id &&
-            draft.status === "승인"
+            draft.status === "최종승인"
         )
     });
 
     return (
         <div>
-            <h2>승인한 기안서</h2>
+            <h2>승인된 기안서</h2>
 
             {approvedDrafts.length === 0 ? (
-                <p>승인한 기안서가 없습니다.</p>
+                <p>승인된 기안서가 없습니다.</p>
             ) : (
                 approvedDrafts.map((draft) => {
                     return (
@@ -28,7 +28,11 @@ function DraftApproved({ drafts, loginUser }) {
                         </div>
                     );
                 })
-            )}
+            ) }
+
+        
+
+            
         </div>
     );
 }

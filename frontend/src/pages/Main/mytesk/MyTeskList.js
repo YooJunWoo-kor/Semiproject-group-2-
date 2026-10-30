@@ -12,12 +12,14 @@ import DraftApproved from "./pages/DraftApproved";
 import { getLoginUser } from "../../../utils/authStorage";
 
 function MyTeskList() {
-
+    const [editingDraft, setEditingDraft] = useState(null);
     const loginUser = getLoginUser();
 
     const mainUrl = "/main/mytesk";
     const [drafts, setDrafts] = useState(() => {
     const savedDrafts = localStorage.getItem("drafts");
+    
+    
 
         if (savedDrafts) {
             return JSON.parse(savedDrafts);
@@ -54,11 +56,11 @@ function MyTeskList() {
                         </div>
                     } />
 
-                    <Route path="draft-create" element={<DraftCreate drafts={drafts} setDrafts={setDrafts} loginUser={loginUser} />} />
+                    <Route path="draft-create" element={<DraftCreate drafts={drafts} setDrafts={setDrafts} loginUser={loginUser} setEditingDraft={setEditingDraft} />} />
 
                     <Route path="draft-complete" element={<DraftComp drafts={drafts} />} />
 
-                    <Route path="draft-request" element={<DraftReq drafts={drafts} setDrafts={setDrafts} loginUser = {loginUser} />} />
+                    <Route path="draft-request" element={<DraftReq drafts={drafts} setDrafts={setDrafts} loginUser = {loginUser} setEditingDraft = {setEditingDraft} />} />
 
                     <Route path="draft-received" element={<DraftReceived
                         drafts={drafts} setDrafts={setDrafts} loginUser={loginUser}
