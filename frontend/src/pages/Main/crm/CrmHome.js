@@ -90,39 +90,21 @@ export default function CrmHome({ data }) {
 
       {/* 2. 상단 핵심 통계 카드 (재무/커뮤니티와 통일된 stats-section) */}
       <section className="stats-section">
-        <StatisticsCard title="총 회원 수" count={customers.length} stiyle={2} />
-        <StatisticsCard title="등록 거래처" count={partners.length} stiyle={2} />
+        <StatisticsCard title="총 회원 수" count={customers.length} stiyle={1} />
+        <StatisticsCard title="등록 거래처" count={partners.length} stiyle={0} />
         <StatisticsCard
           title="미답변 상담"
           count={consultations.filter((c) => c.status !== '답변 완료').length}
-          stiyle={1}
+          stiyle={0}
         />
         <StatisticsCard
           title="미처리 클레임"
           count={claims.filter((c) => c.status !== '처리 완료').length}
-          stiyle={1}
+          stiyle={0}
         />
       </section>
 
       <hr />
-
-      {/* 3. 상단 2열 테이블: 회원 현황 & 거래처 현황 */}
-      <section className="stats-section">
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <BasicTable
-            title="최근 활동 회원 목록"
-            th={customerHeaders}
-            td={customerData}
-          />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <BasicTable
-            title="주요 거래처 목록"
-            th={partnerHeaders}
-            td={partnerData}
-          />
-        </div>
-      </section>
 
       {/* 4. 하단 2열 테이블: 상담 문의 & 클레임 접수 현황 */}
       <section className="stats-section" style={{ marginTop: '16px' }}>
@@ -138,6 +120,17 @@ export default function CrmHome({ data }) {
             title="최근 접수 클레임"
             th={claimHeaders}
             td={claimData}
+          />
+        </div>
+      </section>
+
+      {/* 3. 상단 2열 테이블: 회원 현황 & 거래처 현황 */}
+      <section className="stats-section">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <BasicTable
+            title="주요 거래처 목록"
+            th={partnerHeaders}
+            td={partnerData}
           />
         </div>
       </section>

@@ -1,5 +1,7 @@
 import React from "react";
 
+//기본테이블 모듈
+
 function BasicTable({title, th, td}){
     th = th == null ? ["메뉴1","메뉴2","메뉴3","메뉴4","메뉴5",] : th;
     td = td == null ? [

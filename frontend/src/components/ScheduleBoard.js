@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import BasicCalendar from "./calendar/BasicCalendar";
 import WeeklyCalendar from "./weeklycalendar/WeeklyCalendar";
 
+//스케쥬ㄹ관련 보드
+
 function ScheduleBoard(){
 
     const[isCalStyile, setCalStyile] = useState(0);

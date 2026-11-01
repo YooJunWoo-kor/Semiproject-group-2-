@@ -1,6 +1,8 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+//기본 공통 네비
+
 function Nav(props){
     /*[
         {name: "", url: ""}

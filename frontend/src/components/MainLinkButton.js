@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
+//메인 아이콘 카드
+
 export default function MainLinkButton({ image, icon, text, link }) {
   const navigate = useNavigate();
 

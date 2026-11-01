@@ -22,8 +22,8 @@ function ScheduleModul() {
             </header>
 
             <section className="stats-section">
-                <StatisticsCard title={"마감임박"} count={"5"}/>
-                <StatisticsCard title={"주요일정"} count={"5"}/>
+                <StatisticsCard title={"마감임박"} count={"5"} stiyle={0}/>
+                <StatisticsCard title={"주요일정"} count={"5"} stiyle={0}/>
             </section>
             <div style={{
                 display: "flex",

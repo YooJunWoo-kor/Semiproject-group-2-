@@ -114,27 +114,27 @@ function FinanceModul() {
                     <StatisticsCard
                         title="법인카드"
                         count="3"
-                        stiyle={2}
+                        stiyle={0}
                     />
                     <StatisticsCard
                         title="회사계좌"
                         count="5"
-                        stiyle={2}
+                        stiyle={0}
                     />
                     <StatisticsCard
                         title="신규 기안"
                         count="3"
-                        stiyle={2}
+                        stiyle={0}
                     />
                     <StatisticsCard
                         title="거래처"
                         count="3"
-                        stiyle={2}
+                        stiyle={0}
                     />
                     <StatisticsCard
                         title="관리 품목"
                         count="3"
-                        stiyle={2}
+                        stiyle={0}
                     />
                     지급총액
                     일간

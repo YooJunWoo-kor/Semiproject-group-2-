@@ -6,6 +6,7 @@
 @import './css/MainApp.css';
 @import './css/GroupBord.css';
 @import './css/Schedul.css';
+@import './css/ModalPopup.css';
 
 :root {
   font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
@@ -82,19 +83,23 @@ hr { border: 0; border-top: 1px solid var(--color-line); }
 
 
 /* 로그인 */
-.login-page { display: grid; min-height: 100vh; place-items: center; padding: 32px 20px; background: radial-gradient(ellipse at 15% 10%, #e8efff 0, transparent 34%), var(--color-canvas); }
-.login-page > header, .login-page > main, .login-page > footer { width: min(100%, 430px); }
-.login-page > header { padding: 32px 34px 10px; background: white; border: 1px solid var(--color-line); border-bottom: 0; border-radius: 18px 18px 0 0; }
-.login-page > header h2 { margin-bottom: 6px; color: var(--color-brand); }
-.login-page > main { padding: 20px 34px; background: white; border-left: 1px solid var(--color-line); border-right: 1px solid var(--color-line); }
+.login-page {
+  display: flex;
+  min-height: 100vh;
+  place-items: center;
+  align-items: center;
+  background: radial-gradient(ellipse at 15% 10%, #e8efff 0, transparent 34%), var(--color-canvas);
+}
+
+.login-border{
+  display: flex;
+  flex-flow: column;
+  background-color: #fff;
+  border-radius: 15px;
+  padding: 30px;
+  padding-bottom: 150px;
+  margin: auto;
+  min-width: 400px;
+}
 .login-page form { display: grid; gap: 17px; }
 .login-page form > div { display: grid; gap: 8px; }
-.login-page form button { width: 100%; min-height: 46px; margin-top: 3px; }
-.login-page > footer { padding: 0 34px 30px; background: white; border: 1px solid var(--color-line); border-top: 0; border-radius: 0 0 18px 18px; }
-.login-page > footer button { width: 100%; margin-bottom: 13px; }
-.register-page { max-width: 1180px; margin: 36px auto; padding: 28px; background: white; border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
-.register-page form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; }
-.register-page form > div { display: grid; align-content: start; gap: 8px; }
-.register-page form button { justify-self: start; }
-.register-page footer { margin-top: 16px; }
-.register-page table { margin-top: 18px; overflow: hidden; border: 1px solid var(--color-line); border-radius: 12px; }

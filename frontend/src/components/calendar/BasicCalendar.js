@@ -111,8 +111,8 @@ function BasicCalendar({ schedule = [] }) {
         <table className="basic-calendar-table">
           <thead>
             <tr>
-              {weekdays.map(day => (
-                <th key={day}>{day}</th>
+              {weekdays.map((day,index) => (
+                <th key={index}>{day}</th>
               ))}
             </tr>
           </thead>

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import BasicTable from './BasicTable';
 import './PaginationTable.css';
 
+//기본 게시판 모듈, BasicTable활용
+
 function PaginationTable({ title, th, allData = [], itemsPerPage = 5 }) {
   // 현재 페이지 번호 (1부터 시작)
   const [currentPage, setCurrentPage] = useState(1);

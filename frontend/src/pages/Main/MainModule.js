@@ -89,10 +89,6 @@ function MainModule() {
       {/* 1. 상단 보드 영역 */}
       <div className="main-board">
         <div className="board-header">
-          <span className="board-title">
-            {index === 0 ? "공지 및 안내" : "출결 대시보드"}
-          </span>
-
           <div className="board-btn-group">
             <button
               type="button"
@@ -120,6 +116,7 @@ function MainModule() {
           {modules.map((item) => (
             
               <MainLinkButton 
+                key={item.path}
                 icon={item.icon} 
                 text={item.title} 
                 link={item.path} 

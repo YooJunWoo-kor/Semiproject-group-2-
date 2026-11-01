@@ -117,8 +117,11 @@ function CommunityDashboard({ notices, freePosts, resources, questions, suggesti
       {/* 1. 상단 통계 카드 구역 (재무 모듈 동일) */}
       <section className="stats-section">
         {boardStatus.map((board) => (
-          <Link key={board.title} to={board.url} style={{ textDecoration: "none", color: "inherit" }}>
-            <StatisticsCard title={board.title} count={board.count} stiyle={2} />
+          <Link
+            key={board.title}
+            to={board.url}
+            style={{ textDecoration: "none", color: "inherit" }}>
+            <StatisticsCard title={board.title} count={board.count} stiyle={0} />
           </Link>
         ))}
       </section>
@@ -127,9 +130,10 @@ function CommunityDashboard({ notices, freePosts, resources, questions, suggesti
 
       {/* 2. 메인 대시보드 섹션 1 (좌측: 전사 공지/일정 보드 + 우측: 최신 자유게시판/업무자료실 테이블 2단) */}
       <section className="stats-section">
-        <ScheduleBoard />
-        <div style={{ display: "flex", flexFlow: "column", gap: "16px", flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <BasicTable title="최신 자유게시판" th={freeBoardHeaders} td={freeBoardData} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <BasicTable title="최신 업무자료실" th={techHeaders} td={techData} />
         </div>
       </section>
