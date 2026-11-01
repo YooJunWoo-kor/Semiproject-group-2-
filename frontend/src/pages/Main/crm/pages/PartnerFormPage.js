@@ -82,7 +82,7 @@ export default function PartnerFormPage(props) {
 
   if (isEdit && !savedPartner) {
     return (
-      <section className="workspace-page   ">
+      <section>
         <div className="empty-state">
           <h2>거래처를 찾을 수 없습니다.</h2>
           <button type="button" onClick={handleCancel}>목록으로</button>
@@ -101,8 +101,8 @@ export default function PartnerFormPage(props) {
 
   
   return (
-    <section className="workspace-page    crm-form-page">
-      <header className="page-header">
+    <section className="crm-form-page">
+      <header>
         <div>
           <span className="eyebrow">CRM · 거래처 관리</span>
           <h1>{isEdit ? '거래처 정보 수정' : '신규 거래처 등록'}</h1>

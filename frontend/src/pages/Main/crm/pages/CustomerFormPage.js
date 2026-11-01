@@ -71,7 +71,7 @@ export default function CustomerFormPage(props) {
 
   if (isEdit && !savedCustomer) {
     return (
-      <section className="workspace-page   ">
+      <section>
         <div className="empty-state">
           <h2>고객을 찾을 수 없습니다.</h2>
           <button

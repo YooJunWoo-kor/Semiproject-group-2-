@@ -1,5 +1,4 @@
 import React from "react";
-import './StatisticsCard.css';
 
 function StatisticsCard(props){
     return (

@@ -1,5 +1,4 @@
 import './App.css';
-import './css/Solution.css';
 import Home from './pages/Home';
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
 import RegisterPage from './pages/RegisterPage';
