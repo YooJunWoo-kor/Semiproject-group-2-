@@ -86,6 +86,7 @@ function Items() {
         .reduce((sum, item) => sum + item.totalAmount, 0);
 
     return (
+<<<<<<< HEAD
         <div className="sub-container">
             <header className="dashboard-header">
                 <span className='subtitle'>매입/매출 품목관리</span>
@@ -98,6 +99,22 @@ function Items() {
                     엑셀(Excel) 다운로드
                 </button>
             </div>
+=======
+        <div className="finance-page">
+            {/* 1. 상단 타이틀 및 액션 */}
+            <header>
+                <h2>매입한 품목 / 매출 품목 관리</h2>
+                <p>거래처별 매입 원자재/비품 및 판매된 완제품/용역 품목 내역을 집계합니다.</p>
+                <div>
+                    <button type="button" onClick={() => alert('신규 품목/거래 등록 모달')}>
+                        + 품목 거래내역 신규 등록
+                    </button>
+                    <button type="button" onClick={() => alert('엑셀 다운로드')} >
+                        엑셀(Excel) 다운로드
+                    </button>
+                </div>
+            </header>
+>>>>>>> origin/kds
 
             <hr />
 
@@ -162,6 +179,7 @@ function Items() {
             <br />
 
             {/* 4. 품목 리스트 테이블 */}
+<<<<<<< HEAD
             <main className='table-shell'>
                 <thead>
                     <tr >
@@ -207,6 +225,55 @@ function Items() {
                         </tr>
                     ))}
                 </tbody>
+=======
+            <main>
+                <table >
+                    <thead>
+                        <tr >
+                            <th>품목 번호</th>
+                            <th>구분</th>
+                            <th>거래일자</th>
+                            <th>거래처(고객명)</th>
+                            <th>물품명 (품목명)</th>
+                            <th>규격/수량</th>
+                            <th>단가</th>
+                            <th>공급가액</th>
+                            <th>부가세(VAT)</th>
+                            <th>총 합계금액</th>
+                            <th>결제/정산상태</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredList.map((item) => (
+                            <tr key={item.id}>
+                                <td>{item.id}</td>
+                                <td>
+                                    <strong className={`finance-type ${item.type === 'SALES' ? 'is-sales' : 'is-purchase'}`}>
+                                        {item.type === 'SALES' ? '매출' : '매입'}
+                                    </strong>
+                                </td>
+                                <td>{item.date}</td>
+                                <td><strong>{item.customer}</strong></td>
+                                <td>{item.itemName}</td>
+                                <td>{item.spec} ({item.quantity}개)</td>
+                                <td >{item.unitPrice.toLocaleString()}원</td>
+                                <td >{item.supplyAmount.toLocaleString()}원</td>
+                                <td >{item.vat.toLocaleString()}원</td>
+                                <td >
+                                    {item.totalAmount.toLocaleString()}원
+                                </td>
+                                <td>{item.status}</td>
+                                <td>
+                                    <button type="button" onClick={() => alert(`${item.itemName} 전표 확인`)}>
+                                        전표조회
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+>>>>>>> origin/kds
             </main>
         </div>
     );

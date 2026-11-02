@@ -15,6 +15,7 @@ export default function CustomersPage(props) {
     return target.includes(keyword);
   });
 
+<<<<<<< HEAD
   // 변경: 고정 CSS의 요약 카드에 표시할 고객 수를 실제 데이터에서 계산합니다.
   const customersWithPurchaseIds = new Set(data.purchases.map(function (purchase) {
     return purchase.customerId;
@@ -27,6 +28,8 @@ export default function CustomersPage(props) {
     return customer.joinDate && customer.joinDate.slice(0, 7) === currentMonth;
   }).length;
 
+=======
+>>>>>>> origin/kds
   // 확인을 누른 경우에만 고객과 연결 데이터를 삭제합니다.
   function deleteCustomer(customer) {
     if (!window.confirm('이 고객을 삭제하시겠습니까?')) {
@@ -77,14 +80,24 @@ export default function CustomersPage(props) {
 
 
 
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> origin/kds
   return (
     <section className="workspace-page crm-page">
       <header className="page-header">
         <div>
+<<<<<<< HEAD
 
           <h1>고객 관리</h1>
 
+=======
+          <span className="eyebrow">CRM</span>
+          <h1>고객 관리</h1>
+          <p>고객 정보를 검색하고 등록·수정·삭제할 수 있습니다.</p>
+>>>>>>> origin/kds
         </div>
         <button
           className="erp-primary-button"
@@ -95,6 +108,7 @@ export default function CustomersPage(props) {
         </button>
       </header>
 
+<<<<<<< HEAD
       {/* 변경: 기존 고정 CSS 클래스만 사용해 고객 요약 카드를 추가합니다. */}
       <div className="stats-grid" aria-label="고객 현황">
         <div className="stat-copy content-card">
@@ -115,6 +129,8 @@ export default function CustomersPage(props) {
         </div>
       </div>
 
+=======
+>>>>>>> origin/kds
       <div className="filter-bar">
         <label className="search-field">
           고객 검색

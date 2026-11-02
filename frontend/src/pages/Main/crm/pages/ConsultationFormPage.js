@@ -6,6 +6,7 @@ const EMPTY_CONSULTATION = {
   customerId: '',
   inquiry: '',
   answer: '',
+<<<<<<< HEAD
   status: '신규',
 };
 
@@ -15,6 +16,12 @@ const CONSULTATION_STATUS = ['신규', '답변 완료'];
 function getCurrentDateTime() {
   return new Date().toISOString();
 }
+=======
+  status: '접수',
+};
+
+const CONSULTATION_STATUS = ['접수', '처리 중', '답변 완료'];
+>>>>>>> origin/kds
 
 export default function ConsultationFormPage(props) {
   const data = props.data;
@@ -43,6 +50,7 @@ export default function ConsultationFormPage(props) {
       return;
     }
 
+<<<<<<< HEAD
     // 변경: 처음 답변 완료로 바뀔 때 날짜를 기록하고, 기존 날짜는 보존합니다.
     const wasAlreadyAnswered = savedConsultation && savedConsultation.status === '답변 완료';
     const answeredAt = form.status === '답변 완료'
@@ -53,6 +61,11 @@ export default function ConsultationFormPage(props) {
       ...form,
       id: isEdit ? consultationId : createId('consultation'),
       answeredAt: answeredAt, // 변경: 답변 완료 날짜 저장
+=======
+    const consultation = {
+      ...form,
+      id: isEdit ? consultationId : createId('consultation'),
+>>>>>>> origin/kds
     };
 
     setData(function (current) {

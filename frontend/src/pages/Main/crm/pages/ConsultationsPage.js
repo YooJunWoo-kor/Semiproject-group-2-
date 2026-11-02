@@ -6,6 +6,7 @@ export default function ConsultationsPage(props) {
   const setData = props.setData;
   const navigate = useNavigate();
   const [selectedConsultation, setSelectedConsultation] = useState(null);
+<<<<<<< HEAD
   const today = formatSeoulDate(new Date()); // 변경: 오늘 날짜를 한국 시간 기준으로 계산
   const todayAnsweredCount = data.consultations.filter(function (consultation) {
     return consultation.status === '답변 완료'
@@ -18,6 +19,8 @@ export default function ConsultationsPage(props) {
   const answeredCount = data.consultations.filter(function (consultation) {
     return consultation.status === '답변 완료';
   }).length; // 변경: 전체 답변 완료 건수 계산
+=======
+>>>>>>> origin/kds
 
   function findCustomerName(customerId) {
     const customer = data.customers.find(function (item) {
@@ -49,6 +52,7 @@ export default function ConsultationsPage(props) {
     <section className="workspace-page crm-page">
       <header className="page-header">
         <div>
+<<<<<<< HEAD
 
           <h1>상담 관리</h1> 
            {/* 변경: CRM 작은 라벨과 설명 문구는 제거하고 페이지 제목만 남겼습니다. */}
@@ -78,6 +82,21 @@ export default function ConsultationsPage(props) {
         </div>
       </div>
 
+=======
+          <span className="eyebrow">CRM</span>
+          <h1>상담 관리</h1>
+          <p>일반 구매자의 문의, 답변 및 처리 상태를 관리합니다.</p>
+        </div>
+        <button
+          className="erp-primary-button"
+          type="button"
+          onClick={function () { navigate('/main/crm/consultations/new'); }}
+        >
+          상담 등록
+        </button>
+      </header>
+
+>>>>>>> origin/kds
       {!data.customers.length && (
         <p className="connection-status is-offline">
           상담을 등록하려면 고객 관리에서 고객을 먼저 등록하세요.
@@ -91,7 +110,10 @@ export default function ConsultationsPage(props) {
               <th>고객</th>
               <th>문의 내용</th>
               <th>답변</th>
+<<<<<<< HEAD
               <th>답변일</th>{/* 변경: 답변 완료 날짜 열 추가 */}
+=======
+>>>>>>> origin/kds
               <th>상태</th>
               <th>관리</th>
             </tr>
@@ -107,7 +129,10 @@ export default function ConsultationsPage(props) {
                   <td>{findCustomerName(consultation.customerId)}</td>
                   <td>{consultation.inquiry}</td>
                   <td>{consultation.answer || '-'}</td>
+<<<<<<< HEAD
                   <td>{formatSeoulDate(consultation.answeredAt)}</td>{/* 변경: 날짜 표시, 없으면 '-' */}
+=======
+>>>>>>> origin/kds
                   <td><span className="status-badge">{consultation.status}</span></td>
                   <td onClick={function (event) { event.stopPropagation(); }}>
                     <button
@@ -130,7 +155,11 @@ export default function ConsultationsPage(props) {
               );
             })}
             {!data.consultations.length && (
+<<<<<<< HEAD
               <tr><td colSpan="6" className="no-data">등록된 상담이 없습니다.</td></tr>
+=======
+              <tr><td colSpan="5" className="no-data">등록된 상담이 없습니다.</td></tr>
+>>>>>>> origin/kds
             )}
           </tbody>
         </table>
@@ -147,6 +176,7 @@ export default function ConsultationsPage(props) {
   );
 }
 
+<<<<<<< HEAD
 // 변경: UTC 날짜/시간을 한국 날짜(YYYY-MM-DD)로 표시합니다.
 function formatSeoulDate(value) {
   if (!value) {
@@ -161,6 +191,8 @@ function formatSeoulDate(value) {
   }).format(new Date(value));
 }
 
+=======
+>>>>>>> origin/kds
 function ConsultationDetail(props) {
   return (
     <article className="detail-card">

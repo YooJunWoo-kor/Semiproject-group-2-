@@ -1,6 +1,9 @@
 import React from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
+<<<<<<< HEAD
 import StatisticsCard from '../../../components/StatisticsCard';
+=======
+>>>>>>> origin/kds
 
 function FinanceModul() {
     const navigate = useNavigate();
@@ -35,6 +38,7 @@ function FinanceModul() {
 
     return (
         <div className="sub-container">
+<<<<<<< HEAD
             <header className="dashboard-header">
                 <span className='subtitle'>대시보드</span>
                 <span className='subtext'> 처리할 세부 재무 항목을 선택하세요. </span>
@@ -72,6 +76,30 @@ function FinanceModul() {
             <div> 주요 거래처 리스트 </div>
             <div> 신규 매입 </div>
             <div> 신규 매출 </div>
+=======
+            <header>
+                <span className='subtitle'>대시보드</span>
+                <span className='subtext'> 처리할 세부 재무 항목을 선택하세요. </span>
+
+            </header>
+
+            <main>
+                <div className="module-grid">
+                    {financeMenus.map((menu) => (
+                        <div key={menu.id} className="module-card">
+                            <h3>{menu.title}</h3>
+                            <p>{menu.description}</p>
+                            <button
+                                type="button"
+                                onClick={() => navigate(menu.path)}
+                            >
+                                {menu.title} 이동
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </main>
+>>>>>>> origin/kds
         </div>
     );
 }

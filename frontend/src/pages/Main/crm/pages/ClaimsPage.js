@@ -6,6 +6,7 @@ export default function ClaimsPage(props) {
   const setData = props.setData;
   const navigate = useNavigate();
   const [selectedClaim, setSelectedClaim] = useState(null);
+<<<<<<< HEAD
   const today = getLocalDateString();
   const completedTodayCount = data.claims.filter(function (claim) {
     return claim.status === '처리 완료' && claim.completedAt === today;
@@ -16,6 +17,8 @@ export default function ClaimsPage(props) {
   const completedClaimCount = data.claims.filter(function (claim) {
     return claim.status === '처리 완료';
   }).length;
+=======
+>>>>>>> origin/kds
 
   function findCustomerName(customerId) {
     const customer = data.customers.find(function (item) {
@@ -53,6 +56,7 @@ export default function ClaimsPage(props) {
     <section className="workspace-page crm-page">
       <header className="page-header">
         <div>
+<<<<<<< HEAD
              {/* 변경: CRM 작은 라벨과 설명 문구는 제거하고 페이지 제목만 남겼습니다. */}
           <h1>클레임 관리</h1>
      
@@ -79,6 +83,21 @@ export default function ClaimsPage(props) {
         </div>
       </div>
 
+=======
+          <span className="eyebrow">CRM</span>
+          <h1>클레임 관리</h1>
+          <p>고객의 실제 구매 건에 연결해 클레임을 처리합니다.</p>
+        </div>
+        <button
+          className="erp-primary-button"
+          type="button"
+          onClick={function () { navigate('/main/crm/claims/new'); }}
+        >
+          클레임 등록
+        </button>
+      </header>
+
+>>>>>>> origin/kds
       {!data.purchases.length && (
         <p className="connection-status is-offline">
           클레임을 등록하려면 고객의 구매 이력이 먼저 필요합니다.
@@ -146,6 +165,7 @@ export default function ClaimsPage(props) {
   );
 }
 
+<<<<<<< HEAD
 function getLocalDateString() {
   const today = new Date();
   const year = today.getFullYear();
@@ -154,6 +174,8 @@ function getLocalDateString() {
   return year + '-' + month + '-' + day;
 }
 
+=======
+>>>>>>> origin/kds
 function ClaimDetail(props) {
   return (
     <article className="detail-card">

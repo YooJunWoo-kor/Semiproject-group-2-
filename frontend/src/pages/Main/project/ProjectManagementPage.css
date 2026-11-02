@@ -1,0 +1,363 @@
+/* 프로젝트 관리 화면 전용 임시 스타일 */
+.project-page {
+    padding: 24px;
+    color: #203047;
+    background: #f4f7f6;
+    min-height: 100%;
+    font-family: 'Noto Sans KR', sans-serif;
+}
+
+.project-page * {
+    box-sizing: border-box;
+}
+
+.project-page>nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 22px;
+    padding: 12px;
+    border-radius: 14px;
+    background: #fff;
+    border: 1px solid #e2e9e7;
+}
+
+.project-page button {
+    padding: 9px 14px;
+    border: 1px solid #cbd9d5;
+    border-radius: 8px;
+    background: white;
+    color: #18544e;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.project-page button:hover {
+    background: #e9f5f2;
+}
+
+.project-page button:focus-visible {
+    outline: 2px solid #246b63;
+    outline-offset: 2px;
+}
+
+.project-page>nav button {
+    border-color: transparent;
+}
+
+.project-page h1,
+.project-page h2,
+.project-page h3 {
+    color: #172e2a;
+    margin: 18px 0 12px;
+}
+
+.project-page h1 {
+    font-size: 25px;
+}
+
+.project-page h2 {
+    font-size: 21px;
+}
+
+.project-page h3 {
+    font-size: 17px;
+}
+
+.project-page>div {
+    background: #fff;
+    border: 1px solid #e2e9e7;
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 5px 20px #1d2d5610;
+}
+
+.project-page form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 12px 0 20px;
+}
+
+.project-page input,
+.project-page select,
+.project-page textarea {
+    padding: 9px 11px;
+    border: 1px solid #ccd7d4;
+    border-radius: 8px;
+    background: #fff;
+    color: #203047;
+    max-width: 100%;
+}
+
+.project-page input:focus,
+.project-page select:focus,
+.project-page textarea:focus {
+    outline: 2px solid #a5d4c8;
+    border-color: #246b63;
+}
+
+.project-page ul {
+    padding-left: 20px;
+}
+
+.project-page li {
+    margin: 10px 0;
+    line-height: 2.2;
+}
+
+.project-page li button,
+.project-page li input,
+.project-page li select {
+    margin: 3px 5px;
+}
+
+.project-page table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+}
+
+.project-page th,
+.project-page td {
+    border-bottom: 1px solid #e3ebe8;
+    padding: 11px;
+    text-align: left;
+}
+
+.project-page th {
+    background: #f0f7f5;
+}
+
+@media (max-width: 700px) {
+    .project-page {
+        padding: 12px;
+    }
+
+    .project-page>div {
+        padding: 14px;
+    }
+
+    .project-page form {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .project-page form input,
+    .project-page form select,
+    .project-page form button {
+        width: 100%;
+    }
+}
+
+/* 프로젝트 전용 왼쪽 메뉴 + 한 화면 홈 */
+.project-page {
+    padding: 18px 24px;
+    min-height: 0;
+}
+
+.project-page .project-title {
+    cursor: pointer;
+    margin: 0 0 12px;
+    font-size: 23px;
+}
+
+.project-page .project-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    box-shadow: none;
+}
+
+.project-page .project-sidebar {
+    width: 190px;
+    flex-shrink: 0;
+    padding: 12px;
+    border: 1px solid #e2e9e7;
+    border-radius: 12px;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.project-page .project-sidebar button {
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: transparent;
+    padding: 11px;
+}
+
+.project-page .project-sidebar button.active,
+.project-page .project-sidebar button:hover {
+    background: #e8f4f0;
+    color: #176b5b;
+}
+
+.project-page .project-content {
+    flex: 1;
+    min-width: 0;
+    background: white;
+    border: 1px solid #e2e9e7;
+    border-radius: 12px;
+    padding: 18px;
+}
+
+.project-page .project-home {
+    max-width: 100%;
+}
+
+.project-page .project-home-header h2 {
+    margin: 0 0 4px;
+    font-size: 21px;
+}
+
+.project-page .project-home-header p {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: #6b7787;
+}
+
+.project-page .project-home-alert,
+.project-page .project-home-tasks {
+    border: 1px solid #e2e9e7;
+    border-radius: 12px;
+    padding: 12px 15px;
+    margin-bottom: 12px;
+}
+
+.project-page .project-home-alert {
+    background: #f7faf9;
+}
+
+.project-page .project-home-section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.project-page .project-home-section-title h3 {
+    font-size: 15px;
+    margin: 0;
+}
+
+.project-page .project-home-section-title span {
+    font-size: 12px;
+    color: #6b7787;
+}
+
+.project-page .project-home-alert-row,
+.project-page .project-home-task-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    text-align: left;
+    background: #fff;
+    border: 1px solid #e6ece9;
+    margin: 4px 0;
+    padding: 9px 12px;
+    min-height: 39px;
+}
+
+.project-page .project-home-alert-row {
+    justify-content: space-between;
+}
+
+.project-page .project-home-alert-row strong {
+    color: #b64036;
+}
+
+.project-page .project-home-task-row {
+    gap: 12px;
+}
+
+.project-page .project-home-priority {
+    min-width: 38px;
+    font-size: 12px;
+    text-align: center;
+    border-radius: 6px;
+    padding: 3px 5px;
+    background: #e7eee9;
+}
+
+.project-page .priority-긴급 {
+    color: #ad2828;
+    background: #ffebeb;
+}
+
+.project-page .priority-높음 {
+    color: #9b5800;
+    background: #fff1d9;
+}
+
+.project-page .project-home-task-name {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.project-page .project-home-task-name strong {
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.project-page .project-home-task-name small,
+.project-page .project-home-due {
+    color: #7b8794;
+    font-size: 11px;
+}
+
+.project-page .project-home-empty {
+    font-size: 13px;
+    margin: 8px 0;
+    color: #6b7787;
+}
+
+@media (max-width: 750px) {
+    .project-page .project-layout {
+        flex-direction: column;
+    }
+
+    .project-page .project-sidebar {
+        width: 100%;
+    }
+
+    .project-page .project-content {
+        width: 100%;
+    }
+    
+/* 프로젝트 상세 현황 테이블 */
+.project-summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 20px;
+    font-size: 14px;
+  }
+  
+  .project-summary-table th,
+  .project-summary-table td {
+    padding: 12px 14px;
+    border: 1px solid #e2e8f0;
+    text-align: left;
+  }
+  
+  .project-summary-table th {
+    background-color: #f1f5f9;
+    font-weight: 600;
+  }
+  
+  .project-summary-table tbody tr:hover {
+    background-color: #f8fafc;
+  }
+  
+}

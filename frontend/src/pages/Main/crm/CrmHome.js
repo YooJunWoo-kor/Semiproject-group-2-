@@ -1,6 +1,28 @@
 import { Link } from 'react-router-dom';
 
+<<<<<<< HEAD
 // 변경: 아래 업무 메뉴 카드 영역을 제거해 더 이상 사용하지 않는 메뉴 배열도 삭제했습니다.
+=======
+const menus = [
+  { title: '고객 관리'
+    , description: '고객 정보 조회 및 등록'
+    , path: 'customers'
+    , key: 'customers' },
+  { title: '거래처 관리'
+    , description: '유통사·대리점·납품처 관리'
+    , path: 'partners'
+    , key: 'partners' },
+  { title: '상담 관리'
+    , description: '고객 문의 및 답변 처리'
+    , path: 'consultations'
+    , key: 'consultations' },
+  { title: '클레임 관리'
+    , description: '불량·교환·환불 접수 처리'
+    , path: 'claims'
+    , key: 'claims' },
+];
+
+>>>>>>> origin/kds
 export const initialCrmData = {
   // 1. 고객 관리 (B2C / 리테일 고객)
   customers: [
@@ -167,13 +189,18 @@ export const initialCrmData = {
 
 
 export default function CrmHome(props) {
+<<<<<<< HEAD
   // 변경: 별도 예시 데이터가 아니라 CrmRoutes에서 전달받은 최신 공용 데이터를 사용합니다.
   const data = props.data || initialCrmData;
+=======
+  const data = initialCrmData;
+>>>>>>> origin/kds
 
   return (
     <section className="workspace-page crm-page crm-home">
       <header className="page-header">
         <div>
+<<<<<<< HEAD
           {/* 변경: CRM 작은 라벨과 설명 문구는 제거하고 페이지 제목만 남겼습니다. */}
           <h1>고객관계관리</h1>
         </div>
@@ -211,6 +238,59 @@ export default function CrmHome(props) {
         </Link>
       </div>
 
+=======
+          <span className="eyebrow">CRM</span>
+          <h1>고객관계관리</h1>
+          <p>고객과 거래처 정보를 확인하고 상담 및 클레임 업무를 처리합니다.</p>
+        </div>
+      </header>
+
+      <div className="crm-summary" aria-label="CRM 현황">
+        <div>
+          <span>전체 고객</span>
+          <strong>{data.customers.length}</strong>
+          <small>명</small>
+        </div>
+        <div>
+          <span>거래처</span>
+          <strong>{data.partners.length}</strong>
+          <small>곳</small>
+        </div>
+        <div>
+          <span>상담</span>
+          <strong>{data.consultations.length}</strong>
+          <small>건</small>
+        </div>
+        <div>
+          <span>클레임</span>
+          <strong>{data.claims.length}</strong>
+          <small>건</small>
+        </div>
+      </div>
+
+      <div className="crm-section-heading">
+        <h2>업무 메뉴</h2>
+        <p>작업할 메뉴를 선택하세요.</p>
+      </div>
+      <div className="crm-menu-grid">
+        {menus.map(function (menu, index) {
+          return (
+            <Link
+              className="crm-menu-card"
+              to={'/main/crm/' + menu.path}
+              key={menu.path}
+            >
+              <span className="crm-menu-number">{index + 1}</span>
+              <div>
+                <h3>{menu.title}</h3>
+                <p>{menu.description}</p>
+              </div>
+              <span className="crm-menu-arrow" aria-hidden="true">›</span>
+            </Link>
+          );
+        })}
+      </div>
+>>>>>>> origin/kds
     </section>
   );
 }

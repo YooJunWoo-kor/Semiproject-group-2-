@@ -66,6 +66,7 @@ function Approval() {
     };
 
     return (
+<<<<<<< HEAD
         <div className="sub-container">
             <header className="dashboard-header">
                 <span className='subtitle'>결제(지출) 관리</span>
@@ -75,6 +76,19 @@ function Approval() {
                 <strong>금월 승인 합계:</strong> 5,000,000원 |{' '}
                 <strong>금월 반려:</strong> 1건
             </div>
+=======
+        <div className="finance-page">
+            {/* 1. 상단 타이틀 및 집계 요약 */}
+            <header>
+                <h2>결제(지출) 승인 관리</h2>
+                <p>각 부서에서 상신된 지출 결의서를 검토하고 승인/반려합니다.</p>
+                <div>
+                    <strong>승인 대기:</strong> 2건 |{' '}
+                    <strong>금월 승인 합계:</strong> 5,000,000원 |{' '}
+                    <strong>금월 반려:</strong> 1건
+                </div>
+            </header>
+>>>>>>> origin/kds
 
             <hr />
 
@@ -104,7 +118,11 @@ function Approval() {
             <br />
 
             {/* 3. 결제 지출 승인 목록 테이블 */}
+<<<<<<< HEAD
             <div className='table-shell'>
+=======
+            <main>
+>>>>>>> origin/kds
                 <table >
                     <thead>
                         <tr >
@@ -175,7 +193,11 @@ function Approval() {
                         ))}
                     </tbody>
                 </table>
+<<<<<<< HEAD
             </div>
+=======
+            </main>
+>>>>>>> origin/kds
         </div>
     );
 }

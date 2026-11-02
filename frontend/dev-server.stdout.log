@@ -1,0 +1,270 @@
+
+> cosmetics-erp@1.0.0 start
+> react-scripts start
+
+Starting the development server...
+
+Compiled successfully!
+
+You can now view cosmetics-erp in the browser.
+
+  Local:            http://localhost:3000
+  On Your Network:  http://192.168.0.31:3000
+
+Note that the development build is not optimized.
+To create a production build, use npm run build.
+
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Failed to compile.
+
+Module not found: Error: Can't resolve './customerDummyData' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main\crm'
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/crm/crmStorage.js[39m[22m [1m[32m5:0-52[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './customerDummyData' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main\crm'[39m[22m
+
+webpack compiled with [1m[31m1 error[39m[22m
+Failed to compile.
+
+Module not found: Error: Can't resolve './crm/CustomersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m21:0-48[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/CustomersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/crm/crmStorage.js[39m[22m [1m[32m5:0-52[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './customerDummyData' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main\crm'[39m[22m
+
+webpack compiled with [1m[31m2 errors[39m[22m
+Failed to compile.
+
+Module not found: Error: Can't resolve './crm/CustomersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m21:0-48[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/CustomersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m22:0-54[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/CustomerFormPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/crm/crmStorage.js[39m[22m [1m[32m5:0-52[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './customerDummyData' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main\crm'[39m[22m
+
+webpack compiled with [1m[31m3 errors[39m[22m
+Failed to compile.
+
+Module not found: Error: Can't resolve './crm/CustomersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m21:0-48[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/CustomersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m22:0-54[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/CustomerFormPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m24:0-52[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/PartnerFormPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/crm/crmStorage.js[39m[22m [1m[32m5:0-52[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './customerDummyData' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main\crm'[39m[22m
+
+webpack compiled with [1m[31m4 errors[39m[22m
+Failed to compile.
+
+Module not found: Error: Can't resolve './crm/CustomersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m21:0-48[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/CustomersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m22:0-54[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/CustomerFormPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m23:0-46[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/PartnersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m24:0-52[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/PartnerFormPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/crm/crmStorage.js[39m[22m [1m[32m5:0-52[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './customerDummyData' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main\crm'[39m[22m
+
+webpack compiled with [1m[31m5 errors[39m[22m
+Failed to compile.
+
+Module not found: Error: Can't resolve './crm/CustomersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m21:0-48[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/CustomersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m22:0-54[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/CustomerFormPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m23:0-46[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/PartnersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m24:0-52[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/PartnerFormPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m25:0-56[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/ConsultationsPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/crm/crmStorage.js[39m[22m [1m[32m5:0-52[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './customerDummyData' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main\crm'[39m[22m
+
+webpack compiled with [1m[31m6 errors[39m[22m
+Failed to compile.
+
+Module not found: Error: Can't resolve './crm/CustomersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m21:0-48[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/CustomersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m22:0-54[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/CustomerFormPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m23:0-46[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/PartnersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m24:0-52[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/PartnerFormPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m25:0-56[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/ConsultationsPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m26:0-42[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/ClaimsPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/crm/crmStorage.js[39m[22m [1m[32m5:0-52[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './customerDummyData' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main\crm'[39m[22m
+
+webpack compiled with [1m[31m7 errors[39m[22m
+Failed to compile.
+
+Module not found: Error: Can't resolve './crm/CustomersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m21:0-48[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/CustomersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m22:0-54[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/CustomerFormPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m23:0-46[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/PartnersPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m24:0-52[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/PartnerFormPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m25:0-56[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/ConsultationsPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m26:0-42[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/ClaimsPage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/pages/Main/MainApp.js[39m[22m [1m[32m27:0-46[39m[22m
+[1mModule [1m[31mnot found[39m[22m[1m: [1m[31mError[39m[22m[1m: Can't resolve './crm/crmStorage' in 'C:\Users\user1\Desktop\cosmetics-erp\frontend\src\pages\Main'[39m[22m
+
+webpack compiled with [1m[31m7 errors[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m

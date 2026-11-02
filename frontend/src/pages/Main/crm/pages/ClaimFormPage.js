@@ -8,6 +8,7 @@ const EMPTY_CLAIM = {
   type: '제품 불량',
   content: '',
   resolution: '',
+<<<<<<< HEAD
   status: '신규',
 };
 
@@ -21,6 +22,13 @@ function getLocalDateString() {
   const day = String(today.getDate()).padStart(2, '0');
   return year + '-' + month + '-' + day;
 }
+=======
+  status: '접수',
+};
+
+const CLAIM_TYPES = ['제품 불량', '교환', '환불', '불만 사항'];
+const CLAIM_STATUS = ['접수', '검토 중', '처리 완료'];
+>>>>>>> origin/kds
 
 export default function ClaimFormPage(props) {
   const data = props.data;
@@ -64,6 +72,7 @@ export default function ClaimFormPage(props) {
       return;
     }
 
+<<<<<<< HEAD
     const wasAlreadyCompleted = savedClaim && savedClaim.status === '처리 완료';
     const completedAt = form.status === '처리 완료'
       ? (wasAlreadyCompleted ? savedClaim.completedAt || '' : getLocalDateString())
@@ -73,6 +82,11 @@ export default function ClaimFormPage(props) {
       ...form,
       id: isEdit ? claimId : createId('claim'),
       completedAt: completedAt,
+=======
+    const claim = {
+      ...form,
+      id: isEdit ? claimId : createId('claim'),
+>>>>>>> origin/kds
     };
 
     setData(function (current) {

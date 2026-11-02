@@ -1,0 +1,30 @@
+/* 건의 목록 전체를 두 칸으로 배치합니다. */
+.suggestion-page .suggestion-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  
+  .suggestion-page .suggestion-card {
+    padding: 20px;
+    border: 1px solid #e1e8ed;
+    border-radius: 13px;
+    background-color: #ffffff;
+    box-shadow: 0 3px 12px rgba(23, 60, 74, 0.06);
+  }
+  
+  .suggestion-page .suggestion-card > div {
+    margin-bottom: 10px;
+    color: #253751;
+    line-height: 1.5;
+  }
+  
+  .suggestion-page .suggestion-card > div:last-child {
+    margin-bottom: 0;
+  }
+  
+  @media (max-width: 700px) {
+    .suggestion-page .suggestion-list {
+      grid-template-columns: 1fr;
+    }
+  }

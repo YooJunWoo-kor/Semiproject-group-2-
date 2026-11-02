@@ -1,7 +1,10 @@
+<<<<<<< HEAD
 import { Link } from "react-router-dom";
 import StatisticsCard from "../../../../components/StatisticsCard";
 import { getLoginUser } from "../../../../utils/authStorage";
 
+=======
+>>>>>>> origin/kds
 //json구조 i
 const departments = [
   {
@@ -49,8 +52,11 @@ const departments = [
 ];
 
 export default function Departments() {
+<<<<<<< HEAD
   const loginUser = getLoginUser();
   const isMaster = loginUser?.role === 'MASTER';
+=======
+>>>>>>> origin/kds
   const totalEmployees = departments.reduce(
     (total, department) => total + department.count,
     0
@@ -61,6 +67,7 @@ export default function Departments() {
     : '0';
 
   return (
+<<<<<<< HEAD
     <div className="sub-container">
       <header className="dashboard-header">
           <span className='subtitle'>부서관리</span>
@@ -81,16 +88,69 @@ export default function Departments() {
       <div className="dept-summary-cards">
         <StatisticsCard title={"전체부서"} count={"6"}/>
         <StatisticsCard title={"평균부서인원"} count={"21"} stiyle={1}/>
+=======
+    <div className="departments-wrapper">
+      <div className="page-top-header">
+        <div>
+          <div className="sub-title">ORGANIZATION</div>
+          <h1>부서 관리</h1>
+          <p>회사 조직과 부서별 인원 현황을 확인합니다.</p>
+        </div>
+
+        <button
+          className="action-btn"
+          onClick={() => window.alert('부서 등록 기능은 추후 구현할 수 있습니다.')}
+        >
+          부서 등록
+        </button>
+      </div>
+
+      <div className="dept-summary-cards">
+        <div className="summary-card">
+          <span>전체 부서</span>
+          <strong>{departments.length}개</strong>
+        </div>
+
+        <div className="summary-card">
+          <span>전체 직원</span>
+          <strong>{totalEmployees}명</strong>
+        </div>
+
+        <div className="summary-card">
+          <span>평균 부서 인원</span>
+          <strong>{averageCount}명</strong>
+        </div>
+>>>>>>> origin/kds
       </div>
 
       <div className="dept-grid">
         {departments.map((department) => (
+<<<<<<< HEAD
           <DepartCard data = {department}/> 
+=======
+          <div className="dept-card" key={department.id}>
+            <h2>{department.name}</h2>
+            <p>{department.description}</p>
+
+            <div className="dept-card-footer">
+              <div>
+                <span>부서장</span>
+                <strong>{department.lead}</strong>
+              </div>
+
+              <div>
+                <span>구성원</span>
+                <strong>{department.count}명</strong>
+              </div>
+            </div>
+          </div>
+>>>>>>> origin/kds
         ))}
       </div>
     </div>
   );
 }
+<<<<<<< HEAD
 
 function DepartCard({data}){
   return(
@@ -112,3 +172,5 @@ function DepartCard({data}){
           </div>
   )
 }
+=======
+>>>>>>> origin/kds
