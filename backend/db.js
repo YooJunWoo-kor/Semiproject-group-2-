@@ -1,25 +1,21 @@
 // backend/db.js
-const mysql = require('mysql2/promise');
+const mysql = require('mysql2');
 require('dotenv').config();
 
-const pool = mysql.createPool({
+// .env파일에서 설정한 정보 연결.
+const db = mysql.createConnection({
     host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 3306,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
+    database: process.env.DB_NAME
 });
 
-pool.getConnection()
-    .then((conn) => {
-        console.log('✅ MySQL mydb 연결 성공 (myuser)');
-        conn.release();
-    })
-    .catch((err) => {
-        console.error('❌ MySQL 연결 실패:', err.message);
-    });
-
-module.exports = pool;
+db.connect((err)=>{
+    if(err){
+        console.log('db falied');
+    } else{
+        console.log('db connected');
+    }
+})
+    
+module.exports = db;

@@ -6,10 +6,15 @@ const EMPTY_CONSULTATION = {
   customerId: '',
   inquiry: '',
   answer: '',
-  status: '접수',
+  status: '신규',
 };
 
-const CONSULTATION_STATUS = ['접수', '처리 중', '답변 완료'];
+const CONSULTATION_STATUS = ['신규', '답변 완료'];
+
+// 변경: 날짜를 UTC ISO 형식으로 저장해 나중에 DB와 연동하기 쉽게 합니다.
+function getCurrentDateTime() {
+  return new Date().toISOString();
+}
 
 export default function ConsultationFormPage(props) {
   const data = props.data;
@@ -38,9 +43,16 @@ export default function ConsultationFormPage(props) {
       return;
     }
 
+    // 변경: 처음 답변 완료로 바뀔 때 날짜를 기록하고, 기존 날짜는 보존합니다.
+    const wasAlreadyAnswered = savedConsultation && savedConsultation.status === '답변 완료';
+    const answeredAt = form.status === '답변 완료'
+      ? (wasAlreadyAnswered ? savedConsultation.answeredAt || '' : getCurrentDateTime())
+      : '';
+
     const consultation = {
       ...form,
       id: isEdit ? consultationId : createId('consultation'),
+      answeredAt: answeredAt, // 변경: 답변 완료 날짜 저장
     };
 
     setData(function (current) {
@@ -59,7 +71,7 @@ export default function ConsultationFormPage(props) {
 
   if (isEdit && !savedConsultation) {
     return (
-      <section className="workspace-page crm-page">
+      <section>
         <div className="empty-state">
           <h2>상담을 찾을 수 없습니다.</h2>
           <button type="button" onClick={function () { navigate('/main/crm/consultations'); }}>
@@ -71,8 +83,8 @@ export default function ConsultationFormPage(props) {
   }
 
   return (
-    <section className="workspace-page crm-page crm-form-page">
-      <header className="page-header">
+    <section className="crm-form-page">
+      <header>
         <div>
           <span className="eyebrow">CRM · 상담 관리</span>
           <h1>{isEdit ? '상담 수정 및 답변' : '상담 등록'}</h1>

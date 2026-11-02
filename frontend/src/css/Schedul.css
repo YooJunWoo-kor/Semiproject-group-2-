@@ -1,0 +1,22 @@
+.schedule-nav{
+    display: flex;
+    flex-flow: column;
+    padding-left: 30px;
+}
+
+.schedule-nav label{
+    color:#fff;
+    font-weight: normal;
+}
+
+.schedule-nav input{
+    width: 8px;
+}
+
+.schedule-nav label{
+    padding-bottom: 5px;
+}
+
+.schedule-nav label:first-child{
+    padding-top: 15px;
+}

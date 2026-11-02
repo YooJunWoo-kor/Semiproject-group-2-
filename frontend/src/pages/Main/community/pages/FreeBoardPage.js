@@ -1,91 +1,49 @@
-import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-
-const emptyForm = { title: "", author: "임시 사용자", content: "" };
+import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import PaginationTable from '../../../../components/PaginationTable';
 
 function FreeBoardPage({ communityItems }) {
-  // 1. 게시판별 글 목록과 공통 추가/수정/삭제 기능을 준비합니다.
-  const { items, addItem, updateItem, removeItem } = communityItems;
+  const { items, updateItem, removeItem } = communityItems;
   const location = useLocation();
   const initialSelected = items.find((item) => item.id === location.state?.selectedItemId) || null;
-  const [query, setQuery] = useState(""); //사용자가 입력한 검색어
-  const [view, setView] = useState(initialSelected ? "detail" : "list"); //현재 표시할 화면
-  const [selected, setSelected] = useState(initialSelected); //사용자가 선택한 게시글
-  const [form, setForm] = useState(emptyForm); //글쓰기 ,수정 입력 데이터
-  const [comment, setComment] = useState(""); //현재 작성중인 댓글
-  const [message, setMessage] = useState(""); //등록,수정, 삭제 안내 메세지
-  // 2. 검색어와 필요한 분류/상태 조건으로 목록을 좁힙니다.
-  const filtered = items.filter((item) => `${item.title} ${item.author}`.toLowerCase().includes(query.toLowerCase()));
-  
-  const openForm = (item) => {
-    setForm(item ? { ...item } : emptyForm);
-    setView(item ? "edit" : "write");
-    setMessage("");
+
+  const [query, setQuery] = useState('');
+  const [view, setView] = useState(initialSelected ? 'detail' : 'list'); // 'list' | 'detail'
+  const [selected, setSelected] = useState(initialSelected);
+  const [comment, setComment] = useState('');
+
+  const filtered = items.filter((item) =>
+    `${item.title} ${item.author}`.toLowerCase().includes(query.toLowerCase())
+  );
+
+  const handleOpenWriteModal = () => {
+    // 나중에 공통 모달(Modal) 컴포넌트 오픈 로직을 연결할 자리입니다.
+    alert('공통 글작성 모달을 띄울 예정입니다.');
   };
 
-  // 3. 폼 내용을 검사하고, 신규 글은 추가하고 기존 글은 갱신합니다.
-  const save = (event) => {
-    event.preventDefault();
-
-    if (!form.title.trim() || !form.author.trim() || !form.content.trim()) {
-      setMessage("제목, 작성자, 내용은 필수입니다.");
-      return;
-    }
-
-    // 게시글 수정 및 수정 내용 반영
-    const date = new Date().toISOString().slice(0, 10);
-
-    if (view === "edit") {
-      const savedItem = { ...form, updatedAt: date };
-      updateItem(savedItem);
-      setSelected(savedItem);
-      setView("detail");
-      setMessage("글이 수정되었습니다.");
-      return;
-    }
-
-    const newItem = {
-      ...form,
-      id: Date.now(),
-      comments: [],
-      createdAt: date,
-      updatedAt: date,
-    };
-
-    addItem(newItem);
-    setView("list");
-    setMessage("글이 등록되었습니다.");
-  };
-
-  // 목록에서 부르면 전달된 글을, 상세 화면에서 부르면 기본값인 selected 글을 삭제합니다.
   const remove = (itemToRemove = selected) => {
-    if (!itemToRemove || !window.confirm("이 글을 삭제할까요?")) {
-      return;
-    }
+    if (!itemToRemove || !window.confirm('이 글을 삭제할까요?')) return;
 
     removeItem(itemToRemove.id);
     if (selected && selected.id === itemToRemove.id) {
       setSelected(null);
-      setView("list");
+      setView('list');
     }
-    setMessage("글이 삭제되었습니다.");
   };
 
   const saveComment = () => {
     if (!comment.trim()) {
-      setMessage("댓글 내용을 입력해 주세요.");
+      alert('댓글 내용을 입력해 주세요.');
       return;
     }
 
-    // 새로운 댓글 생성
     const newComment = {
       id: Date.now(),
       content: comment.trim(),
-      author: "임시 사용자",
+      author: '임시 사용자',
       createdAt: new Date().toISOString().slice(0, 10),
     };
 
-    // 기존 게시글에 댓글 추가
     const savedItem = {
       ...selected,
       comments: [...(selected.comments || []), newComment],
@@ -94,14 +52,11 @@ function FreeBoardPage({ communityItems }) {
 
     updateItem(savedItem);
     setSelected(savedItem);
-    setComment("");
-    setMessage("댓글이 등록되었습니다.");
+    setComment('');
   };
 
   const removeComment = (id) => {
-    if (!window.confirm("댓글을 삭제할까요?")) {
-      return;
-    }
+    if (!window.confirm('댓글을 삭제할까요?')) return;
 
     const savedItem = {
       ...selected,
@@ -111,138 +66,166 @@ function FreeBoardPage({ communityItems }) {
 
     updateItem(savedItem);
     setSelected(savedItem);
-    setMessage("댓글이 삭제되었습니다.");
   };
 
+  const tableHeaders = ['번호', '제목', '작성자', '작성일', '댓글수', '관리'];
 
+<<<<<<< HEAD
   const showDetail = view === "detail" && selected !== null;
   const showForm = view === "write" || view === "edit";
+=======
+  const tableData = filtered.map((item, index) => ({
+    content: [
+      filtered.length - index,
+      <span
+        className="table-link-title"
+        onClick={() => {
+          setSelected(item);
+          setView('detail');
+        }}
+      >
+        {item.title}
+      </span>,
+      item.author,
+      item.createdAt || item.updatedAt || '-',
+      (item.comments || []).length,
+      <div className="table-actions">
+        <button type="button" onClick={handleOpenWriteModal}>
+          수정
+        </button>
+        <button
+          type="button"
+          className="danger-button"
+          onClick={() => remove(item)}
+        >
+          삭제
+        </button>
+      </div>,
+    ],
+  }));
+>>>>>>> origin/main
 
   return (
-    <main className="community-page">
-      <h1>자유게시판</h1>
-      <nav><Link to="/main/community">커뮤니티 메인</Link></nav>
+    <div className="sub-container">
+      {/* 1. 상단 공통 헤더 */}
+      <header className="dashboard-header">
+        <span className="subtitle">자유게시판</span>
+        <div className="dashboard-top">
+          {view === 'list' && (
+            <button
+              type="button"
+              className="register-btn"
+              onClick={handleOpenWriteModal}
+            >
+              + 글쓰기
+            </button>
+          )}
+          {view !== 'list' && (
+            <button type="button" onClick={() => setView('list')}>
+              목록으로
+            </button>
+          )}
+        </div>
+      </header>
 
-      
-      {message ? <p role="status">{message}</p> : null}
+      <hr />
 
-      {view === "list" ? (
-        <section>
-          <h2>게시글 목록</h2>
+      {/* 2. 목록 뷰 */}
+      {view === 'list' && (
+        <>
+          <div className="filter-bar">
+            <label className="search-field">
+              검색:
+              <input
+                type="text"
+                placeholder="제목 또는 작성자 검색"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </label>
+          </div>
 
-          <label>
-            검색
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="제목 또는 작성자"
-            />
-          </label>
+          <PaginationTable
+            title="자유게시판 목록"
+            th={tableHeaders}
+            allData={tableData}
+            itemsPerPage={10}
+          />
+        </>
+      )}
 
-          <button type="button" onClick={() => openForm(null)}>글쓰기</button>
+      {/* 3. 상세 보기 뷰 */}
+      {view === 'detail' && selected && (
+        <article className="detail-card">
+          <header>
+            <h3>{selected.title}</h3>
+            <span className="subtext">
+              작성자: {selected.author} | 작성일: {selected.createdAt} | 최근수정: {selected.updatedAt}
+            </span>
+          </header>
 
-          <ul>
-            {filtered.map((item) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelected(item);
-                    setView("detail");
-                    setMessage("");
-                  }}
-                >
-                  {item.title}
-                </button>
-                <span> — {item.author} </span>
-                <small>{item.updatedAt}</small>
-              
-                {/* 목록에서도 바로 수정할 수 있고, 삭제 버튼은 확인창을 거칩니다. */}
-                <button type="button" onClick={() => openForm(item)}>수정</button>
-                <button className="danger-button" type="button" onClick={() => remove(item)}>삭제</button>
-              </li>
-            ))}
-          </ul>
+          <hr />
 
-          {filtered.length === 0 ? <p>등록된 게시글이 없습니다.</p> : null}
-        </section>
-      ) : null}
+          <div className="detail-body">
+            {selected.content}
+          </div>
 
-      {showDetail ? (
-        <article>
-          <h2>{selected.title}</h2>
-          <p>{selected.author} | 작성 {selected.createdAt} / 수정 {selected.updatedAt}</p>
-          <p>{selected.content}</p>
+          <div className="table-actions">
+            <button type="button" onClick={handleOpenWriteModal}>
+              수정
+            </button>
+            <button
+              type="button"
+              className="danger-button"
+              onClick={() => remove(selected)}
+            >
+              삭제
+            </button>
+          </div>
 
-          <button type="button" onClick={() => openForm(selected)}>수정</button>
-          <button type="button" onClick={remove}>삭제</button>
-          <button type="button" onClick={() => setView("list")}>목록</button>
+          <hr />
 
-          <section>
-            <h3>댓글</h3>
-            <ul>
-              {(selected.comments || []).map((commentItem) => (
-                <li key={commentItem.id}>
-                  {commentItem.content} — {commentItem.author} ({commentItem.createdAt})
-                  <button type="button" onClick={() => removeComment(commentItem.id)}>
+          {/* 댓글 영역 */}
+          <section className="comment-section">
+            <h4>댓글 ({(selected.comments || []).length})</h4>
+            <div className="comment-list">
+              {(selected.comments || []).map((c) => (
+                <div key={c.id} className="comment-item">
+                  <div className="comment-meta">
+                    <strong>{c.author}</strong>
+                    <span className="subtext">({c.createdAt})</span>
+                    <p className="comment-text">{c.content}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={() => removeComment(c.id)}
+                  >
                     삭제
                   </button>
-              </li>
+                </div>
               ))}
-            </ul>
+              {(selected.comments || []).length === 0 && (
+                <p className="no-data">등록된 댓글이 없습니다.</p>
+              )}
+            </div>
 
-            {(selected.comments || []).length === 0 ? <p>댓글이 없습니다.</p> : null}
-
-            <input
-              value={comment}
-              onChange={(event) => setComment(event.target.value)}
-              placeholder="댓글 내용"
-            />
-            <button type="button" onClick={saveComment}>댓글 등록</button>
+            <div className="comment-input-wrap">
+              <input
+                type="text"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="댓글을 입력하세요"
+              />
+              <button type="button" className="register-btn" onClick={saveComment}>
+                댓글 등록
+              </button>
+            </div>
           </section>
         </article>
-      ) : null}
-
-      {showForm ? (
-        <form onSubmit={save}>
-          <h2>{view === "edit" ? "글 수정" : "새 글"}</h2>
-
-          <label>
-            제목*
-            <input
-              value={form.title}
-              onChange={(event) => setForm({ ...form, title: event.target.value })}
-            />
-          </label>
-          <br />
-
-          <label>
-            작성자*
-            <input
-              value={form.author}
-              onChange={(event) => setForm({ ...form, author: event.target.value })}
-            />
-          </label>
-          <br />
-
-          <label>
-            내용*
-            <textarea
-              rows="7"
-              value={form.content}
-              onChange={(event) => setForm({ ...form, content: event.target.value })}
-            />
-          </label>
-          <br />
-
-          <button type="submit">저장</button>
-          <button type="button" onClick={() => setView(selected ? "detail" : "list")}>취소</button>
-        </form>
-      ) : null}
-</main>
+      )}
+    </div>
   );
 }
-
-
 
 export default FreeBoardPage;

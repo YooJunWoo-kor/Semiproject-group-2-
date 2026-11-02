@@ -20,13 +20,9 @@ function QualityTestList() {
     });
 
     return (
-        <div className="quality-test-page">
-            <header className="quality-page-header">
-                <div>
-                    <span className="quality-eyebrow">INSPECTIONS</span>
-                    <h1>품질검사 관리</h1>
-                    <p>제품별 품질검사 상태와 최근 검사일을 확인합니다.</p>
-                </div>
+        <div className="sub-container">
+            <header className="dashboard-header">
+                <span className='subtitle'>품질검사 관리</span>
                 <div className="quality-header-badge">총 {filteredProducts.length}건</div>
             </header>
 

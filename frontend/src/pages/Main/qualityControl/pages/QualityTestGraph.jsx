@@ -241,15 +241,11 @@ function QualityTestGraph() {
     };
 
     return (
-        <div className="quality-graph-page">
-            <div className="page-header quality-graph-header">
-                <div>
-                    <span className="eyebrow">QUALITY ANALYTICS</span>
-                    <h1>품질검사 분석</h1>
-                    <p>품질검사 결과와 통과 비율을 한눈에 확인합니다.</p>
-                </div>
-            </div>
-
+        <div className="sub-container">
+            <header className="dashboard-header">
+                <span className='subtitle'>품질검사 분석</span>
+            </header>
+            
             <div className="graph-summary" aria-live="polite">
                 <div className="graph-summary-card">
                     <span>전체 제품</span>
