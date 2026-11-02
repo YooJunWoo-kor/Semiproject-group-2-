@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 // 화면에서 처음 보여줄 예시 일정 데이터입니다.
-=======
->>>>>>> origin/kds
 export const initialSchedules = [
   { 
     id: 1,

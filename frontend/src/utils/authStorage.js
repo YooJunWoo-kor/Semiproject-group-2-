@@ -1,10 +1,7 @@
 const LOGIN_USER_KEY = "loginUser";
 const EMPLOYEE_ACCOUNT_KEY = "employeeAccounts";
 
-
-// =============================
 // MASTER 계정
-// =============================
 export const MASTER_ACCOUNT = {
     loginId: "master",
     password: "1234",
@@ -15,11 +12,8 @@ export const MASTER_ACCOUNT = {
     role: "MASTER"
 };
 
-
-// =============================
 // 기존 일반 직원 더미 계정
 // 로그인 ID = 이메일
-// =============================
 export const NORMAL_ACCOUNTS = [
     {
         employeeKey: "EMP-1001",
@@ -77,10 +71,7 @@ export const NORMAL_ACCOUNTS = [
     }
 ];
 
-
-// =============================
 // 로그인 사용자 저장
-// =============================
 export function saveLoginUser(user) {
     localStorage.setItem(
         LOGIN_USER_KEY,
@@ -88,10 +79,7 @@ export function saveLoginUser(user) {
     );
 }
 
-
-// =============================
 // 로그인 사용자 조회
-// =============================
 export function getLoginUser() {
 
     const user =
@@ -104,10 +92,7 @@ export function getLoginUser() {
     return JSON.parse(user);
 }
 
-
-// =============================
 // 로그아웃
-// =============================
 export function logoutUser() {
 
     localStorage.removeItem(
@@ -115,10 +100,7 @@ export function logoutUser() {
     );
 }
 
-
-// =============================
 // MASTER가 등록한 직원들
-// =============================
 export function getEmployeeAccounts() {
 
     const accounts =
@@ -133,10 +115,7 @@ export function getEmployeeAccounts() {
     return JSON.parse(accounts);
 }
 
-
-// =============================
 // 직원 계정 등록
-// =============================
 export function saveEmployeeAccount(account) {
 
     const accounts =

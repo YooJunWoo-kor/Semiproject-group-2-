@@ -8,7 +8,6 @@ const EMPTY_CLAIM = {
   type: '제품 불량',
   content: '',
   resolution: '',
-<<<<<<< HEAD
   status: '신규',
 };
 
@@ -22,13 +21,6 @@ function getLocalDateString() {
   const day = String(today.getDate()).padStart(2, '0');
   return year + '-' + month + '-' + day;
 }
-=======
-  status: '접수',
-};
-
-const CLAIM_TYPES = ['제품 불량', '교환', '환불', '불만 사항'];
-const CLAIM_STATUS = ['접수', '검토 중', '처리 완료'];
->>>>>>> origin/kds
 
 export default function ClaimFormPage(props) {
   const data = props.data;
@@ -72,7 +64,6 @@ export default function ClaimFormPage(props) {
       return;
     }
 
-<<<<<<< HEAD
     const wasAlreadyCompleted = savedClaim && savedClaim.status === '처리 완료';
     const completedAt = form.status === '처리 완료'
       ? (wasAlreadyCompleted ? savedClaim.completedAt || '' : getLocalDateString())
@@ -82,11 +73,6 @@ export default function ClaimFormPage(props) {
       ...form,
       id: isEdit ? claimId : createId('claim'),
       completedAt: completedAt,
-=======
-    const claim = {
-      ...form,
-      id: isEdit ? claimId : createId('claim'),
->>>>>>> origin/kds
     };
 
     setData(function (current) {
@@ -105,7 +91,7 @@ export default function ClaimFormPage(props) {
 
   if (isEdit && !savedClaim) {
     return (
-      <section className="workspace-page crm-page">
+      <section >
         <div className="empty-state">
           <h2>클레임을 찾을 수 없습니다.</h2>
           <button type="button" onClick={function () { navigate('/main/crm/claims'); }}>
@@ -117,8 +103,8 @@ export default function ClaimFormPage(props) {
   }
 
   return (
-    <section className="workspace-page crm-page crm-form-page">
-      <header className="page-header">
+    <section className="crm-form-page">
+      <header>
         <div>
           <span className="eyebrow">CRM · 클레임 관리</span>
           <h1>{isEdit ? '클레임 수정 및 처리' : '클레임 등록'}</h1>

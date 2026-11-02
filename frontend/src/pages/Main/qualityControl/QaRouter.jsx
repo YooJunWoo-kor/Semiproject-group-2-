@@ -1,7 +1,6 @@
 import React from "react";
 import { NavLink, Navigate, Routes, Route } from "react-router-dom";
 import Main from "./Main";
-<<<<<<< HEAD
 import QualityTestList from "./pages/QualityTestList";
 import ProductList from "./pages/ProductList";
 import QualityTestGraph from "./pages/QualityTestGraph";
@@ -12,26 +11,11 @@ function QaRouter() {
     let mainUrl = "/main/qa/"
     const urlList = [
         {name:"품질 대시보드", url:mainUrl+"/*"}
-=======
-import QualityTestList from "./QualityTestList";
-import ProductList from "./ProductList";
-import QualityTestGraph from "./QualityTestGraph";
-import ProductDetail from "./ProductDetail";
-import Nav from "../../../components/Nav";
-
-function QaRouter() {
-    let mainUrl = "/main/qa/";
-    const urlList = [
-        {name:"품질 대시보드", url:mainUrl+"/"}
->>>>>>> origin/kds
         ,{name:"제품 목록", url:mainUrl+"/products"}
         ,{name:"검사 목록", url:mainUrl+"/test-list"}
         ,{name:"분석 그래프", url:mainUrl+"/graph"}
     ];
-<<<<<<< HEAD
 
-=======
->>>>>>> origin/kds
     return (
         <div className='sub-main-contain'>
             <Nav urlist={urlList}/>

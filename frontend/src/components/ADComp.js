@@ -4,6 +4,7 @@ import BasicCalendar from "../components/calendar/BasicCalendar.js";
 import WeeklyCalendar from "../components/weeklycalendar/WeeklyCalendar.js";
 import './ADComp.css';
 
+// 달력과 출퇴근 관리 모듈
 const data = [
     // 1주차
     { title: "출근", start: "2026-10-01", end: "2026-10-01", typeId: 0 },

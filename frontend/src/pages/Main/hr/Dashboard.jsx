@@ -1,5 +1,3 @@
-import { Link } from 'react-router-dom';
-
 import StatisticsCard
     from '../../../components/StatisticsCard';
 
@@ -7,6 +5,8 @@ import {
     getLoginUser
 } from '../../../utils/authStorage';
 import ADComp from '../../../components/ADComp';
+import { useState } from 'react';
+import ModalBase from '../../../components/ModalBase';
 
 // 1번부서의 출퇴근 현황
 const group1List = [
@@ -17,10 +17,24 @@ const group1List = [
     { name: '최현우', position: '사원', isWorking: false, status: '휴가', clockIn: null, clockOut: null, },
   ];
 
+function TestModal(){
+    return(
+        <div>
+            테스트용 모달
+            <div style={{height:'500px'}}> 테스트용 모달 </div>
+        </div>
+    )
+}
 
 export default function Dashboard() {
     const loginUser = getLoginUser();
     const isMaster = loginUser?.role === 'MASTER';
+
+    //모달팝업용
+    const [isModal, setisModal] = useState(false);
+    const openModal = ()=> setisModal(true);
+    const closeModal = ()=> setisModal(false);
+
     return (
         <div className="sub-container">
             <header className="dashboard-header">
@@ -29,37 +43,21 @@ export default function Dashboard() {
                 <div className="dashboard-top">
                     {/* MASTER에게만 표시 */}
                     {isMaster && (
-                        <Link
-                            to="/main/hr/employees"
-                            className="register-btn"
-                        >
+                        <button onClick ={openModal} className="register-btn">
                             직원 등록하기
-                        </Link>
+                        </button>
                     )}
                  </div>
             </header>
+            
+            {/*인자를 전달할 때, 닫기버튼이 자동할 함수와, 작동할 레이아웃 전달*/}
+            {isModal && <ModalBase onClose={closeModal} layout={<TestModal/>} />}
 
             <section className="stats-section">
-                <StatisticsCard
-                    title="전체직원"
-                    count="128"
-                    stiyle={1}
-                />
-                <StatisticsCard
-                    title="오늘출근"
-                    count="119"
-                    stiyle={1}
-                />
-                <StatisticsCard
-                    title="휴가사용"
-                    count="9"
-                    stiyle={1}
-                />
-                <StatisticsCard
-                    title="운용부서"
-                    count="12"
-                    stiyle={0}
-                />
+                <StatisticsCard title="전체직원" count="128" stiyle={1} />
+                <StatisticsCard title="오늘출근" count="119" stiyle={1} />
+                <StatisticsCard title="휴가사용" count="9"   stiyle={1} />
+                <StatisticsCard title="운용부서" count="12"  stiyle={0} />
             </section>
 
             <div className="stats-section">
@@ -104,14 +102,7 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-            <div className="system-notice-banner">
-                <div>
-                    <strong> 시스템 안내 </strong>
-                    <span>
-                        직원 정보 및 급여 데이터는 권한이 있는 사용자만 확인할 수 있습니다.
-                    </span>
-                </div>
-            </div>
         </div>
     );
 }
+

@@ -1,13 +1,11 @@
-import { useOutletContext } from 'react-router-dom';
 import React, { useState } from 'react';
 
 export default function MeetingRoomManagement() {
   // --------------------------------------------------
   // 1. 데이터와 상태
   // --------------------------------------------------
-
-  // 부모가 관리하는 회의실 목록
-  const { rooms, setRooms } = useOutletContext();
+  const rooms = [];
+  const setRooms = []; 
 
   // 폼에 입력할 값
   const [form, setForm] = useState(createEmptyForm);

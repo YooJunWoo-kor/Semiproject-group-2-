@@ -1,194 +1,226 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import PaginationTable from '../../../../components/PaginationTable';
 
-const STATUSES = ['접수', '검토 중', '처리 완료'];
-const emptyForm = {
-  title: '',
-  author: '임시 사용자',
-  content: '',
-  status: '접수',
-  result: '',
-};
-
-export default function SuggestionPage({ communityItems }) {
-  const { items, addItem, updateItem, removeItem } = communityItems;
-  const safeItems = items || [];
+function SuggestionPage({ communityItems }) {
+  const { items, updateItem, removeItem } = communityItems;
   const location = useLocation();
-  const initialSelected = safeItems.find((item) => item.id === location.state?.selectedItemId) || null;
+  const initialSelected = items.find((item) => item.id === location.state?.selectedItemId) || null;
+
   const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('전체');
-  const [view, setView] = useState(initialSelected ? 'detail' : 'list');
+  const [view, setView] = useState(initialSelected ? 'detail' : 'list'); // 'list' | 'detail'
   const [selected, setSelected] = useState(initialSelected);
-  const [form, setForm] = useState(emptyForm);
-  const [message, setMessage] = useState('');
+  const [comment, setComment] = useState('');
 
-  const filteredItems = safeItems.filter((item) => {
-    const searchText = `${item.title || ''} ${item.author || ''} ${item.content || ''}`.toLowerCase();
-    const matchesQuery = searchText.includes(query.trim().toLowerCase());
-    const matchesStatus = statusFilter === '전체' || item.status === statusFilter;
-    return matchesQuery && matchesStatus;
-  });
+  const filtered = items.filter((item) =>
+    `${item.title} ${item.author}`.toLowerCase().includes(query.toLowerCase())
+  );
 
-  function openForm(item) {
-    setForm(item ? { ...item } : emptyForm);
-    setView(item ? 'edit' : 'write');
-    setMessage('');
-  }
+  const handleOpenWriteModal = () => {
+    // 나중에 공통 모달(Modal) 컴포넌트 오픈 로직을 연결할 자리입니다.
+    alert('공통 글작성 모달을 띄울 예정입니다.');
+  };
 
-  function save(event) {
-    event.preventDefault();
-
-    if (!form.title.trim() || !form.author.trim() || !form.content.trim()) {
-      setMessage('제목, 작성자, 내용은 필수입니다.');
-      return;
-    }
-
-    const date = new Date().toISOString().slice(0, 10);
-
-    if (view === 'edit') {
-      const savedItem = { ...form, updatedAt: date };
-      updateItem(savedItem);
-      setSelected(savedItem);
-      setView('detail');
-      setMessage('건의사항이 수정되었습니다.');
-      return;
-    }
-
-    addItem({
-      ...form,
-      id: Date.now(),
-      createdAt: date,
-      updatedAt: date,
-    });
-    setView('list');
-    setMessage('건의사항이 등록되었습니다.');
-  }
-
-  function remove(itemToRemove = selected) {
-    if (!itemToRemove || !window.confirm('이 건의사항을 삭제할까요?')) {
-      return;
-    }
+  const remove = (itemToRemove = selected) => {
+    if (!itemToRemove || !window.confirm('이 글을 삭제할까요?')) return;
 
     removeItem(itemToRemove.id);
     if (selected && selected.id === itemToRemove.id) {
       setSelected(null);
       setView('list');
     }
-    setMessage('건의사항이 삭제되었습니다.');
-  }
+  };
 
-  function changeStatus(nextStatus) {
+  const saveComment = () => {
+    if (!comment.trim()) {
+      alert('댓글 내용을 입력해 주세요.');
+      return;
+    }
+
+    const newComment = {
+      id: Date.now(),
+      content: comment.trim(),
+      author: '임시 사용자',
+      createdAt: new Date().toISOString().slice(0, 10),
+    };
+
     const savedItem = {
       ...selected,
-      status: nextStatus,
+      comments: [...(selected.comments || []), newComment],
       updatedAt: new Date().toISOString().slice(0, 10),
     };
+
     updateItem(savedItem);
     setSelected(savedItem);
-    setMessage('처리 상태가 저장되었습니다.');
-  }
+    setComment('');
+  };
 
-  const showDetail = view === 'detail' && selected !== null;
-  const showForm = view === 'write' || view === 'edit';
+  const removeComment = (id) => {
+    if (!window.confirm('댓글을 삭제할까요?')) return;
+
+    const savedItem = {
+      ...selected,
+      comments: (selected.comments || []).filter((item) => item.id !== id),
+      updatedAt: new Date().toISOString().slice(0, 10),
+    };
+
+    updateItem(savedItem);
+    setSelected(savedItem);
+  };
+
+  const tableHeaders = ['번호', '제목', '작성자', '작성일', '댓글수', '관리'];
+
+  const tableData = filtered.map((item, index) => ({
+    content: [
+      filtered.length - index,
+      <span
+        className="table-link-title"
+        onClick={() => {
+          setSelected(item);
+          setView('detail');
+        }}
+      >
+        {item.title}
+      </span>,
+      item.author,
+      item.createdAt || item.updatedAt || '-',
+      (item.comments || []).length,
+      <div className="table-actions">
+        <button type="button" onClick={handleOpenWriteModal}>
+          수정
+        </button>
+        <button
+          type="button"
+          className="danger-button"
+          onClick={() => remove(item)}
+        >
+          삭제
+        </button>
+      </div>,
+    ],
+  }));
 
   return (
-    <main className="community-page">
-      <h1>업무 개선 건의</h1>
-      <nav><Link to="/main/community">커뮤니티 메인</Link></nav>
+    <div className="sub-container">
+      {/* 1. 상단 공통 헤더 */}
+      <header className="dashboard-header">
+        <span className="subtitle">개선 건의</span>
+        <div className="dashboard-top">
+          {view === 'list' && (
+            <button
+              type="button"
+              className="register-btn"
+              onClick={handleOpenWriteModal}
+            >
+              + 글쓰기
+            </button>
+          )}
+          {view !== 'list' && (
+            <button type="button" onClick={() => setView('list')}>
+              목록으로
+            </button>
+          )}
+        </div>
+      </header>
 
-      {message ? <p role="status">{message}</p> : null}
+      <hr />
 
-      {view === 'list' ? (
-        <section>
-          <h2>건의사항 목록</h2>
-          <div>
-            <label>
-              제목·작성자·내용 검색
-              <input value={query} onChange={(event) => setQuery(event.target.value)} />
+      {/* 2. 목록 뷰 */}
+      {view === 'list' && (
+        <>
+          <div className="filter-bar">
+            <label className="search-field">
+              검색:
+              <input
+                type="text"
+                placeholder="제목 또는 작성자 검색"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
             </label>
-            <label>
-              처리 상태
-              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                {['전체', ...STATUSES].map((status) => <option key={status}>{status}</option>)}
-              </select>
-            </label>
-            <button type="button" onClick={() => openForm(null)}>건의 등록</button>
           </div>
 
-          <ul>
-            {filteredItems.map((item) => (
-              <li key={item.id}>
-                <strong>[{item.status || '접수'}] </strong>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelected(item);
-                    setView('detail');
-                    setMessage('');
-                  }}
-                >
-                  {item.title}
-                </button>
-                <span> — {item.author} </span>
-                <small>{item.updatedAt || item.createdAt || '-'}</small>
-                <button type="button" onClick={() => openForm(item)}>수정/처리</button>
-                <button className="danger-button" type="button" onClick={() => remove(item)}>삭제</button>
-              </li>
-            ))}
-          </ul>
+          <PaginationTable
+            title="자유게시판 목록"
+            th={tableHeaders}
+            allData={tableData}
+            itemsPerPage={10}
+          />
+        </>
+      )}
 
-          {filteredItems.length === 0 ? <p>등록된 게시글이 없습니다.</p> : null}
-        </section>
-      ) : null}
+      {/* 3. 상세 보기 뷰 */}
+      {view === 'detail' && selected && (
+        <article className="detail-card">
+          <header>
+            <h3>{selected.title}</h3>
+            <span className="subtext">
+              작성자: {selected.author} | 작성일: {selected.createdAt} | 최근수정: {selected.updatedAt}
+            </span>
+          </header>
 
-      {showDetail ? (
-        <article>
-          <h2>{selected.title}</h2>
-          <p>{selected.author} | {selected.createdAt || '-'}</p>
-          <p>{selected.content}</p>
-          {selected.result ? <p>처리 결과: {selected.result}</p> : null}
-          <label>
-            처리 상태
-            <select value={selected.status || '접수'} onChange={(event) => changeStatus(event.target.value)}>
-              {STATUSES.map((status) => <option key={status}>{status}</option>)}
-            </select>
-          </label>
-          <br />
-          <button type="button" onClick={() => openForm(selected)}>수정</button>
-          <button type="button" onClick={remove}>삭제</button>
-          <button type="button" onClick={() => setView('list')}>목록</button>
+          <hr />
+
+          <div className="detail-body">
+            {selected.content}
+          </div>
+
+          <div className="table-actions">
+            <button type="button" onClick={handleOpenWriteModal}>
+              수정
+            </button>
+            <button
+              type="button"
+              className="danger-button"
+              onClick={() => remove(selected)}
+            >
+              삭제
+            </button>
+          </div>
+
+          <hr />
+
+          {/* 댓글 영역 */}
+          <section className="comment-section">
+            <h4>댓글 ({(selected.comments || []).length})</h4>
+            <div className="comment-list">
+              {(selected.comments || []).map((c) => (
+                <div key={c.id} className="comment-item">
+                  <div className="comment-meta">
+                    <strong>{c.author}</strong>
+                    <span className="subtext">({c.createdAt})</span>
+                    <p className="comment-text">{c.content}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={() => removeComment(c.id)}
+                  >
+                    삭제
+                  </button>
+                </div>
+              ))}
+              {(selected.comments || []).length === 0 && (
+                <p className="no-data">등록된 댓글이 없습니다.</p>
+              )}
+            </div>
+
+            <div className="comment-input-wrap">
+              <input
+                type="text"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="댓글을 입력하세요"
+              />
+              <button type="button" className="register-btn" onClick={saveComment}>
+                댓글 등록
+              </button>
+            </div>
+          </section>
         </article>
-      ) : null}
-
-      {showForm ? (
-        <form onSubmit={save}>
-          <h2>{view === 'edit' ? '건의사항 수정' : '건의사항 등록'}</h2>
-          <label>
-            제목*
-            <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
-          </label>
-          <label>
-            작성자*
-            <input value={form.author} onChange={(event) => setForm({ ...form, author: event.target.value })} />
-          </label>
-          <label>
-            내용*
-            <textarea rows="7" value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} />
-          </label>
-          <label>
-            처리 상태
-            <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
-              {STATUSES.map((status) => <option key={status}>{status}</option>)}
-            </select>
-          </label>
-          <label>
-            처리 결과
-            <textarea rows="4" value={form.result || ''} onChange={(event) => setForm({ ...form, result: event.target.value })} />
-          </label>
-          <button type="submit">저장</button>
-          <button type="button" onClick={() => setView(selected ? 'detail' : 'list')}>취소</button>
-        </form>
-      ) : null}
-    </main>
+      )}
+    </div>
   );
 }
+
+export default SuggestionPage;
