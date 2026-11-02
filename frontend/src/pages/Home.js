@@ -6,14 +6,13 @@ import { findLoginAccount, saveLoginUser } from "../utils/authStorage";
 
 function Home() {
 
-    const [loginId, setLoginId] = useState("master");
-    const [password, setPassword] = useState("1234");
+    const [loginId, setLoginId] = useState("master@enova.co.kr");
+    const [password, setPassword] = useState("1111");
 
     const navigate = useNavigate();
 
     const handleLogin = (e) => {
         e.preventDefault();
-
         const account = findLoginAccount(
             loginId,
             password
@@ -25,17 +24,18 @@ function Home() {
             );
             return;
         }
-
-        saveLoginUser({
-            employeeKey: account.employeeKey || null,
-            name: account.name,
-            email: account.email,
-            department: account.department,
-            position: account.position,
-            role: account.role
-        });
-
-        navigate('/main');
+        else{
+            saveLoginUser({
+                employeeKey: account.employeeKey || null,
+                name: account.name,
+                email: account.email,
+                department: account.department,
+                position: account.position,
+                role: account.role
+            });
+    
+            navigate('/main');
+        }
     };
 
 
