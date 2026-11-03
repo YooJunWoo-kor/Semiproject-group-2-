@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './Calendar.css';
-import WeeklyCalendar from './WeeklyCalendar';
+import WeeklyCalendar from '../weeklycalendar/WeeklyCalendar';
 
 function BasicCalendar({ schedule = [], showWeekly = false }) {
 
@@ -83,12 +83,8 @@ function BasicCalendar({ schedule = [], showWeekly = false }) {
   const weekdays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   return (
-<<<<<<< HEAD
     <>
-    <div className="basic-calendar">
-=======
     <div>
->>>>>>> origin/main
 
       {/* 달력 상단 */}
       <div className="basic-calendar-header">

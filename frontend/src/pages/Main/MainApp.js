@@ -1,12 +1,11 @@
 // src/pages/Main/MainApp.js
 import React from 'react';
-import { NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import MainModule from './MainModule';
 import FinanceHome from './finance/FinanceHom';
 import HrRoutes from './hr/HrRoutes';
 import QaRouter from './qualityControl/QaRouter';
 import ScheduleHome from './management/ScheduleHome';
-import { ScheduleProvider } from './management/ScheduleContext';
 import CommunityHome from './community/CommunityHome';
 import CrmRoutes from './crm/CrmRoutes';
 import MyPage from './mypage/MyPage';
@@ -21,8 +20,6 @@ function MainApp() {
         <div className="main-sell">
             <HeaderNav />
             {/* 실제 화면 라우팅 연결 영역 */}
-            {/* 메뉴를 이동해도 같은 일정 데이터를 사용합니다. */}
-            <ScheduleProvider>
             <Routes>
                 <Route path="/" element={<MainModule />} />
                 <Route path="/finance/*" element={<FinanceHome />} />
@@ -36,7 +33,6 @@ function MainApp() {
                 <Route path="/mytesk/*" element={<MyTeskList />} />
                 <Route path="*" element={<Navigate to="/main" replace />} />
             </Routes>
-            </ScheduleProvider>
             <footer>
                 <hr />
                 <p> ERP 시스템 버전: v1.0.0 | 문의: 시스템운영팀 (내선 1004) </p>

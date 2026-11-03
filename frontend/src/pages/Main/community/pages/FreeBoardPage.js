@@ -70,10 +70,6 @@ function FreeBoardPage({ communityItems }) {
 
   const tableHeaders = ['번호', '제목', '작성자', '작성일', '댓글수', '관리'];
 
-<<<<<<< HEAD
-  const showDetail = view === "detail" && selected !== null;
-  const showForm = view === "write" || view === "edit";
-=======
   const tableData = filtered.map((item, index) => ({
     content: [
       filtered.length - index,
@@ -103,7 +99,6 @@ function FreeBoardPage({ communityItems }) {
       </div>,
     ],
   }));
->>>>>>> origin/main
 
   return (
     <div className="sub-container">

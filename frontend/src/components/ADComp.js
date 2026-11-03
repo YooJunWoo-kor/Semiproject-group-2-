@@ -4,9 +4,6 @@ import BasicCalendar from "../components/calendar/BasicCalendar.js";
 import WeeklyCalendar from "../components/weeklycalendar/WeeklyCalendar.js";
 import './ADComp.css';
 
-<<<<<<< HEAD
-function ADComp({style, schedule = [], showWeekly = false}){
-=======
 // 달력과 출퇴근 관리 모듈
 const data = [
     // 1주차
@@ -42,7 +39,6 @@ const data = [
   ];
 
 function ADComp(){
->>>>>>> origin/main
     const user = getLoginUser();
     const userName = user?.name;
     
@@ -64,18 +60,6 @@ function ADComp(){
           };
         }, []);
 
-<<<<<<< HEAD
-    return(
-        <div style={style}>
-            출결현황 달력 : 주, 달<br/>
-            <BasicCalendar schedule={schedule} showWeekly={showWeekly} />
-            출결관리
-            {userName}님
-            {timeString}
-            <button>출근</button>
-        </div>
-    )
-=======
         return (
           <div style={{
             display: 'flex',
@@ -127,7 +111,6 @@ function ADComp(){
             </div>
           </div>
         );
->>>>>>> origin/main
 }
 
 export default ADComp;
