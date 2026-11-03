@@ -23,8 +23,7 @@ export function getLoginUser() {
 }
 // 출결 데이터 조회
 export async function getAttendance(){
-    return [{title: '출근',start:'2026-10-01', end:'2026-11-05', typeId: 0}];
-    // { title: "출근", start: "2026-10-01", end: "2026-10-01", typeId: 0 }
+    return [];
     //const userId = getLoginUser.employeeKey;
     // try {
     //     const data = await axios.post(API_BASE_URL + '/attendance',{userId})

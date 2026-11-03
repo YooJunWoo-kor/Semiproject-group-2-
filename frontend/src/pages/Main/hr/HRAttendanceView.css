@@ -1,0 +1,35 @@
+.hr-attendance-view .basic-calendar-schedule {
+    width: 100%;
+    padding: 1px 2px;
+    box-sizing: border-box;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 9px;
+    line-height: 1.4;
+    letter-spacing: -0.3px;
+}
+
+.hr-department-attendance .table-shell {
+    overflow-x: auto;
+}
+
+.hr-department-attendance table {
+    min-width: 420px;
+    table-layout: fixed;
+}
+
+.hr-department-attendance th,
+.hr-department-attendance td {
+    padding: 6px 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 11px;
+}
+
+.hr-department-attendance .status-tag {
+    padding: 2px 5px;
+    white-space: nowrap;
+    font-size: 10px;
+}

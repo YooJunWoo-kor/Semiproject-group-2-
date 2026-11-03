@@ -3,6 +3,7 @@ import { getLoginUser } from '../../../utils/authStorage';
 import BasicCalendar from '../../../components/calendar/BasicCalendar';
 import WeeklyCalendar from '../../../components/weeklycalendar/WeeklyCalendar';
 import '../../../components/ADComp.css';
+import './HRAttendanceView.css';
 
 const attendanceType = {
     '정상': 0,
@@ -35,6 +36,7 @@ export default function HRAttendanceView(props) {
         title: `${attendance.employeeName} ${attendance.status}`,
         start: attendance.attendanceDate,
         end: attendance.attendanceDate,
+        status: attendance.status,
         typeId: attendanceType[attendance.status] ?? 9,
         description:
             `${attendance.departmentName} / ` +
@@ -42,6 +44,40 @@ export default function HRAttendanceView(props) {
             `퇴근 ${attendance.clockOut || '-'} / ` +
             `메모 ${attendance.memo || '-'}`
     }));
+    const filteredCalendarSchedule = schedule.filter(
+        (attendance) => attendance.status !== '정상'
+    );
+    const calendarScheduleByDate = {};
+
+    filteredCalendarSchedule.forEach((attendance) => {
+        if (!calendarScheduleByDate[attendance.start]) {
+            calendarScheduleByDate[attendance.start] = [];
+        }
+
+        calendarScheduleByDate[attendance.start].push(attendance);
+    });
+
+    const calendarSchedule = Object.keys(calendarScheduleByDate).flatMap((date) => {
+        const daySchedule = calendarScheduleByDate[date];
+        const visibleSchedule = daySchedule.slice(0, 3);
+        const hiddenCount = daySchedule.length - visibleSchedule.length;
+
+        if (hiddenCount === 0) {
+            return visibleSchedule;
+        }
+
+        return [
+            ...visibleSchedule,
+            {
+                id: `more-${date}`,
+                title: `외 ${hiddenCount}명`,
+                start: date,
+                end: date,
+                typeId: 9,
+                description: `${hiddenCount}명의 근태자료가 더 있습니다.`
+            }
+        ];
+    });
 
     const hours = time.getHours();
     const minutes = String(time.getMinutes()).padStart(2, '0');
@@ -49,7 +85,7 @@ export default function HRAttendanceView(props) {
     const timeString = hours + ':' + minutes + ':' + seconds;
 
     return (
-        <div style={{
+        <div className="hr-attendance-view" style={{
             display: 'flex',
             flexDirection: 'row',
             justifyContent: 'space-between',
@@ -74,7 +110,7 @@ export default function HRAttendanceView(props) {
                 ) : schedule.length === 0 ? (
                     <p>표시할 근태자료가 없습니다.</p>
                 ) : calendarStyle === 0 ? (
-                    <BasicCalendar schedule={schedule} />
+                    <BasicCalendar schedule={calendarSchedule} />
                 ) : (
                     <WeeklyCalendar schedule={schedule} />
                 )}

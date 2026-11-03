@@ -3,13 +3,15 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const db = require('./db');
+const hrRoutes = require('./hrRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const Attendance = require('./models/Attendance.'); //출결관련 함수 클레스
+const Attendance = require('./models/Attendance'); //출결관련 함수 클레스
 
 app.use(cors());
 app.use(express.json());
+app.use('/api/hr', hrRoutes);
 
 // 2. [사원 등록 API] RegisterPage 폼 전송 수신
 app.post('/api/register', async (req, res) => {
