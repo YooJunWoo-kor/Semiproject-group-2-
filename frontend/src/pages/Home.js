@@ -11,30 +11,30 @@ function Home() {
 
     const navigate = useNavigate();
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
-        const account =  findLoginAccount(
-            loginId,
-            password
-        );
+        try {
+            // 1. 서버 통신 대기
+            const responseData = await findLoginAccount(loginId, password);
 
-        if (!account) {
-            alert(
-                "이메일 또는 비밀번호가 일치하지 않습니다."
-            );
-            return;
-        }
-        else{
-            saveLoginUser({
-                employeeKey: account.employeeKey || null,
-                name: account.name,
-                email: account.email,
-                department: account.department,
-                position: account.position,
-                role: account.role
-            });
-    
-            navigate('/main');
+            // 2. 서버 응답 결과 판별
+            if (responseData && responseData.result === "success") {
+                saveLoginUser({
+                    employeeKey: responseData.user.employee_id || null,
+                    name: responseData.user.name,
+                    email: responseData.user.email,
+                    department: responseData.user.department_id,
+                    position: responseData.user.position,
+                    role: responseData.user.role
+                });
+                
+                navigate('/main');
+            } else {
+                alert(responseData || "로그인에 실패했습니다.");
+            }
+        } catch (error) {
+            // 3. 입력값 누락, 401 불일치, DB 조회 오류 등 모든 예외 알림을 '여기서 단 한 번만' 띄웁니다!
+            alert(error.message);
         }
     };
 
