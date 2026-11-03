@@ -15,6 +15,8 @@ function isDateString(value) {
         date.toISOString().slice(0, 10) === value;
 }
 
+
+// 달력용 근태 기록 조회
 router.get('/attendance', async (req, res) => {
     const startDate = req.query.startDate || null;
     const endDate = req.query.endDate || null;
@@ -95,11 +97,74 @@ router.get('/attendance', async (req, res) => {
         });
     } catch (error) {
         console.error('HR 근태정보 조회 오류:', error);
+
         return res.status(500).json({
             success: false,
             message: '근태 정보를 불러오지 못했습니다.'
         });
     }
 });
+
+
+// 부서 직원 전체와 해당 날짜의 근태 조회
+router.get('/attendance/department', async (req, res) => {
+    const date = req.query.date;
+    const departmentId = Number(req.query.departmentId);
+
+    if (!date || !isDateString(date)) {
+        return res.status(400).json({
+            success: false,
+            message: '조회일 형식은 YYYY-MM-DD여야 합니다.'
+        });
+    }
+
+    if (!Number.isInteger(departmentId) || departmentId < 1) {
+        return res.status(400).json({
+            success: false,
+            message: '올바른 부서 ID를 입력해 주세요.'
+        });
+    }
+
+    const query = `
+        SELECT
+            e.employee_id AS employeeId,
+            a.attendance_id AS attendanceId,
+            e.name AS employeeName,
+            e.position,
+            d.department_id AS departmentId,
+            d.department_name AS departmentName,
+            DATE_FORMAT(a.work_date, '%Y-%m-%d') AS attendanceDate,
+            DATE_FORMAT(a.check_in_at, '%H:%i') AS clockIn,
+            DATE_FORMAT(a.check_out_at, '%H:%i') AS clockOut,
+            COALESCE(a.attendance_status, '미출근') AS status,
+            a.memo
+        FROM employees e
+        INNER JOIN departments d
+            ON d.department_id = e.department_id
+        LEFT JOIN attendance a
+            ON a.employee_id = e.employee_id
+            AND a.work_date = ?
+        WHERE e.department_id = ?
+          AND e.employment_status = '재직'
+        ORDER BY e.employee_id
+    `;
+
+    try {
+        const [rows] = await promiseDb.query(query, [date, departmentId]);
+
+        return res.json({
+            success: true,
+            data: rows
+        });
+    } catch (error) {
+        console.error('부서 근태현황 조회 오류:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: '부서 근태현황을 불러오지 못했습니다.'
+        });
+    }
+});
+
 
 module.exports = router;
