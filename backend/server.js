@@ -66,8 +66,9 @@ app.post('/api/login', (req, res) => {
             ea.role,
             ea.account_status
         FROM employees e
-        INNER JOIN employee_accounts ea ON e.employee_id = ea.employee_id
+        INNER JOIN employee_accounts ea ON e.employee_id = ea.employee_id 
         WHERE e.email = ? AND ea.password_hash = ?`;
+        // employee_accounts와 join하는 이유는 권한,상태 등이    employee_accounts에 있기 때문이다.
 
     const value = [
         req.body.email,

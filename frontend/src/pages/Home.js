@@ -13,7 +13,7 @@ function Home() {
 
     const handleLogin = (e) => {
         e.preventDefault();
-        const account = findLoginAccount(
+        const account =  findLoginAccount(
             loginId,
             password
         );
