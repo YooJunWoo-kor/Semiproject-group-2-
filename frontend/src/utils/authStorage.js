@@ -21,19 +21,60 @@ export function getLoginUser() {
 
     return JSON.parse(user);
 }
+
+//출결 데이터 포멧팅 함수
+function formatDateToYYYYMMDD(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 // 출결 데이터 조회
 export async function getAttendance(){
-    return [{title: '출근',start:'2026-10-01', end:'2026-11-05', typeId: 0}];
+    //return [{title: '출근',start:'2026-10-01', end:'2026-11-05', typeId: 0}];
     // { title: "출근", start: "2026-10-01", end: "2026-10-01", typeId: 0 }
-    //const userId = getLoginUser.employeeKey;
-    // try {
-    //     const data = await axios.post(API_BASE_URL + '/attendance',{userId})
-    //     return data.data;
-    // } catch (error) {
-    //     if (error.response){
-    //         return alert(userID);
-    //     }
-    // }
+    const user = localStorage.getItem(LOGIN_USER_KEY);
+    const userID = JSON.parse(user).employeeKey;
+    
+    /*date: "2026-11-01T15:00:00.000Z"
+    end: "2026-11-02T09:10:00.000Z"
+    start: "2026-11-01T23:50:00.000Z"
+    title: "정상출근"*/
+
+     try {
+         const data = await axios.post(API_BASE_URL + '/attendance',{userID})
+         const dataSet = data.data.data;
+
+         const formattedData = dataSet.map((item)=>{
+            const stData = formatDateToYYYYMMDD(item.start);
+            const enData = formatDateToYYYYMMDD(item.end);
+            const title = item.title;
+
+            return {
+                title: title
+                , start: stData
+                , end: enData
+                , typeId: (
+                    title == "정상출근" ? 0 :
+                    title == "지각" ? 1 :
+                    title == "휴가" ? 2 :
+                    title == "출장" ? 3 :
+                    title == "휴직" ? 4 : 5
+                )
+            }
+         });
+
+         console.log(formattedData);
+
+         return formattedData || [];
+     } catch (err) {
+        console.error("error:", err);
+         if (err.response){
+             return alert(userID);
+         }
+     }
 }
 
 // MASTER가 등록한 직원들

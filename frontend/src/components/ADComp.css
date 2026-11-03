@@ -88,16 +88,36 @@
     cursor: pointer;
     transition: all 0.15s ease-in-out;
   }
-  
+  /* 출결 버튼 */
   .btn-attendance.check-in {
-    background-color: #3b82f6;
-    color: #ffffff;
+    background-color: #ffffff;
+    color: #3b82f6;
+    border: 1px solid #3b82f6;
   }
   
   .btn-attendance.check-in:hover {
-    background-color: #2563eb;
+    background-color: #dbe5f5;
   }
   
   .btn-attendance.check-in:active {
     transform: translateY(1px);
+  }
+
+  .btn-attendance.check-out {
+    background-color: #3b82f6;
+    color: #ffffff;
+  }
+  
+  .btn-attendance.check-out:hover {
+    background-color: #2563eb;
+  }
+  
+  .btn-attendance.check-out:active {
+    transform: translateY(1px);
+  }
+
+  .btn-attendance.check-ended {
+    background-color: #dee4ee;
+    text-align: center;
+    color: #b0b4be;
   }
