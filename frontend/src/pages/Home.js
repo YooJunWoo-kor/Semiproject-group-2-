@@ -13,27 +13,34 @@ function Home() {
 
     const handleLogin = async (e) => {
         e.preventDefault();
+    
         try {
-            // 1. 서버 통신 대기
-            const responseData = await findLoginAccount(loginId, password);
-
-            // 2. 서버 응답 결과 판별
-            if (responseData && responseData.result === "success") {
-                saveLoginUser({
-                    employeeKey: responseData.user.employee_id || null,
-                    name: responseData.user.name,
-                    email: responseData.user.email,
-                    department: responseData.user.department_id,
-                    position: responseData.user.position,
-                    role: responseData.user.role
-                });
-                
+            const responseData =
+                await findLoginAccount(
+                    loginId,
+                    password
+                );
+    
+            if (
+                responseData &&
+                responseData.result === "success"
+            ) {
+    
+                saveLoginUser(
+                    responseData.user
+                );
+    
                 navigate('/main');
+
             } else {
-                alert(responseData || "로그인에 실패했습니다.");
+                alert(
+                    responseData ||
+                    "로그인에 실패했습니다."
+                );
             }
+    
         } catch (error) {
-            // 3. 입력값 누락, 401 불일치, DB 조회 오류 등 모든 예외 알림을 '여기서 단 한 번만' 띄웁니다!
+    
             alert(error.message);
         }
     };

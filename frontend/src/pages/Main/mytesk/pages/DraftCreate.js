@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from "react";
-import {
-    NORMAL_ACCOUNTS,
-    getEmployeeAccounts
-} from "../../../../utils/authStorage";
+
 
 function DraftCreate({
     drafts,
     setDrafts,
     loginUser,
+    employees,
     editingDraft,
     setEditingDraft
 }) {
@@ -56,15 +54,11 @@ function DraftCreate({
     }, [editingDraft]);
 
 
-    const employees = [
-        ...NORMAL_ACCOUNTS,
-        ...getEmployeeAccounts()
-    ];
 
 
     const departments = [
         ...new Set(
-            employees.map((employee) => employee.department)
+            employees.map((employee) => employee.department_name)
         )
     ];
 
@@ -143,7 +137,7 @@ function DraftCreate({
 
             writerEmployeeKey: loginUser.employeeKey,
             writerName: loginUser.name,
-            writerDepartment: loginUser.department,
+            writerDepartment: loginUser.department_id,
             writerPosition: loginUser.position,
 
             approvers: approvers,
@@ -223,7 +217,7 @@ function DraftCreate({
 
                     <p>작성자 : {loginUser.name}</p>
 
-                    <p>부서 : {loginUser.department}</p>
+                    <p>부서 : {loginUser.department_id}</p>
 
                     <p>직책 : {loginUser.position}</p>
 
@@ -387,7 +381,7 @@ function DraftCreate({
                         approvers.map((approver, index) => (
 
                             <div
-                                key={approver.employeeKey}
+                                key={approver.employee_id}
                                 className="draft-row"
                             >
 
@@ -407,7 +401,7 @@ function DraftCreate({
                                             approvers.filter((item) => {
                                                 return (
                                                     item.employeeKey !==
-                                                    approver.employeeKey
+                                                    approver.employee_id
                                                 );
                                             })
 
@@ -489,7 +483,7 @@ function DraftCreate({
 
                                 .filter((employee) => {
                                     return (
-                                        employee.department ===
+                                        employee.department_name ===
                                         selectedDepartment
                                     );
                                 })
@@ -497,7 +491,7 @@ function DraftCreate({
                                 .map((employee) => (
 
                                     <div
-                                        key={employee.employeeKey}
+                                        key={employee.employee_id}
                                         className="draft-row"
                                     >
 

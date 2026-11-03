@@ -9,9 +9,25 @@ import DraftReq from "./pages/DraftReq";
 import DraftComp from "./pages/DraftComp";
 import DraftReceived from "./pages/DraftReceived";
 import DraftApproved from "./pages/DraftApproved";
-import { getLoginUser } from "../../../utils/authStorage";
+import { getEmployeeAccounts, getLoginUser } from "../../../utils/authStorage";
 
 function MyTeskList() {
+    const [employees, setEmployees] = useState([]);
+
+    useEffect(() => {
+        async function loadEmployees() {
+            try{
+                const data = await getEmployeeAccounts();
+
+                setEmployees(data);
+            }catch(error) {
+                console.error(error);
+            }
+        }
+
+        loadEmployees();
+    },[])
+
     const [editingDraft, setEditingDraft] = useState(null);
     const loginUser = getLoginUser();
 
@@ -56,7 +72,7 @@ function MyTeskList() {
                         </div>
                     } />
 
-                    <Route path="draft-create" element={<DraftCreate drafts={drafts} setDrafts={setDrafts} loginUser={loginUser} setEditingDraft={setEditingDraft} editingDraft={editingDraft}/> } />
+                    <Route path="draft-create" element={<DraftCreate employees={employees} loginUser={loginUser} drafts={drafts} setDrafts={setDrafts} setEditingDraft={setEditingDraft} editingDraft={editingDraft}/> } />
 
                     <Route path="draft-complete" element={<DraftComp drafts={drafts} />} />
 
@@ -72,6 +88,8 @@ function MyTeskList() {
                     />
 
                 </Routes>
+
+                console.log(employees);
             </div>
         </div>
     )
