@@ -36,10 +36,10 @@ export default function ProjectModul({projectlist}) {
                  </div>
       </header>
       <section className="stats-section">
-        <StatisticsCard title="등록된 프로젝트" count={projectlist.length}/>
-        <StatisticsCard title="내 프로젝트" count={3}/>
-        <StatisticsCard title="이번달" count={5}/>
-        <StatisticsCard title="이번주" count={projectlist.length}/>
+        <StatisticsCard title="등록된 프로젝트" count={projectlist.length} stiyle={0}/>
+        <StatisticsCard title="내 프로젝트" count={3} stiyle={0}/>
+        <StatisticsCard title="이번달" count={5} stiyle={0}/>
+        <StatisticsCard title="이번주" count={projectlist.length} stiyle={0}/>
       </section>
       
       <div style={{

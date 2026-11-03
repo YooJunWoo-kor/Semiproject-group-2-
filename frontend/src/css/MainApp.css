@@ -10,6 +10,8 @@
     min-height: 80vh;
     margin: 0 auto;
     gap:50px;
+
+    min-height: calc(100vh - 120px);
 }
 
 .main-board{}
@@ -100,4 +102,9 @@
     box-shadow: var(--card-shadow);
     border-radius: var(--radius-card);
     background-color: #fff;
+}
+
+.link-icon-wrapper {
+  margin-bottom: 8px;
+  color: #3b82f6; /* 브랜드 테마 컬러 */
 }

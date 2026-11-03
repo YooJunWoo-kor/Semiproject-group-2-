@@ -71,7 +71,7 @@ export default function ConsultationFormPage(props) {
 
   if (isEdit && !savedConsultation) {
     return (
-      <section className="workspace-page crm-page">
+      <section>
         <div className="empty-state">
           <h2>상담을 찾을 수 없습니다.</h2>
           <button type="button" onClick={function () { navigate('/main/crm/consultations'); }}>
@@ -83,8 +83,8 @@ export default function ConsultationFormPage(props) {
   }
 
   return (
-    <section className="workspace-page crm-page crm-form-page">
-      <header className="page-header">
+    <section className="crm-form-page">
+      <header>
         <div>
           <span className="eyebrow">CRM · 상담 관리</span>
           <h1>{isEdit ? '상담 수정 및 답변' : '상담 등록'}</h1>

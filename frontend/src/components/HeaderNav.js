@@ -1,6 +1,8 @@
 import React from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 
+//헤더모듈
+
 function HeaderNav(){
     //  페이지 이동 기능 사용
     const navigate = useNavigate();

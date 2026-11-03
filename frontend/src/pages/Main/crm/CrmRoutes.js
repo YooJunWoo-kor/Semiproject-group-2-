@@ -27,7 +27,7 @@ export default function CrmRoutes() {
   // CRM 각 하위 페이지에서 계속 표시할 공통 메뉴입니다.
   const urlList = [
     { name: '대시보드', url: mainUrl },
-    { name: '고객 관리', url: `${mainUrl}/customers` },
+    { name: '회원 관리', url: `${mainUrl}/customers` },
     { name: '거래처 관리', url: `${mainUrl}/partners` },
     { name: '상담 관리', url: `${mainUrl}/consultations` },
     { name: '클레임 관리', url: `${mainUrl}/claims` },
@@ -37,7 +37,7 @@ export default function CrmRoutes() {
   return (
     <div className="sub-main-contain">
       <Nav urlist={urlList} />
-      <div className="sub-container">
+      
         <Routes>
           <Route index element={<CrmHome data={data} setData={setData} />} />
           <Route path="customers" element={<CustomersPage data={data} setData={setData} />} />
@@ -72,7 +72,6 @@ export default function CrmRoutes() {
           />
           <Route path="*" element={<Navigate to={mainUrl} replace />} />
         </Routes>
-      </div>
     </div>
   );
 }
