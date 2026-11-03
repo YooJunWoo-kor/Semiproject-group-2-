@@ -6,6 +6,8 @@ const db = require('./db');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const Attendance = require('./models/Attendance.'); //출결관련 함수 클레스
+
 app.use(cors());
 app.use(express.json());
 
@@ -53,6 +55,22 @@ app.get('/api/users', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+app.post('/api/attendance', async (req, res) =>{
+        try{
+            const { empNumber } = req.params;
+            const records = await Attendance.getData(empNumber);
+
+            res.json({
+                result: 'success',
+                data: records
+            });
+        }
+        catch(err){
+            return res.json({result:'fail'}) 
+        }
+    }
+)
 
 app.post('/api/login', (req, res) => {
     const query = `
