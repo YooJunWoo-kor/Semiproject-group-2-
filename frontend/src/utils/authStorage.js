@@ -16,23 +16,24 @@ export function saveLoginUser(user) {
 
 // 로그인 사용자 조회
 export function getLoginUser() {
-
-    const user =
-        localStorage.getItem(LOGIN_USER_KEY);
-
-    if (!user) {
-        return null;
-    }
+    const user = localStorage.getItem(LOGIN_USER_KEY);
+    if (!user) return null;
 
     return JSON.parse(user);
 }
-
-// 로그아웃
-export function logoutUser() {
-
-    localStorage.removeItem(
-        LOGIN_USER_KEY
-    );
+// 출결 데이터 조회
+export async function getAttendance(){
+    return [{title: '출근',start:'2026-10-01', end:'2026-11-05', typeId: 0}];
+    // { title: "출근", start: "2026-10-01", end: "2026-10-01", typeId: 0 }
+    //const userId = getLoginUser.employeeKey;
+    // try {
+    //     const data = await axios.post(API_BASE_URL + '/attendance',{userId})
+    //     return data.data;
+    // } catch (error) {
+    //     if (error.response){
+    //         return alert(userID);
+    //     }
+    // }
 }
 
 // MASTER가 등록한 직원들
@@ -140,9 +141,9 @@ export async function findLoginAccount (loginId,password) {
          return response.data;
     }catch(error){
         if(error.response && error.response.data){
-            throw new Error(error.response.data.message || '로그인에 실패했습니다.');
+            return error.response.data.message;
         }
-        throw new Error(error.response.data.message || '서버와 통신할 수 없습니다.');
+        return(error.response.data.message || '서버와 통신할 수 없습니다.');
     }
 
     // -----------------------------
