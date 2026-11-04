@@ -7,9 +7,11 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const Attendance = require('./models/Attendance'); //출결관련 함수 클레스
+const DraftServer = require('./models/Draft_server')
 
 app.use(cors());
 app.use(express.json());
+app.use('/api/drafts', DraftServer);
 
 // 2. [사원 등록 API] RegisterPage 폼 전송 수신
 app.post('/api/register', async (req, res) => {
@@ -99,6 +101,9 @@ app.post('/api/attendance', async (req, res) =>{
 )
 
 app.post('/api/login', (req, res) => {
+
+    console.log("로그인 요청 도착", req.body.email);
+    console.log('작동중');
     const query = `
         SELECT 
             e.employee_id,
@@ -118,6 +123,8 @@ app.post('/api/login', (req, res) => {
         req.body.email,
         req.body.password
     ];
+
+    
     
     db.query(query, value, (err, data) => {
         if (err) {
@@ -154,6 +161,10 @@ app.post('/api/login', (req, res) => {
         }
     });
 });
+
+
+
+
 
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);

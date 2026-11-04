@@ -3,7 +3,7 @@ import axios from 'axios';
 const LOGIN_USER_KEY = "loginUser";
 
 // env에서 설정한 api를 사용하거나, 없다면 기본값 4000번 포트 사용.
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://192.168.0.23:4000/api';
 
 // 로그인 사용자 저장
 export function saveLoginUser(user) {
@@ -80,6 +80,7 @@ export async function findLoginAccount (loginId,password) {
     const inputId = loginId.trim();
     const inputPassword = password.trim();
 
+    console.log('로그인버튼', API_BASE_URL);
     if(!inputId || !inputPassword){
         return alert("이메일 또는 비밀번호를 입력해주세요.");
     }
@@ -93,6 +94,8 @@ export async function findLoginAccount (loginId,password) {
             email: inputId,
             password: inputPassword
          })
+
+         console.log("서버 로그인 응답:", response.data);
 
          return response.data;
     }catch(error){
