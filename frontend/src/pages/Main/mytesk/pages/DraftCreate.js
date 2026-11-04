@@ -1,5 +1,14 @@
-import React, { useState } from "react";
-import ModalBase from "../../../../components/ModalBase";
+import React, { useEffect, useState } from "react";
+import ModalBase from "../../../../components/ModalBase"
+
+    function DraftCreate({
+        drafts,
+        setDrafts,
+        loginUser,
+        employees,
+        editingDraft, 
+        setEditingDraft
+    }){
 
     const [title, setTitle] = useState("");
     const [draftType, setDraftType] = useState("일반");
@@ -435,11 +444,16 @@ import ModalBase from "../../../../components/ModalBase";
             {/* 결재자 선택 */}
             {showApproverModal && (
 
+               <ModalBase title="결재자 추가" onClose={() => { 
+                setShowApproverModal(false); 
+                setSelectedDepartment("");
+                setTempApprover(null);
+            }}
+            layout={
                 <div className="draft-box">
 
-                    <h3>결재자 추가</h3>
-
                     <h4>부서 선택</h4>
+            
 
 
                     <div className="draft-row">
@@ -527,8 +541,8 @@ import ModalBase from "../../../../components/ModalBase";
                                     (approver) => {
 
                                         return (
-                                            approver.employeeKey ===
-                                            tempApprover.employeeKey
+                                            approver.employee_id ===
+                                            tempApprover.employee_id
                                         );
                                     }
                                 );
@@ -567,14 +581,19 @@ import ModalBase from "../../../../components/ModalBase";
                         >
                             취소
                         </button>
+            
 
                     </div>
 
                 </div>
-            )}
+                
+            }
+        />
+    )}
 
         </div>
     );
+}
 
 
 export default DraftCreate;
