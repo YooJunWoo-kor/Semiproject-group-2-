@@ -1,8 +1,13 @@
 import React from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import StatisticsCard from '../../../components/StatisticsCard';
+
+// import ScheduleBoard from '../../../components/ScheduleBoard';
+// import BasicTable from '../../../components/BasicTable';
+
 import ScheduleBoard from '../../../components/ScheduleBoard';
 import BasicTable from '../../../components/BasicTable';
+
 
 function FinanceModul() {
     const navigate = useNavigate();
@@ -45,62 +50,73 @@ function FinanceModul() {
             end: "2026-10-31",
             isPaid: false
         }
-        ,{
-            title: "10월 ERP 서버 호스팅 및 인프라 비용 청구",
+        , {
+            title: "11월 ERP 서버 호스팅 및 인프라 비용 청구",
             amount: "2,500,000원",
             author: "홍길동",
-            start: "2026-10-15",
-            end: "2026-10-31",
+            start: "2026-11-15",
+            end: "2026-11-30",
             isPaid: false
         }
-        ,{
-            title: "10월 ERP 서버 호스팅 및 인프라 비용 청구",
+        , {
+            title: "12월 ERP 서버 호스팅 및 인프라 비용 청구",
             amount: "2,500,000원",
             author: "홍길동",
-            start: "2026-10-15",
-            end: "2026-10-31",
+            start: "2026-11-15",
+            end: "2026-11-30",
             isPaid: false
         }
-        ,{
-            title: "10월 ERP 서버 호스팅 및 인프라 비용 청구",
+        , {
+            title: "2월 ERP 서버 호스팅 및 인프라 비용 청구",
             amount: "2,500,000원",
             author: "홍길동",
-            start: "2026-10-15",
-            end: "2026-10-31",
+            start: "2026-12-15",
+            end: "2026-12-31",
             isPaid: false
         }
-        ,{
-            title: "10월 ERP 서버 호스팅 및 인프라 비용 청구",
+        , {
+            title: "1월 ERP 서버 호스팅 및 인프라 비용 청구",
             amount: "2,500,000원",
             author: "홍길동",
-            start: "2026-10-15",
-            end: "2026-10-31",
+            start: "2026-11-15",
+            end: "2026-12-31",
             isPaid: false
         }
-        ,{
-            title: "10월 ERP 서버 호스팅 및 인프라 비용 청구",
+        , {
+            title: "3월 ERP 서버 호스팅 및 인프라 비용 청구",
             amount: "2,500,000원",
             author: "홍길동",
-            start: "2026-10-15",
-            end: "2026-10-31",
+            start: "2026-11-15",
+            end: "2026-11-30",
             isPaid: false
         }
     ]
 
+    const financeSchedules = data1.map((item, index) => ({
+        id: index + 1,
+        title: item.title,
+        start: item.start,
+        end: item.end,
+        typeId: 1,
+        description: `작성자: ${item.author} / 금액: ${item.amount}`
+    })); //추가된 더미
+
     //결제요청 테이블 1관련 자료형 변환
-    const tHeader1 = ["요청 내용","금액","작성자","요청일","마감일","승인"];
-    const tData1 = data1.slice(0,5).map((item) => {
-        let list = [];
+    const tHeader1 = ["요청 내용", "금액", "작성자", "요청일", "마감일", "승인"];
+    const tData1 = data1.slice(0, 5).map((item) => {
+        // 각 행에 넣을 내용을 담는 배열
+        const list = [];
+    
         list.push(item.title);
         list.push(item.amount);
         list.push(item.author);
         list.push(item.start);
         list.push(item.end);
         list.push(item.isPaid ? '지급완료' : '미지급');
-        
-        return { content: list }; // conent -> content 오타 수정
-      });
     
+        return { content: list };
+    });
+
 
     return (
         <div className="sub-container">
@@ -147,10 +163,11 @@ function FinanceModul() {
                 </section>
             </div>
             <section className="stats-section">
-                <ScheduleBoard/>
-                <div style={{display:"flex",flexFlow:"column",gap:"10px"}}>
-                    <BasicTable title={"비용청구"}th = {tHeader1} td={tData1}/>
-                    <BasicTable title={"구매요청"} th = {tHeader1} td={tData1}/>
+                <ScheduleBoard schedule={financeSchedules} />
+
+                <div style={{ display: "flex", flexFlow: "column", gap: "10px" }}>
+                    <BasicTable title="비용청구" th={tHeader1} td={tData1} />
+                    <BasicTable title="구매요청" th={tHeader1} td={tData1} />
                 </div>
             </section>
         </div>

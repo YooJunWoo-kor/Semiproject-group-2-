@@ -170,8 +170,9 @@ export default function Departments() {
           <span className="subtext">부서를 선택하여 조직 구조와 소속 인원을 확인합니다.</span>
         </div>
         <div className="dashboard-top">
-          {(
+          {isMaster && (
             <button
+              type="button"
               className="register-btn"
               onClick={() => setIsModalOpen(true)}
             >
@@ -191,7 +192,7 @@ export default function Departments() {
       {/* 3. 모달 팝업 연결 */}
       {isModalOpen && (
         <ModalBase
-          title= {"신규 부서 등록"}
+          title="신규 부서 등록"
           onClose={() => setIsModalOpen(false)}
           layout={
             <DepartmentRegisterForm
