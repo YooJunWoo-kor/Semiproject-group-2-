@@ -1,14 +1,5 @@
-import React, { useEffect, useState } from "react";
-
-
-function DraftCreate({
-    drafts,
-    setDrafts,
-    loginUser,
-    employees,
-    editingDraft,
-    setEditingDraft
-}) {
+import React, { useState } from "react";
+import ModalBase from "../../../../components/ModalBase";
 
     const [title, setTitle] = useState("");
     const [draftType, setDraftType] = useState("일반");
@@ -584,6 +575,6 @@ function DraftCreate({
 
         </div>
     );
-}
+
 
 export default DraftCreate;
