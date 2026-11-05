@@ -175,10 +175,6 @@ export function saveEmployeeAccount(account) {
 export async function findLoginAccount(loginId, password) {
     const inputId = loginId.trim();
 
-<<<<<<< HEAD
-    if (!inputId || !password) {
-        throw new Error("이메일과 비밀번호를 입력해 주세요.");
-=======
     if(!inputId || !inputPassword){
         return alert("이메일 또는 비밀번호를 입력해주세요.");
     }
@@ -199,7 +195,6 @@ export async function findLoginAccount(loginId, password) {
             return error.response.data.message;
         }
         return alert('서버와 통신할 수 없습니다.');
->>>>>>> origin/main
     }
 
     try {
