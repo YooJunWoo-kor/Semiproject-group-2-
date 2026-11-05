@@ -93,6 +93,127 @@ router.post('/submit', async (req, res) => {
 
 
 
+// 작성자별 기안서 목록 조회
+router.get('/', async (req, res) => {
+    const employeeId = Number(req.query.employeeId);
+    if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+        return res.status(400).json({ message: '올바른 사원 ID가 필요합니다.' });
+    }
+    try {
+        return res.json(await Draft.getByEmployeeId(employeeId));
+    } catch (error) {
+        console.error('기안서 목록 조회 오류:', error);
+        return res.status(500).json({ message: '기안서 목록 조회 실패' });
+    }
+});
+
+// 내가 결재할 기안서 목록
+router.get('/received/list', async (req, res) => {
+    const employeeId = Number(req.query.employeeId);
+    if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+        return res.status(400).json({ message: '올바른 사원 ID가 필요합니다.' });
+    }
+    try {
+        return res.json(await Draft.getReceivedByEmployeeId(employeeId));
+    } catch (error) {
+        console.error('결재 수신 목록 조회 오류:', error);
+        return res.status(500).json({ message: '결재 수신 목록 조회 실패' });
+    }
+});
+
+// 내가 승인한 문서 목록
+router.get('/approved/list', async (req, res) => {
+    const employeeId = Number(req.query.employeeId);
+    if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+        return res.status(400).json({ message: '올바른 사원 ID가 필요합니다.' });
+    }
+    try {
+        return res.json(await Draft.getApprovedByEmployeeId(employeeId));
+    } catch (error) {
+        console.error('승인 목록 조회 오류:', error);
+        return res.status(500).json({ message: '승인 목록 조회 실패' });
+    }
+});
+
+// 임시저장 수정
+router.patch('/:draftId', async (req, res) => {
+    const draftId = Number(req.params.draftId);
+    const { employeeId, title, documentType, content } = req.body;
+    if (!Number.isSafeInteger(draftId) || draftId <= 0 ||
+        !Number.isSafeInteger(employeeId) || employeeId <= 0 ||
+        typeof title !== 'string' || !title.trim() ||
+        typeof documentType !== 'string' || !documentType.trim()) {
+        return res.status(400).json({ message: '올바른 기안서 정보가 필요합니다.' });
+    }
+    try {
+        const changed = await Draft.updateDraft(draftId, employeeId, title, documentType, content);
+        if (!changed) return res.status(404).json({ message: '수정 가능한 임시저장 문서가 없습니다.' });
+        return res.json({ message: '기안서 수정 완료', draftId });
+    } catch (error) {
+        console.error('기안서 수정 오류:', error);
+        return res.status(500).json({ message: '기안서 수정 실패' });
+    }
+});
+
+// 임시저장 삭제
+router.delete('/:draftId', async (req, res) => {
+    const draftId = Number(req.params.draftId);
+    const employeeId = Number(req.query.employeeId);
+    if (!Number.isSafeInteger(draftId) || draftId <= 0 ||
+        !Number.isSafeInteger(employeeId) || employeeId <= 0) {
+        return res.status(400).json({ message: '올바른 문서 및 사원 ID가 필요합니다.' });
+    }
+    try {
+        const deleted = await Draft.deleteDraft(draftId, employeeId);
+        if (!deleted) return res.status(404).json({ message: '삭제 가능한 임시저장 문서가 없습니다.' });
+        return res.json({ message: '기안서 삭제 완료' });
+    } catch (error) {
+        console.error('기안서 삭제 오류:', error);
+        return res.status(500).json({ message: '기안서 삭제 실패' });
+    }
+});
+
+// 기존 임시저장 문서 상신
+router.post('/:draftId/submit', async (req, res) => {
+    const draftId = Number(req.params.draftId);
+    const { employeeId, approverIds } = req.body;
+    if (!Number.isSafeInteger(draftId) || draftId <= 0 ||
+        !Number.isSafeInteger(employeeId) || employeeId <= 0 ||
+        !Array.isArray(approverIds) || approverIds.length === 0 ||
+        !approverIds.every(id => Number.isSafeInteger(id) && id > 0) ||
+        new Set(approverIds).size !== approverIds.length) {
+        return res.status(400).json({ message: '결재 요청 정보가 올바르지 않습니다.' });
+    }
+    try {
+        const submitted = await Draft.submitExisting(draftId, employeeId, approverIds);
+        if (!submitted) return res.status(404).json({ message: '상신 가능한 임시저장 문서가 없습니다.' });
+        return res.json({ message: '기안서 상신 완료', draftId });
+    } catch (error) {
+        console.error('기안서 상신 오류:', error);
+        return res.status(500).json({ message: '기안서 상신 실패' });
+    }
+});
+
+// 현재 결재자의 승인/반려
+router.post('/:draftId/decision', async (req, res) => {
+    const draftId = Number(req.params.draftId);
+    const { employeeId, decision } = req.body;
+    if (!Number.isSafeInteger(draftId) || draftId <= 0 ||
+        !Number.isSafeInteger(employeeId) || employeeId <= 0 ||
+        !['approve', 'reject'].includes(decision)) {
+        return res.status(400).json({ message: '결재 처리 정보가 올바르지 않습니다.' });
+    }
+    try {
+        const changed = await Draft.decide(draftId, employeeId, decision);
+        if (!changed) return res.status(409).json({ message: '현재 결재 순서가 아니거나 이미 처리한 문서입니다.' });
+        return res.json({ message: decision === 'approve' ? '승인 완료' : '반려 완료' });
+    } catch (error) {
+        console.error('결재 처리 오류:', error);
+        return res.status(500).json({ message: '결재 처리 실패' });
+    }
+});
+
+
 // 3. 기안서 상세 조회
 router.get('/:draftId', async (req, res) => {
     const draftId = Number(req.params.draftId);
@@ -138,31 +259,5 @@ router.get('/:draftId', async (req, res) => {
     }
 });
 
-router.get('/', async (req, res) => {
-    
-})
-
-// 내가 작성한 기안서 목록 조회
-router.get('/', async (req,res) => {
-    const employeeId = Number(req.query.employeeId);
-
-    if(!Number.isSafeInteger(employeeId) || employeeId <= 0) {
-        return res.status(400).json({
-            message: '올바른 사원 ID가 필요합니다.'
-        });
-    }
-
-    try {
-        const rows = await Draft.getByEmployeeId(employeeId);
-
-        return res.status(200).json(rows);
-    } catch (error) {
-        console.error('기안서 목록 조회 오류:', error);
-
-        return res.status(500).json({
-            message: '기안서 목록 조회 중 오류가 발생했습니다.'
-        })
-    }
-})
 
 module.exports = router;
