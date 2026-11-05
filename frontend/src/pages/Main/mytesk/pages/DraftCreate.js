@@ -474,7 +474,7 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:400
 
 
                                 setShowApproverModal(false);
-                                                setTempApprover(null);
+                                setTempApprover(null);
                             }}
                         >
                             결재자 선택
@@ -486,7 +486,7 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:400
                             onClick={() => {
 
                                 setShowApproverModal(false);
-                                                setTempApprover(null);
+                                setTempApprover(null);
                             }}
                         >
                             취소
