@@ -43,7 +43,7 @@ function MyTeskList() {
     const [approvedDrafts, setApprovedDrafts] = useState([]);
     const [draftError, setDraftError] = useState("");
     const loginUser = getLoginUser();
-    const employeeId = loginUser?.employeeKey;
+    const employeeId = getLoginUser()?.employeeKey;
     const mainUrl = "/main/mytesk";
 
     useEffect(() => {
