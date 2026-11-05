@@ -55,3 +55,22 @@ export function retireHrEmployee(employeeId) {
   return axios.patch(API_BASE_URL + '/hr/employees/' + employeeId + '/status');
 }
 
+// 선택한 급여월의 직원별 급여 정보를 조회합니다.
+export function getHrPayrolls(payMonth) {
+  return axios.get(API_BASE_URL + '/hr/payrolls', {
+    params: {
+      payMonth
+    }
+  });
+}
+
+// 급여 미등록 직원의 급여를 등록합니다.
+export function createHrPayroll(data) {
+  return axios.post(API_BASE_URL + '/hr/payrolls', data);
+}
+
+// 기존 급여 기록을 수정합니다.
+export function updateHrPayroll(payrollId, data) {
+  return axios.put(API_BASE_URL + '/hr/payrolls/' + payrollId, data);
+}
+

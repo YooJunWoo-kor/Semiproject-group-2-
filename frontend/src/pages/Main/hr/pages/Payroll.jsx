@@ -1,230 +1,498 @@
-import React, { useState } from "react";
-import StatisticsCard from "../../../../components/StatisticsCard";
-import PaginationTable from "../../../../components/PaginationTable";
-import ModalBase from "../../../../components/ModalBase";
-import { getLoginUser } from "../../../../utils/authStorage";
+import React, { useEffect, useState } from 'react';
+import StatisticsCard from '../../../../components/StatisticsCard';
+import PaginationTable from '../../../../components/PaginationTable';
+import ModalBase from '../../../../components/ModalBase';
+import { getLoginUser } from '../../../../utils/authStorage';
+import {
+  createHrPayroll,
+  getHrPayrolls,
+  updateHrPayroll
+} from '../../../../components/HrData';
 
-// 1. [상단 분리] 급여 수정 폼 모달 컴포넌트
-function PayrollEditForm({ employee, onSave, onCancel }) {
-  const [baseSalary, setBaseSalary] = useState(employee.baseSalary);
-  const [mealAllowance, setMealAllowance] = useState(employee.mealAllowance);
-  const [bonus, setBonus] = useState(employee.bonus);
+/* 기존 확인용 더미데이터는 참고용으로 보존합니다.
+const initialPayrollList = [
+  {
+    id: 'EMP-1001',
+    name: '김민준',
+    department: '개발팀',
+    position: '팀장',
+    baseSalary: 4500000,
+    mealAllowance: 200000,
+    bonus: 500000,
+    paymentStatus: '지급대기'
+  }
+];
+*/
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+function getCurrentPayMonth() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+
+  return `${year}-${month}`;
+}
+
+function formatMoney(value) {
+  if (value === null || value === undefined || value === '') {
+    return '-';
+  }
+
+  return `${Number(value).toLocaleString()}원`;
+}
+
+function toNumber(value) {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
+function getApiErrorMessage(error, fallbackMessage) {
+  return error?.response?.data?.message || fallbackMessage;
+}
+
+async function fetchPayrollRows(payMonth) {
+  const response = await getHrPayrolls(payMonth);
+
+  if (!response.data.success || !Array.isArray(response.data.data)) {
+    throw new Error('급여 목록 응답 형식이 올바르지 않습니다.');
+  }
+
+  return response.data.data;
+}
+
+function PayrollEditForm({ employee, payMonth, onSave, onCancel, saving }) {
+  const isRegister = employee.payrollId === null;
+  const [form, setForm] = useState({
+    baseSalary: employee.baseSalary ?? '',
+    allowance: employee.allowance ?? '',
+    deduction: employee.deduction ?? '',
+    bonus: employee.bonus ?? '',
+    paymentDate: employee.paymentDate || '',
+    paymentStatus:
+      employee.paymentStatus === '급여 미등록'
+        ? '지급대기'
+        : employee.paymentStatus || '지급대기'
+  });
+
+  function changeForm(event) {
+    setForm((currentForm) => ({
+      ...currentForm,
+      [event.target.name]: event.target.value
+    }));
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+
+    const amountFields = [
+      form.baseSalary,
+      form.allowance,
+      form.deduction,
+      form.bonus
+    ];
+    const hasInvalidAmount = amountFields.some(
+      (value) =>
+        value === '' ||
+        !Number.isInteger(Number(value)) ||
+        Number(value) < 0
+    );
+
+    if (hasInvalidAmount) {
+      alert('급여 금액은 0 이상의 정수로 입력해 주세요.');
+      return;
+    }
+
+    const grossPay =
+      Number(form.baseSalary) + Number(form.allowance) + Number(form.bonus);
+    const netPay = grossPay - Number(form.deduction);
+
+    if (netPay < 0) {
+      alert('공제액은 세전 총액보다 클 수 없습니다.');
+      return;
+    }
+
     onSave({
-      id: employee.id,
-      baseSalary: Number(baseSalary) || 0,
-      mealAllowance: Number(mealAllowance) || 0,
-      bonus: Number(bonus) || 0,
+      employeeId: employee.employeeId,
+      payrollId: employee.payrollId,
+      payMonth,
+      baseSalary: Number(form.baseSalary),
+      allowance: Number(form.allowance),
+      deduction: Number(form.deduction),
+      bonus: Number(form.bonus),
+      paymentDate: form.paymentDate,
+      paymentStatus: form.paymentStatus,
+      isRegister
     });
-  };
+  }
 
-  const total = (Number(baseSalary) || 0) + (Number(mealAllowance) || 0) + (Number(bonus) || 0);
+  const grossPay =
+    toNumber(form.baseSalary) +
+    toNumber(form.allowance) +
+    toNumber(form.bonus);
+  const netPay = grossPay - toNumber(form.deduction);
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <div style={{ backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '6px', fontSize: '13px' }}>
-        <div>사번: <strong>{employee.id}</strong></div>
-        <div style={{ marginTop: '2px' }}>직원명: <strong>{employee.name}</strong> ({employee.department} / {employee.position})</div>
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
+    >
+      <div
+        style={{
+          backgroundColor: '#f8fafc',
+          padding: '10px 12px',
+          borderRadius: '6px',
+          fontSize: '13px'
+        }}
+      >
+        <div>
+          사번: <strong>{employee.employeeNumber}</strong>
+        </div>
+        <div style={{ marginTop: '2px' }}>
+          직원명: <strong>{employee.employeeName}</strong> ({employee.departmentName || '-'} / {employee.position})
+        </div>
+        <div style={{ marginTop: '2px' }}>급여월: {payMonth}</div>
       </div>
 
-      <div>
-        <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
-          기본급 (원)
-        </label>
+      <label>
+        기본급 (원)
         <input
           type="number"
-          step="10000"
-          value={baseSalary}
-          onChange={(e) => setBaseSalary(e.target.value)}
+          min="0"
+          step="1"
+          name="baseSalary"
+          value={form.baseSalary}
+          onChange={changeForm}
           required
-          style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+          style={{ width: '100%', padding: '8px 10px', boxSizing: 'border-box' }}
         />
-      </div>
+      </label>
 
-      <div>
-        <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
-          식대 (비과세, 원)
-        </label>
+      <label>
+        수당 (원)
         <input
           type="number"
-          step="10000"
-          value={mealAllowance}
-          onChange={(e) => setMealAllowance(e.target.value)}
+          min="0"
+          step="1"
+          name="allowance"
+          value={form.allowance}
+          onChange={changeForm}
           required
-          style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+          style={{ width: '100%', padding: '8px 10px', boxSizing: 'border-box' }}
         />
-      </div>
+      </label>
 
-      <div>
-        <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
-          상여 및 성과급 (원)
-        </label>
+      <label>
+        공제액 (원)
         <input
           type="number"
-          step="10000"
-          value={bonus}
-          onChange={(e) => setBonus(e.target.value)}
-          style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+          min="0"
+          step="1"
+          name="deduction"
+          value={form.deduction}
+          onChange={changeForm}
+          required
+          style={{ width: '100%', padding: '8px 10px', boxSizing: 'border-box' }}
         />
-      </div>
+      </label>
 
-      <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '13px', color: '#475569' }}>총 지급 예정액:</span>
-        <strong style={{ fontSize: '16px', color: '#2563eb' }}>{total.toLocaleString()}원</strong>
-      </div>
+      <label>
+        상여금 (원)
+        <input
+          type="number"
+          min="0"
+          step="1"
+          name="bonus"
+          value={form.bonus}
+          onChange={changeForm}
+          required
+          style={{ width: '100%', padding: '8px 10px', boxSizing: 'border-box' }}
+        />
+      </label>
 
-      <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-        <button
-          type="button"
-          onClick={onCancel}
-          style={{ padding: '8px 14px', border: '1px solid #cbd5e1', background: '#fff', borderRadius: '6px', cursor: 'pointer' }}
+      <label>
+        지급일
+        <input
+          type="date"
+          name="paymentDate"
+          value={form.paymentDate}
+          onChange={changeForm}
+          style={{ width: '100%', padding: '8px 10px', boxSizing: 'border-box' }}
+        />
+      </label>
+
+      <label>
+        지급 상태
+        <select
+          name="paymentStatus"
+          value={form.paymentStatus}
+          onChange={changeForm}
+          style={{ width: '100%', padding: '8px 10px', boxSizing: 'border-box' }}
         >
+          <option value="지급대기">지급대기</option>
+          <option value="지급완료">지급완료</option>
+        </select>
+      </label>
+
+      <div
+        style={{
+          borderTop: '1px solid #e2e8f0',
+          paddingTop: '10px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: '12px',
+          flexWrap: 'wrap'
+        }}
+      >
+        <span>세전 총액: <strong>{formatMoney(grossPay)}</strong></span>
+        <span>실수령액: <strong>{formatMoney(netPay)}</strong></span>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+        <button type="button" onClick={onCancel}>
           취소
         </button>
-        <button
-          type="submit"
-          className="erp-primary-button"
-          style={{ padding: '8px 16px', borderRadius: '6px', cursor: 'pointer' }}
-        >
-          저장 완료
+        <button type="submit" className="erp-primary-button" disabled={saving}>
+          {saving ? '저장 중...' : isRegister ? '급여 등록' : '수정 완료'}
         </button>
       </div>
     </form>
   );
 }
 
-// 2. 초기 직원 급여 더미데이터
-const initialPayrollList = [
-  { id: 'EMP-1001', name: '김민준', department: '개발팀', position: '팀장', baseSalary: 4500000, mealAllowance: 200000, bonus: 500000, paymentStatus: '지급대기' },
-  { id: 'EMP-1002', name: '이서연', department: '인사팀', position: '대리', baseSalary: 3200000, mealAllowance: 200000, bonus: 0, paymentStatus: '지급대기' },
-  { id: 'EMP-1003', name: '박지호', department: '디자인팀', position: '사원', baseSalary: 2800000, mealAllowance: 200000, bonus: 100000, paymentStatus: '지급대기' },
-  { id: 'EMP-1004', name: '최유진', department: '마케팅팀', position: '과장', baseSalary: 3800000, mealAllowance: 200000, bonus: 300000, paymentStatus: '지급대기' },
-  { id: 'EMP-1005', name: '정도윤', department: '경영지원팀', position: '대리', baseSalary: 3300000, mealAllowance: 200000, bonus: 0, paymentStatus: '지급대기' },
-  { id: 'EMP-1006', name: '한지우', department: '개발팀', position: '사원', baseSalary: 2900000, mealAllowance: 200000, bonus: 0, paymentStatus: '지급대기' },
-  { id: 'EMP-1007', name: '윤지훈', department: '영업팀', position: '팀장', baseSalary: 4200000, mealAllowance: 200000, bonus: 800000, paymentStatus: '지급대기' },
-];
-
 export default function Payroll() {
   const loginUser = getLoginUser();
   const isMaster = loginUser?.role === 'MASTER';
-
-  const [activeTab, setActiveTab] = useState('employee'); // 'employee' | 'department'
-  const [payrollList, setPayrollList] = useState(initialPayrollList);
+  const [activeTab, setActiveTab] = useState('employee');
+  const [payrollList, setPayrollList] = useState([]);
+  const [selectedPayMonth, setSelectedPayMonth] = useState(getCurrentPayMonth);
   const [search, setSearch] = useState('');
   const [selectedEmp, setSelectedEmp] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
-  // 1) 급여 수정 모달 오픈
-  const handleOpenEdit = (emp) => {
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadPayrolls() {
+      setLoading(true);
+      setError('');
+      setNotice('');
+
+      try {
+        const rows = await fetchPayrollRows(selectedPayMonth);
+
+        if (!ignore) {
+          setPayrollList(rows);
+        }
+      } catch (requestError) {
+        console.error('급여 목록 조회 오류:', requestError);
+
+        if (!ignore) {
+          setPayrollList([]);
+          setError(
+            getApiErrorMessage(
+              requestError,
+              '급여 정보를 불러오지 못했습니다.'
+            )
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadPayrolls();
+
+    return () => {
+      ignore = true;
+    };
+  }, [selectedPayMonth]);
+
+  function handleOpenEdit(employee) {
     if (!isMaster) {
-      alert("급여 수정 권한이 없습니다 (MASTER 권한 필요).");
+      alert('급여 등록·수정 권한이 없습니다 (MASTER 권한 필요).');
       return;
     }
-    setSelectedEmp(emp);
+
+    setError('');
+    setNotice('');
+    setSelectedEmp(employee);
     setIsModalOpen(true);
-  };
+  }
 
-  // 2) 급여 저장 반영
-  const handleSavePayroll = (updated) => {
-    setPayrollList((prev) =>
-      prev.map((emp) =>
-        emp.id === updated.id
-          ? {
-              ...emp,
-              baseSalary: updated.baseSalary,
-              mealAllowance: updated.mealAllowance,
-              bonus: updated.bonus,
-            }
-          : emp
-      )
-    );
-    setIsModalOpen(false);
-    alert('급여 정보가 성공적으로 반영되었습니다.');
-  };
+  async function handleSavePayroll(formData) {
+    if (!selectedEmp || !isMaster) {
+      return;
+    }
 
-  // 3) 상단 통계 지표 자동 계산
-  const totalPayout = payrollList.reduce(
-    (acc, cur) => acc + cur.baseSalary + cur.mealAllowance + cur.bonus,
+    setSaving(true);
+    setError('');
+    setNotice('');
+
+    try {
+      const response = formData.payrollId
+        ? await updateHrPayroll(formData.payrollId, {
+            baseSalary: formData.baseSalary,
+            allowance: formData.allowance,
+            deduction: formData.deduction,
+            bonus: formData.bonus,
+            paymentDate: formData.paymentDate,
+            paymentStatus: formData.paymentStatus
+          })
+        : await createHrPayroll({
+            employeeId: formData.employeeId,
+            payMonth: formData.payMonth,
+            baseSalary: formData.baseSalary,
+            allowance: formData.allowance,
+            deduction: formData.deduction,
+            bonus: formData.bonus,
+            paymentDate: formData.paymentDate,
+            paymentStatus: formData.paymentStatus
+          });
+
+      if (!response.data.success) {
+        throw new Error('급여 저장 응답 형식이 올바르지 않습니다.');
+      }
+
+      const rows = await fetchPayrollRows(selectedPayMonth);
+      setPayrollList(rows);
+      setSelectedEmp(
+        rows.find((row) => row.employeeId === formData.employeeId) || null
+      );
+      setIsModalOpen(false);
+      setNotice(response.data.message || '급여 정보가 저장되었습니다.');
+    } catch (requestError) {
+      console.error('급여 저장 오류:', requestError);
+      setError(
+        getApiErrorMessage(requestError, '급여 정보를 저장하지 못했습니다.')
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const registeredPayrolls = payrollList.filter(
+    (payroll) => payroll.payrollId !== null
+  );
+  const unregisteredCount = payrollList.length - registeredPayrolls.length;
+  const grossTotal = registeredPayrolls.reduce(
+    (total, payroll) => total + toNumber(payroll.grossPay),
     0
   );
-  const avgSalary = payrollList.length ? Math.round(totalPayout / payrollList.length) : 0;
-
-  // 4) [탭 1] 직원별 급여 데이터 필터링 및 PaginationTable 규격 매핑
-  const filteredEmployees = payrollList.filter((emp) =>
-    `${emp.id} ${emp.name} ${emp.department} ${emp.position}`.toLowerCase().includes(search.toLowerCase())
+  const netTotal = registeredPayrolls.reduce(
+    (total, payroll) => total + toNumber(payroll.netPay),
+    0
   );
 
-  const empTableHeaders = ['사번', '이름', '부서', '직급', '기본급', '식대', '상여/성과급', '총 지급액', '상태', '관리'];
+  const filteredEmployees = payrollList.filter((payroll) =>
+    [
+      payroll.employeeNumber,
+      payroll.employeeName,
+      payroll.departmentName,
+      payroll.position
+    ]
+      .map((value) => String(value || '').toLowerCase())
+      .join(' ')
+      .includes(search.trim().toLowerCase())
+  );
 
-  const empTableData = filteredEmployees.map((emp) => {
-    const total = emp.baseSalary + emp.mealAllowance + emp.bonus;
-    return {
-      content: [
-        <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: '600' }}>{emp.id}</span>,
-        <strong
-          className="emp-name"
-          onClick={() => handleOpenEdit(emp)}
-          style={{ cursor: 'pointer', textDecoration: 'underline', color: '#1d4ed8' }}
-          title="클릭하여 급여 수정"
-        >
-          {emp.name}
-        </strong>,
-        emp.department,
-        <span className="emp-position">{emp.position}</span>,
-        `${emp.baseSalary.toLocaleString()}원`,
-        `${emp.mealAllowance.toLocaleString()}원`,
-        `${emp.bonus.toLocaleString()}원`,
-        <strong style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{total.toLocaleString()}원</strong>,
-        <span className="status-tag working">{emp.paymentStatus}</span>,
-        <button
-          type="button"
-          onClick={() => handleOpenEdit(emp)}
-          style={{
-            padding: '3px 8px',
-            fontSize: '12px',
-            borderRadius: '4px',
-            border: '1px solid #cbd5e1',
-            background: '#ffffff',
-            cursor: 'pointer'
-          }}
-        >
-          수정
+  const employeeHeaders = [
+    '사번',
+    '이름',
+    '부서',
+    '직급',
+    '기본급',
+    '수당',
+    '상여금',
+    '공제액',
+    '세전 총액',
+    '실수령액',
+    '지급일',
+    '상태',
+    '관리'
+  ];
+
+  const employeeTableData = filteredEmployees.map((payroll) => ({
+    content: [
+      payroll.employeeNumber,
+      <strong
+        className="emp-name"
+        onClick={() => handleOpenEdit(payroll)}
+        style={{ cursor: isMaster ? 'pointer' : 'default' }}
+      >
+        {payroll.employeeName}
+      </strong>,
+      payroll.departmentName || '-',
+      <span className="emp-position">{payroll.position}</span>,
+      formatMoney(payroll.baseSalary),
+      formatMoney(payroll.allowance),
+      formatMoney(payroll.bonus),
+      formatMoney(payroll.deduction),
+      formatMoney(payroll.grossPay),
+      formatMoney(payroll.netPay),
+      payroll.paymentDate || '-',
+      <span
+        className={`status-tag ${
+          payroll.paymentStatus === '급여 미등록' ? 'off' : 'working'
+        }`}
+      >
+        {payroll.paymentStatus}
+      </span>,
+      isMaster ? (
+        <button type="button" onClick={() => handleOpenEdit(payroll)}>
+          {payroll.payrollId === null ? '급여 등록' : '수정'}
         </button>
-      ]
-    };
-  });
+      ) : (
+        '-'
+      )
+    ]
+  }));
 
-  // 5) [탭 2] 부서별 급여 집계 및 PaginationTable 규격 매핑
-  const deptSummary = payrollList.reduce((acc, cur) => {
-    if (!acc[cur.department]) {
-      acc[cur.department] = { count: 0, total: 0 };
+  const departmentSummary = registeredPayrolls.reduce((summary, payroll) => {
+    const key = String(payroll.departmentId || 'none');
+
+    if (!summary[key]) {
+      summary[key] = {
+        departmentName: payroll.departmentName || '부서 미지정',
+        count: 0,
+        grossTotal: 0,
+        deductionTotal: 0,
+        netTotal: 0
+      };
     }
-    acc[cur.department].count += 1;
-    acc[cur.department].total += cur.baseSalary + cur.mealAllowance + cur.bonus;
-    return acc;
+
+    summary[key].count += 1;
+    summary[key].grossTotal += toNumber(payroll.grossPay);
+    summary[key].deductionTotal += toNumber(payroll.deduction);
+    summary[key].netTotal += toNumber(payroll.netPay);
+    return summary;
   }, {});
 
-  const deptTableHeaders = ['부서명', '대상 인원', '부서 총 급여 지급액', '부서 1인 평균 급여', '지급 예정일'];
-
-  const deptTableData = Object.keys(deptSummary).map((deptName) => {
-    const dept = deptSummary[deptName];
-    const deptAvg = Math.round(dept.total / dept.count);
-    return {
-      content: [
-        <strong>{deptName}</strong>,
-        `${dept.count}명`,
-        <strong style={{ color: '#0f172a' }}>{dept.total.toLocaleString()}원</strong>,
-        `${deptAvg.toLocaleString()}원`,
-        '2026-10-25'
-      ]
-    };
-  });
+  const departmentHeaders = [
+    '부서명',
+    '급여 등록 인원',
+    '세전 총액',
+    '공제액',
+    '실수령액',
+    '평균 세전 급여'
+  ];
+  const departmentTableData = Object.values(departmentSummary).map((summary) => ({
+    content: [
+      <strong>{summary.departmentName}</strong>,
+      `${summary.count}명`,
+      formatMoney(summary.grossTotal),
+      formatMoney(summary.deductionTotal),
+      formatMoney(summary.netTotal),
+      formatMoney(Math.round(summary.grossTotal / summary.count))
+    ]
+  }));
 
   return (
     <div className="sub-container">
-      {/* 1. 상단 공통 헤더 */}
       <header className="dashboard-header">
         <div>
           <span className="subtitle">급여관리</span>
@@ -232,48 +500,51 @@ export default function Payroll() {
         </div>
       </header>
 
-      {/* 2. 통계 카드 (자동 집계) */}
       <section className="stats-section">
-      <StatisticsCard 
-        title="총 지급액" 
-        count={Math.round(totalPayout / 10000)} 
-        stiyle={2} 
-      />
-      <StatisticsCard 
-        title="지급 대상" 
-        count={payrollList.length} 
-        stiyle={1} 
-      />
-      <StatisticsCard 
-        title="평균 급여" 
-        count={Math.round(avgSalary / 10000)} 
-        stiyle={2} 
-      />
-      <StatisticsCard 
-        title="지급 예정일" 
-        count={25} 
-        stiyle={3} 
-      />
+        <StatisticsCard title="세전 총액" count={Math.round(grossTotal / 10000)} stiyle={2} />
+        <StatisticsCard title="실수령 총액" count={Math.round(netTotal / 10000)} stiyle={2} />
+        <StatisticsCard title="지급 대상" count={registeredPayrolls.length} stiyle={1} />
+        <StatisticsCard title="급여 미등록" count={unregisteredCount} stiyle={1} />
       </section>
 
-      {/* 3. 모달 팝업 연동 */}
+      {notice && (
+        <p role="status" style={{ color: '#047857' }}>
+          {notice}
+        </p>
+      )}
+      {error && (
+        <p role="alert" style={{ color: '#b91c1c' }}>
+          {error}
+        </p>
+      )}
+
       {isModalOpen && selectedEmp && (
         <ModalBase
-          title={`급여 정보 수정 - ${selectedEmp.name} (${selectedEmp.position})`}
+          title={`${selectedEmp.payrollId === null ? '급여 등록' : '급여 정보 수정'} - ${selectedEmp.employeeName}`}
           onClose={() => setIsModalOpen(false)}
           layout={
             <PayrollEditForm
               employee={selectedEmp}
+              payMonth={selectedPayMonth}
               onSave={handleSavePayroll}
               onCancel={() => setIsModalOpen(false)}
+              saving={saving}
             />
           }
         />
       )}
 
-      {/* 4. 목록 탭 전환 및 검색 바 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', marginBottom: '14px' }}>
-        {/* 탭 버튼 */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'wrap',
+          marginTop: '20px',
+          marginBottom: '14px'
+        }}
+      >
         <div style={{ display: 'flex', gap: '6px' }}>
           <button
             type="button"
@@ -281,12 +552,9 @@ export default function Payroll() {
             style={{
               padding: '6px 14px',
               borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              border: activeTab === 'employee' ? '1px solid var(--color-brand, #3b82f6)' : '1px solid #cbd5e1',
-              backgroundColor: activeTab === 'employee' ? 'var(--color-brand, #3b82f6)' : '#ffffff',
-              color: activeTab === 'employee' ? '#ffffff' : '#475569',
+              border: activeTab === 'employee' ? '1px solid #3b82f6' : '1px solid #cbd5e1',
+              backgroundColor: activeTab === 'employee' ? '#3b82f6' : '#ffffff',
+              color: activeTab === 'employee' ? '#ffffff' : '#475569'
             }}
           >
             직원별 급여 목록
@@ -297,60 +565,52 @@ export default function Payroll() {
             style={{
               padding: '6px 14px',
               borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              border: activeTab === 'department' ? '1px solid var(--color-brand, #3b82f6)' : '1px solid #cbd5e1',
-              backgroundColor: activeTab === 'department' ? 'var(--color-brand, #3b82f6)' : '#ffffff',
-              color: activeTab === 'department' ? '#ffffff' : '#475569',
+              border: activeTab === 'department' ? '1px solid #3b82f6' : '1px solid #cbd5e1',
+              backgroundColor: activeTab === 'department' ? '#3b82f6' : '#ffffff',
+              color: activeTab === 'department' ? '#ffffff' : '#475569'
             }}
           >
             부서별 급여 현황
           </button>
         </div>
 
-        {/* 직원 검색 (직원 탭 활성화 시에만 노출) */}
-        {activeTab === 'employee' && (
-          <div style={{ display: 'flex', gap: '6px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <label>
+            급여월
+            <input
+              type="month"
+              value={selectedPayMonth}
+              onChange={(event) => setSelectedPayMonth(event.target.value)}
+              style={{ marginLeft: '6px', padding: '6px 8px' }}
+            />
+          </label>
+          {activeTab === 'employee' && (
             <input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="사번, 이름, 부서 검색"
-              style={{
-                padding: '6px 12px',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                fontSize: '13px',
-                outline: 'none',
-                width: '200px'
-              }}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="사번, 이름, 부서, 직급 검색"
+              style={{ padding: '6px 12px', width: '220px' }}
             />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                style={{ padding: '0 8px', border: '1px solid #cbd5e1', background: '#f8fafc', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
-              >
-                초기화
-              </button>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* 5. 게시판 모듈 렌더링 (PaginationTable) */}
-      {activeTab === 'employee' ? (
+      {loading ? (
+        <p role="status">급여 정보를 불러오는 중입니다.</p>
+      ) : activeTab === 'employee' ? (
         <PaginationTable
-          title="직원별 급여 세부 내역 (직원명을 클릭하여 수정)"
-          th={empTableHeaders}
-          allData={empTableData}
+          key={`${selectedPayMonth}-${search}-${payrollList.length}`}
+          title="직원별 급여 세부 내역"
+          th={employeeHeaders}
+          allData={employeeTableData}
           itemsPerPage={5}
         />
       ) : (
         <PaginationTable
+          key={`${selectedPayMonth}-department-${payrollList.length}`}
           title="부서별 급여 집계 현황"
-          th={deptTableHeaders}
-          allData={deptTableData}
+          th={departmentHeaders}
+          allData={departmentTableData}
           itemsPerPage={5}
         />
       )}

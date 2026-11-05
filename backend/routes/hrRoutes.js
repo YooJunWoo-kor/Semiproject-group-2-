@@ -19,6 +19,22 @@ function isEmailString(value) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function isPayMonthString(value) {
+    return typeof value === 'string' && /^(\d{4})-(0[1-9]|1[0-2])$/.test(value);
+}
+
+function parseNonNegativeInteger(value) {
+    if (value === '' || value === null || value === undefined) {
+        return null;
+    }
+
+    const numberValue = Number(value);
+
+    return Number.isInteger(numberValue) && numberValue >= 0
+        ? numberValue
+        : null;
+}
+
 async function departmentExists(departmentId) {
     const [rows] = await promiseDb.query(
         'SELECT department_id FROM departments WHERE department_id = ?',
@@ -245,6 +261,292 @@ hrRouter.get('/api/hr/departments', async (req, res) => {
         return res.status(500).json({
             success: false,
             message: '부서 목록을 불러오지 못했습니다.'
+        });
+    }
+});
+
+
+// 급여월별 직원 급여 목록 조회
+hrRouter.get('/api/hr/payrolls', async (req, res) => {
+    const payMonth = String(req.query.payMonth || '').trim();
+
+    if (!isPayMonthString(payMonth)) {
+        return res.status(400).json({
+            success: false,
+            message: '급여월 형식은 YYYY-MM이어야 합니다.'
+        });
+    }
+
+    const query = `
+        SELECT
+            p.payroll_id AS payrollId,
+            e.employee_id AS employeeId,
+            e.employee_number AS employeeNumber,
+            e.name AS employeeName,
+            e.department_id AS departmentId,
+            d.department_name AS departmentName,
+            e.position,
+            e.employment_status AS employmentStatus,
+            p.pay_month AS payMonth,
+            p.base_salary AS baseSalary,
+            p.allowance,
+            p.deduction,
+            p.bonus,
+            p.gross_pay AS grossPay,
+            p.net_pay AS netPay,
+            DATE_FORMAT(p.payment_date, '%Y-%m-%d') AS paymentDate,
+            CASE
+                WHEN p.payroll_id IS NULL THEN '급여 미등록'
+                ELSE COALESCE(p.payment_status, '지급대기')
+            END AS paymentStatus
+        FROM employees e
+        LEFT JOIN departments d
+            ON d.department_id = e.department_id
+        LEFT JOIN payrolls p
+            ON p.employee_id = e.employee_id
+            AND p.pay_month = ?
+        WHERE e.employment_status IN ('재직', '휴직')
+        ORDER BY d.department_id, e.employee_id
+    `;
+
+    try {
+        const [rows] = await promiseDb.query(query, [payMonth]);
+
+        return res.json({
+            success: true,
+            data: rows
+        });
+    } catch (error) {
+        console.error('급여 목록 조회 오류:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: '급여 정보를 불러오지 못했습니다.'
+        });
+    }
+});
+
+
+// 급여 등록
+hrRouter.post('/api/hr/payrolls', async (req, res) => {
+    const employeeId = Number(req.body.employeeId);
+    const payMonth = String(req.body.payMonth || '').trim();
+    const baseSalary = parseNonNegativeInteger(req.body.baseSalary);
+    const allowance = parseNonNegativeInteger(req.body.allowance);
+    const deduction = parseNonNegativeInteger(req.body.deduction);
+    const bonus = parseNonNegativeInteger(req.body.bonus);
+    const paymentDate = String(req.body.paymentDate || '').trim() || null;
+    const paymentStatus = String(req.body.paymentStatus || '').trim() || '지급대기';
+
+    if (
+        !Number.isInteger(employeeId) ||
+        employeeId < 1 ||
+        !isPayMonthString(payMonth) ||
+        baseSalary === null ||
+        allowance === null ||
+        deduction === null ||
+        bonus === null ||
+        paymentStatus.length > 20
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: '급여 등록 정보를 올바르게 입력해 주세요.'
+        });
+    }
+
+    if (paymentDate && !isDateString(paymentDate)) {
+        return res.status(400).json({
+            success: false,
+            message: '지급일 형식은 YYYY-MM-DD여야 합니다.'
+        });
+    }
+
+    const grossPay = baseSalary + allowance + bonus;
+    const netPay = grossPay - deduction;
+
+    if (netPay < 0) {
+        return res.status(400).json({
+            success: false,
+            message: '공제액은 세전 총액보다 클 수 없습니다.'
+        });
+    }
+
+    try {
+        const [employeeRows] = await promiseDb.query(
+            'SELECT employee_id FROM employees WHERE employee_id = ?',
+            [employeeId]
+        );
+
+        if (employeeRows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '직원을 찾을 수 없습니다.'
+            });
+        }
+
+        const [existingRows] = await promiseDb.query(
+            `SELECT payroll_id
+             FROM payrolls
+             WHERE employee_id = ? AND pay_month = ?`,
+            [employeeId, payMonth]
+        );
+
+        if (existingRows.length > 0) {
+            return res.status(409).json({
+                success: false,
+                message: '해당 직원의 선택한 월 급여가 이미 등록되어 있습니다.'
+            });
+        }
+
+        const query = `
+            INSERT INTO payrolls (
+                employee_id,
+                pay_month,
+                base_salary,
+                allowance,
+                deduction,
+                bonus,
+                gross_pay,
+                net_pay,
+                payment_date,
+                payment_status
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const [result] = await promiseDb.query(query, [
+            employeeId,
+            payMonth,
+            baseSalary,
+            allowance,
+            deduction,
+            bonus,
+            grossPay,
+            netPay,
+            paymentDate,
+            paymentStatus
+        ]);
+
+        return res.status(201).json({
+            success: true,
+            data: {
+                payrollId: result.insertId,
+                grossPay,
+                netPay
+            },
+            message: '급여가 등록되었습니다.'
+        });
+    } catch (error) {
+        console.error('급여 등록 오류:', error);
+
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({
+                success: false,
+                message: '해당 직원의 선택한 월 급여가 이미 등록되어 있습니다.'
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: '급여를 등록하지 못했습니다.'
+        });
+    }
+});
+
+
+// 급여 수정
+hrRouter.put('/api/hr/payrolls/:payrollId', async (req, res) => {
+    const payrollId = Number(req.params.payrollId);
+    const baseSalary = parseNonNegativeInteger(req.body.baseSalary);
+    const allowance = parseNonNegativeInteger(req.body.allowance);
+    const deduction = parseNonNegativeInteger(req.body.deduction);
+    const bonus = parseNonNegativeInteger(req.body.bonus);
+    const paymentDate = String(req.body.paymentDate || '').trim() || null;
+    const paymentStatus = String(req.body.paymentStatus || '').trim() || '지급대기';
+
+    if (
+        !Number.isInteger(payrollId) ||
+        payrollId < 1 ||
+        baseSalary === null ||
+        allowance === null ||
+        deduction === null ||
+        bonus === null ||
+        paymentStatus.length > 20
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: '급여 수정 정보를 올바르게 입력해 주세요.'
+        });
+    }
+
+    if (paymentDate && !isDateString(paymentDate)) {
+        return res.status(400).json({
+            success: false,
+            message: '지급일 형식은 YYYY-MM-DD여야 합니다.'
+        });
+    }
+
+    const grossPay = baseSalary + allowance + bonus;
+    const netPay = grossPay - deduction;
+
+    if (netPay < 0) {
+        return res.status(400).json({
+            success: false,
+            message: '공제액은 세전 총액보다 클 수 없습니다.'
+        });
+    }
+
+    try {
+        const [existingRows] = await promiseDb.query(
+            'SELECT payroll_id FROM payrolls WHERE payroll_id = ?',
+            [payrollId]
+        );
+
+        if (existingRows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '급여 기록을 찾을 수 없습니다.'
+            });
+        }
+
+        const query = `
+            UPDATE payrolls
+            SET base_salary = ?,
+                allowance = ?,
+                deduction = ?,
+                bonus = ?,
+                gross_pay = ?,
+                net_pay = ?,
+                payment_date = ?,
+                payment_status = ?
+            WHERE payroll_id = ?
+        `;
+        await promiseDb.query(query, [
+            baseSalary,
+            allowance,
+            deduction,
+            bonus,
+            grossPay,
+            netPay,
+            paymentDate,
+            paymentStatus,
+            payrollId
+        ]);
+
+        return res.json({
+            success: true,
+            data: {
+                payrollId,
+                grossPay,
+                netPay
+            },
+            message: '급여 정보가 수정되었습니다.'
+        });
+    } catch (error) {
+        console.error('급여 수정 오류:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: '급여 정보를 수정하지 못했습니다.'
         });
     }
 });
