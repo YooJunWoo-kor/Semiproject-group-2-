@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { getLoginUser } from "../../../../utils/authStorage";
 import { useNavigate } from "react-router-dom";
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api";
@@ -7,9 +8,10 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:400
 function DraftReq({ drafts, loginUser, setEditingDraft, onDraftChanged }) {
     const [searchText, setSearchText] = useState("");
     const navigate = useNavigate();
+    const employeeId = getLoginUser()?.employeeKey;
 
     const requestedDrafts = drafts.filter(draft =>
-        draft.writerEmployeeKey === loginUser?.employeeKey &&
+        draft.writerEmployeeKey === employeeId &&
         draft.status !== "최종승인" &&
         draft.title.includes(searchText)
     );
@@ -18,7 +20,7 @@ function DraftReq({ drafts, loginUser, setEditingDraft, onDraftChanged }) {
         if (!window.confirm("임시저장 기안서를 삭제하시겠습니까?")) return;
         try {
             await axios.delete(`${API_BASE_URL}/drafts/${id}`, {
-                params: { employeeId: loginUser.employeeKey }
+                params: { employeeId }
             });
             await onDraftChanged();
         } catch (error) {
