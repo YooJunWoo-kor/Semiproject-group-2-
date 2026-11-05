@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getLoginUser } from '../../../../utils/authStorage';
 import PaginationTable from '../../../../components/PaginationTable';
 import ModalBase from '../../../../components/ModalBase';
 import StatisticsCard from '../../../../components/StatisticsCard';
-import './EmployeeManagement.css';
 import {
   createHrEmployee,
   getHrEmployees,
@@ -126,6 +126,12 @@ function getAccountStatusLabel(accountStatus) {
   if (accountStatus === 'INACTIVE') return '비활성';
   if (accountStatus === 'SUSPENDED') return '정지';
   return '-';
+}
+
+function getEmploymentStatusClass(employmentStatus) {
+  if (employmentStatus === '재직') return 'working';
+  if (employmentStatus === '휴직') return 'leave';
+  return 'off';
 }
 
 function EmployeeForm(props) {
@@ -289,28 +295,21 @@ function EmployeeForm(props) {
 function EmployeeDetail({ employee }) {
   const details = [
     ['사번', employee.employeeNumber],
-    ['이름', employee.name],
     ['부서', employee.departmentName || '-'],
     ['직급', employee.position],
     ['이메일', employee.email],
     ['전화번호', employee.phone || '-'],
     ['입사일', employee.hireDate],
-    ['재직 상태', employee.employmentStatus],
     ['권한', employee.role || '-'],
     ['계정 상태', getAccountStatusLabel(employee.accountStatus)]
   ];
 
   return (
-    <div style={formGridStyle}>
+    <div className="hr-employee-detail-fields">
       {details.map((detail) => (
-        <div
-          key={detail[0]}
-          style={{ padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '6px' }}
-        >
-          <span style={labelStyle}>{detail[0]}</span>
-          <strong style={{ color: '#1e293b', fontSize: '14px' }}>
-            {detail[1]}
-          </strong>
+        <div key={detail[0]} className="hr-employee-detail-field">
+          <span>{detail[0]}</span>
+          <strong>{detail[1]}</strong>
         </div>
       ))}
     </div>
@@ -434,8 +433,15 @@ export default function Employees() {
     (employee) => employee.employmentStatus === '재직'
   ).length;
   const averageDepartmentCount = departments.length
-    ? Math.round(workingCount / departments.length)
+    ? Math.round((workingCount / departments.length) * 10) / 10
     : 0;
+  const selectedDepartmentName =
+    selectedDepartment === '전체'
+      ? '전체 부서'
+      : departments.find(
+          (department) =>
+            String(department.departmentId) === String(selectedDepartment)
+        )?.departmentName || '부서 미선택';
   const departmentCards = departments.map((department) => ({
     ...department,
     memberCount: employees.filter(
@@ -640,20 +646,28 @@ export default function Employees() {
         onClick={() => setSelectedEmployee(employee)}
         style={{ padding: 0, color: '#1d4ed8', background: 'none', border: 0, cursor: 'pointer', textDecoration: 'underline' }}
       >
-        <strong className="emp-name">{employee.name}</strong>
+        <strong
+          className={`emp-name ${
+            selectedEmployee?.employeeId === employee.employeeId
+              ? 'hr-selected-employee'
+              : ''
+          }`}
+        >
+          {employee.name}
+        </strong>
       </button>,
       employee.departmentName || '-',
       <span className="emp-position">{employee.position}</span>,
       employee.email,
       <span
-        className={`status-tag ${
-          employee.employmentStatus === '재직' ? 'working' : 'off'
-        }`}
+        className={`status-tag ${getEmploymentStatusClass(
+          employee.employmentStatus
+        )}`}
       >
         {employee.employmentStatus}
       </span>,
       <span
-        className={`status-tag ${
+        className={`status-tag account-status-tag ${
           employee.accountStatus === 'ACTIVE' ? 'working' : 'off'
         }`}
       >
@@ -696,7 +710,7 @@ export default function Employees() {
       <header className="dashboard-header">
         <div>
           <span className="subtitle">직원·부서 통합관리</span>
-          <span className="subtext">직원 목록과 부서별 구성원 정보를 한 화면에서 관리합니다.</span>
+          <span className="subtext">직원 정보와 부서 구성을 한 화면에서 관리합니다.</span>
         </div>
 
         <div className="dashboard-top">
@@ -708,6 +722,16 @@ export default function Employees() {
               disabled={departments.length === 0}
             >
               직원 등록
+            </button>
+          )}
+          {isMaster && (
+            <button
+              type="button"
+              className="hr-department-register-button"
+              disabled
+              title="부서 등록 API가 아직 구현되지 않았습니다."
+            >
+              부서 등록
             </button>
           )}
         </div>
@@ -753,9 +777,12 @@ export default function Employees() {
 
       <section className="stats-section">
         <StatisticsCard title="전체 직원" count={employees.length} stiyle={1} />
-        <StatisticsCard title="재직" count={workingCount} stiyle={1} />
+        <StatisticsCard title="재직 직원" count={workingCount} stiyle={1} />
         <StatisticsCard title="전체 부서" count={departments.length} stiyle={0} />
-        <StatisticsCard title="평균 부서 인원" count={averageDepartmentCount} stiyle={1} />
+        <div className="content-card hr-average-card">
+          <p>평균 부서 인원</p>
+          <span>{averageDepartmentCount.toFixed(1)}</span>명
+        </div>
       </section>
 
       {notice && (
@@ -771,26 +798,17 @@ export default function Employees() {
       )}
 
       {/* 검색 및 필터 */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '12px',
-          flexWrap: 'wrap',
-          marginTop: '16px',
-          marginBottom: '12px'
-        }}
-      >
-        <div style={{ fontSize: '14px', color: '#475569' }}>
+      <div className="hr-filter-card">
+        <div className="hr-filter-result">
           조회 직원 <strong>{filteredEmployees.length}</strong>명
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div className="hr-filter-controls">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="사번, 이름, 이메일, 직급 검색"
+            aria-label="통합검색"
+            placeholder="통합검색: 사번, 이름, 이메일, 직급"
             style={{
               padding: '7px 12px',
               border: '1px solid #cbd5e1',
@@ -838,6 +856,14 @@ export default function Employees() {
             <option value="INACTIVE">비활성</option>
             <option value="SUSPENDED">정지</option>
           </select>
+
+          <button
+            type="button"
+            className="hr-filter-query-button"
+            onClick={() => setNotice('현재 검색 조건으로 목록을 표시하고 있습니다.')}
+          >
+            조회
+          </button>
 
           <button
             type="button"
@@ -902,6 +928,13 @@ export default function Employees() {
           </aside>
 
           <section className="hr-panel employee-list-panel">
+            <div className="hr-section-heading">
+              <div>
+                <h2>소속 직원</h2>
+                <p>{selectedDepartmentName} · {filteredEmployees.length}명</p>
+              </div>
+              <span>전체 {filteredEmployees.length}명</span>
+            </div>
             <PaginationTable
               key={
                 search +
@@ -928,6 +961,23 @@ export default function Employees() {
 
             {selectedEmployee ? (
               <>
+                <div className="hr-detail-summary">
+                  <div>
+                    <h3>{selectedEmployee.name}</h3>
+                    <p>
+                      {selectedEmployee.employeeNumber} ·{' '}
+                      {selectedEmployee.departmentName || '-'} ·{' '}
+                      {selectedEmployee.position}
+                    </p>
+                  </div>
+                  <span
+                    className={`status-tag ${getEmploymentStatusClass(
+                      selectedEmployee.employmentStatus
+                    )}`}
+                  >
+                    {selectedEmployee.employmentStatus}
+                  </span>
+                </div>
                 <EmployeeDetail employee={selectedEmployee} />
                 <div className="employee-detail-actions">
                   {isMaster && (
@@ -947,6 +997,12 @@ export default function Employees() {
                       퇴사 처리
                     </button>
                   )}
+                  <Link
+                    to="/main/hr/attendance"
+                    className="hr-attendance-link"
+                  >
+                    근태 상세 보기
+                  </Link>
                 </div>
               </>
             ) : (

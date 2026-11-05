@@ -3,7 +3,6 @@ import { getLoginUser } from '../../../utils/authStorage';
 import BasicCalendar from '../../../components/calendar/BasicCalendar';
 import WeeklyCalendar from '../../../components/weeklycalendar/WeeklyCalendar';
 import '../../../components/ADComp.css';
-import './HRAttendanceView.css';
 
 const attendanceType = {
     '정상': 0,

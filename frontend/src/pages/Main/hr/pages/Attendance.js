@@ -6,7 +6,6 @@ import {
   getHrAttendance,
   getHrOrganization
 } from "../../../../components/HrData";
-import "../HRAttendanceView.css";
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 
 function getLatestMonth(data) {
