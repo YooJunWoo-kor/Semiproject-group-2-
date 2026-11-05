@@ -1,10 +1,12 @@
 import axios from 'axios';
 
-const LOGIN_USER_KEY = "loginUser";
+export const LOGIN_USER_KEY = "loginUser";
 const EMPLOYEE_ACCOUNT_KEY = "employeeAccounts";
 
 // env에서 설정한 api를 사용하거나, 없다면 기본값 4000번 포트 사용.
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000/api';
+//export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000/api';
+const defaultHost = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${defaultHost}:4000/api`;
 
 // 로그인 사용자 저장
 export function saveLoginUser(user) {
@@ -21,6 +23,16 @@ export function getLoginUser() {
 
     return JSON.parse(user);
 }
+
+//오늘날짜 조회
+export function getTodayString (){
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0'); // 월은 0부터 시작하므로 +1
+    const day = String(today.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  };
 
 //출결 데이터 포멧팅 함수
 function formatDateToYYYYMMDD(dateString) {
@@ -44,7 +56,7 @@ export async function getAttendance(){
     title: "정상출근"*/
 
      try {
-         const data = await axios.post(API_BASE_URL + '/attendance',{userID})
+         const data = await axios.post(API_BASE_URL + '/AD/attendance',{userID})
          const dataSet = data.data.data;
 
          const formattedData = dataSet.map((item)=>{
@@ -65,9 +77,6 @@ export async function getAttendance(){
                 )
             }
          });
-
-         console.log(formattedData);
-
          return formattedData || [];
      } catch (err) {
         console.error("error:", err);
@@ -174,17 +183,17 @@ export async function findLoginAccount (loginId,password) {
     //return alert(API_BASE_URL);
     
     try{
-         const response = await axios.post(API_BASE_URL + '/login',{
+        const response = await axios.post(API_BASE_URL + '/login',{
             email: inputId,
             password: inputPassword
          })
-
-         return response.data;
-    }catch(error){
+        return response.data;
+    }
+    catch(error){
         if(error.response && error.response.data){
             return error.response.data.message;
         }
-        return(error.response.data.message || '서버와 통신할 수 없습니다.');
+        return alert('서버와 통신할 수 없습니다.');
     }
 
     // -----------------------------

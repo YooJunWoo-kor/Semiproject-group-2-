@@ -99,8 +99,6 @@ function ProductDetail() {
             qualityScore
         };
 
-        console.log(inspectionData);
-
         alert("검사 결과가 저장되었습니다.");
     };
 

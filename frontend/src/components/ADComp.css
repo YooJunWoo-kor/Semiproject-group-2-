@@ -40,7 +40,7 @@
     line-height: 1.4;
   }
   
-  .attendance-user-info .user-greeting {
+  .user-greeting {
     display: block;
     font-size: 12px;
     color: #94a3b8;
@@ -121,3 +121,79 @@
     text-align: center;
     color: #b0b4be;
   }
+
+  /* 태그들을 감싸는 플렉스 컨테이너 */
+.badge-container {
+  display: flex;
+  flex-flow: column;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* 태그 기본 공통 스타일 (캡슐 알약 형태) */
+.attendance-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 9999px; /* 완전한 둥근 알약 모양 */
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: all 0.2s ease-in-out;
+  user-select: none;
+}
+
+/* 태그 내 제목 텍스트 */
+.tag-label {
+  opacity: 0.85;
+}
+
+/* 태그 내 강조 숫자 */
+.tag-value {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.2px;
+}
+
+/* 숫자 뒤에 붙는 단위 (일, 회, 시간) */
+.tag-unit {
+  font-size: 11px;
+  font-weight: 400;
+  margin-left: 2px;
+  opacity: 0.9;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   컬러 테마별 스타일 (눈이 편안한 파스텔 톤 배경 + 진한 텍스트)
+────────────────────────────────────────────────────────────── */
+
+/* 잔여 연차 (세이지 에메랄드) */
+.tag-emerald {
+  background-color: #ecfdf5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+
+/* 야근 횟수 (웜 앰버) */
+.tag-amber {
+  background-color: #fffbeb;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+/* 정상 근무 / 일반 (소프트 블루) */
+.tag-blue {
+  background-color: #eff6ff;
+  color: #1e40af;
+  border-color: #bfdbfe;
+}
+
+/* 지각 / 결근 주의 (뮤트 레드) */
+.tag-red {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border-color: #fecaca;
+}

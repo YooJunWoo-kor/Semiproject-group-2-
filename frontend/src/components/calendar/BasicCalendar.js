@@ -60,13 +60,6 @@ function BasicCalendar({ schedule = [] }) {
   function getDaySchedules(day) {
     const date = formatDate(day);
 
-    // schedule.map((item)=>{
-    //   let isTest = item.start <= date && date <= item.end;
-    //   if(isTest){
-    //     console.log("true");
-    //   }
-    // })
-
     return schedule.filter(item =>
       item.start <= date && date <= item.end
     );
@@ -140,7 +133,6 @@ function BasicCalendar({ schedule = [] }) {
                         {/* 해당 날짜의 일정 */}
                         {getDaySchedules(day).map((item, index) => {
                             const setColor = CALENDAR_COLORS[item.typeId];
-                            console.log(item.title);
 
                             return <div
                               className="basic-calendar-schedule"
