@@ -13,6 +13,7 @@ import { getEmployeeAccounts, getLoginUser } from "../../../utils/authStorage";
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api";
 
+
 function toDraft(draft, loginUser) {
     const statuses = {
         DRAFT: "임시저장",
@@ -28,7 +29,7 @@ function toDraft(draft, loginUser) {
         status: statuses[draft.status] || draft.status,
         createdAt: draft.created_at ? new Date(draft.created_at).toLocaleString("ko-KR") : "",
         writerEmployeeKey: draft.employee_id,
-        writerName: draft.writer_name || (draft.employee_id === loginUser?.employee_id ? loginUser.name : ""),
+        writerName: draft.writer_name || (draft.employee_id === loginUser?.employeeKey ? loginUser.name : ""),
         approvers: [],
         currentApprovalStep: 0
     };
@@ -42,7 +43,7 @@ function MyTeskList() {
     const [approvedDrafts, setApprovedDrafts] = useState([]);
     const [draftError, setDraftError] = useState("");
     const loginUser = getLoginUser();
-    const employeeId = loginUser?.employee_id;
+    const employeeId = loginUser?.employeeKey;
     const mainUrl = "/main/mytesk";
 
     useEffect(() => {

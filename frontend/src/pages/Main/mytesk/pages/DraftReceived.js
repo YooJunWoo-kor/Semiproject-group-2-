@@ -8,7 +8,7 @@ function DraftReceived({ drafts, loginUser, onDraftChanged }) {
         if (decision === "reject" && !window.confirm("이 기안서를 반려하시겠습니까?")) return;
         try {
             await axios.post(`${API_BASE_URL}/drafts/${id}/decision`, {
-                employeeId: loginUser.employee_id,
+                employeeId: loginUser.employeeKey,
                 decision
             });
             await onDraftChanged();

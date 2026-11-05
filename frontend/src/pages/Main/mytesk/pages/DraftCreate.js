@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import ModalBase from "../../../../components/ModalBase"
 import axios from "axios";
+import { getLoginUser } from "../../../../utils/authStorage";
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api"
 
@@ -124,7 +125,8 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:400
             }
         }
 
-        const employeeId = loginUser?.employee_id;
+        getLoginUser().employeeKey
+        const employeeId = loginUser?.employeeKey;
         if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
             alert("로그인 사용자 정보가 올바르지 않습니다.");
             return;

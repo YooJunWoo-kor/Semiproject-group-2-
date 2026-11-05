@@ -9,7 +9,7 @@ function DraftReq({ drafts, loginUser, setEditingDraft, onDraftChanged }) {
     const navigate = useNavigate();
 
     const requestedDrafts = drafts.filter(draft =>
-        draft.writerEmployeeKey === loginUser?.employee_id &&
+        draft.writerEmployeeKey === loginUser?.employeeKey &&
         draft.status !== "최종승인" &&
         draft.title.includes(searchText)
     );
@@ -18,7 +18,7 @@ function DraftReq({ drafts, loginUser, setEditingDraft, onDraftChanged }) {
         if (!window.confirm("임시저장 기안서를 삭제하시겠습니까?")) return;
         try {
             await axios.delete(`${API_BASE_URL}/drafts/${id}`, {
-                params: { employeeId: loginUser.employee_id }
+                params: { employeeId: loginUser.employeeKey }
             });
             await onDraftChanged();
         } catch (error) {
