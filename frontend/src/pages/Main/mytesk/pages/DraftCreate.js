@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import ModalBase from "../../../../components/ModalBase"
 import axios from "axios";
 
-const API_BASE_URL = process.REACT_APP_API_BASE_URL || "http://localhost:4000/api"
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api"
 
     function DraftCreate({
         drafts,
@@ -10,7 +10,8 @@ const API_BASE_URL = process.REACT_APP_API_BASE_URL || "http://localhost:4000/ap
         loginUser,
         employees,
         editingDraft, 
-        setEditingDraft
+        setEditingDraft,
+        onDraftChanged
     }){
     
 
@@ -123,132 +124,47 @@ const API_BASE_URL = process.REACT_APP_API_BASE_URL || "http://localhost:4000/ap
             }
         }
 
-        let savedDraftId = null;
-
-        if(saveType === "temporary"){
-
-            if(editingDraft){
-                alert("기존 임시저장 문서 수정은 다음 단계에서 연결합니다");
-                return;
-            }
-
-            try {
-                const response = await axios.post(
-                    `${API_BASE_URL}/drafts`,
-                    {
-                        employeeId : loginUser.employee_id,
-                        title : title,
-                        documentType: draftType,
-                        content : content
-                    }
-                );
-
-                savedDraftId = response.data.draftId;
-
-                alert("기안서 임시저장 완료")
-            }catch(error){
-                console.error("기안서 임시저장 오류:", error);
-                alert("기안서 임시저장 실패");
-                return;
-            }
+        const employeeId = loginUser?.employee_id;
+        if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+            alert("로그인 사용자 정보가 올바르지 않습니다.");
+            return;
         }
 
-        if (saveType === "submit") {
-
-            if (editingDraft) {
-                alert("기존 임시저장 문서의 상신은 다음 단계에서 연결합니다.");
-                return;
-            }
-        
-            const approverIds = approvers.map(
-                approver => approver.employee_id
-            );
-        
-            try {
-                const response = await axios.post(
-                    `${API_BASE_URL}/drafts/submit`,
-                    {
-                        employeeId: loginUser.employee_id,
-                        title: title,
-                        documentType: draftType,
-                        content: content,
-                        approverIds: approverIds
-                    }
-                );
-        
-                savedDraftId = response.data.draftId;
-        
-                alert("기안서 상신 완료");
-        
-            } catch (error) {
-                console.error("기안서 상신 오류:", error);
-                alert("기안서 상신에 실패했습니다.");
-                return;
-            }
-        }
-
-
-        const draftData = {
-
-            id: Date.now(),
-
-            title: title,
-            draftType: draftType,
-            content: content,
-
-            status:
-                saveType === "temporary"
-                    ? "임시저장"
-                    : "결재대기",
-
-            createdAt: new Date().toLocaleDateString(),
-
-            writerEmployeeKey: loginUser.employeeKey,
-            writerName: loginUser.name,
-            writerDepartment: loginUser.department_id,
-            writerPosition: loginUser.position,
-
-            approvers: approvers,
-            currentApprovalStep: 0,
-
-            startDate: startDate,
-            endDate: endDate,
-
-            itemName: itemName,
-            quantity: quantity,
-
-            useDate: useDate,
-            amount: amount
+        const payload = {
+            employeeId,
+            title,
+            documentType: draftType,
+            content
         };
 
-
-        // 임시저장 문서를 이어서 작성한 경우
-        if (editingDraft) {
-
-            const updatedDrafts = drafts.map((draft) => {
-
-                if (draft.id === editingDraft.id) {
-
-                    return {
-                        ...draftData,
-                        id: editingDraft.id
-                    };
+        try {
+            if (editingDraft) {
+                // 기존 임시저장 문서의 수정 내용을 먼저 DB에 반영한다.
+                await axios.patch(`${API_BASE_URL}/drafts/${editingDraft.id}`, payload);
+                if (saveType === "submit") {
+                    const approverIds = approvers.map(approver => approver.employee_id);
+                    await axios.post(`${API_BASE_URL}/drafts/${editingDraft.id}/submit`, {
+                        employeeId,
+                        approverIds
+                    });
                 }
-
-                return draft;
-            });
-
-            setDrafts(updatedDrafts);
-
-        } else {
-
-            // 새 기안서 작성
-            setDrafts([
-                ...drafts,
-                draftData
-            ]);
+            } else if (saveType === "temporary") {
+                await axios.post(`${API_BASE_URL}/drafts`, payload);
+            } else {
+                const approverIds = approvers.map(approver => approver.employee_id);
+                await axios.post(`${API_BASE_URL}/drafts/submit`, {
+                    ...payload,
+                    approverIds
+                });
+            }
+            await onDraftChanged();
+            alert(saveType === "temporary" ? "기안서 임시저장 완료" : "기안서 상신 완료");
+        } catch (error) {
+            console.error("기안서 DB 저장 오류:", error);
+            alert(error.response?.data?.message ||
+                (saveType === "temporary" ? "기안서 임시저장 실패" : "기안서 상신 실패"));
+            return;
         }
-
 
         // 입력값 초기화
         setTitle("");
@@ -468,7 +384,7 @@ const API_BASE_URL = process.REACT_APP_API_BASE_URL || "http://localhost:4000/ap
 
                                             approvers.filter((item) => {
                                                 return (
-                                                    item.employeeKey !==
+                                                    item.employee_id !==
                                                     approver.employee_id
                                                 );
                                             })
