@@ -66,6 +66,22 @@ function ScheduleModalPopup(){
   const [timerNum, setTimerNum] = useState(10);
   const [timerType, setTimerType] = useState('h');
   const [timerTiming, setTimerTiming] = useState('REPEAT')
+  const [startTimeH, setStratTimeH] = useState('00');
+  const [startTimeM, setStratTimeM] = useState('00');
+  const [endTimeH, setEndTimeH] = useState('00');
+  const [endTimeM, setEndTimeM] = useState('00');
+
+  const hList = [];
+  for(let i = 0; i < 24; i++){
+    hList.push(String(i).padStart(2,0));
+  }
+
+  const mList = [];
+  for(let i = 0; i <= 60; i+=5){
+    mList.push(String(i).padStart(2,0));
+  }
+
+  console.log(mList)
 
   //유저 리스트 추가
   const listset = function(value){
@@ -121,6 +137,43 @@ function ScheduleModalPopup(){
             onChange={(e)=>{setEndDay(e.target.value)}}
             required
           />
+        </div>
+      </div>
+      {/* 시작일 & 종료일 (2열 가로 정렬) */}
+      <div style = {{display:'flex'}}>
+        <div className="form-group" style={{ flex: 1 }}>
+          <label>시작 시간</label>
+          <div style={{display: 'flex'}}>
+            <select >
+              <option>시</option>
+              {hList.map((item)=>(
+                <option value={item}>{item}</option>
+              ))}
+            </select>
+            <select>
+              <option>분</option>
+              {mList.map((item)=>(
+                <option value={item}>{item}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="form-group" style={{ flex: 1 }}>
+          <label>마감 시간</label>
+          <div style={{display: 'flex'}}>
+            <select>
+              <option value={item}>시</option>
+              {hList.map((item)=>(
+                <option value={item}>{item}</option>
+              ))}
+            </select>
+            <select>
+              <option>분</option>
+              {mList.map((item)=>(
+                <option>{item}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
