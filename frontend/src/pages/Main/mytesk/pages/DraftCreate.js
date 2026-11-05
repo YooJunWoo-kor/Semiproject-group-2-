@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import ModalBase from "../../../../components/ModalBase"
+import ModalBase from "../../../../components/ModalBase";
+import DepartmentEmployeePicker from "../../../../components/DepartmentEmployeePicker";
 import axios from "axios";
 import { getLoginUser } from "../../../../utils/authStorage";
 
@@ -23,7 +24,6 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:400
     const [approvers, setApprovers] = useState([]);
 
     const [showApproverModal, setShowApproverModal] = useState(false);
-    const [selectedDepartment, setSelectedDepartment] = useState("");
     const [tempApprover, setTempApprover] = useState(null);
 
     const [startDate, setStartDate] = useState("");
@@ -60,13 +60,6 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:400
     }, [editingDraft]);
 
 
-
-
-    const departments = [
-        ...new Set(
-            employees.map((employee) => employee.department_name)
-        )
-    ];
 
 
     async function handleSubmit(e, saveType) {
@@ -431,83 +424,17 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:400
 
                <ModalBase title="결재자 추가" onClose={() => { 
                 setShowApproverModal(false); 
-                setSelectedDepartment("");
                 setTempApprover(null);
             }}
             layout={
                 <div className="draft-box">
 
-                    <h4>부서 선택</h4>
-            
-
-
-                    <div className="draft-row">
-
-                        {departments.map((department) => (
-
-                            <button
-                                type="button"
-                                key={department}
-                                onClick={() => {
-
-                                    setSelectedDepartment(department);
-                                    setTempApprover(null);
-                                }}
-                            >
-                                {department}
-                            </button>
-
-                        ))}
-
-                    </div>
-
-
-                    {selectedDepartment && (
-
-                        <div className="draft-box">
-
-                            <h4>{selectedDepartment}</h4>
-
-
-                            {employees
-
-                                .filter((employee) => {
-                                    return (
-                                        employee.department_name ===
-                                        selectedDepartment
-                                    );
-                                })
-
-                                .map((employee) => (
-
-                                    <div
-                                        key={employee.employee_id}
-                                        className="draft-row"
-                                    >
-
-                                        <label>
-
-                                            <input
-                                                type="radio"
-                                                name="approver"
-                                                onChange={() =>
-                                                    setTempApprover(employee)
-                                                }
-                                            />
-
-                                            {employee.name}
-                                            {" / "}
-                                            {employee.position}
-
-                                        </label>
-
-                                    </div>
-
-                                ))}
-
-                        </div>
-                    )}
-
+                    <DepartmentEmployeePicker
+                        employees={employees}
+                        selectedEmployee={tempApprover}
+                        onSelect={setTempApprover}
+                        radioName="draft-approver"
+                    />
 
                     <div className="draft-actions">
 
@@ -547,8 +474,7 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:400
 
 
                                 setShowApproverModal(false);
-                                setSelectedDepartment("");
-                                setTempApprover(null);
+                                                setTempApprover(null);
                             }}
                         >
                             결재자 선택
@@ -560,8 +486,7 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:400
                             onClick={() => {
 
                                 setShowApproverModal(false);
-                                setSelectedDepartment("");
-                                setTempApprover(null);
+                                                setTempApprover(null);
                             }}
                         >
                             취소
