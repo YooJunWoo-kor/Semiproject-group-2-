@@ -92,6 +92,7 @@ router.post('/submit', async (req, res) => {
 });
 
 
+
 // 3. 기안서 상세 조회
 router.get('/:draftId', async (req, res) => {
     const draftId = Number(req.params.draftId);
@@ -136,5 +137,32 @@ router.get('/:draftId', async (req, res) => {
         });
     }
 });
+
+router.get('/', async (req, res) => {
+    
+})
+
+// 내가 작성한 기안서 목록 조회
+router.get('/', async (req,res) => {
+    const employeeId = Number(req.query.employeeId);
+
+    if(!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+        return res.status(400).json({
+            message: '올바른 사원 ID가 필요합니다.'
+        });
+    }
+
+    try {
+        const rows = await Draft.getByEmployeeId(employeeId);
+
+        return res.status(200).json(rows);
+    } catch (error) {
+        console.error('기안서 목록 조회 오류:', error);
+
+        return res.status(500).json({
+            message: '기안서 목록 조회 중 오류가 발생했습니다.'
+        })
+    }
+})
 
 module.exports = router;

@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import ModalBase from "../../../../components/ModalBase"
+import axios from "axios";
+
+const API_BASE_URL = process.REACT_APP_API_BASE_URL || "http://localhost:4000/api"
 
     function DraftCreate({
         drafts,
@@ -9,6 +12,7 @@ import ModalBase from "../../../../components/ModalBase"
         editingDraft, 
         setEditingDraft
     }){
+    
 
     const [title, setTitle] = useState("");
     const [draftType, setDraftType] = useState("일반");
@@ -63,7 +67,7 @@ import ModalBase from "../../../../components/ModalBase"
     ];
 
 
-    function handleSubmit(e, saveType) {
+    async function handleSubmit(e, saveType) {
 
         e.preventDefault();
 
@@ -116,6 +120,70 @@ import ModalBase from "../../../../components/ModalBase"
                     alert("사용일과 금액을 입력해주세요.");
                     return;
                 }
+            }
+        }
+
+        let savedDraftId = null;
+
+        if(saveType === "temporary"){
+
+            if(editingDraft){
+                alert("기존 임시저장 문서 수정은 다음 단계에서 연결합니다");
+                return;
+            }
+
+            try {
+                const response = await axios.post(
+                    `${API_BASE_URL}/drafts`,
+                    {
+                        employeeId : loginUser.employee_id,
+                        title : title,
+                        documentType: draftType,
+                        content : content
+                    }
+                );
+
+                savedDraftId = response.data.draftId;
+
+                alert("기안서 임시저장 완료")
+            }catch(error){
+                console.error("기안서 임시저장 오류:", error);
+                alert("기안서 임시저장 실패");
+                return;
+            }
+        }
+
+        if (saveType === "submit") {
+
+            if (editingDraft) {
+                alert("기존 임시저장 문서의 상신은 다음 단계에서 연결합니다.");
+                return;
+            }
+        
+            const approverIds = approvers.map(
+                approver => approver.employee_id
+            );
+        
+            try {
+                const response = await axios.post(
+                    `${API_BASE_URL}/drafts/submit`,
+                    {
+                        employeeId: loginUser.employee_id,
+                        title: title,
+                        documentType: draftType,
+                        content: content,
+                        approverIds: approverIds
+                    }
+                );
+        
+                savedDraftId = response.data.draftId;
+        
+                alert("기안서 상신 완료");
+        
+            } catch (error) {
+                console.error("기안서 상신 오류:", error);
+                alert("기안서 상신에 실패했습니다.");
+                return;
             }
         }
 

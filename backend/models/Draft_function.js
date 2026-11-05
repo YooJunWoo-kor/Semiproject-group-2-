@@ -34,6 +34,31 @@ class Draft {
         })
     }
 
+    static getByEmployeeId(employeeId) {
+        const sql = `
+            SELECT
+                draft_id,
+                employee_id,
+                title,
+                document_type,
+                content,
+                status,
+                created_at
+            FROM my_draft
+            WHERE employee_id = ? 
+            ORDER BY created_at DESC, draft_id DESC
+        `
+
+        db.query(sql,[employeeId],(err,rows) => {
+            if(err){
+                return reject(err);
+            }
+
+            resolve(rows);
+        })
+
+    }
+
     static create(employeeId, title, documentType, content) {
         return new Promise((resolve, reject) => {
             const sql = `
@@ -89,7 +114,7 @@ class Draft {
                     return reject(err)
                 }
 
-                resolve(result.inserId);
+                resolve(result.insertId);
             })
         })
     }

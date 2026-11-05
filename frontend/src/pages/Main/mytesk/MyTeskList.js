@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
+import axios from "axios";
 
 import Nav from "../../../components/Nav";
 import ADComp from "../../../components/ADComp";
@@ -9,40 +10,50 @@ import DraftReq from "./pages/DraftReq";
 import DraftComp from "./pages/DraftComp";
 import DraftReceived from "./pages/DraftReceived";
 import DraftApproved from "./pages/DraftApproved";
-import { getEmployeeAccounts, getLoginUser } from "../../../utils/authStorage";
 
 function MyTeskList() {
-    const [employees, setEmployees] = useState([]);
+
+    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api";
 
     useEffect(() => {
-        async function loadEmployees() {
-            try{
-                const data = await getEmployeeAccounts();
-
-                setEmployees(data);
-            }catch(error) {
-                console.error(error);
+        async function loadDrafts() {
+            const employeeId = loginUser?.employee_id;
+    
+            if (!Number.isSafeInteger(employeeId)) {
+                return;
+            }
+    
+            try {
+                const response = await axios.get(
+                    `${API_BASE_URL}/drafts`,
+                    {
+                        params: {
+                            employeeId: employeeId
+                        }
+                    }
+                );
+    
+                const dbDrafts = response.data.map(draft => ({
+                    id: draft.draft_id,
+                    title: draft.title,
+                    draftType: draft.document_type,
+                    content: draft.content,
+                    status: draft.status === "DRAFT" ? "임시저장" : draft.status === "PENDING" ? "결재대기" : draft.status,
+                    createdAt: draft.created_at,
+                    writerEmployeeKey: loginUser.employeeKey,
+                    writerName: loginUser.name,
+                    approvers: []
+                }));
+    
+                setDrafts(dbDrafts);
+    
+            } catch (error) {
+                console.error("기안서 목록 조회 오류:", error);
             }
         }
-
-        loadEmployees();
-    },[])
-
-    const [editingDraft, setEditingDraft] = useState(null);
-    const loginUser = getLoginUser();
-
-    const mainUrl = "/main/mytesk";
-    const [drafts, setDrafts] = useState(() => {
-    const savedDrafts = localStorage.getItem("drafts");
     
-    
-
-        if (savedDrafts) {
-            return JSON.parse(savedDrafts);
-        }
-
-        return [];
-    });
+        loadDrafts();
+    }, [loginUser?.employee_id]);
 
 
     const urlList = [
