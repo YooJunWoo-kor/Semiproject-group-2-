@@ -1,19 +1,13 @@
 import StatisticsCard from '../../../components/StatisticsCard';
-import axios from 'axios';
 import { getLoginUser } from '../../../utils/authStorage';
 import { useEffect, useState } from 'react';
 import ModalBase from '../../../components/ModalBase';
 import HRAttendanceView from './HRAttendanceView';
-
-const API_BASE_URL =
-    process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000/api';
-
-const departmentButtons = [
-    { label: '인사', departmentId: 2, departmentName: '인사팀' },
-    { label: '재무', departmentId: 1, departmentName: '경영지원부서' },
-    { label: '품질', departmentId: 3, departmentName: '제품개발부서' },
-    { label: '고객관리', departmentId: 5, departmentName: '영업팀' }
-];
+import {
+    getHrAttendance,
+    getHrDepartmentAttendance,
+    getHrOrganization
+} from '../../../components/HrData';
 
 function formatDate(date) {
     const year = date.getFullYear();
@@ -43,20 +37,33 @@ export default function Dashboard() {
     const [attendanceLoading, setAttendanceLoading] = useState(true);
     const [attendanceError, setAttendanceError] = useState('');
 
+    const [departments, setDepartments] = useState([]);
+    const [employees, setEmployees] = useState([]);
+    const [organizationLoading, setOrganizationLoading] = useState(true);
+    const [organizationError, setOrganizationError] = useState('');
+
     // 부서 직원 표에서 사용할 자료
     const [departmentAttendance, setDepartmentAttendance] = useState([]);
     const [departmentLoading, setDepartmentLoading] = useState(false);
     const [departmentError, setDepartmentError] = useState('');
 
-    const [selectedDepartmentId, setSelectedDepartmentId] = useState(
-        departmentButtons[0].departmentId
-    );
+    const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
 
     const today = formatDate(new Date());
 
-    const selectedDepartment = departmentButtons.find(
+    const selectedDepartment = departments.find(
         (department) => department.departmentId === selectedDepartmentId
     );
+
+    const todayAttendance = attendanceData.filter(
+        (attendance) => attendance.attendanceDate === today
+    );
+    const todayWorkingCount = todayAttendance.filter(
+        (attendance) => attendance.clockIn || attendance.status === '정상' || attendance.status === '지각'
+    ).length;
+    const todayLeaveCount = todayAttendance.filter(
+        (attendance) => attendance.status === '휴가'
+    ).length;
 
     function openModal() {
         setIsModal(true);
@@ -65,6 +72,64 @@ export default function Dashboard() {
     function closeModal() {
         setIsModal(false);
     }
+
+    useEffect(() => {
+        let ignore = false;
+
+        async function loadOrganization() {
+            setOrganizationLoading(true);
+            setOrganizationError('');
+
+            try {
+                const [departmentResponse, employeeResponse] =
+                    await getHrOrganization();
+
+                if (
+                    !departmentResponse.data.success ||
+                    !Array.isArray(departmentResponse.data.data) ||
+                    !employeeResponse.data.success ||
+                    !Array.isArray(employeeResponse.data.data)
+                ) {
+                    throw new Error('조직 자료 형식이 올바르지 않습니다.');
+                }
+
+                if (!ignore) {
+                    setDepartments(departmentResponse.data.data);
+                    setEmployees(employeeResponse.data.data);
+                    setSelectedDepartmentId((currentId) => {
+                        if (
+                            departmentResponse.data.data.some(
+                                (department) => department.departmentId === currentId
+                            )
+                        ) {
+                            return currentId;
+                        }
+
+                        return departmentResponse.data.data[0]?.departmentId || null;
+                    });
+                }
+            } catch (error) {
+                console.error('조직 자료 조회 오류:', error);
+
+                if (!ignore) {
+                    setDepartments([]);
+                    setEmployees([]);
+                    setSelectedDepartmentId(null);
+                    setOrganizationError('부서 및 직원 정보를 불러오지 못했습니다.');
+                }
+            } finally {
+                if (!ignore) {
+                    setOrganizationLoading(false);
+                }
+            }
+        }
+
+        loadOrganization();
+
+        return () => {
+            ignore = true;
+        };
+    }, []);
 
     // 기존 전체 근태자료를 가져옵니다.
     // 이 자료는 달력과 리스트에서 사용합니다.
@@ -76,9 +141,7 @@ export default function Dashboard() {
             setAttendanceError('');
 
             try {
-                const response = await axios.get(
-                    API_BASE_URL + '/hr/attendance'
-                );
+                const response = await getHrAttendance();
 
                 if (!ignore) {
                     if (
@@ -121,19 +184,20 @@ export default function Dashboard() {
     useEffect(() => {
         let ignore = false;
 
+        if (!selectedDepartmentId) {
+            setDepartmentAttendance([]);
+            setDepartmentLoading(false);
+            return undefined;
+        }
+
         async function loadDepartmentAttendance() {
             setDepartmentLoading(true);
             setDepartmentError('');
 
             try {
-                const response = await axios.get(
-                    API_BASE_URL + '/hr/attendance/department',
-                    {
-                        params: {
-                            date: today,
-                            departmentId: selectedDepartmentId
-                        }
-                    }
+                const response = await getHrDepartmentAttendance(
+                    today,
+                    selectedDepartmentId
                 );
 
                 if (!ignore) {
@@ -200,10 +264,10 @@ export default function Dashboard() {
             )}
 
             <section className="stats-section">
-                <StatisticsCard title="전체직원" count="128" stiyle={1} />
-                <StatisticsCard title="오늘출근" count="119" stiyle={1} />
-                <StatisticsCard title="휴가사용" count="9" stiyle={1} />
-                <StatisticsCard title="운용부서" count="12" stiyle={0} />
+                <StatisticsCard title="전체직원" count={String(employees.length)} stiyle={1} />
+                <StatisticsCard title="오늘출근" count={String(todayWorkingCount)} stiyle={1} />
+                <StatisticsCard title="휴가사용" count={String(todayLeaveCount)} stiyle={1} />
+                <StatisticsCard title="운용부서" count={String(departments.length)} stiyle={0} />
             </section>
 
             <div className="stats-section">
@@ -219,26 +283,32 @@ export default function Dashboard() {
 
                     <div className="grouborad">
                         <ul className="grouplist">
-                            {departmentButtons.map((department) => (
-                                <li key={department.departmentId}>
-                                    <button
-                                        type="button"
-                                        className={
-                                            selectedDepartmentId ===
-                                            department.departmentId
-                                                ? 'active'
-                                                : ''
-                                        }
-                                        onClick={() =>
-                                            setSelectedDepartmentId(
+                            {organizationLoading ? (
+                                <li>부서 정보를 불러오는 중입니다.</li>
+                            ) : departments.length === 0 ? (
+                                <li>등록된 부서가 없습니다.</li>
+                            ) : (
+                                departments.map((department) => (
+                                    <li key={department.departmentId}>
+                                        <button
+                                            type="button"
+                                            className={
+                                                selectedDepartmentId ===
                                                 department.departmentId
-                                            )
-                                        }
-                                    >
-                                        {department.label}
-                                    </button>
-                                </li>
-                            ))}
+                                                    ? 'active'
+                                                    : ''
+                                            }
+                                            onClick={() =>
+                                                setSelectedDepartmentId(
+                                                    department.departmentId
+                                                )
+                                            }
+                                        >
+                                            {department.departmentName}
+                                        </button>
+                                    </li>
+                                ))
+                            )}
                         </ul>
 
                         <p>
@@ -246,7 +316,9 @@ export default function Dashboard() {
                             {selectedDepartment?.departmentName}
                         </p>
 
-                        {departmentLoading ? (
+                        {organizationError ? (
+                            <p role="alert">{organizationError}</p>
+                        ) : departmentLoading ? (
                             <p role="status">
                                 부서 출결현황을 불러오는 중입니다.
                             </p>

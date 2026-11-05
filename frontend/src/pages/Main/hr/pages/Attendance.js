@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { Link } from "react-router-dom";
 import PaginationTable from "../../../../components/PaginationTable";
 import { getLoginUser } from "../../../../utils/authStorage";
+import {
+  getHrAttendance,
+  getHrOrganization
+} from "../../../../components/HrData";
 import "../HRAttendanceView.css";
-
-const API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api";
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 
 function getLatestMonth(data) {
@@ -123,14 +123,9 @@ export default function Attendance() {
       setError("");
 
       try {
-        const responses = await Promise.all([
-          axios.get(API_BASE_URL + "/hr/employees"),
-          axios.get(API_BASE_URL + "/hr/departments"),
-          axios.get(API_BASE_URL + "/hr/attendance")
-        ]);
-        const employeeResponse = responses[0];
-        const departmentResponse = responses[1];
-        const attendanceResponse = responses[2];
+        const [departmentResponse, employeeResponse] =
+          await getHrOrganization();
+        const attendanceResponse = await getHrAttendance();
 
         if (
           !employeeResponse.data.success ||

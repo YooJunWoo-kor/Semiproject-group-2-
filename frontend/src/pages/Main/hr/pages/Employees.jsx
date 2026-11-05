@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import { getLoginUser } from '../../../../utils/authStorage';
 import PaginationTable from '../../../../components/PaginationTable';
 import ModalBase from '../../../../components/ModalBase';
 import StatisticsCard from '../../../../components/StatisticsCard';
+import './EmployeeManagement.css';
+import {
+  createHrEmployee,
+  getHrEmployees,
+  getHrOrganization,
+  retireHrEmployee,
+  updateHrEmployee
+} from '../../../../components/HrData';
 
 /* 기존 화면 확인용 더미데이터
 const initialEmployees = [
@@ -61,9 +68,6 @@ const departments = ['개발팀', '인사팀', '디자인팀', '마케팅팀', '
 */
 
 const positions = ['사원', '대리', '과장', '팀장', '부장'];
-
-const API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000/api';
 
 const emptyRegisterForm = {
   employeeNumber: '',
@@ -322,6 +326,7 @@ export default function Employees() {
   const [search, setSearch] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('전체');
   const [selectedStatus, setSelectedStatus] = useState('전체');
+  const [selectedAccountStatus, setSelectedAccountStatus] = useState('전체');
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -341,12 +346,8 @@ export default function Employees() {
       setNotice('');
 
       try {
-        const responses = await Promise.all([
-          axios.get(API_BASE_URL + '/hr/employees'),
-          axios.get(API_BASE_URL + '/hr/departments')
-        ]);
-        const employeeResponse = responses[0];
-        const departmentResponse = responses[1];
+        const [departmentResponse, employeeResponse] =
+          await getHrOrganization();
 
         if (
           !employeeResponse.data.success ||
@@ -390,7 +391,7 @@ export default function Employees() {
   }, []);
 
   async function refreshEmployees() {
-    const response = await axios.get(API_BASE_URL + '/hr/employees');
+    const response = await getHrEmployees();
 
     if (!response.data.success || !Array.isArray(response.data.data)) {
       throw new Error('직원 목록 형식이 올바르지 않습니다.');
@@ -418,24 +419,54 @@ export default function Employees() {
     const matchesStatus =
       selectedStatus === '전체' ||
       employee.employmentStatus === selectedStatus;
-
-    return matchesSearch && matchesDepartment && matchesStatus;
+    const matchesAccountStatus =
+      selectedAccountStatus === '전체' ||
+      employee.accountStatus === selectedAccountStatus;
+    return (
+      matchesSearch &&
+      matchesDepartment &&
+      matchesStatus &&
+      matchesAccountStatus
+    );
   });
 
   const workingCount = employees.filter(
     (employee) => employee.employmentStatus === '재직'
   ).length;
-  const leaveCount = employees.filter(
-    (employee) => employee.employmentStatus === '휴직'
-  ).length;
-  const retiredCount = employees.filter(
-    (employee) => employee.employmentStatus === '퇴사'
-  ).length;
+  const averageDepartmentCount = departments.length
+    ? Math.round(workingCount / departments.length)
+    : 0;
+  const departmentCards = departments.map((department) => ({
+    ...department,
+    memberCount: employees.filter(
+      (employee) =>
+        String(employee.departmentId) === String(department.departmentId) &&
+        employee.employmentStatus === '재직'
+    ).length
+  }));
+
+  useEffect(() => {
+    if (filteredEmployees.length === 0) {
+      if (selectedEmployee !== null) {
+        setSelectedEmployee(null);
+      }
+      return;
+    }
+
+    const selectedStillVisible = filteredEmployees.some(
+      (employee) => employee.employeeId === selectedEmployee?.employeeId
+    );
+
+    if (!selectedStillVisible) {
+      setSelectedEmployee(filteredEmployees[0]);
+    }
+  }, [filteredEmployees, selectedEmployee]);
 
   function resetFilters() {
     setSearch('');
     setSelectedDepartment('전체');
     setSelectedStatus('전체');
+    setSelectedAccountStatus('전체');
   }
 
   function openRegisterModal() {
@@ -479,10 +510,7 @@ export default function Employees() {
     setNotice('');
 
     try {
-      const response = await axios.post(
-        API_BASE_URL + '/hr/employees',
-        registerForm
-      );
+      const response = await createHrEmployee(registerForm);
 
       if (!response.data.success) {
         throw new Error('직원 등록 응답이 올바르지 않습니다.');
@@ -515,18 +543,15 @@ export default function Employees() {
     setNotice('');
 
     try {
-      const response = await axios.put(
-        API_BASE_URL + '/hr/employees/' + editForm.employeeId,
-        {
-          name: editForm.name,
-          departmentId: editForm.departmentId,
-          position: editForm.position,
-          email: editForm.email,
-          phone: editForm.phone,
-          hireDate: editForm.hireDate,
-          employmentStatus: editForm.employmentStatus
-        }
-      );
+      const response = await updateHrEmployee(editForm.employeeId, {
+        name: editForm.name,
+        departmentId: editForm.departmentId,
+        position: editForm.position,
+        email: editForm.email,
+        phone: editForm.phone,
+        hireDate: editForm.hireDate,
+        employmentStatus: editForm.employmentStatus
+      });
 
       if (!response.data.success) {
         throw new Error('직원 수정 응답이 올바르지 않습니다.');
@@ -575,9 +600,7 @@ export default function Employees() {
     setNotice('');
 
     try {
-      const response = await axios.patch(
-        API_BASE_URL + '/hr/employees/' + employee.employeeId + '/status'
-      );
+      const response = await retireHrEmployee(employee.employeeId);
 
       if (!response.data.success) {
         throw new Error('퇴사 처리 응답이 올바르지 않습니다.');
@@ -668,12 +691,12 @@ export default function Employees() {
   }));
 
   return (
-    <div className="sub-container">
+    <div className="sub-container hr-employee-management">
       {/* 헤더 영역 */}
       <header className="dashboard-header">
         <div>
-          <span className="subtitle">직원관리</span>
-          <span className="subtext">전사 임직원 명단 및 계정 권한 현황을 관리합니다.</span>
+          <span className="subtitle">직원·부서 통합관리</span>
+          <span className="subtext">직원 목록과 부서별 구성원 정보를 한 화면에서 관리합니다.</span>
         </div>
 
         <div className="dashboard-top">
@@ -684,7 +707,7 @@ export default function Employees() {
               onClick={openRegisterModal}
               disabled={departments.length === 0}
             >
-              직원등록
+              직원 등록
             </button>
           )}
         </div>
@@ -728,19 +751,11 @@ export default function Employees() {
         />
       )}
 
-      {selectedEmployee && (
-        <ModalBase
-          title={`${selectedEmployee.name} 직원 상세정보`}
-          onClose={() => setSelectedEmployee(null)}
-          layout={<EmployeeDetail employee={selectedEmployee} />}
-        />
-      )}
-
       <section className="stats-section">
         <StatisticsCard title="전체 직원" count={employees.length} stiyle={1} />
         <StatisticsCard title="재직" count={workingCount} stiyle={1} />
-        <StatisticsCard title="휴직" count={leaveCount} stiyle={1} />
-        <StatisticsCard title="퇴사" count={retiredCount} stiyle={1} />
+        <StatisticsCard title="전체 부서" count={departments.length} stiyle={0} />
+        <StatisticsCard title="평균 부서 인원" count={averageDepartmentCount} stiyle={1} />
       </section>
 
       {notice && (
@@ -813,6 +828,17 @@ export default function Employees() {
             <option value="퇴사">퇴사</option>
           </select>
 
+          <select
+            value={selectedAccountStatus}
+            onChange={(event) => setSelectedAccountStatus(event.target.value)}
+            style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+          >
+            <option value="전체">전체 계정</option>
+            <option value="ACTIVE">활성</option>
+            <option value="INACTIVE">비활성</option>
+            <option value="SUSPENDED">정지</option>
+          </select>
+
           <button
             type="button"
             onClick={resetFilters}
@@ -834,13 +860,102 @@ export default function Employees() {
       {loading ? (
         <p role="status">직원 목록을 불러오는 중입니다.</p>
       ) : (
-        <PaginationTable
-          key={`${search}-${selectedDepartment}-${selectedStatus}-${employees.length}`}
-          title="전체 임직원 목록"
-          th={tableHeaders}
-          allData={tableData}
-          itemsPerPage={5}
-        />
+        <div className="hr-organization-grid">
+          <aside className="hr-panel department-panel">
+            <div className="hr-panel-heading">
+              <h2>부서 목록</h2>
+              <span>{departments.length}개</span>
+            </div>
+
+            <button
+              type="button"
+              className={`department-item ${selectedDepartment === '전체' ? 'selected' : ''}`}
+              onClick={() => setSelectedDepartment('전체')}
+            >
+              <strong>전체 부서</strong>
+              <span>{employees.length}명</span>
+            </button>
+
+            {departmentCards.map((department) => (
+              <button
+                type="button"
+                key={department.departmentId}
+                className={`department-item ${
+                  selectedDepartment === String(department.departmentId)
+                    ? 'selected'
+                    : ''
+                }`}
+                onClick={() =>
+                  setSelectedDepartment(String(department.departmentId))
+                }
+              >
+                <strong>{department.departmentName}</strong>
+                <span>{department.memberCount}명</span>
+                {department.managerName && (
+                  <small>부서장: {department.managerName}</small>
+                )}
+                {department.description && (
+                  <small>{department.description}</small>
+                )}
+              </button>
+            ))}
+          </aside>
+
+          <section className="hr-panel employee-list-panel">
+            <PaginationTable
+              key={
+                search +
+                '-' +
+                selectedDepartment +
+                '-' +
+                selectedStatus +
+                '-' +
+                selectedAccountStatus +
+                '-' +
+                employees.length
+              }
+              title="선택 부서 직원 목록"
+              th={tableHeaders}
+              allData={tableData}
+              itemsPerPage={5}
+            />
+          </section>
+
+          <aside className="hr-panel employee-detail-panel">
+            <div className="hr-panel-heading">
+              <h2>직원 상세정보</h2>
+            </div>
+
+            {selectedEmployee ? (
+              <>
+                <EmployeeDetail employee={selectedEmployee} />
+                <div className="employee-detail-actions">
+                  {isMaster && (
+                    <button
+                      type="button"
+                      onClick={() => openEditModal(selectedEmployee)}
+                    >
+                      직원 수정
+                    </button>
+                  )}
+                  {isMaster && selectedEmployee.employmentStatus !== '퇴사' && (
+                    <button
+                      type="button"
+                      onClick={() => retireEmployee(selectedEmployee)}
+                      disabled={saving}
+                    >
+                      퇴사 처리
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <p className="hr-empty-state">
+                직원을 선택하면 상세정보가 표시됩니다.
+              </p>
+            )}
+          </aside>
+        </div>
       )}
     </div>
   );
