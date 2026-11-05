@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { getLoginUser } from "../utils/authStorage";
+import { getAttendance } from "../utils/authStorage";
 import BasicCalendar from "../components/calendar/BasicCalendar.js";
 import WeeklyCalendar from "../components/weeklycalendar/WeeklyCalendar.js";
 import './ADComp.css';
+import ADBord from "./ADBord.js";
 
 // 달력과 출퇴근 관리 모듈
 const data = [
@@ -39,8 +40,49 @@ const data = [
   ];
 
 function ADComp(){
-    const user = getLoginUser();
-    const userName = user?.name;
+    // 달력과 출퇴근 관리 모듈
+    const [data, setData] = useState([]);
+    //출결버튼 관리
+    let resetAttendBtnStl = 0;
+    let [attendBtnStl, setAttendBtnStl] = useState(0);
+
+    //오늘 날짜 계산
+    const newDay = new Date();
+    const year = newDay.getFullYear();
+    const month = String(newDay.getMonth() + 1).padStart(2, '0');
+    const day = String(newDay.getDate()).padStart(2, '0');
+    let currontDay = year + '-' + month + '-' + day;
+
+    //근테관련 데이터 get
+    const dataSet = async () => {
+      const getData = await getAttendance();
+      console.log(getData);
+      setData(getData);
+      getData.map((item)=>{
+        if(item.start == currontDay){
+          if(item.title == '근무중'){
+            resetAttendBtnStl = 1;
+          }
+          else{
+            resetAttendBtnStl = 2;
+          }
+
+          console.log("출근버튼 처리 완료");
+          setAttendBtnStl(resetAttendBtnStl);
+        }});
+    };
+
+    //출근버튼을 눌렀을때 최신상태 갱신
+    const resetData = ()=>{
+      dataSet();
+    };
+
+    //최초 데이터 실행
+    useEffect(()=>{
+      dataSet();
+    }, []);
+
+    const [isCalStyile, setCalStyile] = useState(0);
     
     const[time, setTime] = useState(new Date());
     const hours = time.getHours();
@@ -85,30 +127,7 @@ function ADComp(){
             </div>
         
             {/* 우측: 출결 관리 카드 */}
-            <div className="attendance-card">
-              <div className="attendance-card-header">
-                <span className="attendance-badge">근태 관리</span>
-              </div>
-        
-              {/* 인사말(좌)과 현재시각(우)을 한 줄에 배치 */}
-              <div className="attendance-info-row">
-                <div className="attendance-user-info">
-                  <span className="user-greeting">반갑습니다, </span>
-                  <strong className="user-name">{userName}</strong>님
-                </div>
-        
-                <div className="attendance-clock-box">
-                  <span className="clock-label">현재 시각</span>
-                  <span className="clock-time">{timeString}</span>
-                </div>
-              </div>
-        
-              {/* 우측 하단에 정렬되는 출근 버튼 */}
-              <div className="attendance-action-group">
-                <button className="btn-attendance check-in">출근하기</button>
-                {/* <button className="btn-attendance check-out">퇴근하기</button> */}
-              </div>
-            </div>
+            <ADBord dataSet={resetData} btnStl = {attendBtnStl}/>
           </div>
         );
 }

@@ -6,14 +6,17 @@ const db = require('./db');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-const Attendance = require('./models/Attendance'); //출결관련 함수 클레스
-const financeRouter = require("./routers/financeRouters"); // 재무 API 연결
+const Attendance = require('./models/Attendance'); // 출결 관련
+const financeRouter = require('./routers/financeRouters'); // 재무 API
+const homSurver = require('./routes/homServer');
+const schedule = require('./routes/schedule');
 
 app.use(cors());
 app.use(express.json());
 
-// 재무 API는 routers/financeRouters.js에서 처리합니다.
-app.use("/api/finance", financeRouter);
+app.use('/api/finance', financeRouter);
+app.use('/api/AD', homSurver);
+app.use('/api/schedule', schedule);
 
 // 2. [사원 등록 API] RegisterPage 폼 전송 수신
 app.post('/api/register', async (req, res) => {
@@ -132,6 +135,6 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0',() => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
 });

@@ -1,10 +1,12 @@
 import axios from 'axios';
 
-const LOGIN_USER_KEY = "loginUser";
+export const LOGIN_USER_KEY = "loginUser";
 const EMPLOYEE_ACCOUNT_KEY = "employeeAccounts";
 
 // env에서 설정한 api를 사용하거나, 없다면 기본값 4000번 포트 사용.
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000/api';
+//export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000/api';
+const defaultHost = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${defaultHost}:4000/api`;
 
 // 로그인 사용자 저장
 export function saveLoginUser(user) {
@@ -27,12 +29,66 @@ export function getLoginUser() {
     return JSON.parse(user);
 }
 
-// 로그아웃
-export function logoutUser() {
+//오늘날짜 조회
+export function getTodayString (){
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0'); // 월은 0부터 시작하므로 +1
+    const day = String(today.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  };
 
-    localStorage.removeItem(
-        LOGIN_USER_KEY
-    );
+//출결 데이터 포멧팅 함수
+function formatDateToYYYYMMDD(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+// 출결 데이터 조회
+export async function getAttendance(){
+    //return [{title: '출근',start:'2026-10-01', end:'2026-11-05', typeId: 0}];
+    // { title: "출근", start: "2026-10-01", end: "2026-10-01", typeId: 0 }
+    const user = localStorage.getItem(LOGIN_USER_KEY);
+    const userID = JSON.parse(user).employeeKey;
+    
+    /*date: "2026-11-01T15:00:00.000Z"
+    end: "2026-11-02T09:10:00.000Z"
+    start: "2026-11-01T23:50:00.000Z"
+    title: "정상출근"*/
+
+     try {
+         const data = await axios.post(API_BASE_URL + '/AD/attendance',{userID})
+         const dataSet = data.data.data;
+
+         const formattedData = dataSet.map((item)=>{
+            const stData = formatDateToYYYYMMDD(item.start);
+            const enData = formatDateToYYYYMMDD(item.end);
+            const title = item.title;
+
+            return {
+                title: title
+                , start: stData
+                , end: enData
+                , typeId: (
+                    title == "정상출근" ? 0 :
+                    title == "지각" ? 1 :
+                    title == "휴가" ? 2 :
+                    title == "출장" ? 3 :
+                    title == "휴직" ? 4 : 5
+                )
+            }
+         });
+         return formattedData || [];
+     } catch (err) {
+        console.error("error:", err);
+         if (err.response){
+             return alert(userID);
+         }
+     }
 }
 
 // MASTER가 등록한 직원들
@@ -119,8 +175,31 @@ export function saveEmployeeAccount(account) {
 export async function findLoginAccount(loginId, password) {
     const inputId = loginId.trim();
 
+<<<<<<< HEAD
     if (!inputId || !password) {
         throw new Error("이메일과 비밀번호를 입력해 주세요.");
+=======
+    if(!inputId || !inputPassword){
+        return alert("이메일 또는 비밀번호를 입력해주세요.");
+    }
+    
+    //디버깅용 알림창, 포트 정상 작동 확인
+    //http://localhost:4000/api
+    //return alert(API_BASE_URL);
+    
+    try{
+        const response = await axios.post(API_BASE_URL + '/login',{
+            email: inputId,
+            password: inputPassword
+         })
+        return response.data;
+    }
+    catch(error){
+        if(error.response && error.response.data){
+            return error.response.data.message;
+        }
+        return alert('서버와 통신할 수 없습니다.');
+>>>>>>> origin/main
     }
 
     try {
