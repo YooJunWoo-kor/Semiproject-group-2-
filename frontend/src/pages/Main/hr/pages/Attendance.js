@@ -1,60 +1,264 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import { Link } from "react-router-dom";
 import PaginationTable from "../../../../components/PaginationTable";
 import { getLoginUser } from "../../../../utils/authStorage";
+import "../HRAttendanceView.css";
 
-// 기존 더미 데이터 원본 유지
-const rows = [
-  ['김민준', '개발팀', '08:48', '-', '정상'],
-  ['이서연', '인사팀', '08:55', '-', '정상'],
-  ['박지호', '디자인팀', '09:12', '-', '지각'],
-  ['최유진', '마케팅팀', '-', '연차', '휴가'],
-  ['정도윤', '경영지원팀', '08:51', '-', '정상'],
-  ['한지우', '개발팀', '-', '-', '미출근']
-];
+const API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api";
+const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
+
+function getLatestMonth(data) {
+  const months = data
+    .map((item) => (item.attendanceDate || "").slice(0, 7))
+    .filter(Boolean)
+    .sort();
+
+  return months.length > 0 ? months[months.length - 1] : "";
+}
+
+function createDepartmentList(data) {
+  return data.reduce((list, item) => {
+    if (item.departmentName && !list.includes(item.departmentName)) {
+      list.push(item.departmentName);
+    }
+    return list;
+  }, []);
+}
+
+function createEmployeeList(data, department, searchKeyword) {
+  const keyword = searchKeyword.trim().toLowerCase();
+
+  return data.filter((employee) => {
+    if (department !== "전체" && employee.departmentName !== department) {
+      return false;
+    }
+
+    if (!keyword) {
+      return true;
+    }
+
+    return [
+      employee.employeeNumber,
+      employee.employeeName,
+      employee.email,
+      employee.position,
+      employee.departmentName
+    ]
+      .map((value) => String(value || "").toLowerCase())
+      .join(" ")
+      .includes(keyword);
+  });
+}
+
+function calculateAttendanceRate(data, month, employeeId) {
+  const records = data.filter(
+    (item) =>
+      String(item.employeeId) === String(employeeId) &&
+      String(item.attendanceDate || "").startsWith(month)
+  );
+
+  if (records.length === 0) {
+    return "-";
+  }
+
+  const normalCount = records.filter((item) => item.status === "정상").length;
+  return `${Math.round((normalCount / records.length) * 100)}%`;
+}
+
+function getWeekday(value) {
+  if (!value) return "-";
+  const parts = value.split("-");
+  const date = new Date(
+    Number(parts[0]),
+    Number(parts[1]) - 1,
+    Number(parts[2])
+  );
+  return Number.isNaN(date.getTime()) ? "-" : weekdays[date.getDay()];
+}
+
+function calculateWorkTime(clockIn, clockOut) {
+  if (!clockIn || !clockOut) return "-";
+  const start = clockIn.split(":");
+  const end = clockOut.split(":");
+  const minutes =
+    Number(end[0]) * 60 +
+    Number(end[1]) -
+    Number(start[0]) * 60 -
+    Number(start[1]);
+
+  if (Number.isNaN(minutes) || minutes < 0) return "-";
+  return `${Math.floor(minutes / 60)}시간 ${String(minutes % 60).padStart(
+    2,
+    "0"
+  )}분`;
+}
+
+function getStatusClass(status) {
+  if (status === "정상") return "working";
+  if (status === "지각") return "late";
+  if (status === "휴가") return "leave";
+  return "off";
+}
 
 export default function Attendance() {
   const loginUser = getLoginUser();
-  const isMaster = loginUser?.role === 'MASTER';
+  const isMaster = loginUser?.role === "MASTER";
+  const [employees, setEmployees] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [attendanceData, setAttendanceData] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedDepartment, setSelectedDepartment] = useState("전체");
+  const [keyword, setKeyword] = useState("");
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // 검색 상태 관리
-  const [searchTerm, setSearchTerm] = useState("");
+  useEffect(() => {
+    let ignore = false;
 
-  // 1. 공통 테이블 헤더 규격 (th)
-  const list = ["직원", "부서", "출근시간", "비고", "근태상태"];
+    async function loadAttendancePage() {
+      setLoading(true);
+      setError("");
 
-  // 2. 검색 필터링 적용
-  const filteredRows = rows.filter((row) => {
-    const name = row[0];
-    const dept = row[1];
-    const status = row[4];
-    return (
-      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      dept.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      status.toLowerCase().includes(searchTerm.toLowerCase())
+      try {
+        const responses = await Promise.all([
+          axios.get(API_BASE_URL + "/hr/employees"),
+          axios.get(API_BASE_URL + "/hr/departments"),
+          axios.get(API_BASE_URL + "/hr/attendance")
+        ]);
+        const employeeResponse = responses[0];
+        const departmentResponse = responses[1];
+        const attendanceResponse = responses[2];
+
+        if (
+          !employeeResponse.data.success ||
+          !Array.isArray(employeeResponse.data.data) ||
+          !departmentResponse.data.success ||
+          !Array.isArray(departmentResponse.data.data) ||
+          !attendanceResponse.data.success ||
+          !Array.isArray(attendanceResponse.data.data)
+        ) {
+          throw new Error("근태관리 자료 형식이 올바르지 않습니다.");
+        }
+
+        if (!ignore) {
+          const employeeRows = employeeResponse.data.data.map((employee) => ({
+            ...employee,
+            employeeName: employee.employeeName || employee.name
+          }));
+          const attendanceRows = attendanceResponse.data.data;
+
+          setEmployees(employeeRows);
+          setDepartments(departmentResponse.data.data);
+          setAttendanceData(attendanceRows);
+          setSelectedMonth(getLatestMonth(attendanceRows));
+        }
+      } catch (requestError) {
+        console.error("근태관리 자료 조회 오류:", requestError);
+
+        if (!ignore) {
+          setEmployees([]);
+          setDepartments([]);
+          setAttendanceData([]);
+          setError("근태관리 자료를 불러오지 못했습니다.");
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadAttendancePage();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const departmentList = createDepartmentList(departments);
+  const employeeList = createEmployeeList(
+    employees,
+    selectedDepartment,
+    keyword
+  );
+  const selectedEmployee = employeeList.find(
+    (employee) => String(employee.employeeId) === String(selectedEmployeeId)
+  );
+
+  useEffect(() => {
+    if (!selectedEmployee) {
+      setSelectedEmployeeId(employeeList[0]?.employeeId || null);
+    }
+  }, [employeeList, selectedEmployee, selectedEmployeeId]);
+
+  const selectedAttendance = attendanceData
+    .filter(
+      (item) =>
+        String(item.employeeId) === String(selectedEmployeeId) &&
+        String(item.attendanceDate || "").startsWith(selectedMonth)
+    )
+    .sort((first, second) =>
+      String(second.attendanceDate || "").localeCompare(
+        String(first.attendanceDate || "")
+      )
     );
-  });
-
-  // 3. PaginationTable 전용 allData 규격({ content: [...] }) 매핑
-  const tableData = filteredRows.map((row) => ({
+  const normalCount = selectedAttendance.filter(
+    (item) => item.status === "정상"
+  ).length;
+  const lateCount = selectedAttendance.filter(
+    (item) => item.status === "지각"
+  ).length;
+  const leaveCount = selectedAttendance.filter(
+    (item) => item.status === "휴가"
+  ).length;
+  const tableHeaders = [
+    "날짜",
+    "요일",
+    "출근",
+    "퇴근",
+    "근무시간",
+    "상태",
+    "메모"
+  ];
+  const tableData = selectedAttendance.map((attendance) => ({
     content: [
-      row[0], // 직원
-      row[1], // 부서
-      <span style={{ fontVariantNumeric: "tabular-nums" }}>{row[2]}</span>, // 출근시간
-      row[3], // 비고
-      <span className={`status-tag ${row[4] === '정상' ? 'working' : 'off'}`}>
-        {row[4]}
-      </span> // 근태상태
+      attendance.attendanceDate,
+      getWeekday(attendance.attendanceDate),
+      <span className="emp-time" key={`${attendance.attendanceId}-in`}>
+        {attendance.clockIn || "-"}
+      </span>,
+      <span className="emp-time" key={`${attendance.attendanceId}-out`}>
+        {attendance.clockOut || "-"}
+      </span>,
+      calculateWorkTime(attendance.clockIn, attendance.clockOut),
+      <span
+        className={`status-tag ${getStatusClass(attendance.status)}`}
+        key={`${attendance.attendanceId}-status`}
+      >
+        {attendance.status || "-"}
+      </span>,
+      attendance.memo || "-"
     ]
   }));
 
+  function resetFilters() {
+    setSelectedMonth(getLatestMonth(attendanceData));
+    setSelectedDepartment("전체");
+    setKeyword("");
+    setSelectedEmployeeId(null);
+  }
+
   return (
-    <div className="sub-container">
-      {/* 상단 헤더 */}
+    <div className="sub-container hr-attendance-management">
       <header className="dashboard-header">
         <div>
           <span className="subtitle">근태관리</span>
-          <span className="subtext">전사 임직원의 일별 출근 및 근태 현황을 확인합니다.</span>
+          <span className="subtext">
+            직원별 월간 근태 현황과 일별 기록을 확인합니다.
+          </span>
         </div>
         <div className="dashboard-top">
           {isMaster && (
@@ -65,60 +269,171 @@ export default function Attendance() {
         </div>
       </header>
 
-      {/* 상단 검색바 */}
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginTop: "16px",
-        marginBottom: "12px"
-      }}>
-        <div style={{ fontSize: "14px", color: "#475569" }}>
-          전체 <strong>{filteredRows.length}</strong>건
-        </div>
-
-        <div style={{ display: "flex", gap: "8px" }}>
+      <section className="attendance-filter" aria-label="근태 조회 조건">
+        <label className="attendance-filter-field">
+          <span>기준 월</span>
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(event) => setSelectedMonth(event.target.value)}
+          />
+        </label>
+        <label className="attendance-filter-field">
+          <span>부서</span>
+          <select
+            value={selectedDepartment}
+            onChange={(event) => setSelectedDepartment(event.target.value)}
+          >
+            <option value="전체">전체</option>
+            {departmentList.map((department) => (
+              <option key={department} value={department}>
+                {department}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="attendance-filter-field attendance-keyword-field">
+          <span>직원명</span>
           <input
             type="text"
-            placeholder="직원명, 부서, 근태상태 검색"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              padding: "7px 12px",
-              border: "1px solid #cbd5e1",
-              borderRadius: "6px",
-              fontSize: "13px",
-              outline: "none",
-              width: "220px"
-            }}
+            placeholder="직원명 검색"
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
           />
-          {searchTerm && (
-            <button
-              type="button"
-              onClick={() => setSearchTerm("")}
-              style={{
-                padding: "0 10px",
-                border: "1px solid #cbd5e1",
-                background: "#f8fafc",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "12px",
-                color: "#64748b"
-              }}
-            >
-              초기화
-            </button>
-          )}
-        </div>
-      </div>
+        </label>
+        <button
+          type="button"
+          className="register-btn attendance-reset-button"
+          onClick={resetFilters}
+        >
+          초기화
+        </button>
+      </section>
 
-      {/* 게시판 모듈 적용 (PaginationTable) */}
-      <PaginationTable
-        title="일별 근태 현황 목록"
-        th={list}
-        allData={tableData}
-        itemsPerPage={5}
-      />
+      {loading ? (
+        <p className="attendance-feedback" role="status">
+          근태자료를 불러오는 중입니다.
+        </p>
+      ) : error ? (
+        <p className="attendance-feedback attendance-error" role="alert">
+          {error}
+        </p>
+      ) : (
+        <div className="attendance-layout">
+          <section className="attendance-card employee-list-panel">
+            <div className="employee-list-header">
+              <div>
+                <h2>직원 목록</h2>
+                <p>{selectedMonth || "기준 월 미선택"}</p>
+              </div>
+              <strong>{employeeList.length}명</strong>
+            </div>
+            {employeeList.length === 0 ? (
+              <p className="attendance-empty">조건에 맞는 직원이 없습니다.</p>
+            ) : (
+              <div className="employee-list">
+                {employeeList.map((employee) => (
+                  <button
+                    key={employee.employeeId}
+                    type="button"
+                    className={`employee-item ${
+                      String(employee.employeeId) ===
+                      String(selectedEmployeeId)
+                        ? "active"
+                        : ""
+                    }`}
+                    onClick={() => setSelectedEmployeeId(employee.employeeId)}
+                  >
+                    <span className="employee-item-info">
+                      <strong className="emp-name">
+                        {employee.employeeName}
+                      </strong>
+                      <span>
+                        {employee.departmentName} ·{" "}
+                        <span className="emp-position">
+                          {employee.position}
+                        </span>
+                      </span>
+                    </span>
+                    <span className="employee-attendance-rate">
+                      <small>출근율</small>
+                      <strong>
+                        {calculateAttendanceRate(
+                          attendanceData,
+                          selectedMonth,
+                          employee.employeeId
+                        )}
+                      </strong>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="attendance-detail-panel">
+            {selectedEmployee ? (
+              <>
+                <div className="attendance-detail-header">
+                  <div>
+                    <span className="attendance-badge">선택 직원</span>
+                    <h2>{selectedEmployee.employeeName}</h2>
+                    <p>
+                      {selectedEmployee.departmentName} ·{" "}
+                      {selectedEmployee.position}
+                    </p>
+                  </div>
+                  <div className="detail-attendance-rate">
+                    <span>출근율</span>
+                    <strong>
+                      {calculateAttendanceRate(
+                        attendanceData,
+                        selectedMonth,
+                        selectedEmployee.employeeId
+                      )}
+                    </strong>
+                  </div>
+                </div>
+                <div className="attendance-summary">
+                  <div className="summary-item">
+                    <span>근무일</span>
+                    <strong>{selectedAttendance.length}</strong>
+                  </div>
+                  <div className="summary-item">
+                    <span>정상</span>
+                    <strong>{normalCount}</strong>
+                  </div>
+                  <div className="summary-item">
+                    <span>지각</span>
+                    <strong>{lateCount}</strong>
+                  </div>
+                  <div className="summary-item">
+                    <span>휴가</span>
+                    <strong>{leaveCount}</strong>
+                  </div>
+                </div>
+                {tableData.length > 0 ? (
+                  <PaginationTable
+                    key={`${selectedEmployeeId}-${selectedMonth}`}
+                    title="일별 근태 기록"
+                    th={tableHeaders}
+                    allData={tableData}
+                    itemsPerPage={8}
+                  />
+                ) : (
+                  <p className="attendance-empty">
+                    해당 월의 근태 기록이 없습니다.
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="attendance-empty">
+                상세 근태를 확인할 직원을 선택해 주세요.
+              </p>
+            )}
+          </section>
+        </div>
+      )}
     </div>
   );
 }

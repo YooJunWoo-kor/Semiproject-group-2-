@@ -1,0 +1,588 @@
+const express = require('express');
+const db = require('../db');
+
+const hrRouter = express.Router();
+const promiseDb = db.promise();
+
+function isDateString(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return false;
+    }
+
+    const date = new Date(value + 'T00:00:00Z');
+
+    return !Number.isNaN(date.getTime()) &&
+        date.toISOString().slice(0, 10) === value;
+}
+
+function isEmailString(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+async function departmentExists(departmentId) {
+    const [rows] = await promiseDb.query(
+        'SELECT department_id FROM departments WHERE department_id = ?',
+        [departmentId]
+    );
+
+    return rows.length > 0;
+}
+
+
+// 달력용 근태 기록 조회
+hrRouter.get('/api/hr/attendance', async (req, res) => {
+    const startDate = req.query.startDate || null;
+    const endDate = req.query.endDate || null;
+    const date = req.query.date || null;
+    const departmentIdValue = req.query.departmentId;
+    let departmentId = null;
+
+    if (startDate && !isDateString(startDate)) {
+        return res.status(400).json({
+            success: false,
+            message: '시작일 형식은 YYYY-MM-DD여야 합니다.'
+        });
+    }
+
+    if (endDate && !isDateString(endDate)) {
+        return res.status(400).json({
+            success: false,
+            message: '종료일 형식은 YYYY-MM-DD여야 합니다.'
+        });
+    }
+
+    if (date && !isDateString(date)) {
+        return res.status(400).json({
+            success: false,
+            message: '조회일 형식은 YYYY-MM-DD여야 합니다.'
+        });
+    }
+
+    if (departmentIdValue !== undefined) {
+        departmentId = Number(departmentIdValue);
+
+        if (!Number.isInteger(departmentId) || departmentId < 1) {
+            return res.status(400).json({
+                success: false,
+                message: '올바른 부서 ID를 입력해 주세요.'
+            });
+        }
+    }
+
+    const query = `
+        SELECT
+            a.attendance_id AS attendanceId,
+            a.employee_id AS employeeId,
+            e.name AS employeeName,
+            e.position,
+            d.department_id AS departmentId,
+            d.department_name AS departmentName,
+            DATE_FORMAT(a.work_date, '%Y-%m-%d') AS attendanceDate,
+            DATE_FORMAT(a.check_in_at, '%H:%i') AS clockIn,
+            DATE_FORMAT(a.check_out_at, '%H:%i') AS clockOut,
+            a.attendance_status AS status,
+            a.memo
+        FROM attendance a
+        INNER JOIN employees e
+            ON e.employee_id = a.employee_id
+        INNER JOIN departments d
+            ON d.department_id = e.department_id
+        WHERE (? IS NULL OR a.work_date >= ?)
+          AND (? IS NULL OR a.work_date <= ?)
+          AND (? IS NULL OR a.work_date = ?)
+          AND (? IS NULL OR d.department_id = ?)
+        ORDER BY a.work_date DESC, a.attendance_id DESC
+    `;
+
+    const values = [
+        startDate, startDate,
+        endDate, endDate,
+        date, date,
+        departmentId, departmentId
+    ];
+
+    try {
+        const [rows] = await promiseDb.query(query, values);
+
+        return res.json({
+            success: true,
+            data: rows
+        });
+    } catch (error) {
+        console.error('HR 근태정보 조회 오류:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: '근태 정보를 불러오지 못했습니다.'
+        });
+    }
+});
+
+
+// 부서 직원 전체와 해당 날짜의 근태 조회
+hrRouter.get('/api/hr/attendance/department', async (req, res) => {
+    const date = req.query.date;
+    const departmentId = Number(req.query.departmentId);
+
+    if (!date || !isDateString(date)) {
+        return res.status(400).json({
+            success: false,
+            message: '조회일 형식은 YYYY-MM-DD여야 합니다.'
+        });
+    }
+
+    if (!Number.isInteger(departmentId) || departmentId < 1) {
+        return res.status(400).json({
+            success: false,
+            message: '올바른 부서 ID를 입력해 주세요.'
+        });
+    }
+
+    const query = `
+        SELECT
+            e.employee_id AS employeeId,
+            a.attendance_id AS attendanceId,
+            e.name AS employeeName,
+            e.position,
+            d.department_id AS departmentId,
+            d.department_name AS departmentName,
+            DATE_FORMAT(a.work_date, '%Y-%m-%d') AS attendanceDate,
+            DATE_FORMAT(a.check_in_at, '%H:%i') AS clockIn,
+            DATE_FORMAT(a.check_out_at, '%H:%i') AS clockOut,
+            COALESCE(a.attendance_status, '미출근') AS status,
+            a.memo
+        FROM employees e
+        INNER JOIN departments d
+            ON d.department_id = e.department_id
+        LEFT JOIN attendance a
+            ON a.employee_id = e.employee_id
+            AND a.work_date = ?
+        WHERE e.department_id = ?
+          AND e.employment_status = '재직'
+        ORDER BY e.employee_id
+    `;
+
+    try {
+        const [rows] = await promiseDb.query(query, [date, departmentId]);
+
+        return res.json({
+            success: true,
+            data: rows
+        });
+    } catch (error) {
+        console.error('부서 근태현황 조회 오류:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: '부서 근태현황을 불러오지 못했습니다.'
+        });
+    }
+});
+
+
+// 직원 목록 조회
+hrRouter.get('/api/hr/employees', async (req, res) => {
+    const query = `
+        SELECT
+            e.employee_id AS employeeId,
+            e.employee_number AS employeeNumber,
+            e.name,
+            e.department_id AS departmentId,
+            d.department_name AS departmentName,
+            e.position,
+            e.email,
+            e.phone,
+            DATE_FORMAT(e.hire_date, '%Y-%m-%d') AS hireDate,
+            e.employment_status AS employmentStatus,
+            ea.role,
+            ea.account_status AS accountStatus
+        FROM employees e
+        LEFT JOIN departments d
+            ON d.department_id = e.department_id
+        LEFT JOIN employee_accounts ea
+            ON ea.employee_id = e.employee_id
+        ORDER BY e.employee_id
+    `;
+
+    try {
+        const [rows] = await promiseDb.query(query);
+
+        return res.json({
+            success: true,
+            data: rows
+        });
+    } catch (error) {
+        console.error('직원 목록 조회 오류:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: '직원 목록을 불러오지 못했습니다.'
+        });
+    }
+});
+
+
+// 부서 목록 조회
+hrRouter.get('/api/hr/departments', async (req, res) => {
+    const query = `
+        SELECT
+            department_id AS departmentId,
+            department_name AS departmentName
+        FROM departments
+        ORDER BY department_id
+    `;
+
+    try {
+        const [rows] = await promiseDb.query(query);
+
+        return res.json({
+            success: true,
+            data: rows
+        });
+    } catch (error) {
+        console.error('부서 목록 조회 오류:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: '부서 목록을 불러오지 못했습니다.'
+        });
+    }
+});
+
+
+// 직원 등록
+hrRouter.post('/api/hr/employees', async (req, res) => {
+    const employeeNumber = String(req.body.employeeNumber || '').trim();
+    const name = String(req.body.name || '').trim();
+    const departmentId = Number(req.body.departmentId);
+    const position = String(req.body.position || '').trim();
+    const email = String(req.body.email || '').trim();
+    const phone = String(req.body.phone || '').trim();
+    const hireDate = String(req.body.hireDate || '').trim();
+    const password = String(req.body.password || '');
+    let transactionStarted = false;
+
+    if (
+        !employeeNumber ||
+        !name ||
+        !Number.isInteger(departmentId) ||
+        departmentId < 1 ||
+        !position ||
+        !email ||
+        !hireDate ||
+        !password
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: '사번, 이름, 부서, 직급, 이메일, 입사일, 초기 비밀번호는 필수입니다.'
+        });
+    }
+
+    if (!isEmailString(email)) {
+        return res.status(400).json({
+            success: false,
+            message: '올바른 이메일 형식을 입력해 주세요.'
+        });
+    }
+
+    if (!isDateString(hireDate)) {
+        return res.status(400).json({
+            success: false,
+            message: '입사일 형식은 YYYY-MM-DD여야 합니다.'
+        });
+    }
+
+    try {
+        if (!(await departmentExists(departmentId))) {
+            return res.status(400).json({
+                success: false,
+                message: '존재하지 않는 부서입니다.'
+            });
+        }
+
+        await promiseDb.beginTransaction();
+        transactionStarted = true;
+
+        const employeeQuery = `
+            INSERT INTO employees (
+                employee_number,
+                name,
+                department_id,
+                position,
+                email,
+                phone,
+                hire_date,
+                employment_status
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, '재직')
+        `;
+        const [employeeResult] = await promiseDb.query(employeeQuery, [
+            employeeNumber,
+            name,
+            departmentId,
+            position,
+            email,
+            phone || null,
+            hireDate
+        ]);
+
+        const accountQuery = `
+            INSERT INTO employee_accounts (
+                employee_id,
+                password_hash,
+                role,
+                account_status
+            )
+            VALUES (?, ?, 'USER', 'ACTIVE')
+        `;
+        await promiseDb.query(accountQuery, [employeeResult.insertId, password]);
+
+        await promiseDb.commit();
+        transactionStarted = false;
+
+        return res.status(201).json({
+            success: true,
+            data: {
+                employeeId: employeeResult.insertId
+            },
+            message: '직원 등록이 완료되었습니다.'
+        });
+    } catch (error) {
+        if (transactionStarted) {
+            await promiseDb.rollback();
+        }
+
+        console.error('직원 등록 오류:', error);
+
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({
+                success: false,
+                message: '이미 등록된 사번 또는 이메일입니다.'
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: '직원을 등록하지 못했습니다.'
+        });
+    }
+});
+
+
+// 직원 정보 수정
+hrRouter.put('/api/hr/employees/:employeeId', async (req, res) => {
+    const employeeId = Number(req.params.employeeId);
+    const name = String(req.body.name || '').trim();
+    const departmentId = Number(req.body.departmentId);
+    const position = String(req.body.position || '').trim();
+    const email = String(req.body.email || '').trim();
+    const phone = String(req.body.phone || '').trim();
+    const hireDate = String(req.body.hireDate || '').trim();
+    const employmentStatus = String(req.body.employmentStatus || '').trim();
+    const allowedStatuses = ['재직', '휴직', '퇴사'];
+
+    if (
+        !Number.isInteger(employeeId) ||
+        employeeId < 1 ||
+        !name ||
+        !Number.isInteger(departmentId) ||
+        departmentId < 1 ||
+        !position ||
+        !email ||
+        !hireDate ||
+        !allowedStatuses.includes(employmentStatus)
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: '직원 수정 정보를 올바르게 입력해 주세요.'
+        });
+    }
+
+    if (!isEmailString(email)) {
+        return res.status(400).json({
+            success: false,
+            message: '올바른 이메일 형식을 입력해 주세요.'
+        });
+    }
+
+    if (!isDateString(hireDate)) {
+        return res.status(400).json({
+            success: false,
+            message: '입사일 형식은 YYYY-MM-DD여야 합니다.'
+        });
+    }
+
+    try {
+        const [existingEmployees] = await promiseDb.query(
+            `SELECT employment_status AS employmentStatus
+             FROM employees
+             WHERE employee_id = ?`,
+            [employeeId]
+        );
+
+        if (existingEmployees.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '직원을 찾을 수 없습니다.'
+            });
+        }
+
+        if (
+            employmentStatus === '퇴사' &&
+            existingEmployees[0].employmentStatus !== '퇴사'
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: '퇴사 처리는 전용 퇴사 처리 기능을 이용해 주세요.'
+            });
+        }
+
+        if (
+            existingEmployees[0].employmentStatus === '퇴사' &&
+            employmentStatus !== '퇴사'
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: '퇴사 처리된 직원의 상태는 수정할 수 없습니다.'
+            });
+        }
+
+        if (!(await departmentExists(departmentId))) {
+            return res.status(400).json({
+                success: false,
+                message: '존재하지 않는 부서입니다.'
+            });
+        }
+
+        const query = `
+            UPDATE employees
+            SET name = ?,
+                department_id = ?,
+                position = ?,
+                email = ?,
+                phone = ?,
+                hire_date = ?,
+                employment_status = ?
+            WHERE employee_id = ?
+        `;
+        const [result] = await promiseDb.query(query, [
+            name,
+            departmentId,
+            position,
+            email,
+            phone || null,
+            hireDate,
+            employmentStatus,
+            employeeId
+        ]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '직원을 찾을 수 없습니다.'
+            });
+        }
+
+        return res.json({
+            success: true,
+            data: {
+                employeeId
+            },
+            message: '직원 정보가 수정되었습니다.'
+        });
+    } catch (error) {
+        console.error('직원 정보 수정 오류:', error);
+
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({
+                success: false,
+                message: '이미 등록된 이메일입니다.'
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: '직원 정보를 수정하지 못했습니다.'
+        });
+    }
+});
+
+
+// 직원 퇴사 처리
+hrRouter.patch('/api/hr/employees/:employeeId/status', async (req, res) => {
+    const employeeId = Number(req.params.employeeId);
+    let transactionStarted = false;
+
+    if (!Number.isInteger(employeeId) || employeeId < 1) {
+        return res.status(400).json({
+            success: false,
+            message: '올바른 직원 ID를 입력해 주세요.'
+        });
+    }
+
+    try {
+        await promiseDb.beginTransaction();
+        transactionStarted = true;
+
+        const [employeeResult] = await promiseDb.query(
+            `UPDATE employees
+             SET employment_status = '퇴사'
+             WHERE employee_id = ?`,
+            [employeeId]
+        );
+
+        if (employeeResult.affectedRows === 0) {
+            await promiseDb.rollback();
+            transactionStarted = false;
+
+            return res.status(404).json({
+                success: false,
+                message: '직원을 찾을 수 없습니다.'
+            });
+        }
+
+        const [accountResult] = await promiseDb.query(
+            `UPDATE employee_accounts
+             SET account_status = 'SUSPENDED'
+             WHERE employee_id = ?`,
+            [employeeId]
+        );
+
+        if (accountResult.affectedRows === 0) {
+            await promiseDb.rollback();
+            transactionStarted = false;
+
+            return res.status(404).json({
+                success: false,
+                message: '직원 계정을 찾을 수 없습니다.'
+            });
+        }
+
+        await promiseDb.commit();
+        transactionStarted = false;
+
+        return res.json({
+            success: true,
+            data: {
+                employeeId,
+                employmentStatus: '퇴사',
+                accountStatus: 'SUSPENDED'
+            },
+            message: '퇴사 처리가 완료되었습니다.'
+        });
+    } catch (error) {
+        if (transactionStarted) {
+            await promiseDb.rollback();
+        }
+
+        console.error('직원 퇴사 처리 오류:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: '퇴사 처리에 실패했습니다.'
+        });
+    }
+});
+
+
+module.exports = hrRouter;

@@ -10,7 +10,7 @@ import Nav from '../../../components/Nav.js';
 
 export default function HrRoutes() {
   
-  let mainUrl = "/main/hr/";
+  let mainUrl = "/main/hr";
   const urlList = [
       {name:"대시보드", url:mainUrl+"/"}
       ,{name:"근태 관리", url:mainUrl+"/attendance"}
