@@ -64,7 +64,7 @@ function MyTeskList() {
                 axios.get(`${API_BASE_URL}/drafts`, { params }),
                 axios.get(`${API_BASE_URL}/drafts/received/list`, { params }),
                 axios.get(`${API_BASE_URL}/drafts/approved/list`, { params })
-            ]);
+            ]); // 서버에 get 요청 3개를 한꺼번에 보내고 모든걸로 부터 응답이 오면 밑 코드를 실행
             setDrafts(mine.data.map(row => toDraft(row, loginUser)));
             setReceivedDrafts(received.data.map(row => toDraft(row, loginUser)));
             setApprovedDrafts(approved.data.map(row => toDraft(row, loginUser)));
