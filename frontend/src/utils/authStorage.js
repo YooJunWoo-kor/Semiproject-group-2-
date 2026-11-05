@@ -116,112 +116,29 @@ export function saveEmployeeAccount(account) {
     };
 }
 
-
-// // 로그인
-// export async function findLoginAccount (loginId,password) {
-//     // 입력 앞뒤 공백 제거
-//     const inputId = loginId.trim();
-//     const inputPassword = password.trim();
-
-//     if(!inputId || !inputPassword){
-//         return alert("이메일 또는 비밀번호를 입력해주세요.");
-//     }
-
-//     //디버깅용 알림창, 포트 정상 작동 확인
-//     //http://localhost:4000/api
-//     //return alert(API_BASE_URL);
-
-//     try{
-//          const response = await axios.post(API_BASE_URL + '/login',{
-//             email: inputId,
-//             password: inputPassword
-//          })
-
-//          return response.data;
-//     }catch(error){
-//         if(error.response && error.response.data){
-//             throw new Error(error.response.data.message || '로그인에 실패했습니다.');
-//         }
-//         throw new Error(error.response.data.message || '서버와 통신할 수 없습니다.');
-//     }
-
 export async function findLoginAccount(loginId, password) {
-    // 테스트용 계정
-    const dummyAccounts = [
-        {
-            employee_id: 1,
-            employee_number: "EMP-0000",
-            name: "테스트 관리자",
-            email: "master@enova.co.kr",
-            password: "1111",
-            department_id: 1, // 재무·회계 부서
-            department: "재무·회계팀",
-            position: "사원",
-            role: "MASTER"
-        },
-        {
-            employee_id: 2,
-            employee_number: "EMP-0001",
-            name: "테스트 직원",
-            email: "a1@enova.co.kr",
-            password: "1111",
-            department_id: 4, 
-            department: "인사팀",
-            position: "대리",
-            role: "USER"
-        }
-    ]
-        ;
-
     const inputId = loginId.trim();
 
-    // 이메일과 비밀번호가 모두 일치하는 계정 찾기
-    const account = dummyAccounts.find(
-        (item) =>
-            item.email === inputId &&
-            item.password === password
-    );
-
-    // 일치하는 계정이 없으면 로그인 실패
-    if (!account) {
-        throw new Error("이메일 또는 비밀번호가 일치하지 않습니다.");
+    if (!inputId || !password) {
+        throw new Error("이메일과 비밀번호를 입력해 주세요.");
     }
 
-    // 찾은 계정에서 비밀번호를 제외한 정보만 전달
-    const user = {
-        employee_id: account.employee_id,
-        employee_number: account.employee_number,
-        name: account.name,
-        email: account.email,
-        department_id: account.department_id,
-        department: account.department,
-        position: account.position,
-        role: account.role
-    };
+    try {
+        // 백엔드에서 DB의 사원 계정을 확인합니다.
+        const response = await axios.post(
+            `${API_BASE_URL}/login`,
+            {
+                email: inputId,
+                password
+            }
+        );
 
-    // 기존 로그인 화면에서 사용하는 응답 형태 유지
-    return {
-        result: "success",
-        user: user
-    };
+        // 기존 로그인 화면에서 사용하는 응답 형태를 유지합니다.
+        return response.data;
+    } catch (error) {
+        throw new Error(
+            error.response?.data?.message ||
+            "로그인 서버에 연결하지 못했습니다."
+        );
+    }
 }
-
-    // -----------------------------
-    // MASTER가 등록한 직원 로그인
-    // 이메일 사용
-    // -----------------------------
-    // const employeeAccounts =
-    //     getEmployeeAccounts();
-
-    // const employee =
-    //     employeeAccounts.find(
-    //         account =>
-    //             account.email === inputId &&
-    //             account.password === inputPassword
-    //     );
-
-    // if (employee) {
-    //     return employee;
-    // }
-
-    // return null;

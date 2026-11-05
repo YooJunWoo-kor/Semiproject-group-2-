@@ -25,11 +25,11 @@ export async function createPartner(partnerData) {
 }
 
 // 거래처 정보 수정 (partnerId:수정할 거래처 ID로 수정할 거래처를 지정, partnerData:수정한 입력폼 데이터)
-export async function updatePartner(partnerId, partnerData) { 
+export async function updatePartner(partnerId, partnerData) {
     const response = await axios.put(
-        `${FINANCE_API_URL}/partners/${partnerId}`,  
-        partnerData 
-    );   
+        `${FINANCE_API_URL}/partners/${partnerId}`,
+        partnerData
+    );
     return response.data;
 }
 
@@ -96,6 +96,157 @@ export async function createPayment(transactionId, paymentData) {
 export async function getTransactionPayments(transactionId) {
     const response = await axios.get(
         `${FINANCE_API_URL}/transactions/${transactionId}/payments`
+    );
+
+    return response.data;
+}
+
+// 회사계좌 목록 조회
+export async function getBankAccounts() {
+    const response = await axios.get(
+        `${FINANCE_API_URL}/bank-accounts`
+    );
+
+    return response.data;
+}
+
+// 회사계좌 신규 등록
+export async function createBankAccount(accountData) {
+    const response = await axios.post(
+        `${FINANCE_API_URL}/bank-accounts`,
+        accountData
+    );
+
+    return response.data;
+}
+
+// 회사계좌 정보 수정
+export async function updateBankAccount(accountId, accountData) {
+    const response = await axios.put(
+        `${FINANCE_API_URL}/bank-accounts/${accountId}`,
+        accountData
+    );
+
+    return response.data;
+}
+
+// 회사계좌별 입금·출금 이력 조회
+export async function getBankAccountPayments(accountId) {
+    const response = await axios.get(
+        `${FINANCE_API_URL}/bank-accounts/${accountId}/payments`
+    );
+
+    return response.data;
+}
+
+// 재무 관리 사원 선택용 목록 조회
+export async function getFinanceEmployees() {
+    const response = await axios.get(
+        `${FINANCE_API_URL}/employees`
+    );
+
+    return response.data;
+}
+
+// 법인카드 목록 조회
+export async function getCorporateCards() {
+    const response = await axios.get(
+        `${FINANCE_API_URL}/corporate-cards`
+    );
+
+    return response.data;
+}
+
+// 법인카드 월 한도 변경
+export async function updateCorporateCardLimit(cardId, monthlyLimit) {
+    const response = await axios.put(
+        `${FINANCE_API_URL}/corporate-cards/${cardId}/limit`,
+        { monthly_limit: monthlyLimit }
+    );
+
+    return response.data;
+}
+
+// 법인카드별 사용 이력 조회
+export async function getCorporateCardPayments(cardId) {
+    const response = await axios.get(
+        `${FINANCE_API_URL}/corporate-cards/${cardId}/payments`
+    );
+
+    return response.data;
+}
+
+// 법인카드 신규 등록
+export async function createCorporateCard(cardData) {
+    const response = await axios.post(
+        `${FINANCE_API_URL}/corporate-cards`,
+        cardData
+    );
+
+    return response.data;
+}
+
+// 부서와 관리자 목록을 가져오는 함수
+export async function getCorporateCardOptions() {
+    const response = await axios.get(
+        `${FINANCE_API_URL}/corporate-card-options`
+    );
+    return response.data;
+}
+
+// 법인카드 기본정보 수정
+export async function updateCorporateCard(cardId, cardData) {
+    const response = await axios.put(
+        `${FINANCE_API_URL}/corporate-cards/${cardId}`,
+        cardData
+    );
+
+    return response.data;
+}
+
+// 법인카드 상태 변경
+export async function updateCorporateCardStatus(cardId, status) {
+    const response = await axios.put(
+        `${FINANCE_API_URL}/corporate-cards/${cardId}/status`,
+        { card_status: status }
+    );
+
+    return response.data;
+}
+
+// 회사계좌 상태 변경
+export async function updateBankAccountStatus(accountId, status) {
+    const response = await axios.put(
+        `${FINANCE_API_URL}/bank-accounts/${accountId}/status`,
+        { account_status: status }
+    );
+
+    return response.data;
+}
+
+// 결재 문서 목록 조회
+export async function getApprovals() {
+    const response = await axios.get(
+        `${FINANCE_API_URL}/approvals`
+    );
+
+    return response.data;
+}
+
+// 문서별 결재자와 처리 이력 조회
+export async function getApprovalSteps(documentId) {
+    const response = await axios.get(
+        `${FINANCE_API_URL}/approvals/${documentId}/steps`
+    );
+
+    return response.data;
+}
+
+// 결재 기안 신규 등록
+export async function createApproval(approvalData) {
+    const response = await axios.post(
+        `${FINANCE_API_URL}/approvals`,
+        approvalData
     );
 
     return response.data;

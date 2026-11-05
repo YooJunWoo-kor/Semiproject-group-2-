@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getItems, getPartners, createItem, updateItem, deleteItem, createPayment, getTransactionPayments } from "../../../../utils/financeService";
+import { getItems, getPartners, createItem, updateItem, deleteItem, createPayment, getTransactionPayments, getBankAccounts, getCorporateCards } from "../../../../utils/financeService";
 import PaginationTable from '../../../../components/PaginationTable';
 import WeeklyCalendar from '../../../../components/weeklycalendar/WeeklyCalendar';
 import BasicCalendar from '../../../../components/calendar/BasicCalendar';
@@ -55,7 +55,9 @@ function Items() {
   const [paymentForm, setPaymentForm] = useState({
     payment_date: "",
     amount: "",
-    payment_method: "계좌이체"
+    payment_method: "계좌이체",
+    account_id: "", // 회사계좌 ID
+    card_id: "" // 법인카드 ID
   });
 
   const [paymentSaving, setPaymentSaving] = useState(false);
@@ -68,6 +70,14 @@ function Items() {
 
   // 입금·출금 저장 후 이력을 다시 조회하는 데 사용합니다.
   const [paymentRefresh, setPaymentRefresh] = useState(0);
+
+  // 정산 상태 필터
+  const [settlementFilter, setSettlementFilter] = useState("ALL");
+
+  // 입금·출금에 사용할 회사계좌 목록
+  const [paymentAccounts, setPaymentAccounts] = useState([]);
+  const [accountsLoading, setAccountsLoading] = useState(true);
+  const [accountsError, setAccountsError] = useState("");
 
   useEffect(() => {
     async function loadItems() {
@@ -124,15 +134,100 @@ function Items() {
     loadPartnerOptions();
   }, []);
 
+  // 사용자 컴퓨터의 오늘 날짜를 YYYY-MM-DD 형식으로 만듭니다.
+  const now = new Date();
 
-  // 탭 및 검색어 필터링
+  const today = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0")
+  ].join("-");
+
+  // 거래 구분, 검색어, 정산 상태를 함께 확인합니다.
   const filteredList = itemList.filter((item) => {
-    const matchesTab = activeTab === 'ALL' || item.type === activeTab;
+    const matchesTab =
+      activeTab === "ALL" || item.type === activeTab;
+
+    const keyword = searchTerm.trim().toLowerCase();
+
     const matchesSearch =
-      item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.customer.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesTab && matchesSearch;
+      item.itemName.toLowerCase().includes(keyword) ||
+      item.customer.toLowerCase().includes(keyword);
+
+    const isOverdue =
+      item.status === "미정산" &&
+      Boolean(item.dueDate) &&
+      item.dueDate < today;
+
+    const matchesSettlement =
+      settlementFilter === "ALL" ||
+      (settlementFilter === "OVERDUE"
+        ? isOverdue
+        : item.status === settlementFilter);
+
+    return matchesTab && matchesSearch && matchesSettlement;
   });
+
+  // 사용 가능한 원화 회사계좌 조회
+  useEffect(() => {
+    async function loadPaymentAccounts() {
+      try {
+        const data = await getBankAccounts();
+
+        setPaymentAccounts(
+          data.filter((account) =>
+            account.currency === "KRW" &&
+            ["사용", "ACTIVE"].includes(account.account_status)
+          )
+        );
+      } catch (err) {
+        console.error("정산용 회사계좌 조회 오류:", err);
+        setAccountsError("회사계좌 목록을 불러오지 못했습니다.");
+      } finally {
+        setAccountsLoading(false);
+      }
+    }
+
+    loadPaymentAccounts();
+  }, []);
+
+  // 법인카드 선택 목록: 폼을 열거나 정산을 저장하면 최신 한도를 조회합니다.
+  const [paymentCards, setPaymentCards] = useState([]);
+  const [cardsLoading, setCardsLoading] = useState(false);
+  const [cardsError, setCardsError] = useState("");
+  const paymentTransactionId = paymentTarget?.transactionId ?? null;
+
+  useEffect(() => {
+    let cancelled = false;
+    setPaymentCards([]);
+    setCardsError("");
+
+    if (paymentTransactionId === null) {
+      setCardsLoading(false);
+      return;
+    }
+
+    async function loadPaymentCards() {
+      setCardsLoading(true);
+      try {
+        const data = await getCorporateCards();
+        if (!cancelled) {
+          setPaymentCards(data.filter((card) =>
+            ["사용", "ACTIVE"].includes(card.card_status)
+          ));
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setCardsError("법인카드 목록을 불러오지 못했습니다.");
+        }
+      } finally {
+        if (!cancelled) setCardsLoading(false);
+      }
+    }
+
+    loadPaymentCards();
+    return () => { cancelled = true; };
+  }, [paymentTransactionId, paymentRefresh]);
 
   // 상단 요약 집계 연산
   const totalSalesAmount = itemList
@@ -160,6 +255,8 @@ function Items() {
   // PaginationTable 규격에 맞춘 데이터 매핑 ({ content: [...] })
   const tItemData = filteredList.map((item) => {
     const isSales = item.type === 'SALES';
+
+
 
 
     return {
@@ -327,6 +424,7 @@ function Items() {
 
       setActiveTab("ALL");
       setSearchTerm("");
+      setSettlementFilter("ALL");
       setSelectedItemId(savedItem.id);
 
       setPaymentRefresh((prev) => prev + 1); // 이 줄 추가
@@ -478,7 +576,9 @@ function Items() {
     setPaymentForm({
       payment_date: "",
       amount: "",
-      payment_method: "계좌이체"
+      payment_method: "계좌이체",
+      account_id: "",
+      card_id: ""
     });
 
     setPaymentError("");
@@ -491,7 +591,9 @@ function Items() {
 
     setPaymentForm((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
+      // 결제수단을 바꾸면 이전 계좌·카드 선택을 초기화합니다.
+      ...(name === "payment_method" ? { account_id: "", card_id: "" } : {})
     }));
   }
 
@@ -500,6 +602,17 @@ function Items() {
     e.preventDefault();
 
     if (!paymentTarget || paymentSaving) return;
+
+    if (paymentForm.payment_method === "법인카드") {
+      if (paymentTarget.type !== "PURCHASE") {
+        setPaymentError("법인카드는 매입 거래의 출금에만 사용할 수 있습니다.");
+        return;
+      }
+      if (cardsLoading || cardsError || !paymentForm.card_id) {
+        setPaymentError("사용할 법인카드를 선택해 주세요. 목록 조회 실패 시 폼을 다시 열어 주세요.");
+        return;
+      }
+    }
 
     setPaymentSaving(true);
     setPaymentError("");
@@ -610,6 +723,16 @@ function Items() {
             </div>
 
             <div style={{ display: 'flex', gap: '6px', flex: 1, maxWidth: '280px' }}>
+              <select
+                aria-label="정산 상태"
+                value={settlementFilter}
+                onChange={(e) => setSettlementFilter(e.target.value)}
+              >
+                <option value="ALL">전체 상태</option>
+                <option value="미정산">미정산</option>
+                <option value="완료">완료</option>
+                <option value="OVERDUE">마감 초과</option>
+              </select>
               <input
                 type="text"
                 placeholder="품목명 또는 거래처명 검색"
@@ -824,8 +947,74 @@ function Items() {
                   >
                     <option value="계좌이체">계좌이체</option>
                     <option value="현금">현금</option>
+                    {paymentTarget.type === "PURCHASE" && (
+                      <option value="법인카드">법인카드</option>
+                    )}
                   </select>
                 </div>
+
+                {paymentForm.payment_method === "계좌이체" && (
+                  <div>
+                    <label htmlFor="payment-account">회사계좌 *</label>
+
+                    <select
+                      id="payment-account"
+                      name="account_id"
+                      value={paymentForm.account_id}
+                      onChange={handlePaymentChange}
+                      disabled={accountsLoading || Boolean(accountsError)}
+                      required
+                    >
+                      <option value="">회사계좌 선택</option>
+
+                      {paymentAccounts.map((account) => (
+                        <option
+                          key={account.account_id}
+                          value={account.account_id}
+                        >
+                          {account.bank_name} / {account.account_name}
+                          {" / "}{account.account_number}
+                        </option>
+                      ))}
+                    </select>
+
+                    {accountsLoading && <p>회사계좌를 불러오는 중입니다.</p>}
+                    {accountsError && <p role="alert">{accountsError}</p>}
+
+                    {!accountsLoading &&
+                      !accountsError &&
+                      paymentAccounts.length === 0 && (
+                        <p>선택 가능한 원화 계좌가 없습니다.</p>
+                      )}
+                  </div>
+                )}
+
+                {paymentForm.payment_method === "법인카드" && (
+                  <div>
+                    <label htmlFor="payment-card">법인카드 *</label>
+                    <select
+                      id="payment-card"
+                      name="card_id"
+                      value={paymentForm.card_id}
+                      onChange={handlePaymentChange}
+                      required
+                      disabled={cardsLoading || Boolean(cardsError)}
+                    >
+                      <option value="">법인카드 선택</option>
+                      {paymentCards.map((card) => (
+                        <option key={card.card_id} value={card.card_id}>
+                          {card.card_name} / 잔여 한도 {Number(card.remaining_limit).toLocaleString()}원
+                        </option>
+                      ))}
+                    </select>
+                    {cardsLoading && <p>법인카드를 불러오는 중입니다.</p>}
+                    {cardsError && <p role="alert">{cardsError}</p>}
+                    {!cardsLoading && !cardsError && paymentCards.length === 0 && (
+                      <p>선택 가능한 법인카드가 없습니다.</p>
+                    )}
+                    <p>카드 결제 시 사용량이 증가하고 잔여 한도가 감소합니다.</p>
+                  </div>
+                )}
 
                 {paymentError && (
                   <p role="alert">{paymentError}</p>
@@ -846,7 +1035,7 @@ function Items() {
           )}
 
           <PaginationTable
-            key={`${activeTab}-${searchTerm}`}
+            key={`${activeTab}-${searchTerm}-${settlementFilter}`}
             title={itemTableTitle}
             th={itemHeaders}
             allData={tItemData}
