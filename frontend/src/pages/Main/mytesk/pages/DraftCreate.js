@@ -51,13 +51,31 @@ function DraftCreate({
     
                 setDepartments(departmentList);
     
-            } catch (error) {s
+            } catch (error) {
                 console.error("부서 조회 실패:", error);
             }
         }
     
         loadDepartments();
     }, []);
+
+    useEffect(() => {
+        if (editingDraft) {
+            setTitle(editingDraft.title || "");
+            setDraftType(editingDraft.draftType || "일반");
+            setContent(editingDraft.content || "");
+            setApprovers(editingDraft.approvers || []);
+    
+            setStartDate(editingDraft.startDate || "");
+            setEndDate(editingDraft.endDate || "");
+    
+            setItemName(editingDraft.itemName || "");
+            setQuantity(editingDraft.quantity || "");
+    
+            setUseDate(editingDraft.useDate || "");
+            setAmount(editingDraft.amount || "");
+        }
+    }, [editingDraft]);
 
 
 
