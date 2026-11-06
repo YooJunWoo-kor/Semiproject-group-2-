@@ -12,7 +12,8 @@ import {
     deleteFreePost,
     getEmployee,
     addFreeComment,
-    deleteFreeComment
+    deleteFreeComment,
+    updateFreeComment
 } from '../../../../utils/communityApi';
 
 
@@ -79,7 +80,7 @@ function FreeBoardPage({ communityItems }) {
 
                     const selectedPost = posts.find(
                         (item) =>
-                            String(item.id) === String(selectedItemId)
+                            String(item.post_id) === String(selectedItemId)
                     );
 
                     if (selectedPost) {
@@ -131,6 +132,11 @@ function FreeBoardPage({ communityItems }) {
 
     const [comment, setComment] = useState('');
 
+    // 댓글 수정 상태 관리
+    const [editingCommentId, setEditingCommentId] = useState(null);
+
+    const [editingCommentContent, setEditingCommentContent] = useState('');
+
 
     // ==========================================
     // 4. 모달과 게시글 입력값 관리
@@ -147,7 +153,7 @@ function FreeBoardPage({ communityItems }) {
 
     // 검색
     const filtered = items.filter((item) =>
-        `${item.title} ${item.author}`
+        `${item.post_title} ${item.author}`
             .toLowerCase()
             .includes(query.toLowerCase())
     );
@@ -161,9 +167,9 @@ function FreeBoardPage({ communityItems }) {
 
         setEditingItem(item);
 
-        setTitle(item ? item.title : '');
+        setTitle(item ? item.post_title : '');
 
-        setContent(item ? item.content : '');
+        setContent(item ? item.post_content : '');
 
         setIsModalOpen(true);
 
@@ -226,7 +232,7 @@ function FreeBoardPage({ communityItems }) {
             // 게시글 수정
             if (editingItem) {
 
-                await updateFreePost(editingItem.id, {
+                await updateFreePost(editingItem.post_id, {
                     title: title.trim(),
                     content: content.trim()
                 });
@@ -235,11 +241,11 @@ function FreeBoardPage({ communityItems }) {
                 const posts = await refreshPosts();
 
                 const updatedPost = posts.find(
-                    (item) => item.id === editingItem.id
+                    (item) => item.post_id === editingItem.post_id
                 );
 
 
-                if (selected && selected.id === editingItem.id) {
+                if (selected && selected.post_id === editingItem.post_id) {
 
                     setSelected(updatedPost || null);
 
@@ -295,12 +301,12 @@ function FreeBoardPage({ communityItems }) {
 
         try {
 
-            await deleteFreePost(itemToRemove.id);
+            await deleteFreePost(itemToRemove.post_id);
 
             await refreshPosts();
 
 
-            if (selected && selected.id === itemToRemove.id) {
+            if (selected && selected.post_id === itemToRemove.post_id) {
 
                 setSelected(null);
 
@@ -356,7 +362,7 @@ function FreeBoardPage({ communityItems }) {
 
         try {
 
-            await addFreeComment(selected.id, {
+            await addFreeComment(selected.post_id, {
                 content: comment.trim(),
                 author: employee.name
             });
@@ -365,7 +371,7 @@ function FreeBoardPage({ communityItems }) {
             const posts = await refreshPosts();
 
             const updatedPost = posts.find(
-                (item) => item.id === selected.id
+                (item) => item.post_id === selected.post_id
             );
 
 
@@ -411,7 +417,7 @@ function FreeBoardPage({ communityItems }) {
             const posts = await refreshPosts();
 
             const updatedPost = posts.find(
-                (item) => item.id === selected.id
+                (item) => item.post_id === selected.post_id
             );
 
 
@@ -435,7 +441,81 @@ function FreeBoardPage({ communityItems }) {
 
 
     // ==========================================
-    // 10. 모달 입력 폼
+    // 10. 댓글 수정
+    // ==========================================
+
+    // 수정 버튼 클릭
+    const handleEditComment = (c) => {
+
+        setEditingCommentId(c.id);
+
+        setEditingCommentContent(c.content);
+
+    };
+
+
+    // 댓글 수정 취소
+    const cancelEditComment = () => {
+
+        setEditingCommentId(null);
+
+        setEditingCommentContent('');
+
+    };
+
+
+    // 댓글 수정 저장
+    const saveEditComment = async (id) => {
+
+        if (!editingCommentContent.trim()) {
+
+            alert('댓글 내용을 입력해 주세요.');
+
+            return;
+
+        }
+
+
+        try {
+
+            await updateFreeComment(id, {
+                content: editingCommentContent.trim()
+            });
+
+
+            const posts = await refreshPosts();
+
+            const updatedPost = posts.find(
+                (item) => item.post_id === selected.post_id
+            );
+
+
+            if (updatedPost) {
+
+                setSelected(updatedPost);
+
+            }
+
+
+            setEditingCommentId(null);
+
+            setEditingCommentContent('');
+
+            alert('댓글이 수정되었습니다.');
+
+        } catch (error) {
+
+            console.error('댓글 수정 실패:', error);
+
+            alert('댓글 수정에 실패했습니다.');
+
+        }
+
+    };
+
+
+    // ==========================================
+    // 11. 모달 입력 폼
     // ==========================================
 
     const writeModalLayout = (
@@ -484,7 +564,7 @@ function FreeBoardPage({ communityItems }) {
 
 
     // ==========================================
-    // 11. 테이블 데이터
+    // 12. 테이블 데이터
     // ==========================================
 
     const tableHeaders = [
@@ -511,7 +591,7 @@ function FreeBoardPage({ communityItems }) {
                     setView('detail');
                 }}
             >
-                {item.title}
+                {item.post_title}
             </span>,
 
 
@@ -550,7 +630,7 @@ function FreeBoardPage({ communityItems }) {
 
 
     // ==========================================
-    // 12. 화면 출력
+    // 13. 화면 출력
     // ==========================================
 
     return (
@@ -642,7 +722,7 @@ function FreeBoardPage({ communityItems }) {
 
                     <header>
 
-                        <h3>{selected.title}</h3>
+                        <h3>{selected.post_title}</h3>
 
                         <span className="subtext">
 
@@ -659,7 +739,7 @@ function FreeBoardPage({ communityItems }) {
 
 
                     <div className="detail-body">
-                        {selected.content}
+                        {selected.post_content}
                     </div>
 
 
@@ -708,20 +788,75 @@ function FreeBoardPage({ communityItems }) {
                                             ({c.createdAt})
                                         </span>
 
-                                        <p className="comment-text">
-                                            {c.content}
-                                        </p>
+
+                                        {/* 댓글 수정 중인 경우 */}
+
+                                        {String(editingCommentId) === String(c.id) ? (
+
+                                            <div>
+
+                                                <input
+                                                    type="text"
+                                                    value={editingCommentContent}
+                                                    onChange={(e) =>
+                                                        setEditingCommentContent(e.target.value)
+                                                    }
+                                                />
+
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => saveEditComment(c.id)}
+                                                >
+                                                    저장
+                                                </button>
+
+
+                                                <button
+                                                    type="button"
+                                                    onClick={cancelEditComment}
+                                                >
+                                                    취소
+                                                </button>
+
+                                            </div>
+
+                                        ) : (
+
+                                            <p className="comment-text">
+                                                {c.content}
+                                            </p>
+
+                                        )}
 
                                     </div>
 
 
-                                    <button
-                                        type="button"
-                                        className="danger-button"
-                                        onClick={() => removeComment(c.id)}
-                                    >
-                                        삭제
-                                    </button>
+                                    {/* 수정 중이 아닐 때만 수정 / 삭제 버튼 표시 */}
+
+                                    {String(editingCommentId) !== String(c.id) && (
+
+                                        <div className="table-actions">
+
+                                            <button
+                                                type="button"
+                                                onClick={() => handleEditComment(c)}
+                                            >
+                                                수정
+                                            </button>
+
+
+                                            <button
+                                                type="button"
+                                                className="danger-button"
+                                                onClick={() => removeComment(c.id)}
+                                            >
+                                                삭제
+                                            </button>
+
+                                        </div>
+
+                                    )}
 
                                 </div>
 

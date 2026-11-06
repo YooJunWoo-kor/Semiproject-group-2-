@@ -73,3 +73,14 @@ export const deleteFreeComment = async (commentId) => {
 
     return response.data;
 };
+
+
+// 8. 댓글 수정
+export const updateFreeComment = async (commentId, comment) => {
+    const response = await axios.put(
+        `${API_BASE_URL}/community/comments/${commentId}`,
+        comment
+    );
+
+    return response.data;
+};
