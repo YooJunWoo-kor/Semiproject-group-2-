@@ -1,53 +1,49 @@
 import React from "react";
+import axios from "axios";
+import { getLoginUser } from "../../../../utils/authStorage";
 
-function DraftReceived({ drafts, setDrafts, loginUser }) {
-    const receivedDrafts = drafts.filter((draft) => {
-        return (
-            draft.approverId === loginUser.id && draft.status === "요청"
-        )
-    })
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api";
 
-    function handleApprove(id) {
-        const updatedDrafts = drafts.map((draft) => {
-            if (draft.id === id)
-                return {
-                    ...draft,
-                    status: "승인"
-                };
-
-            return draft;
-        })
-
-
-        setDrafts(updatedDrafts)
-
+function DraftReceived({ drafts, loginUser, onDraftChanged }) {
+    async function handleDecision(id, decision) {
+        const employeeId = getLoginUser()?.employeeKey;
+        if (decision === "reject" && !window.confirm("이 기안서를 반려하시겠습니까?")) return;
+        try {
+            await axios.post(`${API_BASE_URL}/drafts/${id}/decision`, {
+                employeeId,
+                decision
+            });
+            await onDraftChanged();
+            alert(decision === "approve" ? "결재 승인 완료" : "기안서 반려 완료");
+        } catch (error) {
+            console.error("결재 처리 오류:", error);
+            alert(error.response?.data?.message || "결재 처리에 실패했습니다.");
+        }
     }
 
     return (
         <div>
             <h2>요청이 온 기안서</h2>
-
-            {receivedDrafts.length === 0 ? (
-                <p>요청받은 기안서가 없습니다</p>
-            ) : (
-                receivedDrafts.map((draft) => {
-                    return(
-                        <div key={draft.id}>
-                             <p>결재요청자 : {draft.writerName}</p>
-
-                            <p>작성자 : {draft.writerName}</p>
-                            <p>제목 : {draft.title}</p>
-                            <p>문서 종류 : {draft.draftType}</p>
-                            <p>작성일 : {draft.createdAt}</p>
-                            <p>상태 : {draft.status}</p>
-
-                            <button type="button" onClick={() => handleApprove(draft.id)}>승인</button>
-                        </div>
-                    )
-                })
-            )}
+            {drafts.length === 0 ? (
+                <p>요청받은 기안서가 없습니다.</p>
+            ) : drafts.map(draft => (
+                <div key={draft.id} className="draft-item">
+                    <p>결재요청자 : {draft.writerName}</p>
+                    <p>제목 : {draft.title}</p>
+                    <p>문서 종류 : {draft.draftType}</p>
+                    <p>내용 : {draft.content}</p>
+                    <p>작성일 : {draft.createdAt}</p>
+                    <p>상태 : {draft.status}</p>
+                    <button type="button" onClick={() => handleDecision(draft.id, "approve")}>
+                        승인
+                    </button>
+                    <button type="button" onClick={() => handleDecision(draft.id, "reject")}>
+                        반려
+                    </button>
+                </div>
+            ))}
         </div>
-    )
+    );
 }
 
 export default DraftReceived;

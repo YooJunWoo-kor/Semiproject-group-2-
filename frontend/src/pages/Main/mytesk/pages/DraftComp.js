@@ -2,12 +2,12 @@ import React from "react";
 
 function DraftComp({drafts}) {
     const completedDrafts = drafts.filter((draft) => {
-        return draft.status === "완료";
+        return draft.status === "최종승인";
     })
 
     return (
         <div>
-            <h2>완료된 기안서</h2>
+            <h2>최종승인된 기안서</h2>
 
             {completedDrafts.length === 0 ? (
                 <p>완료된 기안서가 없습니다.</p>

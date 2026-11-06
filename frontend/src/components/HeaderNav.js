@@ -8,7 +8,7 @@ function HeaderNav(){
     const navigate = useNavigate();
     // 로그아웃 함수 정의
     const handleLogout = () => {
-        localStorage.clear();
+        localStorage.removeItem("loginUser");
         alert('로그아웃 되었습니다.');
         navigate('/');
     };
@@ -35,10 +35,8 @@ function HeaderNav(){
     const userName = user?.name || user?.userName || "사용자";
     // 유저의 첫글자 저장
     const userFName = userName[0];
-
     // 디버깅용 consol창
-    console.log(localStorage.getItem("loginUser"));
-
+    
     return(
         <div>
             <nav className="erp-top-nav" aria-label="ERP 주 메뉴">

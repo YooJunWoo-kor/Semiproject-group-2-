@@ -1,153 +1,62 @@
 import React, { useState } from "react";
+import axios from "axios";
+import { getLoginUser } from "../../../../utils/authStorage";
+import { useNavigate } from "react-router-dom";
 
-function DraftReq({ drafts, setDrafts }) {
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api";
 
-    const [editId, setEditId] = useState(null);
-    const [editTitle, setEditTitle] = useState("");
-    const [editContent, setEditContent] = useState("");
-    const [editDraftType, setEditDraftType] = useState("");
-    const [searchText, setsearchText] = useState("");
+function DraftReq({ drafts, loginUser, setEditingDraft, onDraftChanged }) {
+    const [searchText, setSearchText] = useState("");
+    const navigate = useNavigate();
+    const employeeId = getLoginUser()?.employeeKey;
 
-    function handleEdit(draft) {
-        setEditId(draft.id);
-        setEditTitle(draft.title);
-        setEditContent(draft.content);
-        setEditDraftType(draft.draftType);
-    }
+    const requestedDrafts = drafts.filter(draft =>
+        draft.writerEmployeeKey === employeeId &&
+        draft.status !== "최종승인" &&
+        draft.title.includes(searchText)
+    );
 
-    function handleComplete(id) {
-        const updatedDrafts = drafts.map((draft) => {
-            if (draft.id === id) {
-                return {
-                    ...draft,
-                    status: "완료"
-                };
-            }
-
-            return draft;
-        });
-
-        setDrafts(updatedDrafts);
-    }
-
-    const requestedDrafts = drafts.filter((draft) => {
-        return (
-            draft.status === "요청" &&
-            draft.title.includes(searchText)
-        );
-    });
-
-    function handleDelete(id) {
-        setDrafts(
-            drafts.filter((draft) => {
-                return draft.id !== id;
-            })
-        );
-    }
-
-
-    function handleCancel() {
-        setEditId(null);
-        setEditTitle("");
-        setEditContent("");
-        setEditDraftType("");
-    }
-
-
-
-    function handleSave(id) {
-        
-        if(editTitle.trim() === "" || editContent.trim() === ""){
-            alert("제목과 내용을 입력해주세요");
-            return;
+    async function handleDelete(id) {
+        if (!window.confirm("임시저장 기안서를 삭제하시겠습니까?")) return;
+        try {
+            await axios.delete(`${API_BASE_URL}/drafts/${id}`, {
+                params: { employeeId }
+            });
+            await onDraftChanged();
+        } catch (error) {
+            console.error("기안서 삭제 오류:", error);
+            alert(error.response?.data?.message || "기안서 삭제에 실패했습니다.");
         }
-
-        const updatedDrafts = drafts.map((draft) => {
-            if (draft.id === id) {
-                return {
-                    ...draft,
-                    title: editTitle,
-                    content: editContent,
-                    draftType: editDraftType
-                }
-            }
-            
-
-            return draft;
-        });
-
-        setDrafts(updatedDrafts);
-
-        setEditId(null);
-        setEditTitle("");
-        setEditContent("");
-        setEditDraftType("");
     }
 
     return (
         <div>
-            <h2>요청된 기안서</h2>
-            <input type="text" placeholder="제목 검색" value={searchText} onChange={e => setsearchText(e.target.value)}/>
-
+            <h2>요청된 기안서 / 임시저장된 기안서</h2>
+            <input type="text" placeholder="제목 검색" value={searchText}
+                onChange={e => setSearchText(e.target.value)} />
             {requestedDrafts.length === 0 ? (
                 <p>요청된 기안서가 없습니다.</p>
-            ) : (
-                requestedDrafts.map((draft, index) => {
-                    return (
-
-                        <div key={index}>
-
-                            {editId === draft.id ? (
-                                <div>
-                                    <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} />
-                                    <textarea value={editContent} onChange={e => setEditContent(e.target.value)} />
-
-                                    <select value={editDraftType} onChange={e => setEditDraftType(e.target.value)}>
-                                        <option>일반</option>
-                                        <option>휴가</option>
-                                        <option>구매</option>
-                                        <option>비용</option>
-                                        
-                                    </select>
-
-                                    <button type="button" onClick={() => handleSave(draft.id)}>
-                                        저장
-                                    </button>
-
-                                    <button type="button" onClick={handleCancel}>
-                                        취소
-                                    </button>
-                                </div>
-                            ) : (
-
-                                <div>
-                                    <p>결재자 : {draft.approverPosition} {draft.approverName}</p>
-
-                                    <p>제목 : {draft.title}</p>
-                                    <p>문서 종류 : {draft.draftType}</p>
-                                    <p>내용 : {draft.content}</p>
-                                    <p>작성일 : {draft.createdAt}</p>
-                                    <p>상태 : {draft.status}</p>
-
-                                    <button type="button" onClick={() => handleComplete(draft.id)}>
-                                        완료
-                                    </button>
-
-                                    <button type="button" onClick={() => handleDelete(draft.id)}>
-                                        삭제
-                                    </button>
-
-                                    <button type="button" onClick={() => handleEdit(draft)}>
-                                        수정
-                                    </button>
-                                </div>
-                            )}
-
+            ) : requestedDrafts.map((draft, index) => (
+                <div key={draft.id} className="draft-item">
+                    <h3 className="draft-item-title">기안서 #{index + 1}</h3>
+                    <p>제목 : {draft.title}</p>
+                    <p>문서 종류 : {draft.draftType}</p>
+                    <p>내용 : {draft.content}</p>
+                    <p>작성일 : {draft.createdAt}</p>
+                    <p>상태 : {draft.status}</p>
+                    {draft.status === "임시저장" && (
+                        <div className="draft-actions">
+                            <button type="button" onClick={() => {
+                                setEditingDraft(draft);
+                                navigate("/main/mytesk/draft-create");
+                            }}>이어서 작성</button>
+                            <button type="button" onClick={() => handleDelete(draft.id)}>
+                                삭제
+                            </button>
                         </div>
-                    );
-                })
-            )}
-
+                    )}
+                </div>
+            ))}
         </div>
     );
 }

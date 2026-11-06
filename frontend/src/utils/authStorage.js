@@ -1,10 +1,25 @@
 import axios from 'axios';
 
-const LOGIN_USER_KEY = "loginUser";
-const EMPLOYEE_ACCOUNT_KEY = "employeeAccounts";
+export const LOGIN_USER_KEY = "loginUser";
 
 // env에서 설정한 api를 사용하거나, 없다면 기본값 4000번 포트 사용.
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000/api';
+//export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000/api';
+const defaultHost = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${defaultHost}:4000/api`;
+
+//달력에 표기할 색상 리스트
+export const TOGLE_COLORS = [
+    '#3b82f6', // 0: 소프트 블루 (정상 출근)
+    '#f59e0b', // 1: 웜 앰버 (지각 / 조퇴)
+    '#ef4444', // 2: 뮤트 레드 (결근 / 병가)
+    '#10b981', // 3: 세이지 에메랄드 (연차 / 반차)
+    '#06b6d4', // 4: 덜 시안 (경조휴가)
+    '#6366f1', // 5: 소프트 인디고 (외근 / 출장)
+    '#14b8a6', // 6: 차분한 틸 (재택근무)
+    '#8b5cf6', // 7: 뮤트 바이올렛 (야간근무)
+    '#d946ef', // 8: 소프트 후샤 (휴일근무)
+    '#64748b'  // 9: 뉴트럴 슬레이트 (기타)
+  ];
 
 // 로그인 사용자 저장
 export function saveLoginUser(user) {
@@ -21,99 +36,51 @@ export function getLoginUser() {
 
     return JSON.parse(user);
 }
-// 출결 데이터 조회
-export async function getAttendance(){
-    return [];
-    //const userId = getLoginUser.employeeKey;
-    // try {
-    //     const data = await axios.post(API_BASE_URL + '/attendance',{userId})
-    //     return data.data;
-    // } catch (error) {
-    //     if (error.response){
-    //         return alert(userID);
-    //     }
-    // }
+
+// 로그아웃
+export function logoutUser() {
+
+    localStorage.removeItem(
+        LOGIN_USER_KEY
+    );
 }
 
 // MASTER가 등록한 직원들
-export function getEmployeeAccounts() {
+export async function getEmployeeAccounts() {
+    try{
+        const response = await axios.get(API_BASE_URL +  '/users');
 
-    const accounts =
-        localStorage.getItem(
-            EMPLOYEE_ACCOUNT_KEY
-        );
-
-    if (!accounts) {
-        return [];
+        return response.data;
+    } catch(error){
+        throw new Error(
+            '직원 정보를 불러올 수 없습니다;'
+        )
     }
-
-    return JSON.parse(accounts);
+    
 }
 
 // 직원 계정 등록
-export function saveEmployeeAccount(account) {
+export async function saveEmployeeAccount(account) {
 
-    const accounts =
-        getEmployeeAccounts();
+    try{
 
+        const response = await axios.post(API_BASE_URL + "/register", account);
+        
+        return response.data;
+    }catch(error){
 
-    const keyExists =
-        accounts.some(
-            item =>
-                item.employeeKey ===
-                account.employeeKey
+        if(error.response && error.response.data){
+            throw new Error(
+                error.response.data.message ||
+                error.response.data.error ||
+                '직원 등록에 실패했습니다'
+            )
+        }
+
+        throw new Error(
+            '서버와 통신할 수 없습니다'
         );
-
-
-    if (keyExists) {
-
-        return {
-            success: false,
-            message: "이미 사용 중인 사원 Key입니다."
-        };
     }
-
-
-    const emailExists =
-        accounts.some(
-            item =>
-                item.email ===
-                account.email
-        );
-
-
-    if (emailExists) {
-
-        return {
-            success: false,
-            message: "이미 사용 중인 이메일입니다."
-        };
-    }
-
-
-    const newAccount = {
-        employeeKey: account.employeeKey,
-        name: account.name,
-        department: account.department,
-        position: account.position,
-        email: account.email,
-        password: account.password,
-        role: "USER"
-    };
-
-
-    localStorage.setItem(
-        EMPLOYEE_ACCOUNT_KEY,
-        JSON.stringify([
-            ...accounts,
-            newAccount
-        ])
-    );
-
-
-    return {
-        success: true
-    };
 }
 
 
@@ -123,6 +90,7 @@ export async function findLoginAccount (loginId,password) {
     const inputId = loginId.trim();
     const inputPassword = password.trim();
 
+    console.log('로그인버튼', API_BASE_URL);
     if(!inputId || !inputPassword){
         return alert("이메일 또는 비밀번호를 입력해주세요.");
     }
@@ -132,17 +100,19 @@ export async function findLoginAccount (loginId,password) {
     //return alert(API_BASE_URL);
     
     try{
-         const response = await axios.post(API_BASE_URL + '/login',{
+        const response = await axios.post(API_BASE_URL + '/login',{
             email: inputId,
             password: inputPassword
          })
 
+         console.log("서버 로그인 응답:", response.data);
+
          return response.data;
     }catch(error){
         if(error.response && error.response.data){
-            return error.response.data.message;
+            throw new Error(error.response.data.message || '로그인에 실패했습니다.');
         }
-        return(error.response.data.message || '서버와 통신할 수 없습니다.');
+        throw new Error(error.response.data.message || '서버와 통신할 수 없습니다.');
     }
 
     // -----------------------------
