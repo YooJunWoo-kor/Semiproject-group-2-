@@ -41,18 +41,18 @@ function DraftCreate({
     useEffect(() => {
         async function loadDepartments() {
             try {
-                const employees = await getEmployeeAccounts();
-    
-                const departmentList = [
-                    ...new Set(
-                        employees.map(employee => employee.department_name).filter(Boolean)
-                    )
-                ];
-    
+                const response = await axios.get(`${API_BASE_URL}/drafts/departments`);
+
+                const departmentList = response.data.map(department => department.department_name);
+
                 setDepartments(departmentList);
-    
-            } catch (error) {
-                console.error("부서 조회 실패:", error);
+            }
+
+
+            catch(error){
+
+                console.error('부서 조회 실패', error);
+
             }
         }
     

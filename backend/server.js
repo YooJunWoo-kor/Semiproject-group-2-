@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 const Attendance = require('./models/Attendance'); //출결관련 함수 클레스
-const DraftServer = require('./models/Draft_server');
+const DraftServer = require('./routes/drafts');
 const homSurver = require('./routes/homServer');
 const schedule = require('./routes/schedule');
 
@@ -16,6 +16,7 @@ app.use(express.json());
 app.use('/api/drafts', DraftServer);
 app.use('/api/AD', homSurver);
 app.use('/api/schedule', schedule);
+app.use('/api/drafts', DraftServer);
 
 // 2. [사원 등록 API] RegisterPage 폼 전송 수신
 app.post('/api/register', async (req, res) => {
