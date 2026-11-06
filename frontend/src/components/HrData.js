@@ -23,6 +23,13 @@ export function getHrAttendance(params) {
   return axios.get(API_BASE_URL + '/hr/attendance', { params });
 }
 
+// 기존 결재 초안과 휴가 기간 데이터를 조합한 휴가 신청 목록을 조회합니다.
+export function getHrLeaves(month) {
+  return axios.get(API_BASE_URL + '/hr/leaves', {
+    params: { month }
+  });
+}
+
 // 출근·퇴근은 유지하고 근태 상태와 메모만 수정합니다.
 export function updateHrAttendance(attendanceId, data) {
   return axios.put(API_BASE_URL + '/hr/attendance/' + attendanceId, data);

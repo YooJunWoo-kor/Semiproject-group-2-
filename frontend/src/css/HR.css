@@ -48,6 +48,108 @@
    2. 근태관리
 ======================================== */
 
+.hr-attendance-management .attendance-tabs {
+    display: flex;
+    gap: 6px;
+    margin: 16px 0 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-line);
+}
+
+.hr-attendance-management .attendance-tabs button {
+    min-height: 36px;
+    padding: 7px 14px;
+    color: var(--color-muted);
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.hr-attendance-management .attendance-tabs button.active {
+    color: #ffffff;
+    background: var(--color-brand);
+    border-color: var(--color-brand);
+}
+
+.hr-attendance-management .attendance-leave-empty {
+    display: flex;
+    min-height: 260px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--color-muted);
+    text-align: center;
+}
+
+.hr-attendance-management .attendance-leave-empty strong {
+    color: var(--color-ink);
+    font-size: 15px;
+}
+
+.hr-attendance-management .attendance-leave-empty span {
+    font-size: 12px;
+}
+
+.hr-attendance-management .leave-empty-full {
+    margin-top: 16px;
+    padding: 42px 18px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--card-shadow);
+}
+
+.hr-attendance-management .attendance-leave-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin: 16px 0;
+}
+
+.hr-attendance-management .attendance-leave-summary .summary-item {
+    min-width: 0;
+}
+
+.hr-attendance-management .attendance-leave-detail-list {
+    margin: 0;
+}
+
+.hr-attendance-management .attendance-leave-detail-list > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.hr-attendance-management .attendance-leave-detail-list dt {
+    color: var(--color-muted);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.hr-attendance-management .attendance-leave-detail-list dd {
+    margin: 0;
+    color: var(--color-ink);
+    font-size: 13px;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.hr-attendance-management .attendance-leave-api-notice {
+    margin: 16px 0 0;
+    padding: 10px 12px;
+    color: var(--color-muted);
+    background: var(--color-canvas);
+    border-radius: 8px;
+    font-size: 12px;
+}
+
 .hr-attendance-management .attendance-filter {
     display: grid;
     grid-template-columns: 170px 190px minmax(220px, 1fr) auto;
@@ -442,7 +544,25 @@
         align-items: flex-start;
     }
 
+    .hr-attendance-management .attendance-tabs {
+        flex-direction: column;
+    }
+
+    .hr-attendance-management .attendance-tabs button {
+        width: 100%;
+    }
+
     .hr-attendance-management .attendance-edit-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .hr-attendance-management .attendance-leave-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    .hr-attendance-management .attendance-leave-summary {
         grid-template-columns: 1fr;
     }
 }

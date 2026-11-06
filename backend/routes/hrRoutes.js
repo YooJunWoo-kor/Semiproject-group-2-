@@ -135,6 +135,74 @@ hrRouter.get('/api/hr/attendance', async (req, res) => {
 });
 
 
+// 기존 결재 초안과 휴가 기간을 조합한 휴가 신청 조회
+hrRouter.get('/api/hr/leaves', async (req, res) => {
+    const month = String(req.query.month || '').trim();
+
+    if (month && !isPayMonthString(month)) {
+        return res.status(400).json({
+            success: false,
+            message: '휴가 조회 월 형식은 YYYY-MM이어야 합니다.'
+        });
+    }
+
+    const query = `
+        SELECT
+            dl.leave_id AS leaveId,
+            md.draft_id AS draftId,
+            md.employee_id AS employeeId,
+            e.employee_number AS employeeNumber,
+            e.name AS employeeName,
+            e.department_id AS departmentId,
+            d.department_name AS departmentName,
+            e.position,
+            md.document_type AS leaveType,
+            md.title,
+            md.content AS reason,
+            DATE_FORMAT(dl.start_date, '%Y-%m-%d') AS startDate,
+            DATE_FORMAT(dl.end_date, '%Y-%m-%d') AS endDate,
+            dl.leave_days AS leaveDays,
+            CASE
+                WHEN md.status IN ('승인', '승인완료', '완료') THEN '승인완료'
+                WHEN md.status IN ('반려', '거절') THEN '반려'
+                ELSE '승인대기'
+            END AS applicationStatus,
+            md.status AS sourceStatus,
+            DATE_FORMAT(md.created_at, '%Y-%m-%d %H:%i') AS applicationDate,
+            md.approver_id AS approverId,
+            approver.name AS approverName,
+            DATE_FORMAT(md.processed_at, '%Y-%m-%d %H:%i') AS approvalDate
+        FROM draft_leave dl
+        INNER JOIN my_draft md
+            ON md.draft_id = dl.draft_id
+        INNER JOIN employees e
+            ON e.employee_id = md.employee_id
+        LEFT JOIN departments d
+            ON d.department_id = e.department_id
+        LEFT JOIN employees approver
+            ON approver.employee_id = md.approver_id
+        WHERE (? = '' OR DATE_FORMAT(dl.start_date, '%Y-%m') = ?)
+        ORDER BY dl.start_date DESC, dl.leave_id DESC
+    `;
+
+    try {
+        const [rows] = await promiseDb.query(query, [month, month]);
+
+        return res.json({
+            success: true,
+            data: rows
+        });
+    } catch (error) {
+        console.error('휴가 신청 조회 오류:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: '휴가 신청 정보를 불러오지 못했습니다.'
+        });
+    }
+});
+
+
 // 근태 상태·메모 수정
 hrRouter.put('/api/hr/attendance/:attendanceId', async (req, res) => {
     const attendanceId = Number(req.params.attendanceId);

@@ -4,6 +4,7 @@ import ModalBase from "../../../../components/ModalBase";
 import { getLoginUser } from "../../../../utils/authStorage";
 import {
   getHrAttendance,
+  getHrLeaves,
   getHrOrganization,
   updateHrAttendance
 } from "../../../../components/HrData";
@@ -102,6 +103,16 @@ function getStatusClass(status) {
   return "off";
 }
 
+function isApprovedLeave(leave) {
+  return leave.applicationStatus === "승인완료";
+}
+
+function getLeaveStatusClass(status) {
+  if (status === "승인완료") return "working";
+  if (status === "반려") return "off";
+  return "late";
+}
+
 function AttendanceEditForm({ attendance, onSave, onCancel, saving }) {
   const [form, setForm] = useState({
     status: attendance.status || "정상",
@@ -176,7 +187,12 @@ export default function Attendance() {
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("전체");
   const [keyword, setKeyword] = useState("");
+  const [activeTab, setActiveTab] = useState("attendance");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+  const [leaveData, setLeaveData] = useState([]);
+  const [leaveLoading, setLeaveLoading] = useState(false);
+  const [leaveError, setLeaveError] = useState("");
+  const [selectedLeaveEmployeeId, setSelectedLeaveEmployeeId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -244,6 +260,56 @@ export default function Attendance() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!selectedMonth) {
+      setLeaveData([]);
+      setLeaveError("");
+      return undefined;
+    }
+
+    let ignore = false;
+
+    async function loadLeaves() {
+      setLeaveLoading(true);
+      setLeaveError("");
+
+      try {
+        const response = await getHrLeaves(selectedMonth);
+
+        if (
+          !response.data.success ||
+          !Array.isArray(response.data.data)
+        ) {
+          throw new Error("휴가 신청 응답 형식이 올바르지 않습니다.");
+        }
+
+        if (!ignore) {
+          setLeaveData(response.data.data);
+        }
+      } catch (requestError) {
+        console.error("휴가 신청 조회 오류:", requestError);
+
+        if (!ignore) {
+          setLeaveData([]);
+          setLeaveError(
+            requestError.response?.data?.message ||
+              "휴가 신청 정보를 불러오지 못했습니다."
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setLeaveLoading(false);
+        }
+      }
+    }
+
+    loadLeaves();
+
+    return () => {
+      ignore = true;
+    };
+  }, [selectedMonth]);
+
   // 부서와 검색어를 동시에 적용해 왼쪽 직원 목록을 구성합니다.
   const departmentList = createDepartmentList(departments);
   const employeeList = createEmployeeList(
@@ -255,12 +321,67 @@ export default function Attendance() {
     (employee) => String(employee.employeeId) === String(selectedEmployeeId)
   );
 
+  const filteredLeaveData = leaveData.filter((leave) => {
+    const matchesDepartment =
+      selectedDepartment === "전체" ||
+      String(leave.departmentName || "") === selectedDepartment;
+    const leaveSearchText = [
+      leave.employeeNumber,
+      leave.employeeName,
+      leave.departmentName,
+      leave.position
+    ]
+      .map((value) => String(value || "").toLowerCase())
+      .join(" ");
+    const matchesKeyword = leaveSearchText.includes(keyword.trim().toLowerCase());
+
+    return matchesDepartment && matchesKeyword;
+  });
+
+  const leaveEmployeeList = filteredLeaveData.reduce((list, leave) => {
+    const existingEmployee = list.find(
+      (employee) => employee.employeeId === leave.employeeId
+    );
+
+    if (existingEmployee) {
+      existingEmployee.requestCount += 1;
+      return list;
+    }
+
+    list.push({
+      employeeId: leave.employeeId,
+      employeeName: leave.employeeName,
+      departmentName: leave.departmentName,
+      position: leave.position,
+      requestCount: 1,
+      latestStatus: leave.applicationStatus
+    });
+    return list;
+  }, []);
+
+  const selectedLeave = filteredLeaveData.find(
+    (leave) => String(leave.employeeId) === String(selectedLeaveEmployeeId)
+  );
+  const leavePendingCount = leaveData.filter(
+    (leave) => leave.applicationStatus === "승인대기"
+  ).length;
+  const leaveApprovedCount = leaveData.filter(isApprovedLeave).length;
+  const leaveUsedDays = leaveData
+    .filter(isApprovedLeave)
+    .reduce((total, leave) => total + Number(leave.leaveDays || 0), 0);
+
   useEffect(() => {
     // 필터 변경으로 기존 선택이 사라지면 첫 번째 직원을 자동 선택합니다.
     if (!selectedEmployee) {
       setSelectedEmployeeId(employeeList[0]?.employeeId || null);
     }
   }, [employeeList, selectedEmployee, selectedEmployeeId]);
+
+  useEffect(() => {
+    if (!selectedLeave) {
+      setSelectedLeaveEmployeeId(leaveEmployeeList[0]?.employeeId || null);
+    }
+  }, [leaveEmployeeList, selectedLeave, selectedLeaveEmployeeId]);
 
   // 선택 직원의 해당 월 기록만 추려 요약 수치와 일별 표를 계산합니다.
   const selectedAttendance = attendanceData
@@ -401,7 +522,7 @@ export default function Attendance() {
           </span>
         </div>
         <div className="dashboard-top">
-          {isMaster && (
+          {isMaster && activeTab === "attendance" && (
             <button
               type="button"
               className="register-btn"
@@ -421,6 +542,27 @@ export default function Attendance() {
           )}
         </div>
       </header>
+
+      <nav className="attendance-tabs" aria-label="근태관리 메뉴">
+        <button
+          type="button"
+          role="tab"
+          className={activeTab === "attendance" ? "active" : ""}
+          aria-selected={activeTab === "attendance"}
+          onClick={() => setActiveTab("attendance")}
+        >
+          근태 기록
+        </button>
+        <button
+          type="button"
+          role="tab"
+          className={activeTab === "leave" ? "active" : ""}
+          aria-selected={activeTab === "leave"}
+          onClick={() => setActiveTab("leave")}
+        >
+          휴가 신청·승인
+        </button>
+      </nav>
 
       <section className="attendance-filter" aria-label="근태 조회 조건">
         <label className="attendance-filter-field">
@@ -463,15 +605,16 @@ export default function Attendance() {
         </button>
       </section>
 
-      {loading ? (
+      {activeTab === "attendance" ? (
+        loading ? (
         <p className="attendance-feedback" role="status">
           근태자료를 불러오는 중입니다.
         </p>
-      ) : error ? (
+        ) : error ? (
         <p className="attendance-feedback attendance-error" role="alert">
           {error}
         </p>
-      ) : (
+        ) : (
         <div className="attendance-layout">
           <section className="attendance-card employee-list-panel">
             <div className="employee-list-header">
@@ -586,6 +729,214 @@ export default function Attendance() {
             )}
           </section>
         </div>
+        )
+      ) : (
+        leaveLoading ? (
+          <p className="attendance-feedback" role="status">
+            휴가 신청 데이터를 불러오는 중입니다.
+          </p>
+        ) : leaveError ? (
+          <p className="attendance-feedback attendance-error" role="alert">
+            {leaveError}
+          </p>
+        ) : leaveData.length === 0 ? (
+          <div className="attendance-layout attendance-leave-layout">
+            <section className="attendance-card employee-list-panel">
+              <div className="employee-list-header">
+                <div>
+                  <h2>휴가 신청 직원</h2>
+                  <p>{selectedMonth || "기준 월 미선택"}</p>
+                </div>
+                <strong>{employeeList.length}명</strong>
+              </div>
+              {employeeList.length === 0 ? (
+                <p className="attendance-empty">직원 데이터가 없습니다.</p>
+              ) : (
+                <div className="employee-list">
+                  {employeeList.map((employee) => (
+                    <button
+                      key={employee.employeeId}
+                      type="button"
+                      className={`employee-item ${
+                        String(employee.employeeId) ===
+                        String(selectedEmployeeId)
+                          ? "active"
+                          : ""
+                      }`}
+                      onClick={() => setSelectedEmployeeId(employee.employeeId)}
+                    >
+                      <span className="employee-item-info">
+                        <strong className="emp-name">
+                          {employee.employeeName}
+                        </strong>
+                        <span>
+                          {employee.departmentName || "부서 미지정"} ·{" "}
+                          <span className="emp-position">
+                            {employee.position || "직급 미지정"}
+                          </span>
+                        </span>
+                      </span>
+                      <span className="employee-attendance-rate">
+                        <small>휴가 신청</small>
+                        <strong>-</strong>
+                        <small>신청 없음</small>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="attendance-detail-panel">
+              {selectedEmployee ? (
+                <>
+                  <div className="attendance-detail-header">
+                    <div>
+                      <span className="attendance-badge">휴가 신청·승인</span>
+                      <h2>{selectedEmployee.employeeName}</h2>
+                      <p>
+                        {selectedEmployee.departmentName || "부서 미지정"} ·{" "}
+                        {selectedEmployee.position || "직급 미지정"}
+                      </p>
+                    </div>
+                    <span className="status-tag off">신청 없음</span>
+                  </div>
+                  <dl className="attendance-leave-detail-list">
+                    <div><dt>휴가 유형</dt><dd>-</dd></div>
+                    <div><dt>시작일</dt><dd>-</dd></div>
+                    <div><dt>종료일</dt><dd>-</dd></div>
+                    <div><dt>휴가 일수</dt><dd>-</dd></div>
+                    <div><dt>신청 사유</dt><dd>-</dd></div>
+                    <div><dt>신청 상태</dt><dd>-</dd></div>
+                    <div><dt>신청일</dt><dd>-</dd></div>
+                    <div><dt>승인자</dt><dd>-</dd></div>
+                    <div><dt>승인일</dt><dd>-</dd></div>
+                  </dl>
+                  <p className="attendance-leave-api-notice">
+                    휴가 신청 데이터가 없습니다. 현재 휴가 신청 API가 준비되지 않았습니다.
+                  </p>
+                </>
+              ) : (
+                <p className="attendance-empty">
+                  직원을 선택하면 휴가 상세정보가 표시됩니다.
+                </p>
+              )}
+            </section>
+          </div>
+        ) : (
+          <>
+            <section className="attendance-leave-summary">
+              <div className="summary-item">
+                <span>전체 신청 건수</span>
+                <strong>{leaveData.length}</strong>
+              </div>
+              <div className="summary-item">
+                <span>승인 대기 건수</span>
+                <strong>{leavePendingCount}</strong>
+              </div>
+              <div className="summary-item">
+                <span>승인 완료 건수</span>
+                <strong>{leaveApprovedCount}</strong>
+              </div>
+              <div className="summary-item">
+                <span>이번 달 사용 일수</span>
+                <strong>{leaveUsedDays}</strong>
+              </div>
+            </section>
+
+            <div className="attendance-layout attendance-leave-layout">
+              <section className="attendance-card employee-list-panel">
+                <div className="employee-list-header">
+                  <div>
+                    <h2>휴가 신청 직원</h2>
+                    <p>{selectedMonth || "기준 월 미선택"}</p>
+                  </div>
+                  <strong>{leaveEmployeeList.length}명</strong>
+                </div>
+                {leaveEmployeeList.length === 0 ? (
+                  <p className="attendance-empty">조건에 맞는 직원이 없습니다.</p>
+                ) : (
+                  <div className="employee-list">
+                    {leaveEmployeeList.map((employee) => (
+                      <button
+                        key={employee.employeeId}
+                        type="button"
+                        className={`employee-item ${
+                          String(employee.employeeId) ===
+                          String(selectedLeaveEmployeeId)
+                            ? "active"
+                            : ""
+                        }`}
+                        onClick={() =>
+                          setSelectedLeaveEmployeeId(employee.employeeId)
+                        }
+                      >
+                        <span className="employee-item-info">
+                          <strong className="emp-name">
+                            {employee.employeeName}
+                          </strong>
+                          <span>
+                            {employee.departmentName || "부서 미지정"} ·{" "}
+                            <span className="emp-position">
+                              {employee.position || "직급 미지정"}
+                            </span>
+                          </span>
+                        </span>
+                        <span className="employee-attendance-rate">
+                          <small>신청 건수</small>
+                          <strong>{employee.requestCount}건</strong>
+                          <small>{employee.latestStatus}</small>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="attendance-detail-panel">
+                {selectedLeave ? (
+                  <>
+                    <div className="attendance-detail-header">
+                      <div>
+                        <span className="attendance-badge">선택 휴가</span>
+                        <h2>{selectedLeave.employeeName}</h2>
+                        <p>
+                          {selectedLeave.departmentName || "부서 미지정"} ·{" "}
+                          {selectedLeave.position || "직급 미지정"}
+                        </p>
+                      </div>
+                      <span
+                        className={`status-tag ${getLeaveStatusClass(
+                          selectedLeave.applicationStatus
+                        )}`}
+                      >
+                        {selectedLeave.applicationStatus}
+                      </span>
+                    </div>
+                    <dl className="attendance-leave-detail-list">
+                      <div><dt>휴가 유형</dt><dd>{selectedLeave.leaveType || "-"}</dd></div>
+                      <div><dt>시작일</dt><dd>{selectedLeave.startDate || "-"}</dd></div>
+                      <div><dt>종료일</dt><dd>{selectedLeave.endDate || "-"}</dd></div>
+                      <div><dt>휴가 일수</dt><dd>{selectedLeave.leaveDays ?? "-"}</dd></div>
+                      <div><dt>신청 사유</dt><dd>{selectedLeave.reason || "-"}</dd></div>
+                      <div><dt>신청 상태</dt><dd>{selectedLeave.applicationStatus || "-"}</dd></div>
+                      <div><dt>신청일</dt><dd>{selectedLeave.applicationDate || "-"}</dd></div>
+                      <div><dt>승인자</dt><dd>{selectedLeave.approverName || "-"}</dd></div>
+                      <div><dt>승인일</dt><dd>{selectedLeave.approvalDate || "-"}</dd></div>
+                    </dl>
+                    <p className="attendance-leave-api-notice">
+                      현재 휴가 신청·승인 API가 준비되지 않아 화면 조회만 지원합니다.
+                    </p>
+                  </>
+                ) : (
+                  <p className="attendance-empty">
+                    직원을 선택하면 휴가 상세정보가 표시됩니다.
+                  </p>
+                )}
+              </section>
+            </div>
+          </>
+        )
       )}
 
       {notice && (
