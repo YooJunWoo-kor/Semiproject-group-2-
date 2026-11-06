@@ -47,8 +47,14 @@ export function logoutUser() {
 
 // 기존 출퇴근 위젯에서 사용하는 근태 조회 API입니다.
 export async function getAttendance() {
-    const response = await axios.post(API_BASE_URL + '/attendance');
-    return Array.isArray(response.data?.data) ? response.data.data : [];
+    const user = getLoginUser();
+    const userID = user?.employee_id || user?.employeeKey;
+    if (!userID) throw new Error('다시 로그인한 후 근태 정보를 조회해 주세요.');
+    const response = await axios.post(API_BASE_URL + '/AD/attendance', { userID });
+    if (response.data?.result !== 'success' || !Array.isArray(response.data.data)) {
+        throw new Error('근태 정보를 불러오지 못했습니다.');
+    }
+    return response.data.data;
 }
 
 export function getTodayString() {
@@ -126,7 +132,7 @@ export async function findLoginAccount (loginId,password) {
         if(error.response && error.response.data){
             throw new Error(error.response.data.message || '로그인에 실패했습니다.');
         }
-        throw new Error(error.response.data.message || '서버와 통신할 수 없습니다.');
+        throw new Error('서버와 통신할 수 없습니다. 백엔드 서버 실행 상태와 API 주소를 확인해 주세요.');
     }
 
     // -----------------------------

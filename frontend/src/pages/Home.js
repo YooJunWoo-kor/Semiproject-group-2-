@@ -11,30 +11,36 @@ function Home() {
 
     const navigate = useNavigate();
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
-        const account = findLoginAccount(
-            loginId,
-            password
-        );
-
-        if (!account) {
-            alert(
-                "이메일 또는 비밀번호가 일치하지 않습니다."
+        try {
+            const result = await findLoginAccount(
+                loginId,
+                password
             );
-            return;
-        }
-        else{
-            saveLoginUser({
-                employeeKey: account.employeeKey || null,
-                name: account.name,
-                email: account.email,
-                department: account.department,
-                position: account.position,
-                role: account.role
-            });
+
+            if (result?.result !== 'success' || !result.user) {
+                alert(
+                    "이메일 또는 비밀번호가 일치하지 않습니다."
+                );
+                return;
+            }
+            else{
+                const account = result.user;
+                saveLoginUser({
+                    ...account,
+                    employeeKey: account.employee_id,
+                    name: account.name,
+                    email: account.email || loginId.trim(),
+                    department: account.department,
+                    position: account.position,
+                    role: account.role
+                });
     
-            navigate('/main');
+                navigate('/main');
+            }
+        } catch (error) {
+            alert(error.message || '로그인에 실패했습니다.');
         }
     };
 

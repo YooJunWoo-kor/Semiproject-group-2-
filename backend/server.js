@@ -14,14 +14,13 @@ const schedule = require('./routes/schedule')
 const DraftServer = require('./models/Draft_server')
 const communityRouter = require('./routes/community');
 const financeRouter = require('./routes/financeRouters'); // 재무 API
+const hrRouter = require('./routes/hrRoutes'); // 인사 API
 
 const Attendance = require('./models/Attendance'); // 출결 관련 함수 클래스
 
 app.use(cors());
 app.use(express.json());
-// HR 프런트 API가 사용하는 /api/hr 기준으로 라우터를 연결합니다.
-app.use('/api/hr', require('./routes/hrRoutes'));
-
+app.use('/api/hr', hrRouter);
 app.use('/api/finance', financeRouter);
 app.use('/api/AD', homSurver);
 app.use('/api/schedule', schedule);

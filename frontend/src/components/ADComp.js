@@ -9,6 +9,7 @@ import ADBord from "./ADBord.js";
 function ADComp(){
     // 달력과 출퇴근 관리 모듈
     const [data, setData] = useState([]);
+    const [loadError, setLoadError] = useState('');
     //출결버튼 관리
     let resetAttendBtnStl = 0;
     let [attendBtnStl, setAttendBtnStl] = useState(0);
@@ -22,21 +23,26 @@ function ADComp(){
 
     //근테관련 데이터 get
     const dataSet = async () => {
-      const getData = await getAttendance();
-      console.log(getData);
-      setData(getData);
-      getData.map((item)=>{
-        if(item.start == currontDay){
-          if(item.title == '근무중'){
-            resetAttendBtnStl = 1;
-          }
-          else{
-            resetAttendBtnStl = 2;
-          }
+      try {
+        const getData = await getAttendance();
+        setLoadError('');
+        console.log(getData);
+        setData(getData);
+        getData.map((item)=>{
+          if(item.start == currontDay){
+            if(item.title == '근무중'){
+              resetAttendBtnStl = 1;
+            }
+            else{
+              resetAttendBtnStl = 2;
+            }
 
-          console.log("출근버튼 처리 완료");
-          setAttendBtnStl(resetAttendBtnStl);
-        }});
+            console.log("출근버튼 처리 완료");
+            setAttendBtnStl(resetAttendBtnStl);
+          }});
+      } catch (error) {
+        setLoadError(error.message || '근태 정보를 불러오지 못했습니다. 백엔드 연결을 확인해 주세요.');
+      }
     };
 
     //출근버튼을 눌렀을때 최신상태 갱신
@@ -78,6 +84,7 @@ function ADComp(){
           }}>
             {/* 좌측: 달력 컴포넌트 */}
             <div className="attendance-card">
+              {loadError && <p role="alert">{loadError}</p>}
               <div>
                 <button onClick ={()=>{
                   setCalStyile(0);
