@@ -1,8 +1,41 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import PaginationTable from "../../../../components/PaginationTable";
-import { getApprovals, getApprovalSteps, getFinanceEmployees, createApproval } from "../../../../utils/financeService";
+import { getApprovals, getApprovalSteps, getFinanceEmployees, createApproval, decideApproval } from "../../../../utils/financeService";
+
+import { getLoginUser } from "../../../../utils/authStorage";
+import ModalBase from "../../../../components/ModalBase";
+import "../FinanceRegistration.css";
+
+// DB 응답을 화면에 표시할 이름으로 변환합니다.
+function toApproval(item) {
+  return {
+    id: item.document_id,
+    employeeId: item.employee_id,
+    department: item.department_name || "미지정",
+    requester: item.requester_name || "미지정",
+    title: item.title,
+    content: item.content || "",
+    amount: Number(item.amount ?? 0),
+    paymentMethod: item.payment_methods || "미등록",
+    deadline: item.due_date || "-",
+    attachmentCount: Number(item.attachment_count ?? 0),
+    status: item.approval_status || "미지정",
+    documentType: item.document_type || "-",
+    createdAt: item.created_at || "-"
+
+  };
+}
 
 function Approval() {
+  const loginUser = getLoginUser();
+  const [decisionOpinion, setDecisionOpinion] = useState("");
+  const [decisionPassword, setDecisionPassword] = useState("");
+  const [decisionSaving, setDecisionSaving] = useState(false);
+  const [decisionError, setDecisionError] = useState("");
+  const [decisionMessage, setDecisionMessage] = useState("");
+  const [stepsRefresh, setStepsRefresh] = useState(0);
+  const decisionLock = useRef(false);
+
   // DB에서 불러온 결재 문서
   const [approvalList, setApprovalList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,21 +88,7 @@ function Approval() {
         const data = await getApprovals();
 
         // DB 컬럼명을 화면에서 사용할 이름으로 바꿉니다.
-        const approvals = data.map((item) => ({
-          id: item.document_id,
-          employeeId: item.employee_id,
-          department: item.department_name || "미지정",
-          requester: item.requester_name || "미지정",
-          title: item.title,
-          content: item.content || "",
-          amount: Number(item.amount ?? 0),
-          paymentMethod: item.payment_methods || "미등록",
-          deadline: item.due_date || "-",
-          attachmentCount: Number(item.attachment_count ?? 0),
-          status: item.approval_status || "미지정",
-          documentType: item.document_type || "-",
-          createdAt: item.created_at || "-"
-        }));
+        const approvals = data.map(toApproval);
 
         if (!cancelled) {
           setApprovalList(approvals);
@@ -170,6 +189,14 @@ function Approval() {
     return () => {
       cancelled = true;
     };
+  }, [selectedApprovalId, stepsRefresh]);
+
+  // 다른 문서를 열면 이전 의견과 비밀번호를 지웁니다.
+  useEffect(() => {
+    setDecisionOpinion("");
+    setDecisionPassword("");
+    setDecisionError("");
+    setDecisionMessage("");
   }, [selectedApprovalId]);
 
   // 목록에 있는 부서명으로 검색 선택 항목을 만듭니다.
@@ -254,6 +281,7 @@ function Approval() {
         </span>,
         <button
           type="button"
+          disabled={decisionSaving}
           onClick={() => setSelectedApprovalId(item.id)}
         >
           상세
@@ -261,6 +289,70 @@ function Approval() {
       ]
     };
   });
+
+  const currentStep = approvalSteps.find((step) => step.step_status !== "승인");
+  const canDecide = selectedApproval?.status === "대기" &&
+    !stepsLoading && !stepsError && currentStep?.step_status === "대기" &&
+    Number(currentStep.employee_id) === Number(loginUser?.employee_id);
+
+  async function handleDecision(decision) {
+    if (decisionLock.current || !canDecide) return;
+    if (!decisionPassword) {
+      setDecisionError("결재를 처리하려면 로그인 비밀번호를 입력해 주세요.");
+      return;
+    }
+    if (decision === "반려" && !decisionOpinion.trim()) {
+      setDecisionError("반려 사유를 입력해 주세요.");
+      return;
+    }
+
+    decisionLock.current = true;
+    setDecisionSaving(true);
+    setDecisionError("");
+    setDecisionMessage("");
+    try {
+      const result = await decideApproval(selectedApprovalId, {
+        employee_id: loginUser.employee_id,
+        password: decisionPassword,
+        decision,
+        opinion: decisionOpinion.trim()
+      });
+      // 서버에서 확정한 상태를 즉시 반영합니다. 지급·계좌 잔액은 변경하지 않습니다.
+      setApprovalList((previous) => previous.map((item) =>
+        item.id === selectedApprovalId ? { ...item, status: result.approval_status } : item
+      ));
+      setApprovalSteps([]);
+      setDecisionOpinion("");
+      setDecisionMessage(result.message);
+      setStepsRefresh((previous) => previous + 1);
+      try {
+        const data = await getApprovals();
+        setApprovalList(data.map(toApproval));
+        setError("");
+      } catch {
+        setError("결재 처리는 완료됐지만 목록 재조회에 실패했습니다. 새로고침해 확인해 주세요.");
+      }
+    } catch (err) {
+      setDecisionError(err.response?.data?.message ||
+        "처리 결과를 확인하지 못했습니다. 최신 상태를 확인한 뒤 다시 시도해 주세요.");
+      // 중복 요청이나 통신 오류가 나면 실제 DB 상태와 결재 순서를 다시 확인합니다.
+      setStepsRefresh((previous) => previous + 1);
+      try {
+        const data = await getApprovals();
+        setApprovalList(data.map(toApproval));
+      } catch {
+        setError("최신 결재 상태를 불러오지 못했습니다. 새로고침해 확인해 주세요.");
+      }
+    } finally {
+      setDecisionPassword("");
+      decisionLock.current = false;
+      setDecisionSaving(false);
+    }
+  }
+
+  function closeDraftForm() {
+    if (!draftSaving) setDraftOpen(false);
+  }
 
   // 새로운 기안 입력폼을 엽니다.
   function openDraftForm() {
@@ -323,21 +415,7 @@ function Approval() {
       try {
         const data = await getApprovals();
 
-        const approvals = data.map((item) => ({
-          id: item.document_id,
-          employeeId: item.employee_id,
-          department: item.department_name || "미지정",
-          requester: item.requester_name || "미지정",
-          title: item.title,
-          content: item.content || "",
-          amount: Number(item.amount ?? 0),
-          paymentMethod: item.payment_methods || "미등록",
-          deadline: item.due_date || "-",
-          attachmentCount: Number(item.attachment_count ?? 0),
-          status: item.approval_status || "미지정",
-          documentType: item.document_type || "-",
-          createdAt: item.created_at || "-"
-        }));
+        const approvals = data.map(toApproval);
 
         setApprovalList(approvals);
         setError("");
@@ -369,7 +447,7 @@ function Approval() {
           <button
             type="button"
             className="register-btn"
-            disabled={draftOpen || draftSaving}
+            disabled={draftOpen || draftSaving || decisionSaving}
             onClick={openDraftForm}
           >
             + 지출 결재 기안
@@ -378,10 +456,9 @@ function Approval() {
       </header>
 
       {draftOpen && (
-        <section>
-          <h3>지출 결재 기안</h3>
-
-          <form onSubmit={handleDraftSubmit}>
+        <div className="finance-registration-modal">
+          <ModalBase title="지출 결재 기안" onClose={closeDraftForm} layout={(
+            <form onSubmit={handleDraftSubmit}>
             <fieldset disabled={draftSaving}>
               {/* 작성자와 결재자는 같은 사원 목록을 사용합니다. */}
               {[
@@ -496,13 +573,14 @@ function Approval() {
 
               <button
                 type="button"
-                onClick={() => setDraftOpen(false)}
+                onClick={closeDraftForm}
               >
                 취소
               </button>
             </fieldset>
           </form>
-        </section>
+          )} />
+        </div>
       )}
 
       <div>
@@ -635,8 +713,35 @@ function Approval() {
               </tbody>
             </table>
           )}
+          {selectedApproval.status === "대기" && !stepsLoading && !stepsError && (
+            canDecide ? (
+              <section aria-label="결재 처리">
+                <h3>결재 처리</h3>
+                <fieldset disabled={decisionSaving}>
+                  <div>
+                    <label htmlFor="decision-opinion">결재 의견 (반려 시 필수, 최대 500자)</label>
+                    <textarea id="decision-opinion" maxLength={500}
+                      value={decisionOpinion} onChange={(e) => setDecisionOpinion(e.target.value)} />
+                  </div>
+                  <div>
+                    <label htmlFor="decision-password">로그인 비밀번호 확인</label>
+                    <input id="decision-password" type="password" autoComplete="current-password"
+                      value={decisionPassword} onChange={(e) => setDecisionPassword(e.target.value)} />
+                  </div>
+                  <p>지정된 결재자만 처리할 수 있습니다. 승인은 실제 지급과 별도로 처리됩니다.</p>
+                  <button type="button" className="erp-primary-button"
+                    onClick={() => handleDecision("승인")}>승인</button>
+                  <button type="button" onClick={() => handleDecision("반려")}>반려</button>
+                </fieldset>
+              </section>
+            ) : <p>현재 순서의 지정 결재자만 승인·반려할 수 있습니다. 결재자와 로그인 계정을 확인해 주세요.</p>
+          )}
+          {decisionSaving && <p role="status">결재를 저장하는 중입니다.</p>}
+          {decisionError && <p role="alert">{decisionError}</p>}
+          {decisionMessage && <p role="status">{decisionMessage}</p>}
           <button
             type="button"
+            disabled={decisionSaving}
             onClick={() => setSelectedApprovalId(null)}
           >
             닫기

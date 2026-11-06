@@ -1,0 +1,48 @@
+/*
+ * 공통 스타일은 src/index.css에서 이미 불러오므로 다시 import하지 않습니다.
+ * - css/ModalPopup.css: 배경, 모달 상자, 헤더
+ * - index.css: 입력칸, 선택칸, 텍스트 영역, label, 버튼, focus, disabled
+ * - css/ColorList.css: 공통 색상 변수
+ * - css/Form.css: 기존 .form-inputs는 가로 배치용이므로 세로 폼에는 적용하지 않습니다.
+ * 아래에는 재무관리 모달의 크기와 폼 배치에 필요한 규칙만 추가합니다.
+ */
+.finance-registration-modal .modal-back {
+    padding: 16px;
+}
+
+.finance-registration-modal .modal-boder {
+    width: 620px;
+    min-width: 0;
+    max-width: 100%;
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+}
+
+.finance-registration-modal fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+}
+
+.finance-registration-modal form > div,
+.finance-registration-modal fieldset > div {
+    margin-bottom: 14px;
+}
+
+.finance-registration-modal label {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.finance-registration-modal [role="alert"] {
+    color: var(--color-danger);
+}
+
+.finance-registration-modal form button {
+    margin-top: 8px;
+}
+
+.finance-registration-modal button[type="submit"] {
+    margin-right: 8px;
+}

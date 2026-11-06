@@ -251,3 +251,12 @@ export async function createApproval(approvalData) {
 
     return response.data;
 }
+
+// 지정 결재자의 승인·반려 처리
+export async function decideApproval(documentId, decisionData) {
+    const response = await axios.patch(
+        `${FINANCE_API_URL}/approvals/${documentId}/decision`,
+        decisionData
+    );
+    return response.data;
+}

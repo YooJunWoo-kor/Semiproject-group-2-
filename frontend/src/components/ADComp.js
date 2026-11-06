@@ -82,8 +82,6 @@ function ADComp(){
       dataSet();
     }, []);
 
-    const [isCalStyile, setCalStyile] = useState(0);
-    
     const[time, setTime] = useState(new Date());
     const hours = time.getHours();
     const minutes = String(time.getMinutes()).padStart(2,'0');

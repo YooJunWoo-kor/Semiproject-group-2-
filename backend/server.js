@@ -4,10 +4,10 @@ const cors = require('cors');
 require('dotenv').config();
 const db = require('./db');
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 5000;
 
 const Attendance = require('./models/Attendance'); // 출결 관련
-const financeRouter = require('./routers/financeRouters'); // 재무 API
+const financeRouter = require('./routes/financeRouters'); // 재무 API
 const homSurver = require('./routes/homServer');
 const schedule = require('./routes/schedule');
 

@@ -2717,4 +2717,113 @@ router.post("/approvals", async (req, res) => {
     }
 });
 
+// 결재 승인·반려 처리
+router.patch('/approvals/:documentId/decision', async (req, res) => {
+    const documentId = Number(req.params.documentId);
+    const payload = req.body || {};
+    const employeeId = Number(payload.employee_id);
+    const { decision, password, opinion = '' } = payload;
+
+    if (!Number.isSafeInteger(documentId) || documentId <= 0 ||
+        !Number.isSafeInteger(employeeId) || employeeId <= 0) {
+        return res.status(400).json({ message: '올바른 문서와 로그인 사원 정보가 필요합니다.' });
+    }
+    if (!['승인', '반려'].includes(decision)) {
+        return res.status(400).json({ message: '승인 또는 반려를 선택해 주세요.' });
+    }
+    if (typeof password !== 'string' || password === '') {
+        return res.status(400).json({ message: '결재를 처리하려면 비밀번호를 입력해 주세요.' });
+    }
+    if (typeof opinion !== 'string' || opinion.trim().length > 500 ||
+        (decision === '반려' && opinion.trim() === '')) {
+        return res.status(400).json({ message: '의견은 500자 이내로 입력하고, 반려 시에는 사유를 작성해 주세요.' });
+    }
+
+    let connection;
+    let transactionOpen = false;
+    try {
+        connection = await financeMysql.createConnection({
+            host: process.env.DB_HOST,
+            port: Number(process.env.DB_PORT || 3306),
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME
+        });
+        // 제공된 기존 로그인 API와 같은 계정 확인 방식입니다.
+        // 클라이언트가 보낸 사원 ID나 MASTER 표시만으로 승인하지 않습니다.
+        const [accounts] = await connection.execute(
+            `SELECT employee_id FROM employee_accounts
+             WHERE employee_id = ? AND password_hash = ? AND account_status = 'ACTIVE'`,
+            [employeeId, password]
+        );
+        if (accounts.length === 0) {
+            return res.status(401).json({ message: '비밀번호 또는 계정 상태를 확인해 주세요.' });
+        }
+
+        await connection.beginTransaction();
+        transactionOpen = true;
+        // 문서부터 잠가서 같은 문서에 대한 중복·동시 결재를 순서대로 처리합니다.
+        const [documents] = await connection.execute(
+            'SELECT document_id, approval_status FROM approval_documents WHERE document_id = ? FOR UPDATE',
+            [documentId]
+        );
+        function fail(status, message) {
+            const error = new Error(message);
+            error.status = status;
+            throw error;
+        }
+        if (documents.length === 0) fail(404, '해당 결재 문서를 찾을 수 없습니다.');
+        if (documents[0].approval_status !== '대기') fail(409, '이미 처리된 문서입니다. 최신 상태를 확인해 주세요.');
+
+        const [steps] = await connection.execute(
+            `SELECT step_id, step_order, employee_id, step_status FROM approval_steps
+             WHERE document_id = ? ORDER BY step_order, step_id FOR UPDATE`,
+            [documentId]
+        );
+        if (steps.length === 0) fail(409, '등록된 결재 단계가 없습니다.');
+        if (steps.some((step) => !['대기', '승인'].includes(step.step_status))) {
+            fail(409, '문서와 결재 단계의 상태를 확인해 주세요.');
+        }
+        // 여러 결재 단계가 있으면 앞선 단계가 모두 승인된 뒤 다음 단계로 넘어갑니다.
+        const currentStep = steps.find((step) => step.step_status === '대기');
+        if (!currentStep) fail(409, '처리할 결재 단계가 없습니다.');
+        if (Number(currentStep.employee_id) !== employeeId) fail(403, '현재 순서의 지정 결재자만 처리할 수 있습니다.');
+
+        const [updated] = await connection.execute(
+            `UPDATE approval_steps SET step_status = ?, opinion = ?, action_at = NOW()
+             WHERE step_id = ? AND step_status = '대기'`,
+            [decision, opinion.trim() || null, currentStep.step_id]
+        );
+        if (updated.affectedRows !== 1) fail(409, '이미 처리된 결재 단계입니다.');
+        const remaining = steps.some((step) => step.step_id !== currentStep.step_id && step.step_status === '대기');
+        const documentStatus = decision === '반려' ? '반려' : remaining ? '대기' : '승인';
+        await connection.execute(
+            'UPDATE approval_documents SET approval_status = ? WHERE document_id = ?',
+            [documentStatus, documentId]
+        );
+        await connection.commit();
+        transactionOpen = false;
+        return res.json({
+            message: decision === '반려' ? '결재 문서가 반려되었습니다.' :
+                remaining ? '승인되었습니다. 다음 결재자의 처리를 기다립니다.' : '최종 승인되었습니다.',
+            document_id: documentId,
+            approval_status: documentStatus,
+            step_id: currentStep.step_id,
+            step_status: decision
+        });
+    } catch (error) {
+        if (transactionOpen) {
+            try { await connection.rollback(); } catch { console.error('결재 처리 롤백 실패'); }
+        }
+        if (!error.status) console.error('결재 승인·반려 처리 실패:', error.code || error.name);
+        return res.status(error.status || 500).json({
+            message: error.status ? error.message : '결재를 처리하지 못했습니다. 최신 상태를 확인한 뒤 다시 시도해 주세요.'
+        });
+    } finally {
+        if (connection) {
+            try { await connection.end(); } catch { console.error('결재 DB 연결 종료 실패'); }
+        }
+    }
+});
+
 module.exports = router;

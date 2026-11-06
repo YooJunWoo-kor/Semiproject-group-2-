@@ -175,7 +175,7 @@ export function saveEmployeeAccount(account) {
 export async function findLoginAccount(loginId, password) {
     const inputId = loginId.trim();
 
-    if(!inputId || !inputPassword){
+    if(!inputId || !password){
         return alert("이메일 또는 비밀번호를 입력해주세요.");
     }
     
@@ -186,7 +186,7 @@ export async function findLoginAccount(loginId, password) {
     try{
         const response = await axios.post(API_BASE_URL + '/login',{
             email: inputId,
-            password: inputPassword
+            password: password
          })
         return response.data;
     }

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getItems, getPartners, createItem, updateItem, deleteItem, createPayment, getTransactionPayments, getBankAccounts, getCorporateCards } from "../../../../utils/financeService";
+import ModalBase from '../../../../components/ModalBase';
+import '../FinanceRegistration.css';
 import PaginationTable from '../../../../components/PaginationTable';
 import WeeklyCalendar from '../../../../components/weeklycalendar/WeeklyCalendar';
 import BasicCalendar from '../../../../components/calendar/BasicCalendar';
@@ -655,6 +657,12 @@ function Items() {
 
 
 
+  // 공통 모달의 배경·닫기·취소 버튼에서 함께 사용합니다.
+  function closeRegistrationModal() {
+    if (saving) return;
+    setFormOpen(false);
+  }
+
   return (
     <div className="sub-container">
       {/* 1. 상단 공통 헤더 및 액션 버튼 */}
@@ -750,153 +758,157 @@ function Items() {
           )}
 
           {formOpen && (
-            <form onSubmit={handleItemSubmit}>
-              <h3>
-                {editingItemId === null
-                  ? "신규 매입·매출 거래 등록"
-                  : "거래 품목 수정"}
-              </h3>
-
-              <fieldset disabled={saving}>
-                <div>
-                  <label htmlFor="item-partner">거래처 *</label>
-                  <select
-                    id="item-partner"
-                    name="partner_id"
-                    value={itemForm.partner_id}
-                    onChange={handleItemChange}
-                    required
-                  >
-                    <option value="">거래처 선택</option>
-
-                    {partnerOptions.map((partner) => (
-                      <option
-                        key={partner.partner_id}
-                        value={partner.partner_id}
+            <div className="finance-registration-modal">
+              <ModalBase
+                title={editingItemId === null ? "신규 매입·매출 거래 등록" : "거래 품목 수정"}
+                onClose={closeRegistrationModal}
+  
+                layout={(
+                  <form onSubmit={handleItemSubmit}>
+                  
+                    <fieldset disabled={saving}>
+                      <div>
+                        <label htmlFor="item-partner">거래처 *</label>
+                        <select
+                          id="item-partner"
+                          name="partner_id"
+                          value={itemForm.partner_id}
+                          onChange={handleItemChange}
+                          required
+                        >
+                          <option value="">거래처 선택</option>
+                  
+                          {partnerOptions.map((partner) => (
+                            <option
+                              key={partner.partner_id}
+                              value={partner.partner_id}
+                            >
+                              {partner.company_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                  
+                      <div>
+                        <label htmlFor="item-trade-type">거래 구분 *</label>
+                        <select
+                          id="item-trade-type"
+                          name="trade_type"
+                          value={itemForm.trade_type}
+                          onChange={handleItemChange}
+                          required
+                        >
+                          <option value="매입">매입</option>
+                          <option value="매출">매출</option>
+                        </select>
+                      </div>
+                  
+                      {/* 같은 구조의 입력칸은 map으로 만듭니다. */}
+                      {[
+                        {
+                          name: "trade_date",
+                          label: "거래일",
+                          type: "date",
+                          required: true
+                        },
+                        {
+                          name: "due_date",
+                          label: "정산 마감일",
+                          type: "date"
+                        },
+                        {
+                          name: "item_name",
+                          label: "품목명",
+                          type: "text",
+                          required: true,
+                          maxLength: 100
+                        },
+                        {
+                          name: "standard",
+                          label: "규격",
+                          type: "text",
+                          maxLength: 50
+                        },
+                        {
+                          name: "quantity",
+                          label: "수량",
+                          type: "number",
+                          required: true,
+                          min: 1,
+                          step: 1
+                        },
+                        {
+                          name: "unit_price",
+                          label: "단가(공급가액 기준)",
+                          type: "number",
+                          required: true,
+                          min: 0,
+                          step: 1
+                        },
+                        {
+                          name: "vat",
+                          label: "부가세",
+                          type: "number",
+                          required: true,
+                          min: 0,
+                          step: 1
+                        }
+                      ].map((field) => (
+                        <div key={field.name}>
+                          <label htmlFor={`item-${field.name}`}>
+                            {field.label}{field.required ? " *" : ""}
+                          </label>
+                  
+                          <input
+                            id={`item-${field.name}`}
+                            name={field.name}
+                            type={field.type}
+                            value={itemForm[field.name]}
+                            onChange={handleItemChange}
+                            required={field.required}
+                            maxLength={field.maxLength}
+                            min={field.min}
+                            step={field.step}
+                          />
+                        </div>
+                      ))}
+                  
+                      <p>
+                        공급가액:{" "}
+                        {(
+                          Number(itemForm.quantity) *
+                          Number(itemForm.unit_price)
+                        ).toLocaleString()}원
+                      </p>
+                  
+                      <p>
+                        합계 금액:{" "}
+                        {(
+                          Number(itemForm.quantity) *
+                          Number(itemForm.unit_price) +
+                          Number(itemForm.vat)
+                        ).toLocaleString()}원
+                      </p>
+                  
+                      <p>신규 거래는 미정산 상태로 등록됩니다.</p>
+                  
+                      {formError && <p role="alert">{formError}</p>}
+                  
+                      <button type="submit">
+                        {saving ? "저장 중..." : "저장"}
+                      </button>
+                  
+                      <button
+                        type="button"
+                        onClick={closeRegistrationModal}
                       >
-                        {partner.company_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="item-trade-type">거래 구분 *</label>
-                  <select
-                    id="item-trade-type"
-                    name="trade_type"
-                    value={itemForm.trade_type}
-                    onChange={handleItemChange}
-                    required
-                  >
-                    <option value="매입">매입</option>
-                    <option value="매출">매출</option>
-                  </select>
-                </div>
-
-                {/* 같은 구조의 입력칸은 map으로 만듭니다. */}
-                {[
-                  {
-                    name: "trade_date",
-                    label: "거래일",
-                    type: "date",
-                    required: true
-                  },
-                  {
-                    name: "due_date",
-                    label: "정산 마감일",
-                    type: "date"
-                  },
-                  {
-                    name: "item_name",
-                    label: "품목명",
-                    type: "text",
-                    required: true,
-                    maxLength: 100
-                  },
-                  {
-                    name: "standard",
-                    label: "규격",
-                    type: "text",
-                    maxLength: 50
-                  },
-                  {
-                    name: "quantity",
-                    label: "수량",
-                    type: "number",
-                    required: true,
-                    min: 1,
-                    step: 1
-                  },
-                  {
-                    name: "unit_price",
-                    label: "단가(공급가액 기준)",
-                    type: "number",
-                    required: true,
-                    min: 0,
-                    step: 1
-                  },
-                  {
-                    name: "vat",
-                    label: "부가세",
-                    type: "number",
-                    required: true,
-                    min: 0,
-                    step: 1
-                  }
-                ].map((field) => (
-                  <div key={field.name}>
-                    <label htmlFor={`item-${field.name}`}>
-                      {field.label}{field.required ? " *" : ""}
-                    </label>
-
-                    <input
-                      id={`item-${field.name}`}
-                      name={field.name}
-                      type={field.type}
-                      value={itemForm[field.name]}
-                      onChange={handleItemChange}
-                      required={field.required}
-                      maxLength={field.maxLength}
-                      min={field.min}
-                      step={field.step}
-                    />
-                  </div>
-                ))}
-
-                <p>
-                  공급가액:{" "}
-                  {(
-                    Number(itemForm.quantity) *
-                    Number(itemForm.unit_price)
-                  ).toLocaleString()}원
-                </p>
-
-                <p>
-                  합계 금액:{" "}
-                  {(
-                    Number(itemForm.quantity) *
-                    Number(itemForm.unit_price) +
-                    Number(itemForm.vat)
-                  ).toLocaleString()}원
-                </p>
-
-                <p>신규 거래는 미정산 상태로 등록됩니다.</p>
-
-                {formError && <p role="alert">{formError}</p>}
-
-                <button type="submit">
-                  {saving ? "저장 중..." : "저장"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFormOpen(false)}
-                >
-                  취소
-                </button>
-              </fieldset>
-            </form>
+                        취소
+                      </button>
+                    </fieldset>
+                  </form>
+                )}
+              />
+            </div>
           )}
 
           {paymentTarget && (
