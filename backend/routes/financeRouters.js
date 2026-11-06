@@ -2,11 +2,63 @@
 const express = require("express");
 const db = require("../db");
 const financeMysql = require("mysql2/promise");
+//multer
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+const { randomUUID } = require("crypto");
 
 const router = express.Router();
 
-// server.js에서 /api/finance 경로로 연결합니다.
-//<여기서부터는 전부 재무관리 전용 API 입니다>
+// 증빙파일 저장 폴더: backend/uploads/approvals
+const approvalUploadDir = path.join(
+    __dirname,
+    "..",
+    "uploads",
+    "approvals"
+);
+
+// 폴더가 없으면 자동으로 생성합니다.
+fs.mkdirSync(approvalUploadDir, { recursive: true });
+
+// 파일을 저장할 위치와 저장 파일명을 설정합니다.
+const approvalStorage = multer.diskStorage({
+    destination(req, file, callback) {
+        callback(null, approvalUploadDir);
+    },
+
+    filename(req, file, callback) {
+        const extension = path.extname(file.originalname).toLowerCase();
+
+        // 같은 이름의 파일이 올라와도 겹치지 않도록 저장합니다.
+        callback(null, `${randomUUID()}${extension}`);
+    }
+});
+
+// 결재 증빙파일 업로드 설정
+const approvalUpload = multer({
+    storage: approvalStorage,
+    defParamCharset: "utf8",
+
+    limits: {
+        fileSize: 10 * 1024 * 1024, // 최대 10MB
+        files: 1                  // 한 번에 파일 1개
+    },
+
+    fileFilter(req, file, callback) {
+        const extension = path.extname(file.originalname).toLowerCase();
+        const allowedExtensions = [".pdf", ".jpg", ".jpeg", ".png"];
+
+        if (!allowedExtensions.includes(extension)) {
+            return callback(
+                new Error("PDF, JPG, JPEG, PNG 파일만 첨부할 수 있습니다.")
+            );
+        }
+
+        callback(null, true);
+    }
+});
+
 // [재무관리] 거래처 목록 조회
 router.get("/partners", (req, res) => {
     const query = `
@@ -2825,5 +2877,258 @@ router.patch('/approvals/:documentId/decision', async (req, res) => {
         }
     }
 });
+
+// 결재 문서에 증빙파일 첨부
+router.post("/approvals/:documentId/attachments", (req, res) => {
+    const documentId = Number(req.params.documentId);
+
+    if (!Number.isSafeInteger(documentId) || documentId <= 0) {
+        return res.status(400).json({
+            message: "올바른 문서 ID가 아닙니다."
+        });
+    }
+
+    // 프론트에서 'file'이라는 이름으로 보낸 파일 1개를 받습니다.
+    approvalUpload.single("file")(req, res, (uploadError) => {
+        if (uploadError) {
+            return res.status(400).json({
+                message: uploadError.code === "LIMIT_FILE_SIZE"
+                    ? "파일은 최대 10MB까지 첨부할 수 있습니다."
+                    : uploadError.message
+            });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({
+                message: "첨부할 파일을 선택해 주세요."
+            });
+        }
+
+        // DB 저장에 실패하면 이미 업로드된 파일도 삭제합니다.
+        function removeFileAndReply(status, message) {
+            fs.unlink(req.file.path, (deleteError) => {
+                if (deleteError && deleteError.code !== "ENOENT") {
+                    console.error("증빙파일 정리 실패:", deleteError.code);
+                }
+
+                res.status(status).json({ message });
+            });
+        }
+
+        const employeeId = Number(req.body.employee_id);
+        const password = req.body.password;
+
+        if (
+            !Number.isSafeInteger(employeeId) ||
+            employeeId <= 0 ||
+            typeof password !== "string" ||
+            password === ""
+        ) {
+            return removeFileAndReply(
+                400,
+                "로그인 사원 정보와 비밀번호를 확인해 주세요."
+            );
+        }
+
+        if (Array.from(req.file.originalname).length > 255) {
+            return removeFileAndReply(
+                400,
+                "원본 파일명은 255자 이내로 작성해 주세요."
+            );
+        }
+
+        const filePath = `/uploads/approvals/${req.file.filename}`;
+
+        // 작성자 계정과 비밀번호, 문서 상태가 맞을 때만 등록합니다.
+        const query = `
+            INSERT INTO approval_attachments (
+                document_id,
+                original_name,
+                file_path,
+                file_size
+            )
+            SELECT
+                a.document_id, ?, ?, ?
+            FROM approval_documents a
+            INNER JOIN employee_accounts ea
+                ON a.employee_id = ea.employee_id
+            WHERE a.document_id = ?
+              AND a.employee_id = ?
+              AND a.approval_status = '대기'
+              AND ea.password_hash = ?
+              AND ea.account_status = 'ACTIVE'
+        `;
+
+        const values = [
+            req.file.originalname,
+            filePath,
+            req.file.size,
+            documentId,
+            employeeId,
+            password
+        ];
+
+        db.query(query, values, (dbError, result) => {
+            if (dbError) {
+                console.error("증빙파일 DB 등록 실패:", dbError.code);
+
+                return removeFileAndReply(
+                    500,
+                    "첨부파일 정보를 저장하지 못했습니다."
+                );
+            }
+
+            if (result.affectedRows !== 1) {
+                return removeFileAndReply(
+                    403,
+                    "작성자 계정·비밀번호와 문서의 대기 상태를 확인해 주세요."
+                );
+            }
+
+            return res.status(201).json({
+                message: "증빙파일이 첨부되었습니다.",
+                file_id: result.insertId,
+                document_id: documentId,
+                original_name: req.file.originalname,
+                file_size: req.file.size
+            });
+        });
+    });
+});
+
+// 결재 문서의 첨부파일 목록 조회
+router.get("/approvals/:documentId/attachments", (req, res) => {
+    const documentId = Number(req.params.documentId);
+
+    if (!Number.isSafeInteger(documentId) || documentId <= 0) {
+        return res.status(400).json({
+            message: "올바른 문서 ID가 아닙니다."
+        });
+    }
+
+    const query = `
+        SELECT
+            file_id,
+            document_id,
+            original_name,
+            file_size,
+            DATE_FORMAT(
+                created_at, '%Y-%m-%d %H:%i'
+            ) AS created_at
+        FROM approval_attachments
+        WHERE document_id = ?
+        ORDER BY created_at DESC, file_id DESC
+    `;
+
+    db.query(query, [documentId], (error, rows) => {
+        if (error) {
+            console.error("첨부파일 목록 조회 실패:", error.code);
+
+            return res.status(500).json({
+                message: "첨부파일 목록을 불러오지 못했습니다."
+            });
+        }
+
+        // 첨부파일이 없으면 빈 배열을 반환합니다.
+        return res.json(rows);
+    });
+});
+
+// 결재 문서의 첨부파일 다운로드
+router.get(
+    "/approvals/:documentId/attachments/:fileId/download",
+    (req, res, next) => {
+        const documentId = Number(req.params.documentId);
+        const fileId = Number(req.params.fileId);
+
+        if (
+            !Number.isSafeInteger(documentId) || documentId <= 0 ||
+            !Number.isSafeInteger(fileId) || fileId <= 0
+        ) {
+            return res.status(400).json({
+                message: "올바른 문서 ID와 파일 ID가 필요합니다."
+            });
+        }
+
+        // 해당 문서에 속한 파일인지 함께 확인합니다.
+        const query = `
+            SELECT original_name, file_path
+            FROM approval_attachments
+            WHERE document_id = ? AND file_id = ?
+        `;
+
+        db.query(query, [documentId, fileId], (error, rows) => {
+            if (error) {
+                console.error("첨부파일 조회 실패:", error.code);
+
+                return res.status(500).json({
+                    message: "첨부파일 정보를 확인하지 못했습니다."
+                });
+            }
+
+            if (rows.length === 0) {
+                return res.status(404).json({
+                    message: "해당 문서의 첨부파일을 찾을 수 없습니다."
+                });
+            }
+
+            const attachment = rows[0];
+            const prefix = "/uploads/approvals/";
+
+            if (!attachment.file_path?.startsWith(prefix)) {
+                return res.status(404).json({
+                    message: "첨부파일 저장 경로를 확인할 수 없습니다."
+                });
+            }
+
+            const storedPath = attachment.file_path.slice(prefix.length);
+            const fullPath = path.resolve(approvalUploadDir, storedPath);
+            const relativePath = path.relative(approvalUploadDir, fullPath);
+
+            // 업로드 폴더 밖의 파일은 다운로드하지 않습니다.
+            if (
+                !relativePath ||
+                relativePath === ".." ||
+                relativePath.startsWith(`..${path.sep}`) ||
+                path.isAbsolute(relativePath)
+            ) {
+                return res.status(400).json({
+                    message: "허용되지 않는 파일 경로입니다."
+                });
+            }
+
+            res.download(
+                relativePath,
+                attachment.original_name,
+                {
+                    root: approvalUploadDir,
+                    dotfiles: "deny",
+                    headers: {
+                        "Cache-Control": "private, no-store",
+                        "X-Content-Type-Options": "nosniff"
+                    }
+                },
+                (downloadError) => {
+                    if (!downloadError) return;
+
+                    // 전송이 시작된 후에는 JSON 응답을 다시 보내지 않습니다.
+                    if (res.headersSent) {
+                        return next(downloadError);
+                    }
+
+                    const notFound =
+                        downloadError.code === "ENOENT" ||
+                        downloadError.status === 404;
+
+                    return res.status(notFound ? 404 : 500).json({
+                        message: notFound
+                            ? "서버에 실제 파일이 없습니다."
+                            : "파일을 다운로드하지 못했습니다."
+                    });
+                }
+            );
+        });
+    }
+);
 
 module.exports = router;

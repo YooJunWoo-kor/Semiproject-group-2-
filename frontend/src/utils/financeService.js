@@ -260,3 +260,45 @@ export async function decideApproval(documentId, decisionData) {
     );
     return response.data;
 }
+
+// 결재 문서에 증빙파일 첨부
+export async function uploadApprovalAttachment(documentId, file, employeeId, password) {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("employee_id", employeeId);
+    formData.append("password", password);
+    const response = await axios.post(
+        `${FINANCE_API_URL}/approvals/${documentId}/attachments`, formData
+    );
+    return response.data;
+}
+
+// 결재 문서의 첨부파일 목록 조회
+export async function getApprovalAttachments(documentId) {
+    const response = await axios.get(
+        `${FINANCE_API_URL}/approvals/${documentId}/attachments`
+    );
+    return response.data;
+}
+
+// 첨부파일을 Blob(브라우저가 저장할 파일 데이터)으로 받습니다.
+export async function downloadApprovalAttachment(documentId, fileId) {
+    try {
+        const response = await axios.get(
+            `${FINANCE_API_URL}/approvals/${documentId}/attachments/${fileId}/download`,
+            { responseType: "blob" }
+        );
+        return response.data;
+    } catch (error) {
+        // 다운로드 요청에서는 서버의 JSON 오류도 Blob으로 올 수 있습니다.
+        const data = error.response?.data;
+        if (typeof data?.text === "function") {
+            try {
+                error.response.data = JSON.parse(await data.text());
+            } catch {
+                // JSON이 아니면 화면의 기본 오류 안내를 사용합니다.
+            }
+        }
+        throw error;
+    }
+}
