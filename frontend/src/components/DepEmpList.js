@@ -1,54 +1,73 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, useId } from "react";
 import { getEmployeeAccounts } from "../utils/authStorage";
 
-function DepEmpList({departmentName}) {
+function DepEmpList({ departmentName, onSelect }) {
     const [employees, setEmployees] = useState([]);
+    const [selectedEmployee, setSelectedEmployee] = useState(null);
+    const radioName = useId();
 
     useEffect(() => {
+        let cancelled = false;
 
-        if(!selectedDepartment){
-            setEmployees([]);
-            return;
-        }
+        setEmployees([]);
+        setSelectedEmployee(null);
 
-        let active = true;
+        if (!departmentName) return;
 
         async function loadEmployees() {
             try {
-                const result = await getEmployeesByDepartment(selectedDepartment);
-                
+                const allEmployees = await getEmployeeAccounts();
 
-                
-
-                const filtered = result.filter(employee => 
-                    employee.department_name === departmentName
-
-                );
-
-                setEmployees(filtered)
-                
-
-
-            } catch {
-                console.error("직원 조회 실패", error);
-                setEmployees([]);
+                if (!cancelled) {
+                    setEmployees(
+                        allEmployees.filter(
+                            employee =>
+                                employee.department_name === departmentName
+                        )
+                    );
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    console.error("직원 조회 실패:", error);
+                    setEmployees([]);
+                }
             }
-
-            loadEmployees();
         }
-    }, [departmentName])
+
+        loadEmployees();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [departmentName]);
+
+    const handleSelect = (employee) => {
+        setSelectedEmployee(employee);
+
+        // onSelect 함수가 전달된 경우에만 실행
+        onSelect?.(employee);
+    };
 
     return (
         <div>
-            <h4>{departmentName} 부서원 목록</h4>
+            <h4>{departmentName} 직원 목록</h4>
 
             {employees.map(employee => (
-                <div key={employee.employee_id}>
-                    {employee.name} / {employee.position}
-                </div>
+                <label key={employee.employee_id}>
+                    <input
+                        type="radio"
+                        name={radioName}
+                        checked={
+                            selectedEmployee?.employee_id ===
+                            employee.employee_id
+                        }
+                        onChange={() => handleSelect(employee)}
+                    />
+                    {employee.position} {employee.name}
+                </label>
             ))}
         </div>
-    )
+    );
 }
 
 export default DepEmpList;

@@ -1,21 +1,21 @@
 import React, { useEffect, useState } from "react";
 import ModalBase from "../../../../components/ModalBase";
-import DepartmentEmployeePicker from "../../../../components/DepartmentEmployeePicker";
 import axios from "axios";
-import { getLoginUser } from "../../../../utils/authStorage";
+import { getLoginUser,getEmployeeAccounts } from "../../../../utils/authStorage";
 import DepEmpList from "../../../../components/DepEmpList";
+
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api"
 
 function DraftCreate({
-    drafts,
-    setDrafts,
     loginUser,
-    employees,
     editingDraft,
     setEditingDraft,
     onDraftChanged
 }) {
+
+    const [selectedDepartment, setSelectedDepartment] = useState("");
+    const [departments, setDepartments ] = useState([]); 
 
 
     const [title, setTitle] = useState("");
@@ -39,26 +39,25 @@ function DraftCreate({
 
     // 임시저장 문서를 이어서 작성할 때 기존 데이터 불러오기
     useEffect(() => {
-
-        if (editingDraft) {
-
-            setTitle(editingDraft.title);
-            setDraftType(editingDraft.draftType);
-            setContent(editingDraft.content);
-
-            setApprovers(editingDraft.approvers || []);
-
-            setStartDate(editingDraft.startDate || "");
-            setEndDate(editingDraft.endDate || "");
-
-            setItemName(editingDraft.itemName || "");
-            setQuantity(editingDraft.quantity || "");
-
-            setUseDate(editingDraft.useDate || "");
-            setAmount(editingDraft.amount || "");
+        async function loadDepartments() {
+            try {
+                const employees = await getEmployeeAccounts();
+    
+                const departmentList = [
+                    ...new Set(
+                        employees.map(employee => employee.department_name).filter(Boolean)
+                    )
+                ];
+    
+                setDepartments(departmentList);
+    
+            } catch (error) {s
+                console.error("부서 조회 실패:", error);
+            }
         }
-
-    }, [editingDraft]);
+    
+        loadDepartments();
+    }, []);
 
 
 
@@ -422,123 +421,78 @@ function DraftCreate({
 
             {/* 결재자 선택 */}
             {showApproverModal && (
+    <ModalBase
+        title="결재자 추가"
+        onClose={() => {
+            setShowApproverModal(false);
+            setTempApprover(null);
+            setSelectedDepartment("");
+        }}
+        layout={
+            <div className="draft-box">
+                <h4>부서 선택</h4>
 
-                <ModalBase title="결재자 추가" onClose={() => {
-                    setShowApproverModal(false);
-                    setSelectedDepartment("");
-                    setTempApprover(null);
-                }}
-                    layout={
-                        <div className="draft-box">
+                <div className="draft-row">
+                    {departments.map(department => (
+                        <button
+                            type="button"
+                            key={department}
+                            onClick={() => {
+                                setSelectedDepartment(department);
+                                setTempApprover(null);
+                            }}
+                        >
+                            {department}
+                        </button>
+                    ))}
+                </div>
 
-                            <h4>부서 선택</h4>
+                {selectedDepartment && (
+                    <DepEmpList
+                        departmentName={selectedDepartment}
+                        onSelect={setTempApprover}
+                    />
+                )}
 
-
-                            <div className="draft-row">
-
-                                {departments.map((department) => (
-
-                                    <button
-                                        type="button"
-                                        key={department}
-                                        onClick={() => {
-
-                                            setSelectedDepartment(department);
-                                            setTempApprover(null);
-
-                                        }}
-                                    >
-                                        {department}
-                                    </button>
-
-                                ))}
-
-                            </div>
-
-
-                            {selectedDepartment && (
-
-                                <DepEmpList departmentName={selectedDepartment}/>
-                                    
-                                
-                                )}
-
-                                </div>
+                <div className="draft-actions">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (!tempApprover) {
+                                alert("직원을 선택해주세요.");
+                                return;
                             }
-                            />
-                        )}
 
+                            if (approvers.some(
+                                item =>
+                                    item.employee_id ===
+                                    tempApprover.employee_id
+                            )) {
+                                alert("이미 추가된 결재자입니다.");
+                                return;
+                            }
 
-                            <div className="draft-actions">
+                            setApprovers(prev => [
+                                ...prev,
+                                tempApprover
+                            ]);
 
-                                <button
-                                    type="button"
-                                    onClick={() => {
-
-                                        if (!tempApprover) {
-
-                                            alert("결재자를 선택해주세요");
-                                            return;
-                                        }
-
-
-                                        const isDuplicate = approvers.some(
-                                            (approver) => {
-
-                                                return (
-                                                    approver.employee_id ===
-                                                    tempApprover.employee_id
-                                                );
-                                            }
-                                        );
-
-
-                                        if (isDuplicate) {
-
-                                            alert("이미 추가된 결재자입니다.");
-                                            return;
-                                        }
-
-
-                                        setApprovers([
-                                            ...approvers,
-                                            tempApprover
-                                        ]);
-
-
-                                        setShowApproverModal(false);
-                                        setSelectedDepartment("");
-                                        setTempApprover(null);
-                                    }}
-                                >
-                                    결재자 선택
-                                </button>
-
-
-                                <button
-                                    type="button"
-                                    onClick={() => {
-
-                                        setShowApproverModal(false);
-                                        setSelectedDepartment("");
-                                        setTempApprover(null);
-                                    }}
-                                >
-                                    취소
-                                </button>
-
-
-                            </div>
-
-                        </div>
-
-                    }
-                />
-            )}
-
-        </div>
+                            setShowApproverModal(false);
+                            setSelectedDepartment("");
+                            setTempApprover(null);
+                        }}
+                    >
+                        결재자 추가
+                    </button>
+                </div>
+            </div>
+        }
+    />
+)}
+</div>
     );
 }
+
 
 
 export default DraftCreate;
