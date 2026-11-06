@@ -77,17 +77,10 @@ function DraftCreate({
         }
     }, [editingDraft]);
 
-
-
-
     async function handleSubmit(e, saveType) {
-
         e.preventDefault();
-
-
         // 임시저장 유효성 검사
         if (saveType === "temporary") {
-
             if (title.trim() === "") {
                 alert("임시저장하려면 제목을 입력해주세요");
                 return;
