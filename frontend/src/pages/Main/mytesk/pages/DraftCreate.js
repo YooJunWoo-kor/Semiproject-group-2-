@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import ModalBase from "../../../../components/ModalBase"
+import ModalBase from "../../../../components/ModalBase";
+import DepartmentEmployeePicker from "../../../../components/DepartmentEmployeePicker";
 import axios from "axios";
 import { getLoginUser } from "../../../../utils/authStorage";
 import DepEmpList from "../../../../components/DepEmpList";
@@ -24,7 +25,6 @@ function DraftCreate({
     const [approvers, setApprovers] = useState([]);
 
     const [showApproverModal, setShowApproverModal] = useState(false);
-    const [selectedDepartment, setSelectedDepartment] = useState("");
     const [tempApprover, setTempApprover] = useState(null);
 
     const [startDate, setStartDate] = useState("");
@@ -61,13 +61,6 @@ function DraftCreate({
     }, [editingDraft]);
 
 
-
-
-    const departments = [
-        ...new Set(
-            employees.map((employee) => employee.department_name)
-        )
-    ];
 
 
     async function handleSubmit(e, saveType) {
