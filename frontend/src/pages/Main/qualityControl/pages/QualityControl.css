@@ -1,3 +1,5 @@
+.quality-dashboard-page,
+.quality-products-page,
 .quality-test-page {
     display: grid;
     gap: 22px;
@@ -437,6 +439,8 @@
 }
 
 @media (max-width: 680px) {
+    .quality-dashboard-page,
+    .quality-products-page,
     .quality-test-page {
         gap: 16px;
         padding: 18px;

@@ -105,3 +105,31 @@ hr { border: 0; border-top: 1px solid var(--color-line); }
 .login-page form { display: grid; gap: 17px; }
 .login-page form > div { display: grid; gap: 8px; }
 
+
+/* 마이페이지 관련 클레스 분리하면 좋을듯*/
+.draft-box {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.draft-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.draft-row > label {
+  flex: 1;
+  min-width: 180px;
+}
+
+.draft-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}

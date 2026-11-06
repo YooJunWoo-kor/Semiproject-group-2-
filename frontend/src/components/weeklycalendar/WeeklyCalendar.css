@@ -239,7 +239,7 @@
   white-space: pre-wrap;
 }
 
-/* BasicCalendar의 CALENDAR_COLORS와 같은 typeId 색상을 사용합니다. */
+/* BasicCalendar의 TOGLE_COLORS와 같은 typeId 색상을 사용합니다. */
 .weekly-calendar .weekly-calendar-status {
   display: inline-block;
   max-width: 100%;
