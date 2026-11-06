@@ -10,7 +10,7 @@ function ModalBase({ onClose, title, layout }) {
           className='modal-boder'
         >
           <div className='modal-header' style={{ }}>
-            <h3 style={{ margin: 0, fontSize: '18px' }}>title</h3>
+            <h3 style={{ margin: 0, fontSize: '18px' }}>{title}</h3>
             <button type="button" onClick={onClose} style={{ cursor: 'pointer', border: 'none', background: 'none', fontSize: '16px' }}>
               ✕
             </button>

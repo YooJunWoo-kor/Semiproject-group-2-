@@ -7,6 +7,7 @@
 @import './css/GroupBord.css';
 @import './css/Schedul.css';
 @import './css/ModalPopup.css';
+@import './css/Form.css';
 
 :root {
   font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
@@ -103,3 +104,4 @@ hr { border: 0; border-top: 1px solid var(--color-line); }
 }
 .login-page form { display: grid; gap: 17px; }
 .login-page form > div { display: grid; gap: 8px; }
+

@@ -132,18 +132,20 @@ function BasicCalendar({ schedule = [] }) {
 
                         {/* 해당 날짜의 일정 */}
                         {getDaySchedules(day).map((item, index) => {
-                          const setColor = CALENDAR_COLORS[item.typeId];
-                         return <div
-                            className="basic-calendar-schedule"
-                            key={index}
-                            style={{
-                              // border: `1px solid ${setColor}`,
-                              backgroundColor: setColor,
-                              color: "#fff",
-                              borderRadius: `10px`,
-                              textAlign: 'center'
-                            }}
-                          >
+                            const setColor = CALENDAR_COLORS[item.typeId];
+
+                            return <div
+                              className="basic-calendar-schedule"
+                              key={index}
+                              style={{
+                                // border: `1px solid ${setColor}`,
+                                backgroundColor: setColor,
+                                color: "#fff",
+                                borderRadius: `10px`,
+                                textAlign: 'center'
+                              }}
+                            >
+                              
                             {item.title}
                           </div>
                         }
