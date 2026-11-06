@@ -1,6 +1,7 @@
 import { useEffect, useState, useId } from "react";
-import { getDbEmployeeAccounts as getEmployeeAccounts } from "../utils/authStorage";
+import { getEmployeeAccounts } from "../utils/authStorage";
 
+//선택한 부서 데이터를 불러오면, 부서 원들 출력
 function DepEmpList({ departmentName, onSelect }) {
     const [employees, setEmployees] = useState([]);
     const [selectedEmployee, setSelectedEmployee] = useState(null);

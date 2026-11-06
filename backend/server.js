@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 4000;
 
 const homSurver = require('./routes/homServer')
 const schedule = require('./routes/schedule')
-const DraftServer = require('./models/Draft_server')
+const DraftServer = require('./routes/drafts')
 const communityRouter = require('./routes/community');
 
 app.use(cors());
