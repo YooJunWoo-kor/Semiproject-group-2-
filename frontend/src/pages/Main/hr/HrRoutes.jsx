@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 
 import Dashboard from './Dashboard.jsx';
 import Employees from './pages/Employees.jsx';
