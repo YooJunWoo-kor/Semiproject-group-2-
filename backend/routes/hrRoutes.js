@@ -4,6 +4,7 @@ const db = require('../db');
 const hrRouter = express.Router();
 const promiseDb = db.promise();
 
+// HR API에서 공통으로 사용하는 날짜·이메일·급여월·금액 입력 검증 함수입니다.
 function isDateString(value) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
         return false;
@@ -36,6 +37,7 @@ function parseNonNegativeInteger(value) {
 }
 
 async function departmentExists(departmentId) {
+    // 직원 등록·수정 전에 참조할 부서가 실제로 존재하는지 확인합니다.
     const [rows] = await promiseDb.query(
         'SELECT department_id FROM departments WHERE department_id = ?',
         [departmentId]
@@ -46,7 +48,8 @@ async function departmentExists(departmentId) {
 
 
 // 달력용 근태 기록 조회
-hrRouter.get('/api/hr/attendance', async (req, res) => {
+// 날짜·부서 조건은 선택적으로 적용하고 출근·퇴근 시각은 조회 전용으로 반환합니다.
+hrRouter.get('/attendance', async (req, res) => {
     const startDate = req.query.startDate || null;
     const endDate = req.query.endDate || null;
     const date = req.query.date || null;
@@ -136,7 +139,8 @@ hrRouter.get('/api/hr/attendance', async (req, res) => {
 
 
 // 기존 결재 초안과 휴가 기간을 조합한 휴가 신청 조회
-hrRouter.get('/api/hr/leaves', async (req, res) => {
+// 휴가 신청·승인 저장 API가 없어 현재 라우트는 읽기 전용입니다.
+hrRouter.get('/leaves', async (req, res) => {
     const month = String(req.query.month || '').trim();
 
     if (month && !isPayMonthString(month)) {
@@ -204,7 +208,8 @@ hrRouter.get('/api/hr/leaves', async (req, res) => {
 
 
 // 근태 상태·메모 수정
-hrRouter.put('/api/hr/attendance/:attendanceId', async (req, res) => {
+// 출근·퇴근 컬럼은 변경하지 않고 상태와 메모만 UPDATE합니다.
+hrRouter.put('/attendance/:attendanceId', async (req, res) => {
     const attendanceId = Number(req.params.attendanceId);
     const status = String(req.body.status || '').trim();
     const memo = String(req.body.memo || '').trim();
@@ -254,7 +259,7 @@ hrRouter.put('/api/hr/attendance/:attendanceId', async (req, res) => {
 
 
 // 부서 직원 전체와 해당 날짜의 근태 조회
-hrRouter.get('/api/hr/attendance/department', async (req, res) => {
+hrRouter.get('/attendance/department', async (req, res) => {
     const date = req.query.date;
     const departmentId = Number(req.query.departmentId);
 
@@ -315,7 +320,8 @@ hrRouter.get('/api/hr/attendance/department', async (req, res) => {
 
 
 // 직원 목록 조회
-hrRouter.get('/api/hr/employees', async (req, res) => {
+// 직원 기본정보와 부서·계정 정보를 조합해 직원관리 화면에 전달합니다.
+hrRouter.get('/employees', async (req, res) => {
     const query = `
         SELECT
             e.employee_id AS employeeId,
@@ -357,7 +363,8 @@ hrRouter.get('/api/hr/employees', async (req, res) => {
 
 
 // 부서 목록 조회
-hrRouter.get('/api/hr/departments', async (req, res) => {
+// 부서장 이름과 설명을 함께 조회해 직원·부서 통합 화면에서 사용합니다.
+hrRouter.get('/departments', async (req, res) => {
     const query = `
         SELECT
             d.department_id AS departmentId,
@@ -390,7 +397,8 @@ hrRouter.get('/api/hr/departments', async (req, res) => {
 
 
 // 부서 등록
-hrRouter.post('/api/hr/departments', async (req, res) => {
+// 선택한 직원은 부서장으로 연결하고 부서명 중복을 먼저 확인합니다.
+hrRouter.post('/departments', async (req, res) => {
     const departmentName = String(req.body.departmentName || '').trim();
     const description = String(req.body.description || '').trim();
     const managerIdValue = req.body.managerId;
@@ -479,7 +487,8 @@ hrRouter.post('/api/hr/departments', async (req, res) => {
 
 
 // 급여월별 직원 급여 목록 조회
-hrRouter.get('/api/hr/payrolls', async (req, res) => {
+// LEFT JOIN으로 급여 미등록 직원도 포함해 실제 등록 여부를 표시합니다.
+hrRouter.get('/payrolls', async (req, res) => {
     const payMonth = String(req.query.payMonth || '').trim();
 
     if (!isPayMonthString(payMonth)) {
@@ -540,7 +549,8 @@ hrRouter.get('/api/hr/payrolls', async (req, res) => {
 
 
 // 급여 등록
-hrRouter.post('/api/hr/payrolls', async (req, res) => {
+// 등록 요청의 금액을 검증하고 gross/net 금액은 서버에서 계산합니다.
+hrRouter.post('/payrolls', async (req, res) => {
     const employeeId = Number(req.body.employeeId);
     const payMonth = String(req.body.payMonth || '').trim();
     const baseSalary = parseNonNegativeInteger(req.body.baseSalary);
@@ -666,7 +676,8 @@ hrRouter.post('/api/hr/payrolls', async (req, res) => {
 
 
 // 급여 수정
-hrRouter.put('/api/hr/payrolls/:payrollId', async (req, res) => {
+// 기존 급여 기록의 금액과 지급 상태를 다시 계산해 저장합니다.
+hrRouter.put('/payrolls/:payrollId', async (req, res) => {
     const payrollId = Number(req.params.payrollId);
     const baseSalary = parseNonNegativeInteger(req.body.baseSalary);
     const allowance = parseNonNegativeInteger(req.body.allowance);
@@ -765,7 +776,8 @@ hrRouter.put('/api/hr/payrolls/:payrollId', async (req, res) => {
 
 
 // 직원 등록
-hrRouter.post('/api/hr/employees', async (req, res) => {
+// 직원과 계정을 하나의 트랜잭션으로 등록해 부분 저장을 방지합니다.
+hrRouter.post('/employees', async (req, res) => {
     const employeeNumber = String(req.body.employeeNumber || '').trim();
     const name = String(req.body.name || '').trim();
     const departmentId = Number(req.body.departmentId);
@@ -884,7 +896,8 @@ hrRouter.post('/api/hr/employees', async (req, res) => {
 
 
 // 직원 정보 수정
-hrRouter.put('/api/hr/employees/:employeeId', async (req, res) => {
+// 퇴사 처리는 별도 API로 제한하고 일반 직원 정보만 수정합니다.
+hrRouter.put('/employees/:employeeId', async (req, res) => {
     const employeeId = Number(req.params.employeeId);
     const name = String(req.body.name || '').trim();
     const departmentId = Number(req.body.departmentId);
@@ -1023,7 +1036,8 @@ hrRouter.put('/api/hr/employees/:employeeId', async (req, res) => {
 
 
 // 직원 퇴사 처리
-hrRouter.patch('/api/hr/employees/:employeeId/status', async (req, res) => {
+// 직원 상태와 계정 상태를 함께 변경하고 실패하면 트랜잭션을 롤백합니다.
+hrRouter.patch('/employees/:employeeId/status', async (req, res) => {
     const employeeId = Number(req.params.employeeId);
     let transactionStarted = false;
 
