@@ -45,6 +45,20 @@ export function logoutUser() {
     );
 }
 
+// 기존 출퇴근 위젯에서 사용하는 근태 조회 API입니다.
+export async function getAttendance() {
+    const response = await axios.post(API_BASE_URL + '/attendance');
+    return Array.isArray(response.data?.data) ? response.data.data : [];
+}
+
+export function getTodayString() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 // MASTER가 등록한 직원들
 export async function getEmployeeAccounts() {
     try{

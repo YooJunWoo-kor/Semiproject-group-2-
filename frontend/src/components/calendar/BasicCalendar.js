@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './Calendar.css';
 import { TOGLE_COLORS } from '../../utils/authStorage'
+import WeeklyCalendar from '../weeklycalendar/WeeklyCalendar.js';
 
 function BasicCalendar({ schedule = [], showWeekly = false }) {
 

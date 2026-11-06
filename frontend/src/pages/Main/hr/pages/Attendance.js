@@ -527,7 +527,7 @@ export default function Attendance() {
         <div>
           <span className="subtitle">근태관리</span>
           <span className="subtext">
-            직원별 월간 근태 현황과 일별 기록을 확인합니다.
+          임직원의 출근 현황과 근태 상태를 조회하고 관리합니다.
           </span>
         </div>
         <div className="dashboard-top">
