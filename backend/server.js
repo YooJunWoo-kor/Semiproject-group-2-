@@ -10,7 +10,8 @@ const Attendance = require('./models/Attendance'); // 출결 관련 함수 클�
 
 app.use(cors());
 app.use(express.json());
-app.use(require('./routes/hrRoutes'));
+// HR 프런트 API가 사용하는 /api/hr 기준으로 라우터를 연결합니다.
+app.use('/api/hr', require('./routes/hrRoutes'));
 
 // 2. [사원 등록 API] RegisterPage 폼 전송 수신
 app.post('/api/register', async (req, res) => {

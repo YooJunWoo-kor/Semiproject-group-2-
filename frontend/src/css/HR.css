@@ -114,8 +114,53 @@
     min-width: 0;
 }
 
+.hr-attendance-management .attendance-leave-summary-empty .summary-item strong {
+    color: var(--color-muted);
+}
+
+.hr-attendance-management .attendance-leave-layout .employee-item {
+    min-height: 82px;
+    align-items: flex-start;
+}
+
+.hr-attendance-management .attendance-leave-layout .employee-attendance-rate {
+    max-width: 112px;
+    line-height: 1.35;
+    text-align: right;
+}
+
+.hr-attendance-management .attendance-leave-layout .employee-attendance-rate small {
+    white-space: normal;
+}
+
 .hr-attendance-management .attendance-leave-detail-list {
     margin: 0;
+}
+
+.hr-attendance-management .attendance-leave-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin: 14px 0 4px;
+}
+
+.hr-attendance-management .attendance-leave-actions button {
+    min-height: 32px;
+    padding: 6px 14px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.hr-attendance-management .attendance-leave-actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.hr-attendance-management .attendance-leave-reject-button {
+    color: var(--color-muted);
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
 }
 
 .hr-attendance-management .attendance-leave-detail-list > div {
@@ -139,6 +184,49 @@
     font-size: 13px;
     text-align: right;
     overflow-wrap: anywhere;
+}
+
+.hr-attendance-management .attendance-leave-balance,
+.hr-attendance-management .attendance-leave-balance-empty {
+    margin-top: 16px;
+    padding: 13px 14px;
+    background: var(--color-brand-soft);
+    border: 1px solid var(--color-line);
+    border-radius: 9px;
+}
+
+.hr-attendance-management .attendance-leave-balance > strong,
+.hr-attendance-management .attendance-leave-balance-empty strong {
+    display: block;
+    color: var(--color-brand);
+    font-size: 13px;
+}
+
+.hr-attendance-management .attendance-leave-balance > div {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.hr-attendance-management .attendance-leave-balance > div span {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    color: var(--color-muted);
+    font-size: 11px;
+}
+
+.hr-attendance-management .attendance-leave-balance b {
+    color: var(--color-ink);
+    font-size: 15px;
+}
+
+.hr-attendance-management .attendance-leave-balance-empty span {
+    display: block;
+    margin-top: 4px;
+    color: var(--color-muted);
+    font-size: 11px;
 }
 
 .hr-attendance-management .attendance-leave-api-notice {
@@ -558,6 +646,10 @@
 
     .hr-attendance-management .attendance-leave-summary {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .hr-attendance-management .attendance-leave-balance > div {
+        grid-template-columns: 1fr;
     }
 }
 

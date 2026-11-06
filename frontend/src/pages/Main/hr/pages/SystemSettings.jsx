@@ -7,6 +7,7 @@ const settings = [
 ];
 
 export default function SystemSettings() {
+  // 현재는 HR 설정 메뉴의 기본 화면만 제공하며 저장 로직은 없습니다.
   return (
     <div className="settings-list">
       {/* 실제 설정 화면이 연결되기 전까지는 안내만 표시합니다. */}

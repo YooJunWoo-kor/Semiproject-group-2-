@@ -13,6 +13,7 @@ const attendanceType = {
 };
 
 export default function HRAttendanceView(props) {
+    // 대시보드에서 재사용하는 부서별 근태 요약 컴포넌트입니다.
     const user = getLoginUser();
     const [time, setTime] = useState(new Date());
     const [calendarStyle, setCalendarStyle] = useState(0);
@@ -21,6 +22,7 @@ export default function HRAttendanceView(props) {
     const error = props.error || '';
 
     // 우측 근태 카드의 현재 시각을 1초마다 갱신합니다.
+    // 날짜·부서가 바뀔 때 해당 근태 목록을 다시 조회합니다.
     useEffect(() => {
         const timer = setInterval(() => {
             setTime(new Date());

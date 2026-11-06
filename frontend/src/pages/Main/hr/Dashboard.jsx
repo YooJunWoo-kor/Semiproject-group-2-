@@ -27,6 +27,7 @@ function TestModal() {
 }
 
 export default function Dashboard() {
+    // HR 대시보드는 조직 현황과 오늘의 근태 요약을 함께 보여줍니다.
     // 조직 정보와 근태 정보를 각각 조회해 HR 요약 화면에 전달합니다.
     const loginUser = getLoginUser();
     const isMaster = loginUser?.role === 'MASTER';
@@ -77,6 +78,7 @@ export default function Dashboard() {
     useEffect(() => {
         let ignore = false;
 
+        // 부서·직원 데이터를 먼저 조회해 조직 통계와 부서 선택에 사용합니다.
         async function loadOrganization() {
             setOrganizationLoading(true);
             setOrganizationError('');
@@ -137,6 +139,7 @@ export default function Dashboard() {
     useEffect(() => {
         let ignore = false;
 
+        // 전체 근태 데이터를 조회해 오늘의 출근·휴가 현황을 계산합니다.
         async function loadAttendance() {
             setAttendanceLoading(true);
             setAttendanceError('');
@@ -191,6 +194,7 @@ export default function Dashboard() {
             return undefined;
         }
 
+        // 선택한 날짜와 부서의 근태 현황을 조회합니다.
         async function loadDepartmentAttendance() {
             setDepartmentLoading(true);
             setDepartmentError('');

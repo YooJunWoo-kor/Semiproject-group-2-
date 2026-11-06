@@ -260,6 +260,7 @@ function PayrollEditForm({ employee, payMonth, onSave, onCancel, saving }) {
 }
 
 export default function Payroll() {
+  // 기준 월별 급여 조회와 급여 등록·수정을 담당합니다.
   const loginUser = getLoginUser();
   // 급여 등록·수정 기능은 기존 정책대로 MASTER 화면에만 노출합니다.
   const isMaster = loginUser?.role === 'MASTER';
@@ -282,6 +283,7 @@ export default function Payroll() {
     let ignore = false;
 
     // 급여월이 바뀔 때 이전 선택을 비우고 해당 월 자료를 다시 조회합니다.
+    // 기준 급여월이 바뀔 때 직원별 급여 목록을 다시 조회합니다.
     async function loadPayrolls() {
       setLoading(true);
       setHasLoadedPayrolls(false);
@@ -354,6 +356,7 @@ export default function Payroll() {
     setSelectedPaymentStatus('전체');
   }
 
+  // payrollId 유무로 신규 등록과 기존 급여 수정을 구분합니다.
   async function handleSavePayroll(formData) {
     if (!selectedEmp || !isMaster) {
       return;
@@ -623,6 +626,7 @@ export default function Payroll() {
     ]
   }));
 
+  // 왼쪽 직원 목록과 오른쪽 급여 상세·처리 영역을 함께 렌더링합니다.
   return (
     <div className="sub-container hr-payroll-management">
       <header className="dashboard-header">

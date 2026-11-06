@@ -87,6 +87,7 @@ function normalizeDepartments(departmentRows, employeeRows) {
 }
 
 export default function Departments() {
+  // 부서 목록과 소속 인원 수를 DB 응답으로 구성합니다.
   const loginUser = getLoginUser();
   // 현재 부서 등록 UI는 기존 정책대로 MASTER 사용자에게만 노출합니다.
   const isMaster = loginUser?.role === "MASTER";
@@ -99,6 +100,7 @@ export default function Departments() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
+  // 부서와 직원을 함께 조회해 부서 카드와 인원 수를 갱신합니다.
   async function loadDepartmentPage() {
     // 부서와 직원을 함께 조회해 부서 카드와 소속 직원 표를 갱신합니다.
     setLoading(true);
@@ -163,6 +165,7 @@ export default function Departments() {
     ? Math.round(totalEmployees / departments.length)
     : 0;
 
+  // 등록 성공 후 목록을 다시 조회해 새 부서를 즉시 반영합니다.
   function handleRegisterDept() {
     // 등록 API가 없으므로 실제 저장 대신 지원되지 않는 기능임을 안내합니다.
     setIsModalOpen(false);

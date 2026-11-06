@@ -113,6 +113,10 @@ function getLeaveStatusClass(status) {
   return "late";
 }
 
+function isLeaveApprovalPending(status) {
+  return getLeaveStatusClass(status) === "late";
+}
+
 function AttendanceEditForm({ attendance, onSave, onCancel, saving }) {
   const [form, setForm] = useState({
     status: attendance.status || "정상",
@@ -179,6 +183,7 @@ function AttendanceEditForm({ attendance, onSave, onCancel, saving }) {
 }
 
 export default function Attendance() {
+  // 근태 기록과 휴가 신청·승인 조회를 한 화면의 탭으로 제공합니다.
   const loginUser = getLoginUser();
   const isMaster = loginUser?.role === "MASTER";
   const [employees, setEmployees] = useState([]);
@@ -204,6 +209,7 @@ export default function Attendance() {
     let ignore = false;
 
     // 직원·부서·근태 자료를 함께 조회하고 가장 최근 근태월을 기본값으로 설정합니다.
+    // 조직 정보와 전체 근태 기록을 함께 조회해 직원 목록을 구성합니다.
     async function loadAttendancePage() {
       setLoading(true);
       setError("");
@@ -269,6 +275,7 @@ export default function Attendance() {
 
     let ignore = false;
 
+    // 선택한 기준 월의 휴가 신청 데이터를 조회합니다.
     async function loadLeaves() {
       setLeaveLoading(true);
       setLeaveError("");
@@ -321,6 +328,7 @@ export default function Attendance() {
     (employee) => String(employee.employeeId) === String(selectedEmployeeId)
   );
 
+  // 휴가 탭도 기존 부서·직원 검색 필터를 동일하게 적용합니다.
   const filteredLeaveData = leaveData.filter((leave) => {
     const matchesDepartment =
       selectedDepartment === "전체" ||
@@ -457,6 +465,7 @@ export default function Attendance() {
     setIsEditModalOpen(true);
   }
 
+  // 출퇴근 시간은 건드리지 않고 상태와 메모만 서버에 저장합니다.
   async function saveAttendanceEdit(formData) {
     if (!isMaster) {
       return;
@@ -605,6 +614,7 @@ export default function Attendance() {
         </button>
       </section>
 
+      {/* 근태 기록 탭과 휴가 신청·승인 탭의 본문을 전환합니다. */}
       {activeTab === "attendance" ? (
         loading ? (
         <p className="attendance-feedback" role="status">
@@ -740,8 +750,27 @@ export default function Attendance() {
             {leaveError}
           </p>
         ) : leaveData.length === 0 ? (
-          <div className="attendance-layout attendance-leave-layout">
-            <section className="attendance-card employee-list-panel">
+          <>
+            <section className="attendance-leave-summary attendance-leave-summary-empty">
+              <div className="summary-item">
+                <span>전체 신청 건수</span>
+                <strong>-</strong>
+              </div>
+              <div className="summary-item">
+                <span>승인 대기 건수</span>
+                <strong>-</strong>
+              </div>
+              <div className="summary-item">
+                <span>승인 완료 건수</span>
+                <strong>-</strong>
+              </div>
+              <div className="summary-item">
+                <span>이번 달 사용 일수</span>
+                <strong>-</strong>
+              </div>
+            </section>
+            <div className="attendance-layout attendance-leave-layout">
+              <section className="attendance-card employee-list-panel">
               <div className="employee-list-header">
                 <div>
                   <h2>휴가 신청 직원</h2>
@@ -780,14 +809,15 @@ export default function Attendance() {
                         <small>휴가 신청</small>
                         <strong>-</strong>
                         <small>신청 없음</small>
+                        <small>잔여 휴가 정보 없음</small>
                       </span>
                     </button>
                   ))}
                 </div>
               )}
-            </section>
+              </section>
 
-            <section className="attendance-detail-panel">
+              <section className="attendance-detail-panel">
               {selectedEmployee ? (
                 <>
                   <div className="attendance-detail-header">
@@ -812,6 +842,10 @@ export default function Attendance() {
                     <div><dt>승인자</dt><dd>-</dd></div>
                     <div><dt>승인일</dt><dd>-</dd></div>
                   </dl>
+                  <div className="attendance-leave-balance-empty">
+                    <strong>잔여 휴가 정보 없음</strong>
+                    <span>잔여 휴가 계산에 필요한 DB 정보가 없습니다.</span>
+                  </div>
                   <p className="attendance-leave-api-notice">
                     휴가 신청 데이터가 없습니다. 현재 휴가 신청 API가 준비되지 않았습니다.
                   </p>
@@ -821,8 +855,9 @@ export default function Attendance() {
                   직원을 선택하면 휴가 상세정보가 표시됩니다.
                 </p>
               )}
-            </section>
-          </div>
+              </section>
+            </div>
+          </>
         ) : (
           <>
             <section className="attendance-leave-summary">
@@ -886,6 +921,7 @@ export default function Attendance() {
                           <small>신청 건수</small>
                           <strong>{employee.requestCount}건</strong>
                           <small>{employee.latestStatus}</small>
+                          <small>잔여 휴가 정보 없음</small>
                         </span>
                       </button>
                     ))}
@@ -913,6 +949,26 @@ export default function Attendance() {
                         {selectedLeave.applicationStatus}
                       </span>
                     </div>
+                    {isLeaveApprovalPending(selectedLeave.applicationStatus) && (
+                      <div className="attendance-leave-actions" aria-label="휴가 승인 작업">
+                        <button
+                          type="button"
+                          className="erp-primary-button"
+                          disabled
+                          title="현재 휴가 승인 API가 준비되지 않았습니다."
+                        >
+                          승인
+                        </button>
+                        <button
+                          type="button"
+                          className="attendance-leave-reject-button"
+                          disabled
+                          title="현재 휴가 반려 API가 준비되지 않았습니다."
+                        >
+                          반려
+                        </button>
+                      </div>
+                    )}
                     <dl className="attendance-leave-detail-list">
                       <div><dt>휴가 유형</dt><dd>{selectedLeave.leaveType || "-"}</dd></div>
                       <div><dt>시작일</dt><dd>{selectedLeave.startDate || "-"}</dd></div>
@@ -924,6 +980,14 @@ export default function Attendance() {
                       <div><dt>승인자</dt><dd>{selectedLeave.approverName || "-"}</dd></div>
                       <div><dt>승인일</dt><dd>{selectedLeave.approvalDate || "-"}</dd></div>
                     </dl>
+                    <div className="attendance-leave-balance">
+                      <strong>개인 잔여 휴가 정보 없음</strong>
+                      <div>
+                        <span>총 연차 <b>-</b></span>
+                        <span>사용 일수 <b>-</b></span>
+                        <span>잔여 일수 <b>-</b></span>
+                      </div>
+                    </div>
                     <p className="attendance-leave-api-notice">
                       현재 휴가 신청·승인 API가 준비되지 않아 화면 조회만 지원합니다.
                     </p>

@@ -10,7 +10,7 @@ import Nav from '../../../components/Nav.js';
 import '../../../css/HR.css';
 
 export default function HrRoutes() {
-  
+  // HR 공통 네비게이션과 하위 화면 라우트를 한 곳에서 관리합니다.
   let mainUrl = "/main/hr";
   // HR 왼쪽 메뉴와 하위 화면 경로를 한곳에서 관리합니다.
   const urlList = [
@@ -25,6 +25,7 @@ export default function HrRoutes() {
     <div className='sub-main-contain'>
       <Nav urlist={urlList}/>
       {/* 주소에 따라 HR 대시보드와 각 관리 화면을 전환합니다. */}
+      {/* 메뉴 URL과 실제 HR 화면을 연결합니다. */}
       <Routes>
           <Route index element={<Dashboard />} />
           <Route path="employees" element={<Employees />} />

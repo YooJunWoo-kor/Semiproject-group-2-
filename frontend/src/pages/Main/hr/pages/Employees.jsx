@@ -400,6 +400,7 @@ function EmployeeDetail({ employee }) {
 }
 
 export default function Employees() {
+  // 직원·부서 통합관리 화면의 조회, 등록, 수정, 퇴사 처리를 담당합니다.
   const loginUser = getLoginUser();
   // 직원 등록·수정·퇴사 처리는 MASTER 사용자에게만 노출합니다.
   const isMaster = loginUser?.role === 'MASTER';
@@ -426,6 +427,7 @@ export default function Employees() {
     let ignore = false;
 
     // 화면 진입 시 부서와 직원을 함께 조회해 필터와 목록을 구성합니다.
+    // 화면 진입 시 직원과 부서 데이터를 함께 조회합니다.
     async function loadEmployeePage() {
       setLoading(true);
       setError('');
@@ -476,6 +478,7 @@ export default function Employees() {
     };
   }, []);
 
+  // 등록·수정·퇴사 후 직원 목록과 선택 상태를 새로 고칩니다.
   async function refreshEmployees() {
     const response = await getHrEmployees();
 
@@ -599,6 +602,7 @@ export default function Employees() {
     setShowEditModal(true);
   }
 
+  // 직원 등록 API를 호출하고 성공 시 목록을 갱신합니다.
   async function addEmployee(event) {
     // 신규 직원 저장 후 서버 목록을 다시 조회해 화면을 동기화합니다.
     event.preventDefault();
@@ -633,6 +637,7 @@ export default function Employees() {
     }
   }
 
+  // 통합관리 화면에서 부서를 등록하고 조직 데이터를 다시 조회합니다.
   async function addDepartment(event) {
     event.preventDefault();
 
@@ -686,6 +691,7 @@ export default function Employees() {
     }
   }
 
+  // 선택한 직원의 기본 정보만 수정합니다.
   async function updateEmployee(event) {
     // 선택 직원의 수정 내용을 저장하고 상세 패널까지 최신 값으로 갱신합니다.
     event.preventDefault();
@@ -738,6 +744,7 @@ export default function Employees() {
     }
   }
 
+  // 직원 삭제 대신 재직 상태를 퇴사로 변경합니다.
   async function retireEmployee(employee) {
     // 직원 자료를 삭제하지 않고 기존 퇴사 처리 API로 상태만 변경합니다.
     if (!isMaster) {
