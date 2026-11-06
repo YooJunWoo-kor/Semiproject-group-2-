@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './Calendar.css';
+import { TOGLE_COLORS } from '../../utils/authStorage'
 
 function BasicCalendar({ schedule = [] }) {
 
@@ -65,20 +66,6 @@ function BasicCalendar({ schedule = [] }) {
     );
   }
 
-  //달력에 표기할 색상 리스트
-  const CALENDAR_COLORS = [
-    '#3b82f6', // 0: 소프트 블루 (정상 출근)
-    '#f59e0b', // 1: 웜 앰버 (지각 / 조퇴)
-    '#ef4444', // 2: 뮤트 레드 (결근 / 병가)
-    '#10b981', // 3: 세이지 에메랄드 (연차 / 반차)
-    '#06b6d4', // 4: 덜 시안 (경조휴가)
-    '#6366f1', // 5: 소프트 인디고 (외근 / 출장)
-    '#14b8a6', // 6: 차분한 틸 (재택근무)
-    '#8b5cf6', // 7: 뮤트 바이올렛 (야간근무)
-    '#d946ef', // 8: 소프트 후샤 (휴일근무)
-    '#64748b'  // 9: 뉴트럴 슬레이트 (기타)
-  ];
-
   const weekdays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   return (
@@ -132,7 +119,7 @@ function BasicCalendar({ schedule = [] }) {
 
                         {/* 해당 날짜의 일정 */}
                         {getDaySchedules(day).map((item, index) => {
-                            const setColor = CALENDAR_COLORS[item.typeId];
+                            const setColor = TOGLE_COLORS[item.typeId];
 
                             return <div
                               className="basic-calendar-schedule"

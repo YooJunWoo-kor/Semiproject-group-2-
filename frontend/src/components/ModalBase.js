@@ -19,11 +19,6 @@ function ModalBase({ onClose, title, layout }) {
           <div className='modal-body'>
             {layout}
           </div>
-          <div style={{ marginTop: '20px', textAlign: 'right' }}>
-            <button type="button" onClick={onClose} className="erp-primary-button">
-              닫기
-            </button>
-          </div>
         </div>
       </div>
     );

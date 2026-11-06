@@ -6,7 +6,7 @@ import WeeklyCalendar from '../../../components/weeklycalendar/WeeklyCalendar';
 import StatisticsCard from '../../../components/StatisticsCard';
 import ModalBase from '../../../components/ModalBase'
 import axios from 'axios';
-import { getLoginUser, getTodayString, API_BASE_URL } from '../../../utils/authStorage'
+import { getLoginUser, getTodayString, API_BASE_URL, TOGLE_COLORS } from '../../../utils/authStorage'
 import GetPopover from '../../../components/GetPopover';
 
 function ScheduleModul() {
@@ -47,12 +47,15 @@ function ScheduleModul() {
             </div>
             
             {/* onClose, title, layout */}
-            {isModal ? <ModalBase onClose={closeModal} title={"일정 등록"} layout={<ScheduleModalPopup/>}/>: <div></div>}
+            {isModal ? <ModalBase onClose={closeModal} title={"일정 등록"}
+              layout={<ScheduleModalPopup
+                onClose={closeModal}
+              />}/>: <div></div>}
         </div>
     );
 }
 
-function ScheduleModalPopup(){
+function ScheduleModalPopup({onClose}){
   //오늘날짜 가져오기
   let today = getTodayString();
 
@@ -60,16 +63,17 @@ function ScheduleModalPopup(){
   const [startDay,setStartDay] = useState(today);
   const [endDay, setEndDay] = useState('');
   const [participant, setParticipant] = useState([]);
-  const [visible, setVisible] = useState(true);
-  const [velues, setValues] = useState('');
+  const [scheduleType, setScheduleType] = useState(true);
+  const [description, setDescription] = useState('');
   const [isNotifyEnabled, setIsNotifyEnabled] = useState(false);
   const [timerNum, setTimerNum] = useState(10);
   const [timerType, setTimerType] = useState('h');
   const [timerTiming, setTimerTiming] = useState('REPEAT')
-  const [startTimeH, setStratTimeH] = useState('00');
-  const [startTimeM, setStratTimeM] = useState('00');
-  const [endTimeH, setEndTimeH] = useState('00');
-  const [endTimeM, setEndTimeM] = useState('00');
+  const [startTimeH, setStratTimeH] = useState('시');
+  const [startTimeM, setStratTimeM] = useState('분');
+  const [endTimeH, setEndTimeH] = useState('시');
+  const [endTimeM, setEndTimeM] = useState('분');
+  const [typeId, setTypeId] = useState(0);
 
   const hList = [];
   for(let i = 0; i < 24; i++){
@@ -81,8 +85,6 @@ function ScheduleModalPopup(){
     mList.push(String(i).padStart(2,0));
   }
 
-  console.log(mList)
-
   //유저 리스트 추가
   const listset = function(value){
     setParticipant([...participant, value]);
@@ -92,32 +94,90 @@ function ScheduleModalPopup(){
     setParticipant(participant.filter((_,i)=> i != index))
   }
 
-  const onSubmit = function(e){
+  const onSubmit = async function(e){
     e.preventDefault();
+
+    let startTime = startTimeH + ':' + startTimeM + ':00'
+    let endTime = endTimeH + ':' + endTimeM + ':00'
+
     const userID = getLoginUser().employeeKey;
-    const response = axios.post(
-      API_BASE_URL + '/schedule/setSchedule',
-      {userID, title, startDay, endDay, participant, visible, velues, isNotifyEnabled, timerNum, timerType, timerTiming}
-    );
+    try {
+      const response = await axios.post(
+        API_BASE_URL + '/schedule/setSchedule',
+        { title,        //제목
+          scheduleType, //공개여부
+          userID,       //작성자
+          startDay,     //시작일시
+          endDay,       //종료일시
+          startTime,    //시작시간
+          endTime,      //종료시간
+          typeId,          //색상
+          description,  //스케쥴상세내용
+  
+          participant,     //유저리스트
+          isNotifyEnabled, //알람상태
+          timerNum,        //타이머시간
+          timerType,       //타이머타입 (일, 시, 분)
+          timerTiming,     //타이머타이밍 (마감전, 반복)
+        });
+
+        if( response.data.status){
+          alert( response.data.message );
+          onClose();
+        }
+    } catch (error) {
+      if(error.response?.status == '500'){
+        alert(error.response.message);
+      }
+      else if(error.response?.status == '400'){
+        alert(error.response.message);
+      }
+      else{
+        alert('요청중 에러가 발생했습니다.')
+      }
+    }
   };
   
   return (
-    <form onSubmit={onSubmit}>
+    <form onSubmit={onSubmit} style={{display:'flex',flexFlow:'column',gap:'20px'}}>
       {/* 제목 */}
-      <div className="form-group">
+      <div>
         <label>제목</label>
-        <input 
-          type="text" 
-          className="form-input"
-          placeholder="스케줄 제목을 입력하세요" 
-          value = {title}
-          onChange = {(e)=>{setTitle(e.target.value)}}
-          required 
-        />
+        <div style={{display:'flex',gap:'5px'}}>
+          <input 
+            className="form-input"
+            placeholder="스케줄 제목을 입력하세요" 
+            value = {title}
+            onChange = {(e)=>{setTitle(e.target.value)}}
+            required 
+            style={{flex:'8'}}
+          />
+          <select
+            style={{
+              flex:'1',
+              color: TOGLE_COLORS[typeId],
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              MozAppearance: 'none'
+            }}
+            value = {typeId}
+            onChange={(e)=>{setTypeId(e.target.value)}}>
+            {/* TOGLE_COLORS.map실행하기 */}
+            {TOGLE_COLORS.map((item, index)=>(
+              <option
+                key={index}
+                value={index}
+                style={{color: item}
+              }>
+                ●
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* 시작일 & 종료일 (2열 가로 정렬) */}
-      <div style = {{display:'flex'}}>
+      <div style = {{display:'flex', gap: '10px'}}>
         <div className="form-group" style={{ flex: 1 }}>
           <label>시작일</label>
           <input
@@ -140,17 +200,17 @@ function ScheduleModalPopup(){
         </div>
       </div>
       {/* 시작일 & 종료일 (2열 가로 정렬) */}
-      <div style = {{display:'flex'}}>
+      <div style = {{display:'flex', gap: '10px'}}>
         <div className="form-group" style={{ flex: 1 }}>
           <label>시작 시간</label>
-          <div style={{display: 'flex'}}>
-            <select >
+          <div style={{display: 'flex', gap:'5px'}}>
+            <select value={startTimeH} onChange={(e)=>{setStratTimeH(e.target.value)}}>
               <option>시</option>
               {hList.map((item)=>(
                 <option value={item}>{item}</option>
               ))}
             </select>
-            <select>
+            <select value={startTimeM} onChange={(e)=>{setStratTimeM(e.target.value)}}>
               <option>분</option>
               {mList.map((item)=>(
                 <option value={item}>{item}</option>
@@ -160,14 +220,14 @@ function ScheduleModalPopup(){
         </div>
         <div className="form-group" style={{ flex: 1 }}>
           <label>마감 시간</label>
-          <div style={{display: 'flex'}}>
-            <select>
-              <option value={item}>시</option>
+          <div style={{display: 'flex', gap:'5px'}}>
+            <select value={endTimeH} onChange={(e)=>{setEndTimeH(e.target.value)}}>
+              <option >시</option>
               {hList.map((item)=>(
                 <option value={item}>{item}</option>
               ))}
             </select>
-            <select>
+            <select value={endTimeM} onChange={(e)=>{setEndTimeM(e.target.value)}}>
               <option>분</option>
               {mList.map((item)=>(
                 <option>{item}</option>
@@ -209,11 +269,11 @@ function ScheduleModalPopup(){
         <label>공개 설정</label>
         <div className="radio-group">
           <label className="radio-item">
-            <input type="radio" name="schedule_type" value="PUBLIC" checked = {visible} onChange = {()=>{setVisible(true)}}/>
+            <input type="radio" name="schedule_type" value="PUBLIC" checked = {scheduleType} onChange = {()=>{setScheduleType(true)}}/>
             공개
           </label>
           <label className="radio-item">
-            <input type="radio" name="schedule_type" value="PRIVATE" checked = {!visible} onChange = {()=>{setVisible(false)}}/>
+            <input type="radio" name="schedule_type" value="PRIVATE" checked = {!scheduleType} onChange = {()=>{setScheduleType(false)}}/>
             비공개
           </label>
         </div>
@@ -225,9 +285,9 @@ function ScheduleModalPopup(){
         <textarea 
           className="form-input form-textarea" 
           rows="3" 
-          value = {velues}
+          value = {description}
           placeholder="스케줄 내용을 입력하세요" 
-          onChange = {(e)=>{setValues(e.target.value)}}
+          onChange = {(e)=>{setDescription(e.target.value)}}
         />
       </div>
 
