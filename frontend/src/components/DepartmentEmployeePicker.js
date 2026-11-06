@@ -1,17 +1,26 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
+import "./DepartmentEmployeePicker.css";
 
 /**
- * 공통 부서/직원 선택 UI
+ * Reusable department / employee picker.
+ *
  * employees: [{ employee_id, department_name, name, position, ... }]
- * onSelect(employee): 선택한 직원 객체를 부모에게 전달
+ * selectedEmployee: currently selected employee (or null)
+ * onSelect: callback receiving the complete employee object, or null when department changes
+ * radioName: optional radio group name (otherwise generated per component instance)
+ *
+ * Data loading and the action after selection belong to the parent component.
  */
 function DepartmentEmployeePicker({
     employees = [],
     selectedEmployee = null,
     onSelect,
-    radioName = "employee-picker"
+    radioName
 }) {
     const [selectedDepartment, setSelectedDepartment] = useState("");
+    const generatedName = useId();
+    const groupName = radioName || generatedName;
+
     const departments = [...new Set(
         employees.map(employee => employee.department_name).filter(Boolean)
     )];
@@ -20,16 +29,18 @@ function DepartmentEmployeePicker({
     );
 
     return (
-        <div className="draft-box">
-            <h4>부서 선택</h4>
-            <div className="draft-row">
+        <div className="department-employee-picker">
+            <h4 className="department-employee-picker__heading">부서 선택</h4>
+            <div className="department-employee-picker__departments">
                 {departments.map(department => (
                     <button
                         type="button"
+                        className="department-employee-picker__department"
                         key={department}
+                        aria-pressed={selectedDepartment === department}
                         onClick={() => {
                             setSelectedDepartment(department);
-                            onSelect(null);
+                            if (selectedDepartment !== department) onSelect(null);
                         }}
                     >
                         {department}
@@ -37,22 +48,29 @@ function DepartmentEmployeePicker({
                 ))}
             </div>
 
+            {departments.length === 0 && (
+                <p className="department-employee-picker__empty">부서 정보가 없습니다.</p>
+            )}
+
             {selectedDepartment && (
-                <div className="draft-box">
-                    <h4>{selectedDepartment}</h4>
-                    {departmentEmployees.length === 0 && <p>등록된 직원이 없습니다.</p>}
+                <div className="department-employee-picker__employees">
+                    <h4 className="department-employee-picker__heading">{selectedDepartment}</h4>
+                    {departmentEmployees.length === 0 && (
+                        <p className="department-employee-picker__empty">등록된 직원이 없습니다.</p>
+                    )}
                     {departmentEmployees.map(employee => (
-                        <div key={employee.employee_id} className="draft-row">
-                            <label>
-                                <input
-                                    type="radio"
-                                    name={radioName}
-                                    checked={selectedEmployee?.employee_id === employee.employee_id}
-                                    onChange={() => onSelect(employee)}
-                                />
-                                {employee.name} / {employee.position}
-                            </label>
-                        </div>
+                        <label
+                            key={employee.employee_id}
+                            className="department-employee-picker__employee"
+                        >
+                            <input
+                                type="radio"
+                                name={groupName}
+                                checked={selectedEmployee?.employee_id === employee.employee_id}
+                                onChange={() => onSelect(employee)}
+                            />
+                            <span>{employee.name} / {employee.position}</span>
+                        </label>
                     ))}
                 </div>
             )}
