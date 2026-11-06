@@ -2,19 +2,20 @@ import React, { useEffect, useState } from "react";
 import ModalBase from "../../../../components/ModalBase"
 import axios from "axios";
 import { getLoginUser } from "../../../../utils/authStorage";
+import DepEmpList from "../../../../components/DepEmpList";
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api"
 
-    function DraftCreate({
-        drafts,
-        setDrafts,
-        loginUser,
-        employees,
-        editingDraft, 
-        setEditingDraft,
-        onDraftChanged
-    }){
-    
+function DraftCreate({
+    drafts,
+    setDrafts,
+    loginUser,
+    employees,
+    editingDraft,
+    setEditingDraft,
+    onDraftChanged
+}) {
+
 
     const [title, setTitle] = useState("");
     const [draftType, setDraftType] = useState("일반");
@@ -429,152 +430,118 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:400
             {/* 결재자 선택 */}
             {showApproverModal && (
 
-               <ModalBase title="결재자 추가" onClose={() => { 
-                setShowApproverModal(false); 
-                setSelectedDepartment("");
-                setTempApprover(null);
-            }}
-            layout={
-                <div className="draft-box">
-
-                    <h4>부서 선택</h4>
-            
-
-
-                    <div className="draft-row">
-
-                        {departments.map((department) => (
-
-                            <button
-                                type="button"
-                                key={department}
-                                onClick={() => {
-
-                                    setSelectedDepartment(department);
-                                    setTempApprover(null);
-                                }}
-                            >
-                                {department}
-                            </button>
-
-                        ))}
-
-                    </div>
-
-
-                    {selectedDepartment && (
-
+                <ModalBase title="결재자 추가" onClose={() => {
+                    setShowApproverModal(false);
+                    setSelectedDepartment("");
+                    setTempApprover(null);
+                }}
+                    layout={
                         <div className="draft-box">
 
-                            <h4>{selectedDepartment}</h4>
+                            <h4>부서 선택</h4>
 
 
-                            {employees
+                            <div className="draft-row">
 
-                                .filter((employee) => {
-                                    return (
-                                        employee.department_name ===
-                                        selectedDepartment
-                                    );
-                                })
+                                {departments.map((department) => (
 
-                                .map((employee) => (
+                                    <button
+                                        type="button"
+                                        key={department}
+                                        onClick={() => {
 
-                                    <div
-                                        key={employee.employee_id}
-                                        className="draft-row"
+                                            setSelectedDepartment(department);
+                                            setTempApprover(null);
+
+                                        }}
                                     >
-
-                                        <label>
-
-                                            <input
-                                                type="radio"
-                                                name="approver"
-                                                onChange={() =>
-                                                    setTempApprover(employee)
-                                                }
-                                            />
-
-                                            {employee.name}
-                                            {" / "}
-                                            {employee.position}
-
-                                        </label>
-
-                                    </div>
+                                        {department}
+                                    </button>
 
                                 ))}
 
-                        </div>
-                    )}
+                            </div>
 
 
-                    <div className="draft-actions">
+                            {selectedDepartment && (
 
-                        <button
-                            type="button"
-                            onClick={() => {
+                                <DepEmpList departmentName={selectedDepartment}/>
+                                    
+                                
+                                )}
 
-                                if (!tempApprover) {
+                                </div>
+                            }
+                            />
+                        )}
 
-                                    alert("결재자를 선택해주세요");
-                                    return;
-                                }
+
+                            <div className="draft-actions">
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+
+                                        if (!tempApprover) {
+
+                                            alert("결재자를 선택해주세요");
+                                            return;
+                                        }
 
 
-                                const isDuplicate = approvers.some(
-                                    (approver) => {
+                                        const isDuplicate = approvers.some(
+                                            (approver) => {
 
-                                        return (
-                                            approver.employee_id ===
-                                            tempApprover.employee_id
+                                                return (
+                                                    approver.employee_id ===
+                                                    tempApprover.employee_id
+                                                );
+                                            }
                                         );
-                                    }
-                                );
 
 
-                                if (isDuplicate) {
+                                        if (isDuplicate) {
 
-                                    alert("이미 추가된 결재자입니다.");
-                                    return;
-                                }
-
-
-                                setApprovers([
-                                    ...approvers,
-                                    tempApprover
-                                ]);
+                                            alert("이미 추가된 결재자입니다.");
+                                            return;
+                                        }
 
 
-                                setShowApproverModal(false);
-                                setSelectedDepartment("");
-                                setTempApprover(null);
-                            }}
-                        >
-                            결재자 선택
-                        </button>
+                                        setApprovers([
+                                            ...approvers,
+                                            tempApprover
+                                        ]);
 
 
-                        <button
-                            type="button"
-                            onClick={() => {
+                                        setShowApproverModal(false);
+                                        setSelectedDepartment("");
+                                        setTempApprover(null);
+                                    }}
+                                >
+                                    결재자 선택
+                                </button>
 
-                                setShowApproverModal(false);
-                                setSelectedDepartment("");
-                                setTempApprover(null);
-                            }}
-                        >
-                            취소
-                        </button>
-            
 
-                    </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
 
-                </div>
-                
-            }
-        />
-    )}
+                                        setShowApproverModal(false);
+                                        setSelectedDepartment("");
+                                        setTempApprover(null);
+                                    }}
+                                >
+                                    취소
+                                </button>
+
+
+                            </div>
+
+                        </div>
+
+                    }
+                />
+            )}
 
         </div>
     );
