@@ -5,6 +5,7 @@ import { getApprovals, getApprovalSteps, getFinanceEmployees, createApproval, de
 import { getLoginUser } from "../../../../utils/authStorage";
 import ModalBase from "../../../../components/ModalBase";
 import "../FinanceRegistration.css";
+import ApprovalPayments from "../components/ApprovalPayments";
 
 // DB 응답을 화면에 표시할 이름으로 변환합니다.
 function toApproval(item) {
@@ -28,6 +29,8 @@ function toApproval(item) {
 
 function Approval() {
   const loginUser = getLoginUser();
+  const [paymentBusy, setPaymentBusy] = useState(false);
+  const paymentBusyRef = useRef(false);
   const [decisionOpinion, setDecisionOpinion] = useState("");
   const [decisionPassword, setDecisionPassword] = useState("");
   const [decisionSaving, setDecisionSaving] = useState(false);
@@ -328,7 +331,7 @@ function Approval() {
         </span>,
         <button
           type="button"
-          disabled={decisionSaving || attachmentSaving || downloadingFileId !== null}
+          disabled={decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy}
           onClick={() => setSelectedApprovalId(item.id)}
         >
           상세
@@ -343,7 +346,7 @@ function Approval() {
     Number(currentStep.employee_id) === Number(loginUser?.employee_id);
 
   async function handleDecision(decision) {
-    if (decisionLock.current || attachmentLock.current || downloadLock.current || !canDecide) return;
+    if (decisionLock.current || attachmentLock.current || downloadLock.current || paymentBusyRef.current || !canDecide) return;
     if (!decisionPassword) {
       setDecisionError("결재를 처리하려면 로그인 비밀번호를 입력해 주세요.");
       return;
@@ -403,7 +406,7 @@ function Approval() {
 
   async function handleAttachmentSubmit(event) {
     event.preventDefault();
-    if (attachmentLock.current || decisionLock.current || downloadLock.current || !canAttach) return;
+    if (attachmentLock.current || decisionLock.current || downloadLock.current || paymentBusyRef.current || !canAttach) return;
     setAttachmentError("");
     setAttachmentMessage("");
 
@@ -461,7 +464,7 @@ function Approval() {
   }
 
   async function handleAttachmentDownload(file) {
-    if (downloadLock.current || attachmentLock.current || decisionLock.current) return;
+    if (downloadLock.current || attachmentLock.current || decisionLock.current || paymentBusyRef.current) return;
     downloadLock.current = true;
     setDownloadingFileId(file.file_id);
     setDownloadError("");
@@ -484,6 +487,21 @@ function Approval() {
       if (objectUrl) window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
       downloadLock.current = false;
       setDownloadingFileId(null);
+    }
+  }
+
+  function handlePaymentBusyChange(value) {
+    paymentBusyRef.current = value;
+    setPaymentBusy(value);
+  }
+
+  async function handlePaymentSaved() {
+    try {
+      const data = await getApprovals();
+      setApprovalList(data.map(toApproval));
+      setError("");
+    } catch {
+      setError("지급은 등록되었지만 문서 목록 재조회에 실패했습니다. 새로고침해 확인해 주세요.");
     }
   }
 
@@ -584,7 +602,7 @@ function Approval() {
           <button
             type="button"
             className="register-btn"
-            disabled={draftOpen || draftSaving || decisionSaving || attachmentSaving || downloadingFileId !== null}
+            disabled={draftOpen || draftSaving || decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy}
             onClick={openDraftForm}
           >
             + 지출 결재 기안
@@ -813,6 +831,15 @@ function Approval() {
               </tr>
             </tbody>
           </table>
+          <ApprovalPayments
+            key={selectedApproval.id}
+            approval={selectedApproval}
+            loginUser={loginUser}
+            blocked={decisionSaving || attachmentSaving || downloadingFileId !== null}
+            onBusyChange={handlePaymentBusyChange}
+            onPaid={handlePaymentSaved}
+          />
+
           <section className="finance-registration-modal" aria-label="증빙파일 첨부">
             <h3>증빙파일</h3>
             <button type="button"
@@ -843,7 +870,7 @@ function Approval() {
                         <td>
                           <button type="button"
                             aria-label={`${file.original_name} 다운로드`}
-                            disabled={downloadingFileId !== null || attachmentSaving || decisionSaving}
+                            disabled={downloadingFileId !== null || attachmentSaving || decisionSaving || paymentBusy}
                             onClick={() => handleAttachmentDownload(file)}>
                             {downloadingFileId === file.file_id ? "다운로드 중..." : "다운로드"}
                           </button>
@@ -856,7 +883,7 @@ function Approval() {
             {downloadError && <p role="alert">{downloadError}</p>}
             {canAttach ? (
               <form onSubmit={handleAttachmentSubmit}>
-                <fieldset disabled={attachmentSaving || decisionSaving || downloadingFileId !== null}>
+                <fieldset disabled={attachmentSaving || decisionSaving || downloadingFileId !== null || paymentBusy}>
                   <div>
                     <label htmlFor="approval-attachment-file">증빙파일</label>
                     <input
@@ -935,7 +962,7 @@ function Approval() {
             canDecide ? (
               <section aria-label="결재 처리">
                 <h3>결재 처리</h3>
-                <fieldset disabled={decisionSaving || attachmentSaving || downloadingFileId !== null}>
+                <fieldset disabled={decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy}>
                   <div>
                     <label htmlFor="decision-opinion">결재 의견 (반려 시 필수, 최대 500자)</label>
                     <textarea id="decision-opinion" maxLength={500}
@@ -959,7 +986,7 @@ function Approval() {
           {decisionMessage && <p role="status">{decisionMessage}</p>}
           <button
             type="button"
-            disabled={decisionSaving || attachmentSaving || downloadingFileId !== null}
+            disabled={decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy}
             onClick={() => setSelectedApprovalId(null)}
           >
             닫기

@@ -3131,4 +3131,265 @@ router.get(
     }
 );
 
+// 결재 문서별 지급 현황 및 지급 내역 조회
+router.get("/approvals/:documentId/payments", (req, res) => {
+    const documentId = Number(req.params.documentId);
+
+    if (!Number.isSafeInteger(documentId) || documentId <= 0) {
+        return res.status(400).json({
+            message: "올바른 문서 ID가 아닙니다."
+        });
+    }
+
+    // 완료된 출금만 지급액에 포함합니다.
+    const summaryQuery = `
+        SELECT
+            a.document_id,
+            a.approval_status,
+            a.amount AS document_amount,
+            COALESCE(SUM(p.amount), 0) AS paid_amount,
+            a.amount - COALESCE(SUM(p.amount), 0) AS remaining_amount
+        FROM approval_documents a
+        LEFT JOIN payments p
+            ON a.document_id = p.document_id
+            AND p.payment_direction = '출금'
+            AND p.payment_status = '완료'
+        WHERE a.document_id = ?
+        GROUP BY
+            a.document_id,
+            a.approval_status,
+            a.amount
+    `;
+
+    db.query(summaryQuery, [documentId], (summaryError, rows) => {
+        if (summaryError) {
+            console.error("지급 현황 조회 실패:", summaryError.code);
+
+            return res.status(500).json({
+                message: "지급 현황을 불러오지 못했습니다."
+            });
+        }
+
+        if (rows.length === 0) {
+            return res.status(404).json({
+                message: "해당 결재 문서를 찾을 수 없습니다."
+            });
+        }
+
+        const historyQuery = `
+            SELECT
+                payment_id,
+                document_id,
+                transaction_id,
+                DATE_FORMAT(payment_date, '%Y-%m-%d') AS payment_date,
+                amount,
+                payment_method,
+                account_id,
+                card_id,
+                payment_direction,
+                payment_status
+            FROM payments
+            WHERE document_id = ?
+            ORDER BY payment_date DESC, payment_id DESC
+        `;
+
+        db.query(historyQuery, [documentId], (historyError, payments) => {
+            if (historyError) {
+                console.error("지급 내역 조회 실패:", historyError.code);
+
+                return res.status(500).json({
+                    message: "지급 내역을 불러오지 못했습니다."
+                });
+            }
+
+            return res.json({
+                summary: rows[0],
+                payments
+            });
+        });
+    });
+});
+
+// 승인된 결재 문서의 지급 등록
+router.post('/approvals/:documentId/payments', async (req, res) => {
+    const documentId = Number(req.params.documentId);
+    const body = req.body || {};
+    const { payment_date, amount, payment_method, password } = body;
+    const employeeId = Number(body.employee_id);
+    const paymentAmount = Number(amount);
+    const accountId = payment_method === '계좌이체' ? Number(body.account_id) : null;
+    const cardId = payment_method === '법인카드' ? Number(body.card_id) : null;
+    const validId = (value) => Number.isSafeInteger(value) && value > 0;
+
+    if (!validId(documentId) || !validId(employeeId) ||
+        !['string', 'number'].includes(typeof amount) ||
+        !Number.isSafeInteger(paymentAmount) || paymentAmount <= 0) {
+        return res.status(400).json({ message: '문서 ID, 로그인 사원 정보와 1원 이상의 정수 금액이 필요합니다.' });
+    }
+    if (typeof password !== 'string' || !password) {
+        return res.status(400).json({ message: '지급 등록자의 로그인 비밀번호를 입력해 주세요.' });
+    }
+    const date = new Date(`${payment_date}T00:00:00Z`);
+    if (typeof payment_date !== 'string' || !/^[1-9]\d{3}-\d{2}-\d{2}$/.test(payment_date) ||
+        Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== payment_date) {
+        return res.status(400).json({ message: '올바른 지급일을 입력해 주세요.' });
+    }
+    if (!['계좌이체', '법인카드', '현금'].includes(payment_method)) {
+        return res.status(400).json({ message: '결제수단은 계좌이체, 법인카드 또는 현금을 선택해 주세요.' });
+    }
+    if ((accountId !== null && !validId(accountId)) ||
+        (cardId !== null && !validId(cardId))) {
+        return res.status(400).json({ message: '결제수단에 맞는 회사계좌 또는 법인카드를 선택해 주세요.' });
+    }
+    // monthly_usage와 remaining_limit을 갱신하므로 카드 지급은 현재 월만 받습니다.
+    if (cardId !== null) {
+        const parts = new Intl.DateTimeFormat('en', {
+            timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit'
+        }).formatToParts(new Date());
+        const month = `${parts.find((part) => part.type === 'year').value}-${parts.find((part) => part.type === 'month').value}`;
+        if (!payment_date.startsWith(`${month}-`)) {
+            return res.status(400).json({ message: '법인카드 지급일은 현재 월로 입력해 주세요.' });
+        }
+    }
+
+    let connection;
+    let transactionOpen = false;
+    function fail(status, message) {
+        const error = new Error(message);
+        error.status = status;
+        throw error;
+    }
+    function money(value, label) {
+        const number = Number(value);
+        if (value == null || !Number.isSafeInteger(number) || number < 0) {
+            fail(409, `${label} 금액을 확인해 주세요.`);
+        }
+        return number;
+    }
+
+    try {
+        connection = await financeMysql.createConnection({
+            host: process.env.DB_HOST,
+            port: Number(process.env.DB_PORT || 3306),
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME
+        });
+        // 기존 로그인과 같은 방식으로 계정을 확인하며, 지급은 재무부 또는 MASTER가 등록합니다.
+        const [accounts] = await connection.execute(
+            `SELECT e.employee_id, e.department_id, ea.role
+             FROM employees e
+             INNER JOIN employee_accounts ea ON ea.employee_id = e.employee_id
+             WHERE e.employee_id = ? AND ea.password_hash = ? AND ea.account_status = 'ACTIVE'`,
+            [employeeId, password]
+        );
+        if (accounts.length === 0) fail(401, '비밀번호 또는 계정 상태를 확인해 주세요.');
+        if (Number(accounts[0].department_id) !== 1 && accounts[0].role !== 'MASTER') {
+            fail(403, '재무부 또는 MASTER 계정만 지급을 등록할 수 있습니다.');
+        }
+
+        await connection.beginTransaction();
+        transactionOpen = true;
+        // 반드시 문서를 먼저 잠급니다. 같은 문서의 동시 지급 요청은 순서대로 처리됩니다.
+        const [documents] = await connection.execute(
+            'SELECT document_id, amount, approval_status FROM approval_documents WHERE document_id = ? FOR UPDATE',
+            [documentId]
+        );
+        if (documents.length === 0) fail(404, '해당 결재 문서를 찾을 수 없습니다.');
+        if (documents[0].approval_status !== '승인') fail(409, '승인된 문서에만 지급을 등록할 수 있습니다.');
+        const documentAmount = money(documents[0].amount, '결재 문서');
+        if (documentAmount === 0) fail(409, '지급할 문서 금액이 없습니다.');
+
+        // 잠금 읽기로 직전에 완료된 다른 요청의 지급 내역까지 확인합니다.
+        const [payments] = await connection.execute(
+            `SELECT payment_id, amount FROM payments
+             WHERE document_id = ? AND payment_direction = '출금' AND payment_status = '완료'
+             FOR UPDATE`,
+            [documentId]
+        );
+        let paidAmount = 0;
+        for (const payment of payments) {
+            paidAmount += money(payment.amount, '기존 지급');
+            if (!Number.isSafeInteger(paidAmount)) fail(409, '기존 지급 합계가 처리 가능한 범위를 초과합니다.');
+        }
+        const remainingAmount = documentAmount - paidAmount;
+        if (remainingAmount <= 0) fail(409, '추가로 지급할 금액이 없습니다.');
+        if (paymentAmount > remainingAmount) {
+            fail(409, `남은 지급액 ${remainingAmount.toLocaleString('ko-KR')}원을 초과할 수 없습니다.`);
+        }
+
+        if (accountId !== null) {
+            const [bankAccounts] = await connection.execute(
+                'SELECT balance, currency, account_status FROM bank_accounts WHERE account_id = ? FOR UPDATE',
+                [accountId]
+            );
+            if (bankAccounts.length === 0) fail(404, '선택한 회사계좌를 찾을 수 없습니다.');
+            const bank = bankAccounts[0];
+            if (bank.currency !== 'KRW' || !['사용', 'ACTIVE'].includes(bank.account_status)) {
+                fail(409, '사용 가능한 원화 계좌를 선택해 주세요.');
+            }
+            const balance = money(bank.balance, '회사계좌 잔액');
+            if (paymentAmount > balance) fail(409, '회사계좌의 잔액이 부족합니다.');
+            await connection.execute(
+                `UPDATE bank_accounts SET balance = ?,
+                 last_transaction = GREATEST(COALESCE(last_transaction, ?), ?)
+                 WHERE account_id = ?`,
+                [balance - paymentAmount, `${payment_date} 00:00:00`, `${payment_date} 00:00:00`, accountId]
+            );
+        }
+        if (cardId !== null) {
+            const [cards] = await connection.execute(
+                `SELECT monthly_usage, monthly_limit, remaining_limit, card_status
+                 FROM corporate_cards WHERE card_id = ? FOR UPDATE`,
+                [cardId]
+            );
+            if (cards.length === 0) fail(404, '선택한 법인카드를 찾을 수 없습니다.');
+            const card = cards[0];
+            if (!['사용', 'ACTIVE'].includes(card.card_status)) fail(409, '사용 가능한 법인카드를 선택해 주세요.');
+            const usage = money(card.monthly_usage, '카드 사용량');
+            const limit = money(card.monthly_limit, '카드 한도');
+            const remainingLimit = money(card.remaining_limit, '카드 잔여 한도');
+            if (limit - usage !== remainingLimit) fail(409, '법인카드 사용량과 잔여 한도가 일치하지 않습니다.');
+            if (paymentAmount > remainingLimit) fail(409, '법인카드 잔여 한도를 초과할 수 없습니다.');
+            await connection.execute(
+                'UPDATE corporate_cards SET monthly_usage = ?, remaining_limit = ? WHERE card_id = ?',
+                [usage + paymentAmount, remainingLimit - paymentAmount, cardId]
+            );
+        }
+
+        // 문서에 직접 연결합니다. 거래 API와 별개로 transaction_id는 NULL입니다.
+        const [result] = await connection.execute(
+            `INSERT INTO payments
+             (document_id, transaction_id, payment_date, amount, payment_method,
+              account_id, card_id, payment_direction, payment_status)
+             VALUES (?, NULL, ?, ?, ?, ?, ?, '출금', '완료')`,
+            [documentId, payment_date, paymentAmount, payment_method, accountId, cardId]
+        );
+        await connection.commit();
+        transactionOpen = false;
+        return res.status(201).json({
+            message: '지급 내역이 등록되었습니다.',
+            payment_id: result.insertId,
+            document_id: documentId,
+            document_amount: documentAmount,
+            paid_amount: paidAmount + paymentAmount,
+            remaining_amount: remainingAmount - paymentAmount
+        });
+    } catch (error) {
+        if (transactionOpen) {
+            try { await connection.rollback(); } catch { console.error('문서 지급 롤백 실패'); }
+        }
+        if (!error.status) console.error('문서 지급 등록 실패:', error.code || error.name);
+        return res.status(error.status || 500).json({
+            message: error.status ? error.message :
+                '지급 결과를 확인하지 못했습니다. 지급 내역을 다시 조회한 뒤 확인해 주세요.'
+        });
+    } finally {
+        if (connection) {
+            try { await connection.end(); } catch { console.error('문서 지급 DB 연결 종료 실패'); }
+        }
+    }
+});
+
+
 module.exports = router;

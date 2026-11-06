@@ -302,3 +302,15 @@ export async function downloadApprovalAttachment(documentId, fileId) {
         throw error;
     }
 }
+
+// 결재 문서별 지급 현황과 내역 조회
+export async function getApprovalPayments(documentId) {
+    const response = await axios.get(`${FINANCE_API_URL}/approvals/${documentId}/payments`);
+    return response.data;
+}
+
+// 승인된 결재 문서의 지급 등록
+export async function createApprovalPayment(documentId, paymentData) {
+    const response = await axios.post(`${FINANCE_API_URL}/approvals/${documentId}/payments`, paymentData);
+    return response.data;
+}
