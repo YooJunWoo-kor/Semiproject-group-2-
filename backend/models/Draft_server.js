@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Draft = require('../models/Draft_function');
+const Draft = require('./Draft_function');
 
 
 // 1. 기안서 임시저장

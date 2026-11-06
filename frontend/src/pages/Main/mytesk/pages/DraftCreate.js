@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import ModalBase from "../../../../components/ModalBase";
 import axios from "axios";
-import { getLoginUser } from "../../../../utils/authStorage";
-import { getDepartments } from "../../../../services/departmentService";
+import { getLoginUser, getDbEmployeeAccounts as getEmployeeAccounts } from "../../../../utils/authStorage";
 import DepEmpList from "../../../../components/DepEmpList";
 
 
@@ -42,11 +41,15 @@ function DraftCreate({
     useEffect(() => {
         async function loadDepartments() {
             try {
-                const departmentRows = await getDepartments();
-                const departmentNames = departmentRows
-                    .map((department) => department.department_name)
-                    .filter(Boolean);
-                setDepartments(departmentNames);
+                const employees = await getEmployeeAccounts();
+    
+                const departmentList = [
+                    ...new Set(
+                        employees.map(employee => employee.department_name).filter(Boolean)
+                    )
+                ];
+    
+                setDepartments(departmentList);
     
             } catch (error) {
                 console.error("부서 조회 실패:", error);
