@@ -16,6 +16,14 @@ const schedule = require('./routes/schedule');
 app.use(cors());
 app.use(express.json());
 
+
+//커뮤니티관련해서 추가 코드
+const communityRouter = require('./routes/community');
+// 커뮤니티 API
+app.use('/api/community', communityRouter);
+
+
+
 // 2. [사원 등록 API] RegisterPage 폼 전송 수신
 app.post('/api/register', async (req, res) => {
     const { employeeId, name, email, password, department, position, phone } = req.body;
