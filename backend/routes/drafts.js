@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const Draft = require('./Draft_function');
+const Draft = require('../models/Draft_function');
+const db = require('../db');
 
 
 // 1. 기안서 임시저장
@@ -90,6 +91,8 @@ router.post('/submit', async (req, res) => {
         });
     }
 });
+
+
 
 
 
@@ -212,6 +215,25 @@ router.post('/:draftId/decision', async (req, res) => {
         return res.status(500).json({ message: '결재 처리 실패' });
     }
 });
+
+//2. 부서 api
+router.get('/departments', (req, res) => {
+    const sql = `SELECT department_id, department_name
+                 FROM departments
+                 ORDER BY department_id
+    `;
+
+    db.query(sql, (err,data) => {
+        if(err){
+            console.error('부서 조회 실패', err);
+            return res.status(500).json({
+                message: '부서 조회 실패'
+            })
+        }
+
+        res.json(data);
+    })
+})
 
 
 // 3. 기안서 상세 조회
