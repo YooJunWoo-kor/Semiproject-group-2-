@@ -325,6 +325,85 @@
     color: #b42318;
 }
 
+.hr-attendance-management .attendance-success {
+    color: #047857;
+}
+
+.hr-attendance-management .attendance-row-edit-button {
+    min-height: 28px;
+    padding: 4px 8px;
+    color: var(--color-brand);
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.hr-attendance-management .attendance-row-edit-button:hover {
+    color: #ffffff;
+    background: var(--color-brand);
+    border-color: var(--color-brand);
+}
+
+.hr-attendance-management .attendance-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.hr-attendance-management .attendance-edit-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 12px;
+    background: var(--color-canvas);
+    border: 1px solid var(--color-line);
+    border-radius: 9px;
+}
+
+.hr-attendance-management .attendance-edit-summary div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.hr-attendance-management .attendance-edit-summary span,
+.hr-attendance-management .attendance-edit-field > span {
+    color: var(--color-muted);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.hr-attendance-management .attendance-edit-summary strong {
+    color: var(--color-ink);
+    font-size: 13px;
+}
+
+.hr-attendance-management .attendance-edit-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.hr-attendance-management .attendance-edit-field select,
+.hr-attendance-management .attendance-edit-field textarea {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.hr-attendance-management .attendance-edit-field textarea {
+    min-height: 92px;
+    resize: vertical;
+}
+
+.hr-attendance-management .attendance-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 4px;
+}
+
 @media (max-width: 1100px) {
     .hr-attendance-management .attendance-filter {
         grid-template-columns: repeat(2, minmax(180px, 1fr));
@@ -361,6 +440,10 @@
 
     .hr-attendance-management .attendance-detail-header {
         align-items: flex-start;
+    }
+
+    .hr-attendance-management .attendance-edit-summary {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -489,12 +572,21 @@
 }
 
 .hr-employee-management .hr-department-register-button {
-  color: var(--color-muted);
-  background: #f8fafc;
-  border-color: var(--color-line);
+  color: #ffffff;
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+}
+
+.hr-employee-management .hr-department-register-button:hover {
+  color: #ffffff;
+  background: var(--color-brand-dark);
+  border-color: var(--color-brand-dark);
 }
 
 .hr-employee-management .hr-department-register-button:disabled {
+  color: var(--color-muted);
+  background: #f8fafc;
+  border-color: var(--color-line);
   cursor: not-allowed;
   opacity: 0.65;
 }
@@ -737,7 +829,588 @@
 }
 
 /* ========================================
-   4. HR 반응형
+   4. 급여관리
+======================================== */
+
+.hr-payroll-management .dashboard-header {
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.hr-payroll-management .payroll-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.hr-payroll-management .payroll-header-actions button {
+  min-height: 36px;
+  padding: 7px 12px;
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.hr-payroll-management .payroll-header-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.hr-payroll-management .payroll-process-card {
+  margin: 18px 0 14px;
+  padding: 18px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
+}
+
+.hr-payroll-management .payroll-process-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.hr-payroll-management .payroll-process-heading > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hr-payroll-management .payroll-process-heading strong {
+  color: var(--color-ink);
+  font-size: 16px;
+}
+
+.hr-payroll-management .payroll-process-heading span {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.hr-payroll-management .payroll-process-heading > span {
+  flex-shrink: 0;
+  padding: 4px 9px;
+  background: var(--color-brand-soft);
+  border-radius: 999px;
+  color: var(--color-brand);
+  font-weight: 700;
+}
+
+.hr-payroll-management .payroll-process-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hr-payroll-management .payroll-process-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+}
+
+.hr-payroll-management .payroll-process-step.current {
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+.hr-payroll-management .payroll-process-step.complete {
+  background: #ecfdf5;
+  border-color: #86efac;
+}
+
+.hr-payroll-management .payroll-process-number {
+  display: grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  color: var(--color-muted);
+  background: #ffffff;
+  border: 1px solid var(--color-line);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.hr-payroll-management .payroll-process-step.current .payroll-process-number {
+  color: #b45309;
+  border-color: #fdba74;
+}
+
+.hr-payroll-management .payroll-process-step.complete .payroll-process-number {
+  color: #047857;
+  border-color: #86efac;
+}
+
+.hr-payroll-management .payroll-process-step > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 3px;
+}
+
+.hr-payroll-management .payroll-process-step strong {
+  overflow: hidden;
+  color: var(--color-ink);
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.hr-payroll-management .payroll-process-step > div span {
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.hr-payroll-management .payroll-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hr-payroll-management .payroll-summary-grid > .content-card {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.hr-payroll-management .payroll-warning-card {
+  border-color: #fecaca;
+  background: #fff7f7;
+}
+
+.hr-payroll-management .payroll-warning-card p {
+  margin: 0;
+}
+
+.hr-payroll-management .payroll-warning-card span {
+  display: inline-block;
+  margin-right: 5px;
+  color: #b42318;
+  font-size: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.hr-payroll-management .payroll-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 11px 14px;
+  border: 1px solid;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+.hr-payroll-management .payroll-alert-warning {
+  color: #9f3a15;
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.hr-payroll-management .payroll-alert-success {
+  color: #047857;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.hr-payroll-management .payroll-alert-error {
+  color: #b42318;
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+.hr-payroll-management .payroll-filter-card {
+  margin: 18px 0 14px;
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
+}
+
+.hr-payroll-management .payroll-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.hr-payroll-management .payroll-tabs button {
+  min-height: 36px;
+  padding: 7px 14px;
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.hr-payroll-management .payroll-tabs button.active {
+  color: #ffffff;
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+}
+
+.hr-payroll-management .payroll-filter-controls {
+  display: grid;
+  grid-template-columns: 150px 150px 150px minmax(220px, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.hr-payroll-management .payroll-filter-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 5px;
+}
+
+.hr-payroll-management .payroll-filter-field > span {
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.hr-payroll-management .payroll-filter-field input,
+.hr-payroll-management .payroll-filter-field select,
+.hr-payroll-management .payroll-reset-button {
+  width: 100%;
+  min-height: 38px;
+  box-sizing: border-box;
+  font-size: 13px;
+}
+
+.hr-payroll-management .payroll-reset-button {
+  width: auto;
+  padding: 7px 14px;
+  white-space: nowrap;
+}
+
+.hr-payroll-management .payroll-filter-result {
+  margin-top: 10px;
+  color: var(--color-muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+.hr-payroll-management .payroll-filter-result strong {
+  color: var(--color-brand);
+}
+
+.hr-payroll-management .payroll-loading {
+  margin: 0;
+  padding: 48px 18px;
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  text-align: center;
+}
+
+.hr-payroll-management .payroll-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 330px);
+  align-items: start;
+  gap: 16px;
+}
+
+.hr-payroll-management .payroll-list-panel,
+.hr-payroll-management .payroll-department-panel {
+  min-width: 0;
+}
+
+.hr-payroll-management .payroll-list-panel .attendance-card,
+.hr-payroll-management .payroll-department-panel .attendance-card {
+  max-width: none;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.hr-payroll-management .payroll-list-panel .table-shell,
+.hr-payroll-management .payroll-department-panel .table-shell {
+  overflow-x: auto;
+}
+
+.hr-payroll-management .payroll-list-panel table {
+  min-width: 1060px;
+}
+
+.hr-payroll-management .payroll-department-panel table {
+  min-width: 780px;
+}
+
+.hr-payroll-management .payroll-list-panel th,
+.hr-payroll-management .payroll-list-panel td,
+.hr-payroll-management .payroll-department-panel th,
+.hr-payroll-management .payroll-department-panel td {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.hr-payroll-management .payroll-list-panel input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--color-brand);
+}
+
+.hr-payroll-management .payroll-employee-cell,
+.hr-payroll-management .payroll-stacked-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hr-payroll-management .payroll-employee-cell > span,
+.hr-payroll-management .payroll-stacked-cell > span {
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.hr-payroll-management .payroll-employee-name {
+  width: fit-content;
+  padding: 0;
+  color: var(--color-brand);
+  background: transparent;
+  border: 0;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hr-payroll-management .payroll-employee-name:hover,
+.hr-payroll-management .payroll-employee-name.selected {
+  color: var(--color-brand-dark);
+  text-decoration: underline;
+}
+
+.hr-payroll-management .payroll-amount-breakdown {
+  min-width: 110px;
+}
+
+.hr-payroll-management .payroll-status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hr-payroll-management .payroll-status-unregistered {
+  color: #b42318;
+  background: #fee2e2;
+}
+
+.hr-payroll-management .payroll-status-pending {
+  color: #ad6b13;
+  background: #fff4df;
+}
+
+.hr-payroll-management .payroll-status-complete {
+  color: #047857;
+  background: #dcfce7;
+}
+
+.hr-payroll-management .payroll-detail-panel {
+  min-width: 0;
+  padding: 18px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
+}
+
+.hr-payroll-management .payroll-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.hr-payroll-management .payroll-panel-heading > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hr-payroll-management .payroll-panel-heading span {
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.hr-payroll-management .payroll-panel-heading h2 {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 17px;
+}
+
+.hr-payroll-management .payroll-detail-employee {
+  padding: 16px 0 12px;
+}
+
+.hr-payroll-management .payroll-detail-employee strong {
+  margin-right: 7px;
+  color: var(--color-ink);
+  font-size: 19px;
+}
+
+.hr-payroll-management .payroll-detail-employee > span,
+.hr-payroll-management .payroll-detail-employee p {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.hr-payroll-management .payroll-detail-employee p {
+  margin: 5px 0 0;
+}
+
+.hr-payroll-management .payroll-detail-list {
+  margin: 0;
+}
+
+.hr-payroll-management .payroll-detail-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 0;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.hr-payroll-management .payroll-detail-row dt {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.hr-payroll-management .payroll-detail-row dd {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.hr-payroll-management .payroll-detail-total {
+  margin-top: 4px;
+  border-top: 1px solid var(--color-line);
+}
+
+.hr-payroll-management .payroll-detail-net dd {
+  color: var(--color-brand);
+  font-size: 16px;
+}
+
+.hr-payroll-management .payroll-detail-action {
+  width: 100%;
+  margin-top: 14px;
+}
+
+.hr-payroll-management .payroll-empty-detail {
+  display: grid;
+  min-height: 360px;
+  margin: 0;
+  padding: 16px;
+  place-items: center;
+  color: var(--color-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 1180px) {
+  .hr-payroll-management .payroll-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .hr-payroll-management .payroll-filter-controls {
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
+  }
+
+  .hr-payroll-management .payroll-search-field {
+    grid-column: span 2;
+  }
+
+  .hr-payroll-management .payroll-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .hr-payroll-management .payroll-detail-panel {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 760px) {
+  .hr-payroll-management .dashboard-header,
+  .hr-payroll-management .payroll-process-heading,
+  .hr-payroll-management .payroll-alert {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .hr-payroll-management .payroll-header-actions {
+    justify-content: flex-start;
+  }
+
+  .hr-payroll-management .payroll-process-steps,
+  .hr-payroll-management .payroll-summary-grid,
+  .hr-payroll-management .payroll-filter-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hr-payroll-management .payroll-tabs {
+    flex-direction: column;
+  }
+
+  .hr-payroll-management .payroll-tabs button {
+    width: 100%;
+  }
+
+  .hr-payroll-management .payroll-search-field {
+    grid-column: 1 / -1;
+  }
+
+  .hr-payroll-management .payroll-reset-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .hr-payroll-management .payroll-process-steps,
+  .hr-payroll-management .payroll-summary-grid,
+  .hr-payroll-management .payroll-filter-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .hr-payroll-management .payroll-search-field {
+    grid-column: auto;
+  }
+}
+
+/* ========================================
+   5. HR 반응형
 ======================================== */
 
 /* 근태관리와 직원·부서 통합관리의 미디어 쿼리는 각 영역 규칙과 함께 유지합니다. */

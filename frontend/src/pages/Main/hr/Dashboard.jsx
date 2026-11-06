@@ -27,6 +27,7 @@ function TestModal() {
 }
 
 export default function Dashboard() {
+    // 조직 정보와 근태 정보를 각각 조회해 HR 요약 화면에 전달합니다.
     const loginUser = getLoginUser();
     const isMaster = loginUser?.role === 'MASTER';
 

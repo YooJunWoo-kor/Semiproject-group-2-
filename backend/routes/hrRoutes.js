@@ -135,6 +135,56 @@ hrRouter.get('/api/hr/attendance', async (req, res) => {
 });
 
 
+// 근태 상태·메모 수정
+hrRouter.put('/api/hr/attendance/:attendanceId', async (req, res) => {
+    const attendanceId = Number(req.params.attendanceId);
+    const status = String(req.body.status || '').trim();
+    const memo = String(req.body.memo || '').trim();
+    const allowedStatuses = ['정상', '지각', '휴가', '출장', '휴직', '미출근'];
+
+    if (
+        !Number.isInteger(attendanceId) ||
+        attendanceId < 1 ||
+        !allowedStatuses.includes(status) ||
+        memo.length > 255
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: '근태 상태 또는 메모를 올바르게 입력해 주세요.'
+        });
+    }
+
+    try {
+        const [result] = await promiseDb.query(
+            `UPDATE attendance
+             SET attendance_status = ?, memo = ?
+             WHERE attendance_id = ?`,
+            [status, memo || null, attendanceId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '근태 기록을 찾을 수 없습니다.'
+            });
+        }
+
+        return res.json({
+            success: true,
+            data: { attendanceId, status, memo: memo || null },
+            message: '근태 정보가 수정되었습니다.'
+        });
+    } catch (error) {
+        console.error('근태 정보 수정 오류:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: '근태 정보를 수정하지 못했습니다.'
+        });
+    }
+});
+
+
 // 부서 직원 전체와 해당 날짜의 근태 조회
 hrRouter.get('/api/hr/attendance/department', async (req, res) => {
     const date = req.query.date;
@@ -242,10 +292,15 @@ hrRouter.get('/api/hr/employees', async (req, res) => {
 hrRouter.get('/api/hr/departments', async (req, res) => {
     const query = `
         SELECT
-            department_id AS departmentId,
-            department_name AS departmentName
-        FROM departments
-        ORDER BY department_id
+            d.department_id AS departmentId,
+            d.department_name AS departmentName,
+            d.manager_id AS managerId,
+            m.name AS managerName,
+            d.description
+        FROM departments d
+        LEFT JOIN employees m
+            ON m.employee_id = d.manager_id
+        ORDER BY d.department_id
     `;
 
     try {
@@ -261,6 +316,95 @@ hrRouter.get('/api/hr/departments', async (req, res) => {
         return res.status(500).json({
             success: false,
             message: '부서 목록을 불러오지 못했습니다.'
+        });
+    }
+});
+
+
+// 부서 등록
+hrRouter.post('/api/hr/departments', async (req, res) => {
+    const departmentName = String(req.body.departmentName || '').trim();
+    const description = String(req.body.description || '').trim();
+    const managerIdValue = req.body.managerId;
+    const managerId =
+        managerIdValue === '' || managerIdValue === null || managerIdValue === undefined
+            ? null
+            : Number(managerIdValue);
+
+    if (
+        !departmentName ||
+        departmentName.length > 50 ||
+        description.length > 255 ||
+        (managerId !== null && (!Number.isInteger(managerId) || managerId < 1))
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: '부서 등록 정보를 올바르게 입력해 주세요.'
+        });
+    }
+
+    try {
+        const [duplicateRows] = await promiseDb.query(
+            'SELECT department_id FROM departments WHERE department_name = ?',
+            [departmentName]
+        );
+
+        if (duplicateRows.length > 0) {
+            return res.status(409).json({
+                success: false,
+                message: '이미 등록된 부서명입니다.'
+            });
+        }
+
+        if (managerId !== null) {
+            const [managerRows] = await promiseDb.query(
+                `SELECT employee_id
+                 FROM employees
+                 WHERE employee_id = ? AND employment_status <> '퇴사'`,
+                [managerId]
+            );
+
+            if (managerRows.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: '부서장으로 지정할 수 있는 직원을 찾을 수 없습니다.'
+                });
+            }
+        }
+
+        const [result] = await promiseDb.query(
+            `INSERT INTO departments (
+                department_name,
+                manager_id,
+                description
+             )
+             VALUES (?, ?, ?)`,
+            [departmentName, managerId, description || null]
+        );
+
+        return res.status(201).json({
+            success: true,
+            data: {
+                departmentId: result.insertId,
+                departmentName,
+                managerId,
+                description: description || null
+            },
+            message: '부서가 등록되었습니다.'
+        });
+    } catch (error) {
+        console.error('부서 등록 오류:', error);
+
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({
+                success: false,
+                message: '이미 등록된 부서명입니다.'
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: '부서를 등록하지 못했습니다.'
         });
     }
 });

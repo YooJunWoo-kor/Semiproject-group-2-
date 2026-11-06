@@ -69,6 +69,7 @@ function DepartmentRegisterForm({ onRegister, onCancel }) {
 }
 
 function normalizeDepartments(departmentRows, employeeRows) {
+  // 부서 API와 직원 API를 합쳐 화면에 필요한 부서별 인원수를 만듭니다.
   return departmentRows.map((department) => {
     const departmentMembers = employeeRows.filter(
       (employee) =>
@@ -87,6 +88,7 @@ function normalizeDepartments(departmentRows, employeeRows) {
 
 export default function Departments() {
   const loginUser = getLoginUser();
+  // 현재 부서 등록 UI는 기존 정책대로 MASTER 사용자에게만 노출합니다.
   const isMaster = loginUser?.role === "MASTER";
   const [departments, setDepartments] = useState([]);
   const [members, setMembers] = useState([]);
@@ -98,6 +100,7 @@ export default function Departments() {
   const [notice, setNotice] = useState("");
 
   async function loadDepartmentPage() {
+    // 부서와 직원을 함께 조회해 부서 카드와 소속 직원 표를 갱신합니다.
     setLoading(true);
     setError("");
 
@@ -142,6 +145,7 @@ export default function Departments() {
     loadDepartmentPage();
   }, []);
 
+  // 선택한 부서 ID를 기준으로 오른쪽 소속 직원 목록을 계산합니다.
   const selectedDept = departments.find(
     (department) => department.id === selectedDeptId
   );
@@ -160,6 +164,7 @@ export default function Departments() {
     : 0;
 
   function handleRegisterDept() {
+    // 등록 API가 없으므로 실제 저장 대신 지원되지 않는 기능임을 안내합니다.
     setIsModalOpen(false);
     setNotice("부서 등록 API가 없어 DB 등록은 지원되지 않습니다.");
   }

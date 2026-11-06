@@ -5,6 +5,7 @@ import PaginationTable from '../../../../components/PaginationTable';
 import ModalBase from '../../../../components/ModalBase';
 import StatisticsCard from '../../../../components/StatisticsCard';
 import {
+  createHrDepartment,
   createHrEmployee,
   getHrEmployees,
   getHrOrganization,
@@ -90,6 +91,12 @@ const emptyEditForm = {
   phone: '',
   hireDate: '',
   employmentStatus: '재직'
+};
+
+const emptyDepartmentForm = {
+  departmentName: '',
+  managerId: '',
+  description: ''
 };
 
 const formGridStyle = {
@@ -292,6 +299,82 @@ function EmployeeForm(props) {
   );
 }
 
+function DepartmentRegisterForm(props) {
+  const form = props.form;
+  const availableManagers = props.employees.filter(
+    (employee) => employee.employmentStatus === '재직'
+  );
+
+  function changeForm(event) {
+    props.setForm({
+      ...form,
+      [event.target.name]: event.target.value
+    });
+  }
+
+  return (
+    <form onSubmit={props.onSubmit}>
+      <div style={formGridStyle}>
+        <div>
+          <label style={labelStyle}>부서명</label>
+          <input
+            name="departmentName"
+            value={form.departmentName}
+            onChange={changeForm}
+            maxLength={50}
+            placeholder="예: 플랫폼개발팀"
+            required
+            style={inputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>부서장</label>
+          <select
+            name="managerId"
+            value={form.managerId}
+            onChange={changeForm}
+            style={inputStyle}
+          >
+            <option value="">미지정</option>
+            {availableManagers.map((employee) => (
+              <option key={employee.employeeId} value={employee.employeeId}>
+                {employee.name} ({employee.employeeNumber} · {employee.departmentName || '부서 미지정'})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ gridColumn: '1 / -1' }}>
+          <label style={labelStyle}>부서 업무 설명</label>
+          <textarea
+            name="description"
+            value={form.description}
+            onChange={changeForm}
+            maxLength={255}
+            rows={4}
+            placeholder="부서의 주요 업무를 입력해 주세요."
+            style={{ ...inputStyle, resize: 'vertical' }}
+          />
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}>
+        <button type="button" onClick={props.onCancel}>
+          취소
+        </button>
+        <button
+          type="submit"
+          className="erp-primary-button"
+          disabled={props.saving}
+        >
+          {props.saving ? '저장 중...' : '등록 완료'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function EmployeeDetail({ employee }) {
   const details = [
     ['사번', employee.employeeNumber],
@@ -318,6 +401,7 @@ function EmployeeDetail({ employee }) {
 
 export default function Employees() {
   const loginUser = getLoginUser();
+  // 직원 등록·수정·퇴사 처리는 MASTER 사용자에게만 노출합니다.
   const isMaster = loginUser?.role === 'MASTER';
 
   const [employees, setEmployees] = useState([]);
@@ -333,12 +417,15 @@ export default function Employees() {
   const [notice, setNotice] = useState('');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDepartmentModal, setShowDepartmentModal] = useState(false);
   const [registerForm, setRegisterForm] = useState(emptyRegisterForm);
   const [editForm, setEditForm] = useState(emptyEditForm);
+  const [departmentForm, setDepartmentForm] = useState(emptyDepartmentForm);
 
   useEffect(() => {
     let ignore = false;
 
+    // 화면 진입 시 부서와 직원을 함께 조회해 필터와 목록을 구성합니다.
     async function loadEmployeePage() {
       setLoading(true);
       setError('');
@@ -400,6 +487,7 @@ export default function Employees() {
     return response.data.data;
   }
 
+  // 통합검색·부서·재직상태·계정상태 조건을 동시에 적용합니다.
   const normalizedSearch = search.trim().toLowerCase();
   const filteredEmployees = employees.filter((employee) => {
     const searchText = [
@@ -452,6 +540,7 @@ export default function Employees() {
   }));
 
   useEffect(() => {
+    // 필터 결과가 바뀌면 상세 패널도 현재 보이는 직원과 맞춥니다.
     if (filteredEmployees.length === 0) {
       if (selectedEmployee !== null) {
         setSelectedEmployee(null);
@@ -486,6 +575,13 @@ export default function Employees() {
     setShowRegisterModal(true);
   }
 
+  function openDepartmentModal() {
+    setDepartmentForm(emptyDepartmentForm);
+    setError('');
+    setNotice('');
+    setShowDepartmentModal(true);
+  }
+
   function openEditModal(employee) {
     setEditForm({
       employeeId: employee.employeeId,
@@ -504,6 +600,7 @@ export default function Employees() {
   }
 
   async function addEmployee(event) {
+    // 신규 직원 저장 후 서버 목록을 다시 조회해 화면을 동기화합니다.
     event.preventDefault();
 
     if (!isMaster) {
@@ -536,7 +633,61 @@ export default function Employees() {
     }
   }
 
+  async function addDepartment(event) {
+    event.preventDefault();
+
+    if (!isMaster) {
+      alert('MASTER 계정만 부서를 등록할 수 있습니다.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    setNotice('');
+
+    try {
+      const response = await createHrDepartment({
+        departmentName: departmentForm.departmentName.trim(),
+        managerId: departmentForm.managerId,
+        description: departmentForm.description.trim()
+      });
+
+      if (!response.data.success) {
+        throw new Error('부서 등록 응답이 올바르지 않습니다.');
+      }
+
+      // 등록된 부서의 부서장명과 설명까지 반영하기 위해 조직 자료를 다시 조회합니다.
+      const [departmentResponse, employeeResponse] =
+        await getHrOrganization();
+
+      if (
+        !departmentResponse.data.success ||
+        !Array.isArray(departmentResponse.data.data) ||
+        !employeeResponse.data.success ||
+        !Array.isArray(employeeResponse.data.data)
+      ) {
+        throw new Error('조직 정보 응답 형식이 올바르지 않습니다.');
+      }
+
+      setDepartments(departmentResponse.data.data);
+      setEmployees(employeeResponse.data.data);
+      setSelectedDepartment(
+        String(response.data.data?.departmentId || '전체')
+      );
+      setShowDepartmentModal(false);
+      setNotice(response.data.message || '부서가 등록되었습니다.');
+    } catch (requestError) {
+      console.error('부서 등록 오류:', requestError);
+      setError(
+        getApiErrorMessage(requestError, '부서를 등록하지 못했습니다.')
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function updateEmployee(event) {
+    // 선택 직원의 수정 내용을 저장하고 상세 패널까지 최신 값으로 갱신합니다.
     event.preventDefault();
 
     if (!isMaster) {
@@ -588,6 +739,7 @@ export default function Employees() {
   }
 
   async function retireEmployee(employee) {
+    // 직원 자료를 삭제하지 않고 기존 퇴사 처리 API로 상태만 변경합니다.
     if (!isMaster) {
       alert('MASTER 계정만 퇴사 처리할 수 있습니다.');
       return;
@@ -636,6 +788,7 @@ export default function Employees() {
     '관리'
   ];
 
+  // 기존 PaginationTable이 사용하는 content 배열 형식으로 행을 구성합니다.
   const tableData = filteredEmployees.map((employee) => ({
     content: [
       <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: '600' }}>
@@ -728,8 +881,7 @@ export default function Employees() {
             <button
               type="button"
               className="hr-department-register-button"
-              disabled
-              title="부서 등록 API가 아직 구현되지 않았습니다."
+              onClick={openDepartmentModal}
             >
               부서 등록
             </button>
@@ -770,6 +922,23 @@ export default function Employees() {
               onCancel={() => setShowEditModal(false)}
               saving={saving}
               submitLabel="수정 완료"
+            />
+          }
+        />
+      )}
+
+      {showDepartmentModal && (
+        <ModalBase
+          title="신규 부서 등록"
+          onClose={() => setShowDepartmentModal(false)}
+          layout={
+            <DepartmentRegisterForm
+              form={departmentForm}
+              setForm={setDepartmentForm}
+              employees={employees}
+              onSubmit={addDepartment}
+              onCancel={() => setShowDepartmentModal(false)}
+              saving={saving}
             />
           }
         />

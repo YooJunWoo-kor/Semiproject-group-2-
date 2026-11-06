@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import PaginationTable from "../../../../components/PaginationTable";
+import ModalBase from "../../../../components/ModalBase";
 import { getLoginUser } from "../../../../utils/authStorage";
 import {
   getHrAttendance,
-  getHrOrganization
+  getHrOrganization,
+  updateHrAttendance
 } from "../../../../components/HrData";
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -101,6 +102,71 @@ function getStatusClass(status) {
   return "off";
 }
 
+function AttendanceEditForm({ attendance, onSave, onCancel, saving }) {
+  const [form, setForm] = useState({
+    status: attendance.status || "정상",
+    memo: attendance.memo || ""
+  });
+
+  function changeForm(event) {
+    setForm((currentForm) => ({
+      ...currentForm,
+      [event.target.name]: event.target.value
+    }));
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    onSave({
+      attendanceId: attendance.attendanceId,
+      status: form.status,
+      memo: form.memo.trim()
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="attendance-edit-form">
+      <div className="attendance-edit-summary">
+        <div><span>직원</span><strong>{attendance.employeeName}</strong></div>
+        <div><span>날짜</span><strong>{attendance.attendanceDate}</strong></div>
+        <div><span>출근</span><strong>{attendance.clockIn || "-"}</strong></div>
+        <div><span>퇴근</span><strong>{attendance.clockOut || "-"}</strong></div>
+      </div>
+
+      <label className="attendance-edit-field">
+        <span>상태</span>
+        <select name="status" value={form.status} onChange={changeForm}>
+          <option value="정상">정상</option>
+          <option value="지각">지각</option>
+          <option value="휴가">휴가</option>
+          <option value="출장">출장</option>
+          <option value="휴직">휴직</option>
+          <option value="미출근">미출근</option>
+        </select>
+      </label>
+
+      <label className="attendance-edit-field">
+        <span>메모</span>
+        <textarea
+          name="memo"
+          value={form.memo}
+          onChange={changeForm}
+          maxLength={255}
+          rows={4}
+          placeholder="근태 관련 메모를 입력해 주세요."
+        />
+      </label>
+
+      <div className="attendance-edit-actions">
+        <button type="button" onClick={onCancel}>취소</button>
+        <button type="submit" className="erp-primary-button" disabled={saving}>
+          {saving ? "저장 중..." : "저장"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 export default function Attendance() {
   const loginUser = getLoginUser();
   const isMaster = loginUser?.role === "MASTER";
@@ -113,13 +179,19 @@ export default function Attendance() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [selectedAttendanceRecord, setSelectedAttendanceRecord] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let ignore = false;
 
+    // 직원·부서·근태 자료를 함께 조회하고 가장 최근 근태월을 기본값으로 설정합니다.
     async function loadAttendancePage() {
       setLoading(true);
       setError("");
+      setNotice("");
 
       try {
         const [departmentResponse, employeeResponse] =
@@ -172,6 +244,7 @@ export default function Attendance() {
     };
   }, []);
 
+  // 부서와 검색어를 동시에 적용해 왼쪽 직원 목록을 구성합니다.
   const departmentList = createDepartmentList(departments);
   const employeeList = createEmployeeList(
     employees,
@@ -183,11 +256,13 @@ export default function Attendance() {
   );
 
   useEffect(() => {
+    // 필터 변경으로 기존 선택이 사라지면 첫 번째 직원을 자동 선택합니다.
     if (!selectedEmployee) {
       setSelectedEmployeeId(employeeList[0]?.employeeId || null);
     }
   }, [employeeList, selectedEmployee, selectedEmployeeId]);
 
+  // 선택 직원의 해당 월 기록만 추려 요약 수치와 일별 표를 계산합니다.
   const selectedAttendance = attendanceData
     .filter(
       (item) =>
@@ -215,7 +290,8 @@ export default function Attendance() {
     "퇴근",
     "근무시간",
     "상태",
-    "메모"
+    "메모",
+    "관리"
   ];
   const tableData = selectedAttendance.map((attendance) => ({
     content: [
@@ -234,9 +310,79 @@ export default function Attendance() {
       >
         {attendance.status || "-"}
       </span>,
-      attendance.memo || "-"
+      attendance.memo || "-",
+      isMaster ? (
+        <button
+          type="button"
+          onClick={() => openAttendanceEdit(attendance)}
+          className="attendance-row-edit-button"
+        >
+          수정
+        </button>
+      ) : (
+        "-"
+      )
     ]
   }));
+
+  function openAttendanceEdit(attendance) {
+    if (!isMaster) {
+      return;
+    }
+
+    setSelectedAttendanceRecord(attendance);
+    setError("");
+    setNotice("");
+    setIsEditModalOpen(true);
+  }
+
+  async function saveAttendanceEdit(formData) {
+    if (!isMaster) {
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await updateHrAttendance(formData.attendanceId, {
+        status: formData.status,
+        memo: formData.memo
+      });
+
+      if (!response.data.success) {
+        throw new Error("근태 수정 응답이 올바르지 않습니다.");
+      }
+
+      const attendanceResponse = await getHrAttendance();
+
+      if (
+        !attendanceResponse.data.success ||
+        !Array.isArray(attendanceResponse.data.data)
+      ) {
+        throw new Error("근태 목록 응답 형식이 올바르지 않습니다.");
+      }
+
+      const updatedRows = attendanceResponse.data.data;
+      setAttendanceData(updatedRows);
+      setSelectedAttendanceRecord(
+        updatedRows.find(
+          (attendance) => attendance.attendanceId === formData.attendanceId
+        ) || null
+      );
+      setIsEditModalOpen(false);
+      setNotice(response.data.message || "근태 정보가 수정되었습니다.");
+    } catch (requestError) {
+      console.error("근태 수정 오류:", requestError);
+      setError(
+        requestError.response?.data?.message ||
+          "근태 정보를 수정하지 못했습니다."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
 
   function resetFilters() {
     setSelectedMonth(getLatestMonth(attendanceData));
@@ -256,9 +402,22 @@ export default function Attendance() {
         </div>
         <div className="dashboard-top">
           {isMaster && (
-            <Link to="/main/hr/employees" className="register-btn">
+            <button
+              type="button"
+              className="register-btn"
+              onClick={() =>
+                selectedAttendance.length > 0 &&
+                openAttendanceEdit(selectedAttendance[0])
+              }
+              disabled={selectedAttendance.length === 0}
+              title={
+                selectedAttendance.length === 0
+                  ? "수정할 일별 근태 기록이 없습니다."
+                  : "선택 직원의 최근 일별 근태 기록을 수정합니다."
+              }
+            >
               근태수정
-            </Link>
+            </button>
           )}
         </div>
       </header>
@@ -427,6 +586,27 @@ export default function Attendance() {
             )}
           </section>
         </div>
+      )}
+
+      {notice && (
+        <p className="attendance-feedback attendance-success" role="status">
+          {notice}
+        </p>
+      )}
+
+      {isEditModalOpen && selectedAttendanceRecord && (
+        <ModalBase
+          title="일별 근태 기록 수정"
+          onClose={() => setIsEditModalOpen(false)}
+          layout={
+            <AttendanceEditForm
+              attendance={selectedAttendanceRecord}
+              onSave={saveAttendanceEdit}
+              onCancel={() => setIsEditModalOpen(false)}
+              saving={saving}
+            />
+          }
+        />
       )}
     </div>
   );

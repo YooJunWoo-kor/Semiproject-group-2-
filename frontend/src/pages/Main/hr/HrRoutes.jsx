@@ -12,6 +12,7 @@ import '../../../css/HR.css';
 export default function HrRoutes() {
   
   let mainUrl = "/main/hr";
+  // HR 왼쪽 메뉴와 하위 화면 경로를 한곳에서 관리합니다.
   const urlList = [
       {name:"대시보드", url:mainUrl+"/"}
       ,{name:"근태 관리", url:mainUrl+"/attendance"}
@@ -23,6 +24,7 @@ export default function HrRoutes() {
   return (
     <div className='sub-main-contain'>
       <Nav urlist={urlList}/>
+      {/* 주소에 따라 HR 대시보드와 각 관리 화면을 전환합니다. */}
       <Routes>
           <Route index element={<Dashboard />} />
           <Route path="employees" element={<Employees />} />

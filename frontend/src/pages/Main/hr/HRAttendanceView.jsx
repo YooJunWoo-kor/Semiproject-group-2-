@@ -20,6 +20,7 @@ export default function HRAttendanceView(props) {
     const isLoading = props.isLoading || false;
     const error = props.error || '';
 
+    // 우측 근태 카드의 현재 시각을 1초마다 갱신합니다.
     useEffect(() => {
         const timer = setInterval(() => {
             setTime(new Date());
@@ -30,6 +31,7 @@ export default function HRAttendanceView(props) {
         };
     }, []);
 
+    // API 근태 응답을 달력과 주간 목록이 사용하는 일정 형식으로 변환합니다.
     const schedule = attendanceData.map((attendance) => ({
         id: attendance.attendanceId,
         title: `${attendance.employeeName} ${attendance.status}`,
@@ -56,6 +58,7 @@ export default function HRAttendanceView(props) {
         calendarScheduleByDate[attendance.start].push(attendance);
     });
 
+    // 월간 달력은 날짜별 3건까지만 표시하고 나머지는 인원수로 묶습니다.
     const calendarSchedule = Object.keys(calendarScheduleByDate).flatMap((date) => {
         const daySchedule = calendarScheduleByDate[date];
         const visibleSchedule = daySchedule.slice(0, 3);

@@ -8,6 +8,11 @@ export function getHrDepartments() {
   return axios.get(API_BASE_URL + '/hr/departments');
 }
 
+// 신규 부서를 DB에 등록합니다.
+export function createHrDepartment(data) {
+  return axios.post(API_BASE_URL + '/hr/departments', data);
+}
+
 // HR 직원 목록을 DB에서 조회합니다.
 export function getHrEmployees() {
   return axios.get(API_BASE_URL + '/hr/employees');
@@ -16,6 +21,11 @@ export function getHrEmployees() {
 // 대시보드와 근태관리에서 사용하는 전체 근태 기록을 조회합니다.
 export function getHrAttendance(params) {
   return axios.get(API_BASE_URL + '/hr/attendance', { params });
+}
+
+// 출근·퇴근은 유지하고 근태 상태와 메모만 수정합니다.
+export function updateHrAttendance(attendanceId, data) {
+  return axios.put(API_BASE_URL + '/hr/attendance/' + attendanceId, data);
 }
 
 // 선택한 날짜와 부서의 직원별 출결 현황을 조회합니다.
