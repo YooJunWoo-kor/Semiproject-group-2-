@@ -259,7 +259,7 @@ function CorpCard() {
 
   // 신규 카드 등록폼을 엽니다.
   function openCardForm() {
-    if (cardSaving || limitSaving) return;
+    if (cardSaving || limitSaving || statusSavingId !== null) return;
     setEditingCardId(null);
     setCardForm({
       card_name: "",
@@ -277,7 +277,7 @@ function CorpCard() {
 
   // 기존 카드의 기본정보를 등록폼에 채워 수정 모드로 엽니다.
   function openEditCardForm(card) {
-    if (cardSaving || limitSaving) return;
+    if (cardSaving || limitSaving || statusSavingId !== null) return;
     setEditingCardId(card.id);
     setCardForm({
       card_name: card.cardName,
@@ -386,8 +386,9 @@ function CorpCard() {
 
   // 선택한 카드의 현재 한도를 입력폼에 채웁니다.
   function openLimitForm(card) {
-    if (cardSaving || limitSaving) return;
+    if (cardSaving || limitSaving || statusSavingId !== null) return;
     setCardFormOpen(false);
+    setSelectedCardId(card.id);
     setLimitTarget(card);
     setMonthlyLimitInput(String(card.monthlyLimit));
     setLimitError("");
@@ -462,20 +463,21 @@ function CorpCard() {
         <div style={{ display: 'flex', gap: '4px' }}>
           <button
             type="button"
-            onClick={() => setSelectedCardId(card.id)}
+            disabled={cardSaving || limitSaving || statusSavingId !== null}
+            onClick={() => openCardDetail(card.id)}
           >
             상세
           </button>
           <button
             type="button"
-            disabled={cardSaving || limitSaving}
+            disabled={cardSaving || limitSaving || statusSavingId !== null}
             onClick={() => openEditCardForm(card)}
           >
             수정
           </button>
           <button
             type="button"
-            disabled={limitSaving || cardSaving}
+            disabled={limitSaving || cardSaving || statusSavingId !== null}
             onClick={() => openLimitForm(card)}
           >
             한도변경
@@ -501,9 +503,27 @@ function CorpCard() {
     };
   });
 
+  // 상세와 등록·수정·한도변경 모달은 한 번에 하나씩 표시합니다.
+  function openCardDetail(cardId) {
+    if (cardSaving || limitSaving || statusSavingId !== null) return;
+    setCardFormOpen(false);
+    setLimitTarget(null);
+    setSelectedCardId(cardId);
+  }
+
+  function closeCardDetail() {
+    if (cardSaving || limitSaving || statusSavingId !== null) return;
+    setSelectedCardId(null);
+  }
+
+  function closeLimitModal() {
+    if (cardSaving || limitSaving || statusSavingId !== null) return;
+    setLimitTarget(null);
+  }
+
   // 공통 모달의 배경·닫기·취소 버튼에서 함께 사용합니다.
   function closeRegistrationModal() {
-    if (cardSaving) return;
+    if (cardSaving || limitSaving || statusSavingId !== null) return;
     setCardFormOpen(false);
   }
 
@@ -515,7 +535,7 @@ function CorpCard() {
           <button
             type="button"
             className="register-btn"
-            disabled={cardSaving || limitSaving || cardFormOpen}
+            disabled={cardSaving || limitSaving || cardFormOpen || statusSavingId !== null}
             onClick={openCardForm}
           >
             + 등록
@@ -666,8 +686,13 @@ function CorpCard() {
       />
 
       {limitTarget && (
-        <section>
-          <h3>법인카드 한도변경</h3>
+        <div className="finance-registration-modal">
+          <ModalBase
+            title="법인카드 한도변경"
+            onClose={closeLimitModal}
+            layout={(
+              <section aria-label="법인카드 한도변경">
+
 
           <p>법인카드: {limitTarget.cardName}</p>
           <p>
@@ -698,19 +723,29 @@ function CorpCard() {
             <button
               type="button"
               disabled={limitSaving}
-              onClick={() => setLimitTarget(null)}
+              onClick={closeLimitModal}
             >
               취소
             </button>
           </form>
-        </section>
+        
+              </section>
+            )}
+          />
+        </div>
       )}
 
-      {selectedCard && (
-        <section>
-          <h3>법인카드 상세정보</h3>
+      {selectedCard && !cardFormOpen && !limitTarget && (
+        <div className="finance-registration-modal finance-card-detail">
+          <ModalBase
+            title="법인카드 상세정보"
+            onClose={closeCardDetail}
+            layout={(
+              <section aria-label="법인카드 상세정보">
 
-          <table>
+
+          <div className="table-shell">
+          <table className="finance-card-fields">
             <tbody>
               {[
                 ["카드 ID", selectedCard.id],
@@ -740,6 +775,7 @@ function CorpCard() {
               ))}
             </tbody>
           </table>
+          </div>
 
           <h3>법인카드 사용 이력</h3>
 
@@ -750,6 +786,7 @@ function CorpCard() {
           ) : cardPayments.length === 0 ? (
             <p>이 카드에 연결된 사용 이력이 없습니다.</p>
           ) : (
+            <div className="table-shell finance-card-history">
             <table>
               <thead>
                 <tr>
@@ -775,15 +812,23 @@ function CorpCard() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
 
-          <button
-            type="button"
-            onClick={() => setSelectedCardId(null)}
-          >
-            닫기
-          </button>
-        </section>
+        
+                <div className="finance-detail-actions">
+                  <button type="button" className="erp-primary-button"
+                    disabled={cardSaving || limitSaving || statusSavingId !== null}
+                    onClick={() => openEditCardForm(selectedCard)}>수정</button>
+                  <button type="button"
+                    disabled={cardSaving || limitSaving || statusSavingId !== null}
+                    onClick={() => openLimitForm(selectedCard)}>한도변경</button>
+                </div>
+
+              </section>
+            )}
+          />
+        </div>
       )}
     </div>
   );

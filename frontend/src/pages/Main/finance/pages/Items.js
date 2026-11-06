@@ -306,7 +306,8 @@ function Items() {
         // 7. 관리 버튼
         <button
           type="button"
-          onClick={() => setSelectedItemId(item.id)}
+          disabled={saving || paymentSaving}
+          onClick={() => openVoucher(item.id)}
         >
           전표
         </button>
@@ -327,6 +328,7 @@ function Items() {
 
   // 신규 등록폼 열기
   function openItemForm() {
+    if (saving || paymentSaving) return;
     setPaymentTarget(null); // 입금·출금 입력폼 닫기
     setEditingItemId(null); // 신규 등록 모드
 
@@ -453,7 +455,7 @@ function Items() {
 
   // 선택한 거래 품목 삭제
   async function handleItemDelete() {
-    if (!selectedItem || saving) return;
+    if (!selectedItem || saving || paymentSaving) return;
 
     const confirmed = window.confirm(
       `"${selectedItem.itemName}" 품목을 삭제하시겠습니까?\n` +
@@ -546,6 +548,7 @@ function Items() {
 
   // 선택한 품목의 기존 내용을 입력폼에 채웁니다.
   function openEditItemForm(item) {
+    if (saving || paymentSaving) return;
     setPaymentTarget(null);
     setEditingItemId(item.id);
 
@@ -567,6 +570,7 @@ function Items() {
 
   // 입금·출금 입력폼 열기
   function openPaymentForm(item) {
+    if (saving || paymentSaving) return;
     // 처리 대상을 따로 보관합니다.
     // 다른 품목을 선택해도 정산할 거래가 바뀌지 않습니다.
     setPaymentTarget({
@@ -657,9 +661,27 @@ function Items() {
 
 
 
+  // 전표 상세와 입력 폼은 한 번에 하나씩 표시합니다.
+  function openVoucher(itemId) {
+    if (saving || paymentSaving) return;
+    setFormOpen(false);
+    setPaymentTarget(null);
+    setSelectedItemId(itemId);
+  }
+
+  function closeVoucher() {
+    if (saving || paymentSaving) return;
+    setSelectedItemId(null);
+  }
+
+  function closePaymentModal() {
+    if (saving || paymentSaving) return;
+    setPaymentTarget(null);
+  }
+
   // 공통 모달의 배경·닫기·취소 버튼에서 함께 사용합니다.
   function closeRegistrationModal() {
-    if (saving) return;
+    if (saving || paymentSaving) return;
     setFormOpen(false);
   }
 
@@ -672,6 +694,7 @@ function Items() {
           <button
             type="button"
             className="register-btn"
+            disabled={saving || paymentSaving}
             onClick={openItemForm}
           >
             + 품목 거래내역 신규 등록
@@ -912,10 +935,12 @@ function Items() {
           )}
 
           {paymentTarget && (
-            <form onSubmit={handlePaymentSubmit}>
-              <h3>
-                {paymentTarget.type === "SALES" ? "입금 등록" : "출금 등록"}
-              </h3>
+            <div className="finance-registration-modal">
+              <ModalBase
+                title={paymentTarget.type === "SALES" ? "입금 등록" : "출금 등록"}
+                onClose={closePaymentModal}
+                layout={(
+                  <form onSubmit={handlePaymentSubmit}>
 
               <p>거래 ID: {paymentTarget.transactionId}</p>
               <p>거래처: {paymentTarget.customer}</p>
@@ -1038,12 +1063,15 @@ function Items() {
 
                 <button
                   type="button"
-                  onClick={() => setPaymentTarget(null)}
+                  onClick={closePaymentModal}
                 >
                   취소
                 </button>
               </fieldset>
             </form>
+                )}
+              />
+            </div>
           )}
 
           <PaginationTable
@@ -1053,11 +1081,17 @@ function Items() {
             allData={tItemData}
             itemsPerPage={5}
           />
-          {selectedItem && (
-            <section>
-              <h3>거래 품목 상세정보</h3>
+          {selectedItem && !formOpen && !paymentTarget && (
+            <div className="finance-registration-modal finance-voucher-detail">
+              <ModalBase
+                title="매입·매출 전표"
+                onClose={closeVoucher}
+                layout={(
+                  <section aria-label="거래 전표 상세정보">
 
-              <table>
+
+              <div className="table-shell">
+              <table className="finance-voucher-fields">
                 <tbody>
                   {[
                     ["거래 ID", selectedItem.transactionId],
@@ -1082,6 +1116,7 @@ function Items() {
                   ))}
                 </tbody>
               </table>
+              </div>
 
               <h3>거래 전체 정산 정보</h3>
 
@@ -1114,6 +1149,7 @@ function Items() {
                     {paymentSummary.payments.length === 0 ? (
                       <p>등록된 입금·출금 이력이 없습니다.</p>
                     ) : (
+                      <div className="table-shell finance-voucher-history">
                       <table>
                         <thead>
                           <tr>
@@ -1139,11 +1175,13 @@ function Items() {
                           ))}
                         </tbody>
                       </table>
+                      </div>
                     )}
                   </div>
                 )
               )}
 
+              <div className="finance-detail-actions">
               <button
                 type="button"
                 disabled={saving || paymentSaving}
@@ -1154,7 +1192,8 @@ function Items() {
 
               <button
                 type="button"
-                disabled={saving}
+                disabled={saving || paymentSaving}
+                className="erp-primary-button"
                 onClick={() => openEditItemForm(selectedItem)}
               >
                 수정
@@ -1162,20 +1201,20 @@ function Items() {
 
               <button
                 type="button"
-                disabled={saving}
+                disabled={saving || paymentSaving}
+                className="finance-detail-delete"
                 onClick={handleItemDelete}
               >
                 삭제
               </button>
 
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => setSelectedItemId(null)}
-              >
-                닫기
-              </button>
-            </section>
+            
+              </div>
+
+                  </section>
+                )}
+              />
+            </div>
           )}
         </div>
 

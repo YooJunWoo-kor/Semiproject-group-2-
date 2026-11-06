@@ -179,7 +179,8 @@ function Partners() {
         : `${item.payableAmount.toLocaleString()}원`,
       <button
         type="button"
-        onClick={() => setSelectedPartnerId(item.id)}
+        disabled={saving || deleting}
+        onClick={() => openPartnerDetail(item.id)}
       >
         선택
       </button>
@@ -228,6 +229,17 @@ function Partners() {
   // 선택한 거래처의 정보를 찾습니다.
   const selectedPartner = partnersList.find(
     (item) => item.id === selectedPartnerId);
+
+  // 선택한 거래처를 공통 상세 모달로 표시합니다.
+  function openPartnerDetail(partnerId) {
+    if (saving || deleting) return;
+    setSelectedPartnerId(partnerId);
+  }
+
+  function closePartnerDetail() {
+    if (saving || deleting) return;
+    setSelectedPartnerId(null);
+  }
 
   // 신규 등록폼 열기
   function openPartnerForm() {
@@ -594,92 +606,90 @@ function Partners() {
             />
           </div>
 
-          {selectedPartner && (
-            <section aria-label="거래처 상세정보">
-              <h3>거래처 상세정보</h3>
-              <table>
-                <tbody>
-                  <tr>
-                    <th scope="row">거래처명</th>
-                    <td>{selectedPartner.name}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">거래 구분</th>
-                    <td>{selectedPartner.type}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">업체 유형</th>
-                    <td>{selectedPartner.companyType}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">사업자번호</th>
-                    <td>{selectedPartner.bizNumber}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">대표자</th>
-                    <td>{selectedPartner.ceo}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">연락처</th>
-                    <td>{selectedPartner.contact}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">주소</th>
-                    <td>{selectedPartner.address}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">정기 마감일</th>
-                    <td>
-                      {selectedPartner.closingDay
-                        ? Number(selectedPartner.closingDay) === 31
-                          ? "매월 말일"
-                          : `매월 ${selectedPartner.closingDay}일`
-                        : "-"}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row">은행명</th>
-                    <td>{selectedPartner.bankInfo.bank}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">계좌번호</th>
-                    <td>{selectedPartner.bankInfo.account}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">예금주</th>
-                    <td>{selectedPartner.bankInfo.holder}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">메모</th>
-                    <td>{selectedPartner.memo}</td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <button
-                type="button"
-                disabled={saving || deleting}
-                onClick={() => openEditPartnerForm(selectedPartner)}
-              >
-                수정
-              </button>
-
-              <button
-                type="button"
-                disabled={saving || deleting}
-                onClick={() => handlePartnerDelete(selectedPartner)}
-              >
-                {deleting ? "삭제 중..." : "삭제"}
-              </button>
-
-              <button
-                type="button"
-                disabled={saving || deleting}
-                onClick={() => setSelectedPartnerId(null)}
-              >
-                닫기
-              </button>
-            </section>
+          {/* 상세와 수정 폼은 하나씩 열고, 기존 공통 모달을 사용합니다. */}
+          {selectedPartner && !formOpen && (
+            <div className="finance-registration-modal finance-partner-detail">
+              <ModalBase
+                title="거래처 상세정보"
+                onClose={closePartnerDetail}
+                layout={(
+                  <section aria-label="거래처 상세정보">
+                    <div className="table-shell">
+                      <table>
+                        <tbody>
+                          <tr>
+                            <th scope="row">거래처명</th>
+                            <td>{selectedPartner.name}</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">거래 구분</th>
+                            <td>{selectedPartner.type}</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">업체 유형</th>
+                            <td>{selectedPartner.companyType}</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">사업자번호</th>
+                            <td>{selectedPartner.bizNumber}</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">대표자</th>
+                            <td>{selectedPartner.ceo}</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">연락처</th>
+                            <td>{selectedPartner.contact}</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">주소</th>
+                            <td>{selectedPartner.address}</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">정기 마감일</th>
+                            <td>
+                              {selectedPartner.closingDay
+                                ? Number(selectedPartner.closingDay) === 31
+                                  ? "매월 말일"
+                                  : `매월 ${selectedPartner.closingDay}일`
+                                : "-"}
+                            </td>
+                          </tr>
+                          <tr>
+                            <th scope="row">은행명</th>
+                            <td>{selectedPartner.bankInfo.bank}</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">계좌번호</th>
+                            <td>{selectedPartner.bankInfo.account}</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">예금주</th>
+                            <td>{selectedPartner.bankInfo.holder}</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">메모</th>
+                            <td>{selectedPartner.memo}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="finance-detail-actions">
+                      <button type="button" className="erp-primary-button"
+                        disabled={saving || deleting}
+                        onClick={() => openEditPartnerForm(selectedPartner)}>
+                        수정
+                      </button>
+                      <button type="button" className="finance-detail-delete"
+                        disabled={saving || deleting}
+                        onClick={() => handlePartnerDelete(selectedPartner)}>
+                        {deleting ? "삭제 중..." : "삭제"}
+                      </button>
+                    </div>
+                  </section>
+                )}
+              />
+            </div>
           )}
         </div>
 

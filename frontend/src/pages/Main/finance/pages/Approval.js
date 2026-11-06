@@ -31,6 +31,8 @@ function Approval() {
   const loginUser = getLoginUser();
   const [paymentBusy, setPaymentBusy] = useState(false);
   const paymentBusyRef = useRef(false);
+  const [paymentFormOpen, setPaymentFormOpen] = useState(false);
+  const approvalModalRef = useRef(null);
   const [decisionOpinion, setDecisionOpinion] = useState("");
   const [decisionPassword, setDecisionPassword] = useState("");
   const [decisionSaving, setDecisionSaving] = useState(false);
@@ -212,6 +214,7 @@ function Approval() {
 
   // 다른 문서를 열면 이전 의견과 비밀번호를 지웁니다.
   useEffect(() => {
+    setPaymentFormOpen(false);
     setDecisionOpinion("");
     setDecisionPassword("");
     setDecisionError("");
@@ -332,7 +335,7 @@ function Approval() {
         <button
           type="button"
           disabled={decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy}
-          onClick={() => setSelectedApprovalId(item.id)}
+          onClick={() => openApprovalDetail(item.id)}
         >
           상세
         </button>
@@ -504,6 +507,27 @@ function Approval() {
       setError("지급은 등록되었지만 문서 목록 재조회에 실패했습니다. 새로고침해 확인해 주세요.");
     }
   }
+
+  function openApprovalDetail(documentId) {
+    if (decisionLock.current || attachmentLock.current || downloadLock.current || paymentBusyRef.current || draftSaving) return;
+    setDraftOpen(false);
+    setSelectedApprovalId(documentId);
+  }
+
+  function closeApprovalDetail() {
+    if (decisionLock.current || attachmentLock.current || downloadLock.current || paymentBusyRef.current) return;
+    if (paymentFormOpen) {
+      setPaymentFormOpen(false);
+      return;
+    }
+    setSelectedApprovalId(null);
+  }
+
+  // 문서 상세와 지급 입력을 전환하면 모달의 맨 위로 돌아갑니다.
+  useEffect(() => {
+    const dialog = approvalModalRef.current?.querySelector(".modal-boder");
+    if (dialog) dialog.scrollTop = 0;
+  }, [paymentFormOpen, selectedApprovalId]);
 
   function closeDraftForm() {
     if (!draftSaving) setDraftOpen(false);
@@ -795,11 +819,18 @@ function Approval() {
         itemsPerPage={5}
       />
 
-      {selectedApproval && (
-        <section>
-          <h3>결재 문서 상세정보</h3>
+      {selectedApproval && !draftOpen && (
+        <div ref={approvalModalRef} className="finance-registration-modal finance-approval-detail">
+          <ModalBase
+            title={paymentFormOpen ? "지출 지급 등록" : "결재 문서 상세정보"}
+            onClose={closeApprovalDetail}
+            layout={(
+              <section aria-label="결재 문서 상세정보">
+                <div hidden={paymentFormOpen}>
 
-          <table>
+
+          <div className="table-shell">
+          <table className="finance-approval-fields">
             <tbody>
               {[
                 ["문서 ID", selectedApproval.id],
@@ -831,14 +862,20 @@ function Approval() {
               </tr>
             </tbody>
           </table>
+          </div>
+                </div>
           <ApprovalPayments
             key={selectedApproval.id}
+            embedded
+            paymentFormOpen={paymentFormOpen}
+            onFormOpenChange={setPaymentFormOpen}
             approval={selectedApproval}
             loginUser={loginUser}
             blocked={decisionSaving || attachmentSaving || downloadingFileId !== null}
             onBusyChange={handlePaymentBusyChange}
             onPaid={handlePaymentSaved}
-          />
+          />                <div hidden={paymentFormOpen}>
+
 
           <section className="finance-registration-modal" aria-label="증빙파일 첨부">
             <h3>증빙파일</h3>
@@ -850,6 +887,7 @@ function Approval() {
             {attachmentListLoading ? <p>첨부파일 목록을 불러오는 중입니다.</p> :
               attachmentListError ? <p role="alert">{attachmentListError}</p> :
               attachmentList.length === 0 ? <p>등록된 첨부파일이 없습니다.</p> : (
+                <div className="table-shell finance-approval-scroll">
                 <table>
                   <thead>
                     <tr>
@@ -879,6 +917,7 @@ function Approval() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             {downloadError && <p role="alert">{downloadError}</p>}
             {canAttach ? (
@@ -930,7 +969,8 @@ function Approval() {
           ) : approvalSteps.length === 0 ? (
             <p>등록된 결재 단계가 없습니다.</p>
           ) : (
-            <table>
+            <div className="table-shell finance-approval-scroll">
+                <table>
               <thead>
                 <tr>
                   <th scope="col">결재 순서</th>
@@ -957,6 +997,7 @@ function Approval() {
                 ))}
               </tbody>
             </table>
+                </div>
           )}
           {selectedApproval.status === "대기" && !stepsLoading && !stepsError && (
             canDecide ? (
@@ -984,14 +1025,12 @@ function Approval() {
           {decisionSaving && <p role="status">결재를 저장하는 중입니다.</p>}
           {decisionError && <p role="alert">{decisionError}</p>}
           {decisionMessage && <p role="status">{decisionMessage}</p>}
-          <button
-            type="button"
-            disabled={decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy}
-            onClick={() => setSelectedApprovalId(null)}
-          >
-            닫기
-          </button>
-        </section>
+                        </div>
+
+              </section>
+            )}
+          />
+        </div>
       )}
 
     </div>

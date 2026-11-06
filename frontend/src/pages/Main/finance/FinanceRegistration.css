@@ -46,3 +46,144 @@
 .finance-registration-modal button[type="submit"] {
     margin-right: 8px;
 }
+
+/* 거래처 상세 모달의 배치만 조정합니다. 표·버튼은 공통 스타일을 사용합니다. */
+.finance-partner-detail table {
+    table-layout: fixed;
+}
+
+.finance-partner-detail th[scope="row"] {
+    width: 30%;
+    white-space: normal;
+}
+
+.finance-partner-detail td {
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.finance-partner-detail .table-shell tbody tr {
+    cursor: default;
+}
+
+.finance-partner-detail .finance-detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.finance-partner-detail .finance-detail-delete {
+    color: var(--color-danger);
+}
+
+/* 매입·매출 전표 상세의 배치. 색상·표·버튼은 기존 공통 스타일을 사용합니다. */
+.finance-voucher-detail .finance-voucher-fields {
+    table-layout: fixed;
+}
+
+.finance-voucher-detail .finance-voucher-fields th[scope="row"] {
+    width: 30%;
+    white-space: normal;
+}
+
+.finance-voucher-detail td {
+    overflow-wrap: anywhere;
+}
+
+.finance-voucher-detail .table-shell tbody tr {
+    cursor: default;
+}
+
+.finance-voucher-detail .finance-voucher-history table {
+    min-width: 520px;
+}
+
+.finance-voucher-detail .finance-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.finance-voucher-detail .finance-detail-delete {
+    color: var(--color-danger);
+}
+
+/* 법인카드 상세 모달의 배치. 표·버튼·색상은 기존 공통 스타일을 사용합니다. */
+.finance-card-detail .finance-card-fields {
+    table-layout: fixed;
+}
+
+.finance-card-detail .finance-card-fields th[scope="row"] {
+    width: 30%;
+    white-space: normal;
+}
+
+.finance-card-detail td {
+    overflow-wrap: anywhere;
+}
+
+.finance-card-detail .table-shell tbody tr {
+    cursor: default;
+}
+
+.finance-card-detail .finance-card-history table {
+    min-width: 560px;
+}
+
+.finance-card-detail .finance-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+/* 회사계좌 거래내역 모달의 배치. 표·버튼·색상은 공통 스타일을 사용합니다. */
+.finance-account-detail .finance-account-history table {
+    min-width: 560px;
+}
+
+.finance-account-detail td {
+    overflow-wrap: anywhere;
+}
+
+.finance-account-detail .table-shell tbody tr {
+    cursor: default;
+}
+
+.finance-account-detail .finance-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+/* 결재 문서 상세 모달의 배치. 색상·표·버튼은 기존 공통 스타일을 사용합니다. */
+.finance-approval-detail .finance-approval-fields {
+    table-layout: fixed;
+}
+
+.finance-approval-detail .finance-approval-fields th[scope="row"] {
+    width: 30%;
+    white-space: normal;
+}
+
+.finance-approval-detail td {
+    overflow-wrap: anywhere;
+}
+
+.finance-approval-detail .table-shell tbody tr {
+    cursor: default;
+}
+
+.finance-approval-detail .finance-approval-scroll table {
+    min-width: 560px;
+}
+
+.finance-approval-detail .modal-body > section > div > h3 {
+    margin-top: 24px;
+}

@@ -16,14 +16,22 @@ function todayInKorea() {
   ).join("-");
 }
 
-export default function ApprovalPayments({ approval, loginUser, blocked, onBusyChange, onPaid }) {
+export default function ApprovalPayments({
+  approval, loginUser, blocked, onBusyChange, onPaid,
+  embedded = false, paymentFormOpen = false, onFormOpenChange
+}) {
   const [summary, setSummary] = useState(null);
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refresh, setRefresh] = useState(0);
   const [message, setMessage] = useState("");
-  const [formOpen, setFormOpen] = useState(false);
+  const [localFormOpen, setLocalFormOpen] = useState(false);
+  const formOpen = embedded ? paymentFormOpen : localFormOpen;
+  function setFormOpen(value) {
+    if (embedded) onFormOpenChange?.(value);
+    else setLocalFormOpen(value);
+  }
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
   const [form, setForm] = useState({
@@ -80,6 +88,11 @@ export default function ApprovalPayments({ approval, loginUser, blocked, onBusyC
     }
     loadOptions();
     return () => { cancelled = true; };
+  }, [formOpen]);
+
+  // 상위 모달의 닫기 버튼으로 돌아간 경우에도 비밀번호를 지웁니다.
+  useEffect(() => {
+    if (!formOpen) setForm((previous) => ({ ...previous, password: "" }));
   }, [formOpen]);
 
   const remaining = Number(summary?.remaining_amount);
@@ -179,47 +192,8 @@ export default function ApprovalPayments({ approval, loginUser, blocked, onBusyC
     }
   }
 
-  return (
-    <section className="finance-registration-modal" aria-label="지급 현황">
-      <h3>지급 현황</h3>
-      <button type="button" disabled={loading || saving || blocked}
-        onClick={() => setRefresh((previous) => previous + 1)}>지급 현황 새로고침</button>
-      {message && <p role="status">{message}</p>}
-      {loading ? <p>지급 현황을 불러오는 중입니다.</p> : error ? <p role="alert">{error}</p> : (
-        <>
-          <p>
-            문서 금액: {Number(summary?.document_amount || 0).toLocaleString()}원
-            {" | "}지급 완료: {Number(summary?.paid_amount || 0).toLocaleString()}원
-            {" | "}남은 지급액: {Number(summary?.remaining_amount || 0).toLocaleString()}원
-          </p>
-          {!validSummary && <p role="alert">기존 문서 금액과 지급 합계를 확인해 주세요. 지급 등록을 중단했습니다.</p>}
-          {canPay && <button type="button" className="erp-primary-button"
-            disabled={saving || blocked || formOpen} onClick={openForm}>+ 지급 등록</button>}
-          {validSummary && remaining === 0 && <p>지급이 완료된 문서입니다.</p>}
-          {approval.status !== "승인" && <p>최종 승인된 문서에 지급을 등록할 수 있습니다.</p>}
-          {!isFinance && <p>지급 등록은 재무부 또는 MASTER 계정으로 진행해 주세요.</p>}
-          {payments.length === 0 ? <p>등록된 지급 내역이 없습니다.</p> : (
-            <table>
-              <thead><tr>
-                <th scope="col">지급 번호</th><th scope="col">지급일</th>
-                <th scope="col">금액</th><th scope="col">결제수단</th>
-                <th scope="col">계좌·카드 ID</th><th scope="col">입출금 구분</th><th scope="col">상태</th>
-              </tr></thead>
-              <tbody>{payments.map((payment) => (
-                <tr key={payment.payment_id}>
-                  <td>{payment.payment_id}</td><td>{payment.payment_date}</td>
-                  <td>{Number(payment.amount).toLocaleString()}원</td><td>{payment.payment_method}</td>
-                  <td>{payment.account_id ? `계좌 #${payment.account_id}` : payment.card_id ? `카드 #${payment.card_id}` : "-"}</td>
-                  <td>{payment.payment_direction}</td><td>{payment.payment_status}</td>
-                </tr>
-              ))}</tbody>
-            </table>
-          )}
-        </>
-      )}
-      {formOpen && (
-        <ModalBase title="지출 지급 등록" onClose={closeForm} layout={(
-          <form onSubmit={submitPayment}>
+  const paymentForm = (
+    <form onSubmit={submitPayment}>
             <fieldset disabled={saving || blocked}>
               <p>{approval.title} / 남은 지급액: {Number.isSafeInteger(remaining) ? remaining.toLocaleString() : "조회 중"}원</p>
               <div><label htmlFor="doc-payment-date">지급일 *</label>
@@ -268,8 +242,53 @@ export default function ApprovalPayments({ approval, loginUser, blocked, onBusyC
               <button type="button" onClick={closeForm}>취소</button>
             </fieldset>
           </form>
-        )} />
+  );
+
+  return (
+    <section className="finance-registration-modal" aria-label="지급 현황">
+      {(!embedded || !formOpen) && <>
+      <h3>지급 현황</h3>
+      <button type="button" disabled={loading || saving || blocked}
+        onClick={() => setRefresh((previous) => previous + 1)}>지급 현황 새로고침</button>
+      {message && <p role="status">{message}</p>}
+      {loading ? <p>지급 현황을 불러오는 중입니다.</p> : error ? <p role="alert">{error}</p> : (
+        <>
+          <p>
+            문서 금액: {Number(summary?.document_amount || 0).toLocaleString()}원
+            {" | "}지급 완료: {Number(summary?.paid_amount || 0).toLocaleString()}원
+            {" | "}남은 지급액: {Number(summary?.remaining_amount || 0).toLocaleString()}원
+          </p>
+          {!validSummary && <p role="alert">기존 문서 금액과 지급 합계를 확인해 주세요. 지급 등록을 중단했습니다.</p>}
+          {canPay && <button type="button" className="erp-primary-button"
+            disabled={saving || blocked || formOpen} onClick={openForm}>+ 지급 등록</button>}
+          {validSummary && remaining === 0 && <p>지급이 완료된 문서입니다.</p>}
+          {approval.status !== "승인" && <p>최종 승인된 문서에 지급을 등록할 수 있습니다.</p>}
+          {!isFinance && <p>지급 등록은 재무부 또는 MASTER 계정으로 진행해 주세요.</p>}
+          {payments.length === 0 ? <p>등록된 지급 내역이 없습니다.</p> : (
+            <div className="table-shell finance-approval-scroll">
+            <table>
+              <thead><tr>
+                <th scope="col">지급 번호</th><th scope="col">지급일</th>
+                <th scope="col">금액</th><th scope="col">결제수단</th>
+                <th scope="col">계좌·카드 ID</th><th scope="col">입출금 구분</th><th scope="col">상태</th>
+              </tr></thead>
+              <tbody>{payments.map((payment) => (
+                <tr key={payment.payment_id}>
+                  <td>{payment.payment_id}</td><td>{payment.payment_date}</td>
+                  <td>{Number(payment.amount).toLocaleString()}원</td><td>{payment.payment_method}</td>
+                  <td>{payment.account_id ? `계좌 #${payment.account_id}` : payment.card_id ? `카드 #${payment.card_id}` : "-"}</td>
+                  <td>{payment.payment_direction}</td><td>{payment.payment_status}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+            </div>
+          )}
+        </>
       )}
+      </>}
+      {formOpen && (embedded ? paymentForm : (
+        <ModalBase title="지출 지급 등록" onClose={closeForm} layout={paymentForm} />
+      ))}
     </section>
   );
 }

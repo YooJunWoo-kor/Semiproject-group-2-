@@ -232,19 +232,14 @@ function BankAccount() {
         <div style={{ display: 'flex', gap: '4px' }}>
           <button
             type="button"
-            onClick={() => {
-              setAccountPayments([]);
-              setPaymentsError("");
-              setPaymentsLoading(true);
-              setSelectedAccountId(acc.id);
-            }}
-            disabled={selectedAccountId === acc.id}
+            onClick={() => openAccountHistory(acc.id)}
+            disabled={saving || accountStatusSaving}
           >
             거래내역
           </button>
           <button
             type="button"
-            disabled={saving}
+            disabled={saving || accountStatusSaving}
             onClick={() => openEditAccountForm(acc)}
           >
             수정
@@ -260,6 +255,7 @@ function BankAccount() {
 
   // 신규 계좌 등록폼 열기
   function openAccountForm() {
+    if (saving || accountStatusSaving) return;
     setEditingAccountId(null); // 신규 등록 모드
 
     setAccountForm({
@@ -380,6 +376,7 @@ function BankAccount() {
 
   // 선택한 계좌 정보를 기존 입력폼에 채웁니다.
   function openEditAccountForm(acc) {
+    if (saving || accountStatusSaving) return;
     setEditingAccountId(acc.id);
 
     setAccountForm({
@@ -393,13 +390,13 @@ function BankAccount() {
     });
 
     setFormError("");
-    setSelectedAccountId(null);
+    setSelectedAccountId(acc.id);
     setFormOpen(true);
   }
 
   // 선택한 회사계좌의 사용 상태를 변경합니다.
   async function handleAccountStatusChange(account) {
-    if (accountStatusSaving) return;
+    if (saving || accountStatusSaving) return;
 
     const nextStatus =
       ["사용", "ACTIVE"].includes(account.status) ? "STOP" : "사용";
@@ -433,9 +430,25 @@ function BankAccount() {
     }
   }
 
+  // 거래내역과 수정 폼을 동시에 열지 않고 공통 모달로 표시합니다.
+  function openAccountHistory(accountId) {
+    if (saving || accountStatusSaving) return;
+    setFormOpen(false);
+    setAccountPayments([]);
+    setPaymentsError("");
+    setPaymentsLoading(true);
+    setAccountStatusError("");
+    setSelectedAccountId(accountId);
+  }
+
+  function closeAccountHistory() {
+    if (saving || accountStatusSaving) return;
+    setSelectedAccountId(null);
+  }
+
   // 공통 모달의 배경·닫기·취소 버튼에서 함께 사용합니다.
   function closeRegistrationModal() {
-    if (saving) return;
+    if (saving || accountStatusSaving) return;
     setFormOpen(false);
   }
 
@@ -448,6 +461,7 @@ function BankAccount() {
           <button
             type="button"
             className="register-btn"
+            disabled={saving || accountStatusSaving}
             onClick={openAccountForm}
           >
             + 법인 계좌 신규 등록
@@ -675,9 +689,14 @@ function BankAccount() {
         itemsPerPage={5}
       />
 
-      {selectedAccount && (
-        <section>
-          <h3>회사계좌 거래내역</h3>
+      {selectedAccount && !formOpen && (
+        <div className="finance-registration-modal finance-account-detail">
+          <ModalBase
+            title="회사계좌 거래내역"
+            onClose={closeAccountHistory}
+            layout={(
+              <section aria-label="회사계좌 거래내역">
+
 
           <p>
             {selectedAccount.bankName} / {selectedAccount.accountName}
@@ -695,6 +714,7 @@ function BankAccount() {
           ) : accountPayments.length === 0 ? (
             <p>이 계좌에 연결된 입금·출금 이력이 없습니다.</p>
           ) : (
+            <div className="table-shell finance-account-history">
             <table>
               <thead>
                 <tr>
@@ -720,6 +740,7 @@ function BankAccount() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
 
           <p>
@@ -733,10 +754,14 @@ function BankAccount() {
             <p role="alert">{accountStatusError}</p>
           )}
 
+          <div className="finance-detail-actions">
+            <button type="button" className="erp-primary-button"
+              disabled={saving || accountStatusSaving}
+              onClick={() => openEditAccountForm(selectedAccount)}>수정</button>
           <button
             type="button"
             disabled={
-              accountStatusSaving ||
+              saving || accountStatusSaving ||
               !["사용", "ACTIVE", "STOP"].includes(selectedAccount.status)
             }
             onClick={() => handleAccountStatusChange(selectedAccount)}
@@ -748,13 +773,13 @@ function BankAccount() {
                 : "사용 중지"}
           </button>
 
-          <button
-            type="button"
-            onClick={() => setSelectedAccountId(null)}
-          >
-            닫기
-          </button>
-        </section>
+        
+          </div>
+
+              </section>
+            )}
+          />
+        </div>
       )}
 
     </div>
