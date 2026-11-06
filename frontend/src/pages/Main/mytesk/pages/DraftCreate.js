@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import ModalBase from "../../../../components/ModalBase";
 import axios from "axios";
-import { getLoginUser,getEmployeeAccounts } from "../../../../utils/authStorage";
+import { getLoginUser, getDbEmployeeAccounts as getEmployeeAccounts } from "../../../../utils/authStorage";
 import DepEmpList from "../../../../components/DepEmpList";
 
 

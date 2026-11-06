@@ -4,14 +4,18 @@ const cors = require('cors');
 require('dotenv').config();
 const db = require('./db');
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 4000;
 
 const Attendance = require('./models/Attendance'); //출결관련 함수 클레스
-const DraftServer = require('./models/Draft_server')
+const DraftServer = require('./models/Draft_server');
+const homSurver = require('./routes/homServer');
+const schedule = require('./routes/schedule');
 
 app.use(cors());
 app.use(express.json());
 app.use('/api/drafts', DraftServer);
+app.use('/api/AD', homSurver);
+app.use('/api/schedule', schedule);
 
 // 2. [사원 등록 API] RegisterPage 폼 전송 수신
 app.post('/api/register', async (req, res) => {
@@ -26,7 +30,7 @@ app.post('/api/register', async (req, res) => {
             INSERT INTO users (employee_id, name, email, password, department, position, phone)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
-        const [result] = await db.query(query, [
+        const [result] = await db.promise().query(query, [
             employeeId,
             name,
             email,
@@ -86,7 +90,7 @@ app.get('/api/users', (req, res) => {
 
 app.post('/api/attendance', async (req, res) =>{
         try{
-            const { empNumber } = req.params;
+            const empNumber = req.body?.empNumber ?? req.body?.userID;
             const records = await Attendance.getData(empNumber);
 
             res.json({
@@ -166,6 +170,6 @@ app.post('/api/login', (req, res) => {
 
 
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
 });

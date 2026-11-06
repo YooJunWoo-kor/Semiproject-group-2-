@@ -37,7 +37,6 @@ function HeaderNav(){
     const userFName = userName[0];
 
     // 디버깅용 consol창
-    console.log(localStorage.getItem("loginUser"));
 
     return(
         <div>

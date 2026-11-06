@@ -1,9 +1,12 @@
 import axios from 'axios';
 
-const LOGIN_USER_KEY = "loginUser";
+export const LOGIN_USER_KEY = "loginUser";
+const EMPLOYEE_ACCOUNT_KEY = "employeeAccounts";
 
 // env에서 설정한 api를 사용하거나, 없다면 기본값 4000번 포트 사용.
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000/api';
+//export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000/api';
+const defaultHost = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://${defaultHost}:4000/api`;
 
 // 로그인 사용자 저장
 export function saveLoginUser(user) {
@@ -20,57 +23,148 @@ export function getLoginUser() {
 
     return JSON.parse(user);
 }
+
+//오늘날짜 조회
+export function getTodayString (){
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0'); // 월은 0부터 시작하므로 +1
+    const day = String(today.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  };
+
+//출결 데이터 포멧팅 함수
+function formatDateToYYYYMMDD(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 // 출결 데이터 조회
 export async function getAttendance(){
-    return [{title: '출근',start:'2026-10-01', end:'2026-11-05', typeId: 0}];
+    //return [{title: '출근',start:'2026-10-01', end:'2026-11-05', typeId: 0}];
     // { title: "출근", start: "2026-10-01", end: "2026-10-01", typeId: 0 }
-    //const userId = getLoginUser.employeeKey;
-    // try {
-    //     const data = await axios.post(API_BASE_URL + '/attendance',{userId})
-    //     return data.data;
-    // } catch (error) {
-    //     if (error.response){
-    //         return alert(userID);
-    //     }
-    // }
+    const user = localStorage.getItem(LOGIN_USER_KEY);
+    const userID = JSON.parse(user).employeeKey;
+    
+    /*date: "2026-11-01T15:00:00.000Z"
+    end: "2026-11-02T09:10:00.000Z"
+    start: "2026-11-01T23:50:00.000Z"
+    title: "정상출근"*/
+
+     try {
+         const data = await axios.post(API_BASE_URL + '/AD/attendance',{userID})
+         const dataSet = data.data.data;
+
+         const formattedData = dataSet.map((item)=>{
+            const stData = formatDateToYYYYMMDD(item.start);
+            const enData = formatDateToYYYYMMDD(item.end);
+            const title = item.title;
+
+            return {
+                title: title
+                , start: stData
+                , end: enData
+                , typeId: (
+                    title == "정상출근" ? 0 :
+                    title == "지각" ? 1 :
+                    title == "휴가" ? 2 :
+                    title == "출장" ? 3 :
+                    title == "휴직" ? 4 : 5
+                )
+            }
+         });
+         return formattedData || [];
+     } catch (err) {
+        console.error("error:", err);
+         if (err.response){
+             return alert(userID);
+         }
+     }
 }
 
 // MASTER가 등록한 직원들
-export async function getEmployeeAccounts() {
-    try{
-        const response = await axios.get(API_BASE_URL +  '/users');
+export function getEmployeeAccounts() {
 
-        return response.data;
-    } catch(error){
-        throw new Error(
-            '직원 정보를 불러올 수 없습니다;'
-        )
+    const accounts =
+        localStorage.getItem(
+            EMPLOYEE_ACCOUNT_KEY
+        );
+
+    if (!accounts) {
+        return [];
     }
-    
+
+    return JSON.parse(accounts);
 }
 
 // 직원 계정 등록
-export async function saveEmployeeAccount(account) {
+export function saveEmployeeAccount(account) {
 
-    try{
+    const accounts =
+        getEmployeeAccounts();
 
-        const response = await axios.post(API_BASE_URL + "/register", account);
-        
-        return response.data;
-    }catch(error){
 
-        if(error.response && error.response.data){
-            throw new Error(
-                error.response.data.message ||
-                error.response.data.error ||
-                '직원 등록에 실패했습니다'
-            )
-        }
-
-        throw new Error(
-            '서버와 통신할 수 없습니다'
+    const keyExists =
+        accounts.some(
+            item =>
+                item.employeeKey ===
+                account.employeeKey
         );
+
+
+    if (keyExists) {
+
+        return {
+            success: false,
+            message: "이미 사용 중인 사원 Key입니다."
+        };
     }
+
+
+    const emailExists =
+        accounts.some(
+            item =>
+                item.email ===
+                account.email
+        );
+
+
+    if (emailExists) {
+
+        return {
+            success: false,
+            message: "이미 사용 중인 이메일입니다."
+        };
+    }
+
+
+    const newAccount = {
+        employeeKey: account.employeeKey,
+        name: account.name,
+        department: account.department,
+        position: account.position,
+        email: account.email,
+        password: account.password,
+        role: "USER"
+    };
+
+
+    localStorage.setItem(
+        EMPLOYEE_ACCOUNT_KEY,
+        JSON.stringify([
+            ...accounts,
+            newAccount
+        ])
+    );
+
+
+    return {
+        success: true
+    };
 }
 
 
@@ -80,7 +174,6 @@ export async function findLoginAccount (loginId,password) {
     const inputId = loginId.trim();
     const inputPassword = password.trim();
 
-    console.log('로그인버튼', API_BASE_URL);
     if(!inputId || !inputPassword){
         return alert("이메일 또는 비밀번호를 입력해주세요.");
     }
@@ -90,24 +183,17 @@ export async function findLoginAccount (loginId,password) {
     //return alert(API_BASE_URL);
     
     try{
-         const response = await axios.post(API_BASE_URL + '/login',{
+        const response = await axios.post(API_BASE_URL + '/login',{
             email: inputId,
             password: inputPassword
          })
-
-         console.log("서버 로그인 응답:", response.data);
-
-         return response.data;
-    }catch(error){
+        return response.data;
+    }
+    catch(error){
         if(error.response && error.response.data){
-            throw new Error(
-                error.response.data.message ||
-                '로그인에 실패했습니다.'
-            )
+            return error.response.data.message;
         }
-        throw new Error(
-            '서버와 통신할 수 없습니다'
-        )
+        return alert('서버와 통신할 수 없습니다.');
     }
 
     // -----------------------------
@@ -129,4 +215,16 @@ export async function findLoginAccount (loginId,password) {
     // }
 
     // return null;
+}
+
+// DB 직원 목록: 결재선 등 서버 데이터를 사용하는 화면용 (localStorage 계정 목록과 분리)
+export async function getDbEmployeeAccounts() {
+    const response = await axios.get(API_BASE_URL + '/users');
+    return response.data;
+}
+
+// DB 직원 등록: 서버 API 기반 등록 기능 (기존 localStorage 저장 함수와 분리)
+export async function saveDbEmployeeAccount(account) {
+    const response = await axios.post(API_BASE_URL + '/register', account);
+    return response.data;
 }

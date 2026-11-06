@@ -1,5 +1,5 @@
 import { useEffect, useState, useId } from "react";
-import { getEmployeeAccounts } from "../utils/authStorage";
+import { getDbEmployeeAccounts as getEmployeeAccounts } from "../utils/authStorage";
 
 function DepEmpList({ departmentName, onSelect }) {
     const [employees, setEmployees] = useState([]);

@@ -1,3 +1,50 @@
 .form-inputs { display: flex; align-items: center; gap: 10px; }
 .form-inputs { flex-wrap: wrap; }
 .form-inputs > * { flex: 1 1 180px; }
+
+.attendee-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px 4px 12px;
+    border-radius: 9999px;
+    background-color: var(--primary-color, #3b82f6); /* ColorList 변수 기본 적용 */
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    user-select: none;
+  }
+  
+  /* 흰색 배경의 동그란 x 버튼 */
+  .attendee-tag button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    min-height: 18px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+
+    padding: 0;
+    margin: 0;
+    background-color: #ffffff;
+    color: #4b5563;
+    border-radius: 18px;
+
+    font-size: 10px;
+    font-weight: bold;
+    line-height: 1;
+
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  }
+  
+  .attendee-tag button:hover {
+    background-color: #fee2e2;
+    color: #ef4444;
+    transform: scale(1.1);
+  }
