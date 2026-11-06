@@ -1,0 +1,53 @@
+/* Shared department / employee picker. No approval-page styles required. */
+.department-employee-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+.department-employee-picker__heading {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+}
+.department-employee-picker__departments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.department-employee-picker__department {
+    padding: 7px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    color: #1e293b;
+    cursor: pointer;
+}
+.department-employee-picker__department[aria-pressed="true"] {
+    border-color: #2563eb;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 600;
+}
+.department-employee-picker__employees {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.department-employee-picker__employee {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.department-employee-picker__employee input {
+    margin: 0;
+}
+.department-employee-picker__empty {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+}

@@ -1,7 +1,6 @@
 import axios from 'axios';
 
 export const LOGIN_USER_KEY = "loginUser";
-const EMPLOYEE_ACCOUNT_KEY = "employeeAccounts";
 
 // env에서 설정한 api를 사용하거나, 없다면 기본값 4000번 포트 사용.
 //export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000/api';
@@ -101,84 +100,41 @@ export async function getAttendance(){
 }
 
 // MASTER가 등록한 직원들
-export function getEmployeeAccounts() {
+export async function getEmployeeAccounts() {
+    try{
+        const response = await axios.get(API_BASE_URL +  '/users');
 
-    const accounts =
-        localStorage.getItem(
-            EMPLOYEE_ACCOUNT_KEY
-        );
-
-    if (!accounts) {
-        return [];
+        return response.data;
+    } catch(error){
+        throw new Error(
+            '직원 정보를 불러올 수 없습니다;'
+        )
     }
-
-    return JSON.parse(accounts);
+    
 }
 
 // 직원 계정 등록
-export function saveEmployeeAccount(account) {
+export async function saveEmployeeAccount(account) {
 
-    const accounts =
-        getEmployeeAccounts();
+    try{
 
+        const response = await axios.post(API_BASE_URL + "/register", account);
+        
+        return response.data;
+    }catch(error){
 
-    const keyExists =
-        accounts.some(
-            item =>
-                item.employeeKey ===
-                account.employeeKey
+        if(error.response && error.response.data){
+            throw new Error(
+                error.response.data.message ||
+                error.response.data.error ||
+                '직원 등록에 실패했습니다'
+            )
+        }
+
+        throw new Error(
+            '서버와 통신할 수 없습니다'
         );
-
-
-    if (keyExists) {
-
-        return {
-            success: false,
-            message: "이미 사용 중인 사원 Key입니다."
-        };
     }
-
-
-    const emailExists =
-        accounts.some(
-            item =>
-                item.email ===
-                account.email
-        );
-
-
-    if (emailExists) {
-
-        return {
-            success: false,
-            message: "이미 사용 중인 이메일입니다."
-        };
-    }
-
-
-    const newAccount = {
-        employeeKey: account.employeeKey,
-        name: account.name,
-        department: account.department,
-        position: account.position,
-        email: account.email,
-        password: account.password,
-        role: "USER"
-    };
-
-
-    localStorage.setItem(
-        EMPLOYEE_ACCOUNT_KEY,
-        JSON.stringify([
-            ...accounts,
-            newAccount
-        ])
-    );
-
-
-    return {
-        success: true
-    };
 }
 
 
@@ -188,6 +144,7 @@ export async function findLoginAccount (loginId,password) {
     const inputId = loginId.trim();
     const inputPassword = password.trim();
 
+    console.log('로그인버튼', API_BASE_URL);
     if(!inputId || !inputPassword){
         return alert("이메일 또는 비밀번호를 입력해주세요.");
     }
@@ -201,11 +158,16 @@ export async function findLoginAccount (loginId,password) {
             email: inputId,
             password: inputPassword
          })
-        return response.data;
-    }
-    catch(error){
+
+         console.log("서버 로그인 응답:", response.data);
+
+         return response.data;
+    }catch(error){
         if(error.response && error.response.data){
-            return error.response.data.message;
+            throw new Error(
+                error.response.data.message ||
+                '로그인에 실패했습니다.'
+            )
         }
         return alert('서버와 통신할 수 없습니다.');
     }
