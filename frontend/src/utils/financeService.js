@@ -1,7 +1,8 @@
 import axios from "axios";
+import {API_BASE_URL} from "./authStorage";
 
 // 재무관리 API 기본 주소
-const FINANCE_API_URL = "http://localhost:4000/api/finance";
+const FINANCE_API_URL = API_BASE_URL+"/finance";
 
 // 거래처 목록 조회
 export async function getPartners() {

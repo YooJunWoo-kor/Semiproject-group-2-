@@ -2,8 +2,7 @@
 const express = require("express");
 const db = require("../db");
 const financeMysql = require("mysql2/promise");
-//multer
-const multer = require("multer");
+
 const path = require("path");
 const fs = require("fs");
 const { randomUUID } = require("crypto");
