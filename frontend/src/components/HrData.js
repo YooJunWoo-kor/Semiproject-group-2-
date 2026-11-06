@@ -1,7 +1,5 @@
 import axios from 'axios';
-
-const API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000/api';
+import { API_BASE_URL } from '../utils/authStorage';
 
 // HR 부서 목록을 DB에서 조회합니다.
 export function getHrDepartments() {
