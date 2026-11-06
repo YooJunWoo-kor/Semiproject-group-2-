@@ -187,3 +187,19 @@
 .finance-approval-detail .modal-body > section > div > h3 {
     margin-top: 24px;
 }
+
+/* 6주짜리 달력도 들어가도록 높이 확보 */
+.finance-dashboard {
+    --fd-panel-height: 820px;
+}
+
+/* 달력 영역의 스크롤 해제 */
+.finance-dashboard .fd-board {
+    overflow: visible;
+}
+
+/* 검색 결과 목록은 기존처럼 스크롤 유지 */
+.finance-dashboard .fd-search-results ul {
+    min-height: 0;
+    overflow-y: auto;
+}
