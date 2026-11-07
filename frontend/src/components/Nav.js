@@ -11,7 +11,7 @@ function Nav(props){
     ]*/
 
     const urlist = props.urlist;
-    
+
     return(
         <div className="sub-main-nav">
             <ul>

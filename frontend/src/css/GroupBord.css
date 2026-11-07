@@ -7,7 +7,7 @@
     box-sizing: border-box;
   }
   
-  /* 상단 부서 선택 탭 목록 */
+  /* 상단  선택 탭 목록 */
   .grouplist {
     display: flex;
     align-items: center;
@@ -15,10 +15,10 @@
     list-style: none;
     padding: 0;
     margin: 0;
-    overflow-x: auto; /* 부서가 많아져도 스크롤 가능 */
+    overflow-x: auto; /* 가 많아져도 스크롤 가능 */
   }
   
-  /* 부서 탭 버튼 */
+  /*  탭 버튼 */
   .grouplist li button {
     padding: 5px 12px;
     font-size: 12px;
@@ -37,7 +37,7 @@
     color: #1e293b;
   }
   
-  /* 활성화된 부서 버튼 (선택 시 추가할 active 클래스) */
+  /* 활성화된  버튼 (선택 시 추가할 active 클래스) */
   .grouplist li button.active {
     background-color: #3b82f6;
     color: #ffffff;

@@ -13,10 +13,12 @@ const homSurver = require('./routes/homServer')
 const schedule = require('./routes/schedule')
 const DraftServer = require('./routes/drafts')
 const communityRouter = require('./routes/community');
+const financeRouter = require('./routes/financeRouters'); // 재무 API
 
 app.use(cors());
 app.use(express.json());
 app.use('/api/drafts', DraftServer);
+app.use('/api/finance', financeRouter);
 app.use('/api/AD', homSurver);
 app.use('/api/schedule', schedule);
 app.use('/api/drafts', DraftServer);
