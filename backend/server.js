@@ -163,7 +163,6 @@ app.get('/api/users', async (req, res) => {
 app.post('/api/login', (req, res) => {
 
     console.log("로그인 요청 도착", req.body.email);
-    console.log('작동중');
     const query = `
         SELECT
             e.employee_id,
@@ -201,6 +200,7 @@ app.post('/api/login', (req, res) => {
             }
 
             // 로그인 성공
+            console.log('로그인성공');
             return res.json({
                 result: 'success',
                 user: {
@@ -212,7 +212,9 @@ app.post('/api/login', (req, res) => {
                     role: user.role
                 }
             });
+            
         } else {
+            console.log('비밀번호, 아이디 오류');
             return res.status(401).json(
                 { message: '이메일 또는 비밀번호가 일치하지 않습니다.' }
             );

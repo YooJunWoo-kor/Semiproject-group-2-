@@ -171,24 +171,4 @@ export async function findLoginAccount (loginId,password) {
         }
         return alert('서버와 통신할 수 없습니다.');
     }
-
-    // -----------------------------
-    // MASTER가 등록한 직원 로그인
-    // 이메일 사용
-    // -----------------------------
-    // const employeeAccounts =
-    //     getEmployeeAccounts();
-
-    // const employee =
-    //     employeeAccounts.find(
-    //         account =>
-    //             account.email === inputId &&
-    //             account.password === inputPassword
-    //     );
-
-    // if (employee) {
-    //     return employee;
-    // }
-
-    // return null;
 }
