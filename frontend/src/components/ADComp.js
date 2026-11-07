@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { getAttendance } from "../utils/authStorage";
 import BasicCalendar from "../components/calendar/BasicCalendar.js";
 import WeeklyCalendar from "../components/weeklycalendar/WeeklyCalendar.js";
-import DateCount from "./DateCount.js";
 import './ADComp.css';
 import ADBord from "./ADBord.js";
 
@@ -26,8 +25,7 @@ function ADComp(){
       try {
         const getData = await getAttendance();
         setLoadError('');
-        console.log(getData);
-        setData(getData);
+        
         getData.map((item)=>{
           if(item.start == currontDay){
             if(item.title == '근무중'){
@@ -40,6 +38,9 @@ function ADComp(){
             console.log("출근버튼 처리 완료");
             setAttendBtnStl(resetAttendBtnStl);
           }});
+
+        console.log(getData);
+        setData(getData);
       } catch (error) {
         setLoadError(error.message || '근태 정보를 불러오지 못했습니다. 백엔드 연결을 확인해 주세요.');
       }

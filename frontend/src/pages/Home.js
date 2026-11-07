@@ -104,9 +104,7 @@ function Home() {
                         </button>
                     </form>
                 </main>
-                <footer>
-                    <button onClick={registerHendle}> 회원가입 </button>
-                    <br />
+                <footer style={{paddingTop: '50px'}}>
                     <small> 계정 분실 시 전산팀에 문의하세요. </small>
                 </footer>
             </div>
