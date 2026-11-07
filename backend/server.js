@@ -14,10 +14,13 @@ const schedule = require('./routes/schedule')
 const DraftServer = require('./routes/drafts')
 const communityRouter = require('./routes/community');
 const financeRouter = require('./routes/financeRouters'); // 재무 API
+const hrRouter = require('./routes/hrRoutes'); // 인사 API
+
+const Attendance = require('./models/Attendance'); // 출결 관련 함수 클래스
 
 app.use(cors());
 app.use(express.json());
-app.use('/api/drafts', DraftServer);
+app.use('/api/hr', hrRouter);
 app.use('/api/finance', financeRouter);
 app.use('/api/AD', homSurver);
 app.use('/api/schedule', schedule);

@@ -1,6 +1,6 @@
 // src/pages/Main/MainApp.js
 import React from 'react';
-import { NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import MainModule from './MainModule';
 import FinanceHome from './finance/FinanceHom';
 import HrRoutes from './hr/HrRoutes';

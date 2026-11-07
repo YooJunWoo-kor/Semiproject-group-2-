@@ -11,53 +11,36 @@ function Home() {
 
     const navigate = useNavigate();
 
-    // const handleLogin = (e) => {
-    //     e.preventDefault();
-    //     const account = findLoginAccount(
-    //         loginId,
-    //         password
-    //     );
-
-    //     if (!account) {
-    //         alert(
-    //             "이메일 또는 비밀번호가 일치하지 않습니다."
-    //         );
-    //         return;
-    //     }
-    //     else{
-    //         saveLoginUser({
-    //             employeeKey: account.employeeKey || null,
-    //             name: account.name,
-    //             email: account.email,
-    //             department: account.department,
-    //             position: account.position,
-    //             role: account.role
-    //         });
-
-    //         navigate('/main');
-    //     }
-    // };
-
     const handleLogin = async (e) => {
         e.preventDefault();
-
         try {
-            // 서버의 로그인 응답을 기다립니다.
-            const result = await findLoginAccount(loginId, password);
+            const result = await findLoginAccount(
+                loginId,
+                password
+            );
 
-            // 로그인 성공 여부와 사원 정보 확인
-            if (result?.result !== "success" || !result.user) {
-                alert("이메일 또는 비밀번호가 일치하지 않습니다.");
+            if (result?.result !== 'success' || !result.user) {
+                alert(
+                    "이메일 또는 비밀번호가 일치하지 않습니다."
+                );
                 return;
             }
-
-            // 서버가 보내준 사원 정보를 저장합니다.
-            // employee_id, department_id, name, role 등이 포함됩니다.
-            saveLoginUser(result.user);
-
-            navigate('/main');
+            else{
+                const account = result.user;
+                saveLoginUser({
+                    ...account,
+                    employeeKey: account.employee_id,
+                    name: account.name,
+                    email: account.email || loginId.trim(),
+                    department: account.department,
+                    position: account.position,
+                    role: account.role
+                });
+    
+                navigate('/main');
+            }
         } catch (error) {
-            alert(error.message || "로그인 중 오류가 발생했습니다.");
+            alert(error.message || '로그인에 실패했습니다.');
         }
     };
 
