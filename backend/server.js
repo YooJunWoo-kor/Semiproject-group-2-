@@ -10,6 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 const homSurver = require('./routes/homServer')
+const homeRoutes = require('./routes/homeServer');
 const schedule = require('./routes/schedule')
 const DraftServer = require('./routes/drafts')
 const communityRouter = require('./routes/community');
@@ -21,6 +22,7 @@ const Attendance = require('./models/Attendance'); // 출결 관련 함수 클�
 app.use(cors());
 app.use(express.json());
 app.use('/api/hr', hrRouter);
+app.use('/api', homeRoutes);
 app.use('/api/finance', financeRouter);
 app.use('/api/AD', homSurver);
 app.use('/api/schedule', schedule);
