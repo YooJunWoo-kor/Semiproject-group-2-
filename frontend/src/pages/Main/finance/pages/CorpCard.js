@@ -528,7 +528,7 @@ function CorpCard() {
   }
 
   return (
-    <div className="sub-container">
+    <div className="border-container">
       <header className="dashboard-header">
         <span className="subtitle">법인카드 관리</span>
         <div className="dashboard-top">

@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import './Calendar.css';
 import { TOGLE_COLORS } from '../../utils/authStorage'
-import WeeklyCalendar from '../weeklycalendar/WeeklyCalendar.js';
 
-function BasicCalendar({ schedule = [], showWeekly = false }) {
+function BasicCalendar({ schedule = [] }) {
 
   // 현재 보고 있는 연도와 월
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -70,7 +69,6 @@ function BasicCalendar({ schedule = [], showWeekly = false }) {
   const weekdays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   return (
-    <>
     <div>
 
       {/* 달력 상단 */}
@@ -129,7 +127,6 @@ function BasicCalendar({ schedule = [], showWeekly = false }) {
                               style={{
                                 // border: `1px solid ${setColor}`,
                                 backgroundColor: setColor,
-                                color: "#fff",
                                 borderRadius: `10px`,
                                 textAlign: 'center'
                               }}
@@ -152,8 +149,6 @@ function BasicCalendar({ schedule = [], showWeekly = false }) {
       </div>
 
     </div>
-    {showWeekly && <WeeklyCalendar schedule={schedule} />}
-    </>
   );
 }
 

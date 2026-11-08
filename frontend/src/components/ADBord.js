@@ -40,7 +40,7 @@ function ADBord({dataSet, btnStl}){
     }, [btnStl]);
 
     return (
-        <div className="attendance-card">
+        <div className="attendance-card" style={{maxWidth: '250px'}}>
             <div className="attendance-card-header">
             <span className="attendance-badge">근태 관리</span>
             </div>

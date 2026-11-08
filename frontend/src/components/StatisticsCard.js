@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { TOGLE_COLORS } from '../utils/authStorage'
 
 function StatisticsCard(props){
     const ANIMATION_DURATION = 800; //애니메이션 속도
@@ -24,23 +25,28 @@ function StatisticsCard(props){
 
     }, [targetCount]);
 
+    const color = TOGLE_COLORS[props.stiyle];
+
     return (
         <div className="content-card">
-            <p style={{
-                margin: 0
-            }}>{props.title}</p>
-            <span style={{
-                fontSize: "30px",
-                fontWeight: "bold",
-                marginRight: 5,
-                fontVariantNumeric: "tabular-nums" //너비흔들림 방지.
-            }}>{displayCount}</span>
-            {
-                props.stiyle == 0 ? ("개"):
-                props.stiyle == 1 ? ("명"):
-                props.stiyle == 2 ? ("만원") :
-                props.stiyle == 3 ? ("일") : ("")
-            }
+            <div style={{backgroundColor:color, height: '5px', width: '100%'}}></div>
+            <div style={{padding: '15px'}}>
+                <p style={{
+                    margin: 0
+                }}>{props.title}</p>
+                <span style={{
+                    fontSize: "30px",
+                    fontWeight: "bold",
+                    marginRight: 5,
+                    fontVariantNumeric: "tabular-nums" //너비흔들림 방지.
+                }}>{displayCount}</span>
+                {
+                    props.stiyle == 0 ? ("개"):
+                    props.stiyle == 1 ? ("명"):
+                    props.stiyle == 2 ? ("만원") :
+                    props.stiyle == 3 ? ("일") : ("")
+                }
+            </div>
         </div>
     )
 }

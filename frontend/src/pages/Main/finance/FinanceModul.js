@@ -113,7 +113,7 @@ function FinanceModul() {
         ['partners', '거래처'], ['items', '관리 품목']
     ];
     return (
-        <div className="sub-container finance-dashboard">
+        <div className="border-container finance-dashboard">
             <header className="fd-header">
                 <h1>대시보드</h1><p>재무 현황과 문서 작성을 한눈에 확인하세요.</p>
                 <button type="button" className="fd-refresh" disabled={loading} onClick={() => setReload(reload + 1)}>

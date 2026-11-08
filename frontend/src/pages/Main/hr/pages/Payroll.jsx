@@ -628,7 +628,7 @@ export default function Payroll() {
 
   // 왼쪽 직원 목록과 오른쪽 급여 상세·처리 영역을 함께 렌더링합니다.
   return (
-    <div className="sub-container hr-payroll-management">
+    <div className="border-container hr-payroll-management">
       <header className="dashboard-header">
         <div>
           <span className="subtitle">급여관리</span>

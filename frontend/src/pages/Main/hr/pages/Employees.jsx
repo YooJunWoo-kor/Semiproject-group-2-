@@ -865,7 +865,7 @@ export default function Employees() {
   }));
 
   return (
-    <div className="sub-container hr-employee-management">
+    <div className="border-container hr-employee-management">
       {/* 헤더 영역 */}
       <header className="dashboard-header">
         <div>

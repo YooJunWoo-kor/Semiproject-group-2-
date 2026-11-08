@@ -618,7 +618,7 @@ function Approval() {
   }
 
   return (
-    <div className="sub-container">
+    <div className="border-container">
       <header className="dashboard-header">
         <span className="subtitle">결제(지출) 관리</span>
 

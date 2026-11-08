@@ -23,7 +23,7 @@ export default function HrRoutes() {
   ];
   return (
     <div className='sub-main-contain'>
-      <Nav urlist={urlList}/>
+      <Nav urlist={urlList} title={'인사관리'}/>
       {/* 주소에 따라 HR 대시보드와 각 관리 화면을 전환합니다. */}
       {/* 메뉴 URL과 실제 HR 화면을 연결합니다. */}
       <Routes>

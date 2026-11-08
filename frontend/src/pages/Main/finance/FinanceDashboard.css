@@ -6,9 +6,9 @@
 .finance-dashboard .fd-header { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
 .finance-dashboard .fd-header h1 { color: #087e87; font-size: 28px; }
 .finance-dashboard .fd-header > p { font-size: 15px; color: #465a72; padding-left: 20px; border-left: 1px solid #bed9df; }
-.finance-dashboard .fd-refresh { margin-left: auto; border: 1px solid #b9dadd; background: #fff; color: #087c83; padding: 7px 12px; border-radius: 8px; cursor: pointer; }
+.finance-dashboard .fd-refresh { margin-left: auto; border: 1px solid #b9dadd; background: var(--color-surface); color: #087c83; padding: 7px 12px; border-radius: 8px; cursor: pointer; }
 .finance-dashboard .fd-refresh:disabled { opacity: .6; cursor: wait; }
-.finance-dashboard .fd-panel { background: #fff; border: 1px solid #dceef0; border-radius: 16px; box-shadow: 0 3px 7px #087e8710; }
+.finance-dashboard .fd-panel { background: var(--color-surface); border: 1px solid #dceef0; border-radius: 16px; box-shadow: 0 3px 7px #087e8710; }
 .finance-dashboard .fd-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
 .finance-dashboard .fd-stat { padding: 18px 20px; }
 .finance-dashboard .fd-stat h2 { font-size: 17px; font-weight: 500; color: #425572; }
@@ -29,7 +29,7 @@
 .finance-dashboard .fd-summary + .fd-summary { border-top: 1px solid #cce5e7; }
 .finance-dashboard .fd-summary-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .finance-dashboard .fd-periods { display: flex; border: 1px solid #bfd2df; border-radius: 9px; overflow: hidden; }
-.finance-dashboard .fd-periods button { border: 0; border-left: 1px solid #d4e0e8; background: #fff; color: #425572; padding: 6px 15px; cursor: pointer; }
+.finance-dashboard .fd-periods button { border: 0; border-left: 1px solid #d4e0e8; background: var(--color-surface); color: #425572; padding: 6px 15px; cursor: pointer; }
 .finance-dashboard .fd-periods button:first-child { border-left: 0; }
 .finance-dashboard .fd-periods button[aria-pressed="true"] { background: #caeeee; color: #007b83; font-weight: 700; }
 .finance-dashboard button:focus-visible { outline: 3px solid #008a96; outline-offset: 3px; }

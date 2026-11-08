@@ -1,16 +1,13 @@
-
 import React, { useState } from 'react';
 import PaginationTable from '../../../../components/PaginationTable';
 import ModalBase from '../../../../components/ModalBase';
 
-export default function NoticePage({ communityItems }) {
-  const { items, addItem, removeItem } = communityItems;
+export default function NoticePage({  }) {
+  const items = []
+  const { addItem, removeItem } = [];
 
   // 검색어 관리
   const [query, setQuery] = useState('');
-
-  // 현재 화면 관리: 목록 또는 상세 보기
-  const [view, setView] = useState('list');
 
   // 선택한 게시글 관리
   const [selected, setSelected] = useState(null);
@@ -81,7 +78,6 @@ export default function NoticePage({ communityItems }) {
     handleCloseWriteModal();
 
     // 목록 화면으로 이동
-    setView('list');
     setSelected(null);
 
     alert('공지사항이 등록되었습니다.');
@@ -92,12 +88,8 @@ export default function NoticePage({ communityItems }) {
     if (!window.confirm('해당 공지글을 삭제하시겠습니까?')) {
       return;
     }
-
     removeItem(targetId);
-
     setSelected(null);
-    setView('list');
-
     alert('공지사항이 삭제되었습니다.');
   };
 
@@ -117,23 +109,14 @@ export default function NoticePage({ communityItems }) {
       item.important
         ? <span className="status-badge status-danger">공지</span>
         : '-',
-
       item.category,
-
       <span
         className="table-link-title"
-        onClick={() => {
-          setSelected(item);
-          setView('detail');
-        }}
       >
         {item.title}
       </span>,
-
       item.author,
-
       item.createdAt ? item.createdAt.slice(0, 10) : '-',
-
       item.views || 0,
     ],
   }));
@@ -190,7 +173,7 @@ export default function NoticePage({ communityItems }) {
   );
 
   return (
-    <div className="sub-container">
+    <div className="border-container">
 
       {/* 상단 공통 헤더 */}
       <header className="dashboard-header">
@@ -198,7 +181,6 @@ export default function NoticePage({ communityItems }) {
 
         <div className="dashboard-top">
 
-          {view === 'list' && (
             <button
               type="button"
               className="register-btn"
@@ -206,30 +188,15 @@ export default function NoticePage({ communityItems }) {
             >
               + 공지글 작성
             </button>
-          )}
-
-          {view !== 'list' && (
-            <button
-              type="button"
-              onClick={() => setView('list')}
-            >
-              목록으로
-            </button>
-          )}
-
         </div>
       </header>
 
       <hr />
 
       {/* 목록 화면 */}
-      {view === 'list' && (
-        <>
-          <div className="filter-bar">
-
-            <label className="search-field">
-              검색:
-
+          <div className="filter-bar" style={{display: 'flex', gap: '5px'}}>
+            <p>검색</p>
+            <label className="search-field" >
               <input
                 id="search"
                 type="text"
@@ -237,9 +204,7 @@ export default function NoticePage({ communityItems }) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
-
             </label>
-
           </div>
 
           <PaginationTable
@@ -248,54 +213,6 @@ export default function NoticePage({ communityItems }) {
             allData={tableData}
             itemsPerPage={10}
           />
-        </>
-      )}
-
-      {/* 상세 보기 화면 */}
-      {view === 'detail' && selected && (
-        <article className="detail-card">
-
-          <header>
-            <h3>{selected.title}</h3>
-
-            <span className="subtext">
-              작성자: {selected.author} |
-              분류: {selected.category} |
-              작성일: {selected.createdAt?.slice(0, 10)} |
-              조회수: {selected.views || 0}
-            </span>
-          </header>
-
-          <hr />
-
-          <div className="detail-body">
-            {selected.content}
-          </div>
-
-          <div className="table-actions">
-
-            <button
-              type="button"
-              onClick={() => {
-                alert('공지사항 수정 기능은 아직 구현되지 않았습니다.');
-              }}
-            >
-              수정
-            </button>
-
-            <button
-              type="button"
-              className="danger-button"
-              onClick={() => remove(selected.id)}
-            >
-              삭제
-            </button>
-
-          </div>
-
-        </article>
-      )}
-
       {/* 공지사항 작성 모달 */}
       {isModalOpen && (
         <ModalBase
@@ -307,4 +224,52 @@ export default function NoticePage({ communityItems }) {
 
     </div>
   );
+}
+
+export function NoticeModule({style = 1}){
+  const tableHeaders = [
+    '구분',
+    '분류',
+    '제목',
+    '작성자',
+    '작성일',
+    '조회수',
+  ];
+
+  const items = [];
+
+  // 검색어 관리
+  const [query, setQuery] = useState('');
+
+  const filtered = items.filter((item) => {
+    const searchText = `${item.title} ${item.content}`.toLowerCase();
+
+    return searchText.includes(query.trim().toLowerCase());
+  });
+
+  // PaginationTable 데이터
+  const tableData = filtered.map((item) => ({
+    content: [
+      item.important
+        ? <span className="status-badge status-danger">공지</span>
+        : '-',
+      item.category,
+      <span
+        className="table-link-title"
+      >
+        {item.title}
+      </span>,
+      item.author,
+      item.createdAt ? item.createdAt.slice(0, 10) : '-',
+      item.views || 0,
+    ],
+  }));
+
+  return <PaginationTable
+            title="공지사항 목록"
+            th={tableHeaders}
+            allData={tableData}
+            itemsPerPage={10}
+            style = {style}
+          />
 }

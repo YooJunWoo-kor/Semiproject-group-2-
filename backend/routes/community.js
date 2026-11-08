@@ -46,58 +46,47 @@ router.get('/employee', async (req, res) => {
 
 });
 
-
-// ==========================================
 // 2. 게시글 전체 조회
-// ==========================================
-
 router.get('/free-posts', async (req, res) => {
-
     try {
-
         // 게시글 조회
         const [posts] = await db.promise().query(
             `SELECT
-                id,
-                title,
+                post_id,
+                post_title,
                 content,
                 author,
                 DATE_FORMAT(created_at, '%Y-%m-%d') AS createdAt,
                 DATE_FORMAT(updated_at, '%Y-%m-%d') AS updatedAt
-             FROM test_free_posts
+             FROM free_posts
              ORDER BY created_at DESC`
         );
-
 
         // 댓글 전체 조회
         const [comments] = await db.promise().query(
             `SELECT
-                id,
+                comment_id,
                 post_id,
-                content,
+                comment_content,
                 author,
                 DATE_FORMAT(created_at, '%Y-%m-%d') AS createdAt
-             FROM test_free_comments
+             FROM free_comments
              ORDER BY created_at ASC`
         );
 
 
         // 게시글마다 해당 댓글 연결
+        console.log(posts, comments);
         const result = posts.map((post) => {
-
             return {
                 ...post,
 
                 comments: comments.filter(
-                    (comment) => comment.post_id === post.id
+                    (comment) => comment.post_id === post.post_id
                 )
-
             };
-
         });
-
-
-        res.json(result);
+        res.status(200).json(result);
 
     } catch (error) {
 

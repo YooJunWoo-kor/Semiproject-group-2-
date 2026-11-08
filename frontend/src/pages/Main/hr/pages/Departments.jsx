@@ -173,7 +173,7 @@ export default function Departments() {
   }
 
   return (
-    <div className="sub-container">
+    <div className="border-container">
       <header className="dashboard-header">
         <div>
           <span className="subtitle">부서관리</span>

@@ -28,7 +28,7 @@ export default function ScheduleCalendar() {
   }));
 
   return (
-    <section className="sub-container">
+    <section className="border-container">
       <BasicCalendar schedule={calendarSchedules} />
     </section>
   );

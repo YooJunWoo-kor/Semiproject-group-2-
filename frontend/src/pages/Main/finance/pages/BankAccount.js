@@ -453,7 +453,7 @@ function BankAccount() {
   }
 
   return (
-    <div className="sub-container">
+    <div className="border-container">
       {/* 1. 헤더 & 액션 버튼 영역 */}
       <header className="dashboard-header">
         <span className="subtitle">회사 계좌 관리</span>

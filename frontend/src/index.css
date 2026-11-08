@@ -8,6 +8,7 @@
 @import './css/Schedul.css';
 @import './css/ModalPopup.css';
 @import './css/Form.css';
+@import './css/fontSetting.css';
 
 :root {
   font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
@@ -50,7 +51,7 @@ ul{
 /* 공통 입력 요소 */
 input:not([type='checkbox']):not([type='radio']), select, textarea {
   width: 100%; min-height: 42px; padding: 10px 12px; color: var(--color-ink);
-  background: #fff; border: 1px solid #d9deea; border-radius: 9px; outline: none;
+  background: var(--color-surface); border: 1px solid #d9deea; border-radius: 9px; outline: none;
   transition: border-color .18s, box-shadow .18s;
 }
 textarea { min-height: 120px; resize: vertical; }
@@ -66,10 +67,10 @@ button {
 button:hover { border-color: #bcc7dc; background: #f8faff; }
 button:active { transform: translateY(1px); }
 button[type='submit'], .action-btn, .submit-btn, .erp-primary-button {
-  color: #fff; background: var(--color-brand); border-color: var(--color-brand);
+  color: var(--color-surface); background: var(--color-brand); border-color: var(--color-brand);
 }
 button[type='submit']:hover, .action-btn:hover, .submit-btn:hover, .erp-primary-button:hover {
-  color: #fff; background: var(--color-brand-dark); border-color: var(--color-brand-dark);
+  color: var(--color-surface); background: var(--color-brand-dark); border-color: var(--color-brand-dark);
 }
 hr { border: 0; border-top: 1px solid var(--color-line); }
 
@@ -83,19 +84,35 @@ hr { border: 0; border-top: 1px solid var(--color-line); }
 }
 
 
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 100deg;
+  inherits: false;
+}
+
+@keyframes rotateGradient {
+  0% {
+    --angle: 0deg;
+  }
+  100% {
+    --angle: 360deg; 
+  }
+}
+
 /* 로그인 */
 .login-page {
   display: flex;
   min-height: 100vh;
   place-items: center;
   align-items: center;
-  background: radial-gradient(ellipse at 15% 10%, #e8efff 0, transparent 34%), var(--color-canvas);
+  background: linear-gradient(var(--angle), var(--color-brand), var(--color-success));
+  animation: rotateGradient 20s normal infinite;
 }
 
 .login-border{
   display: flex;
   flex-flow: column;
-  background-color: #fff;
+  background-color: var(--color-surface);
   border-radius: 15px;
   padding: 30px;
   padding-bottom: 150px;

@@ -433,7 +433,7 @@ function Partners() {
   }
 
   return (
-    <div className="sub-container">
+    <div className="border-container">
       {/* 1. 상단 공통 헤더 */}
       <header className="dashboard-header">
         <span className="subtitle">거래처 및 정산 마감 관리</span>

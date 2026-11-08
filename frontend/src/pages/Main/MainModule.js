@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import ADComp from '../../components/ADComp';
 import Dashboard from './hr/Dashboard';
 import MainLinkButton from '../../components/MainLinkButton';
+import {NoticeModule} from './community/pages/NoticePage'
 
 import { 
   Users, 
@@ -47,44 +48,47 @@ function MainModule() {
   return (
     <div className="main-content">
       {/* 좌측 보드영역 */}
-      <div className="main-board">
-        <div className="board-header">
-          <div className="board-btn-group">
-            <button
-              type="button"
-              className="board-arrow-btn"
-              onClick={prevBoard}
-            >
-              &lt;
-            </button>
-            <button
-              type="button"
-              className="board-arrow-btn"
-              onClick={nextBoard}
-            >
-              &gt;
-            </button>
-          </div>
+      <div className="main-Arrow-bord">
+        <div className="board-btn-group">
+          <button
+            type="button"
+            className="board-arrow-btn"
+            onClick={prevBoard}
+          >
+            &lt;
+          </button>
+          <button
+            type="button"
+            className="board-arrow-btn"
+            onClick={nextBoard}
+          >
+            &gt;
+          </button>
         </div>
-
-        {boardList[index]}
       </div>
-
-      {/* 우측 아이콘 영역 */}
-      <main className="nav-bord">
-        <ul className="main-grid">
-          {modules.map((item) => (
-            
-              <MainLinkButton 
-                key={item.path}
-                icon={item.icon} 
-                text={item.title} 
-                link={item.path} 
-              />
-            
-          ))}
-        </ul>
-      </main>
+      <div style={{display:'flex', flex:'1'}}>
+        <div className="main-board">
+          {boardList[index]}
+        </div>
+        <div style={{display:'flex', flexFlow:'column', margin:'0 20px', flex:'1', gap: '10px'}}>
+          <NoticeModule style={2}/>
+        </div>
+        {/* 우측 아이콘 영역 */}
+        <main className="nav-bord">
+          <ul className="main-grid">
+            {modules.map((item) => (
+              
+                <MainLinkButton 
+                  key={item.path}
+                  icon={item.icon} 
+                  text={item.title} 
+                  link={item.path} 
+                />
+              
+            ))}
+          </ul>
+        </main>
+      </div>
     </div>
   );
 }

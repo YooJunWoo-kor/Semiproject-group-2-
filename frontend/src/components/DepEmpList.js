@@ -51,7 +51,7 @@ function DepEmpList({ departmentName, onSelect }) {
 
     return (
         <div>
-            <h4>{departmentName} 직원 목록</h4>
+            <h4>{departmentName}</h4>
 
             {employees.map(employee => (
                 <label key={employee.employee_id}>

@@ -522,7 +522,7 @@ export default function Attendance() {
   }
 
   return (
-    <div className="sub-container hr-attendance-management">
+    <div className="border-container hr-attendance-management">
       <header className="dashboard-header">
         <div>
           <span className="subtitle">근태관리</span>

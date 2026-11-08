@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
 //기본 공통 네비
 
@@ -13,17 +13,15 @@ function Nav(props){
     const urlist = props.urlist;
 
     return(
-        <div className="sub-main-nav">
-            <ul>
-                <li>전산업무센터</li>
+        <div className="sub-border">
+            <p>{props.title}</p>
+            <nav className="sub-main-nav">
                 {urlist.map((item)=>(
-                    <li>
-                        <Link to = {item.url}>
+                        <NavLink key={item.url} to = {item.url} end>
                             {item.name}
-                        </Link>
-                    </li>
+                        </NavLink>
                 ))}
-            </ul>
+            </nav>
         </div>
     )
 }

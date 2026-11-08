@@ -19,7 +19,7 @@ function ScheduleList() {
   });
 
   return (
-    <section className="sub-container">
+    <section className="border-container">
       <h2>일정 목록</h2>
       <p>
         <input aria-label="일정 검색" value={keyword} onChange={event => setKeyword(event.target.value)} placeholder="일정명·담당자 검색" />

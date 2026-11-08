@@ -2,7 +2,6 @@ import StatisticsCard from '../../../components/StatisticsCard';
 import { getLoginUser } from '../../../utils/authStorage';
 import { useEffect, useState } from 'react';
 import ModalBase from '../../../components/ModalBase';
-import HRAttendanceView from './HRAttendanceView';
 import {
     getHrAttendance,
     getHrDepartmentAttendance,
@@ -242,12 +241,9 @@ export default function Dashboard() {
     }, [today, selectedDepartmentId]);
 
     return (
-        <div className="sub-container">
+        <div className="border-container">
             <header className="dashboard-header">
                 <span className="subtitle">인사관리 대시보드</span>
-                <span className="subtext">
-                    처리할 세부 인사 항목을 선택하세요.
-                </span>
 
                 <div className="dashboard-top">
                     {isMaster && (
@@ -276,12 +272,7 @@ export default function Dashboard() {
             </section>
 
             <div className="stats-section">
-                {/* 전체 근태자료를 달력·리스트에 전달합니다. */}
-                <HRAttendanceView
-                    attendanceData={attendanceData}
-                    isLoading={attendanceLoading}
-                    error={attendanceError}
-                />
+                
 
                 <div className="attendance-card hr-department-attendance">
                     <h2>부서 출결현황</h2>

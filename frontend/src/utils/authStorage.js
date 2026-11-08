@@ -37,32 +37,66 @@ export function getLoginUser() {
     return JSON.parse(user);
 }
 
-// 로그아웃
-export function logoutUser() {
-
-    localStorage.removeItem(
-        LOGIN_USER_KEY
-    );
-}
-
-// 기존 출퇴근 위젯에서 사용하는 근태 조회 API입니다.
-export async function getAttendance() {
-    const user = getLoginUser();
-    const userID = user?.employee_id || user?.employeeKey;
-    if (!userID) throw new Error('다시 로그인한 후 근태 정보를 조회해 주세요.');
-    const response = await axios.post(API_BASE_URL + '/AD/attendance', { userID });
-    if (response.data?.result !== 'success' || !Array.isArray(response.data.data)) {
-        throw new Error('근태 정보를 불러오지 못했습니다.');
-    }
-    return response.data.data;
-}
-
-export function getTodayString() {
+//오늘날짜 조회
+export function getTodayString (){
     const today = new Date();
     const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0'); // 월은 0부터 시작하므로 +1
     const day = String(today.getDate()).padStart(2, '0');
+    
     return `${year}-${month}-${day}`;
+  };
+
+//출결 데이터 포멧팅 함수
+function formatDateToYYYYMMDD(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+// 출결 데이터 조회
+export async function getAttendance(){
+    //return [{title: '출근',start:'2026-10-01', end:'2026-11-05', typeId: 0}];
+    // { title: "출근", start: "2026-10-01", end: "2026-10-01", typeId: 0 }
+    const user = localStorage.getItem(LOGIN_USER_KEY);
+    const userID = JSON.parse(user).employeeKey;
+    
+    /*date: "2026-11-01T15:00:00.000Z"
+    end: "2026-11-02T09:10:00.000Z"
+    start: "2026-11-01T23:50:00.000Z"
+    title: "정상출근"*/
+
+     try {
+         const data = await axios.post(API_BASE_URL + '/AD/attendance',{userID})
+         const dataSet = data.data.data;
+
+         const formattedData = dataSet.map((item)=>{
+            const stData = formatDateToYYYYMMDD(item.start);
+            const enData = formatDateToYYYYMMDD(item.end);
+            const title = item.title;
+
+            return {
+                title: title
+                , start: stData
+                , end: enData
+                , typeId: (
+                    title == "정상출근" ? 0 :
+                    title == "지각" ? 1 :
+                    title == "휴가" ? 2 :
+                    title == "출장" ? 3 :
+                    title == "휴직" ? 4 : 5
+                )
+            }
+         });
+         return formattedData || [];
+     } catch (err) {
+        console.error("error:", err);
+         if (err.response){
+             return alert(userID);
+         }
+     }
 }
 
 // MASTER가 등록한 직원들
@@ -130,8 +164,31 @@ export async function findLoginAccount (loginId,password) {
          return response.data;
     }catch(error){
         if(error.response && error.response.data){
-            throw new Error(error.response.data.message || '로그인에 실패했습니다.');
+            throw new Error(
+                error.response.data.message ||
+                '로그인에 실패했습니다.'
+            )
         }
-        throw new Error('서버와 통신할 수 없습니다. 백엔드 서버 실행 상태와 API 주소를 확인해 주세요.');
+        return alert('서버와 통신할 수 없습니다.');
     }
+
+    // -----------------------------
+    // MASTER가 등록한 직원 로그인
+    // 이메일 사용
+    // -----------------------------
+    // const employeeAccounts =
+    //     getEmployeeAccounts();
+
+    // const employee =
+    //     employeeAccounts.find(
+    //         account =>
+    //             account.email === inputId &&
+    //             account.password === inputPassword
+    //     );
+
+    // if (employee) {
+    //     return employee;
+    // }
+
+    // return null;
 }

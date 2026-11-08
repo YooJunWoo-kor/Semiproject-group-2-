@@ -2,13 +2,12 @@ import React, { useEffect, useState } from "react";
 import { getAttendance } from "../utils/authStorage";
 import BasicCalendar from "../components/calendar/BasicCalendar.js";
 import WeeklyCalendar from "../components/weeklycalendar/WeeklyCalendar.js";
-import './ADComp.css';
+import '../css/ADComp.css';
 import ADBord from "./ADBord.js";
 
 function ADComp(){
     // 달력과 출퇴근 관리 모듈
     const [data, setData] = useState([]);
-    const [loadError, setLoadError] = useState('');
     //출결버튼 관리
     let resetAttendBtnStl = 0;
     let [attendBtnStl, setAttendBtnStl] = useState(0);
@@ -22,28 +21,21 @@ function ADComp(){
 
     //근테관련 데이터 get
     const dataSet = async () => {
-      try {
-        const getData = await getAttendance();
-        setLoadError('');
-        
-        getData.map((item)=>{
-          if(item.start == currontDay){
-            if(item.title == '근무중'){
-              resetAttendBtnStl = 1;
-            }
-            else{
-              resetAttendBtnStl = 2;
-            }
+      const getData = await getAttendance();
+      console.log(getData);
+      setData(getData);
+      getData.map((item)=>{
+        if(item.start == currontDay){
+          if(item.title == '근무중'){
+            resetAttendBtnStl = 1;
+          }
+          else{
+            resetAttendBtnStl = 2;
+          }
 
-            console.log("출근버튼 처리 완료");
-            setAttendBtnStl(resetAttendBtnStl);
-          }});
-
-        console.log(getData);
-        setData(getData);
-      } catch (error) {
-        setLoadError(error.message || '근태 정보를 불러오지 못했습니다. 백엔드 연결을 확인해 주세요.');
-      }
+          console.log("출근버튼 처리 완료");
+          setAttendBtnStl(resetAttendBtnStl);
+        }});
     };
 
     //출근버튼을 눌렀을때 최신상태 갱신
@@ -56,36 +48,19 @@ function ADComp(){
       dataSet();
     }, []);
 
-    const[time, setTime] = useState(new Date());
-    const hours = time.getHours();
-    const minutes = String(time.getMinutes()).padStart(2,'0');
-    const seconds = String(time.getSeconds()).padStart(2,'0');
-    const timeString = hours + ":" + minutes + ":" + seconds;
-
     const [isCalStyile, setCalStyile] = useState(0);
-
-    useEffect(()=>{
-        const timer = setInterval(() => {
-            setTime(new Date());
-          }, 1000);
-
-          return ()=>{
-            clearInterval(timer);
-          };
-        }, []);
-
-        return (
+    
+    return (
           <div style={{
             display: 'flex',
             flexDirection: 'row',
-            justifyContent: 'space-between',
             alignItems: 'stretch',
             gap: '20px',                /* 달력과 출퇴근 카드 사이 간격 */
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            flex: '1'
           }}>
             {/* 좌측: 달력 컴포넌트 */}
             <div className="attendance-card">
-              {loadError && <p role="alert">{loadError}</p>}
               <div>
                 <button onClick ={()=>{
                   setCalStyile(0);

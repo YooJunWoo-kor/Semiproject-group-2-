@@ -1,5 +1,4 @@
-import './App.css';
-import Home from './pages/Home';
+import Home from './pages/LoginPage';
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
 import MainApp from './pages/Main/MainApp';
 

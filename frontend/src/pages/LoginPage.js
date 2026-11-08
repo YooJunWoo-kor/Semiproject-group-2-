@@ -14,35 +14,30 @@ function Home() {
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
-            const result = await findLoginAccount(
-                loginId,
-                password
-            );
+            // 1. 서버 통신 대기
+            const responseData = await findLoginAccount(loginId, password);
 
-            if (result?.result !== 'success' || !result.user) {
-                alert(
-                    "이메일 또는 비밀번호가 일치하지 않습니다."
-                );
-                return;
-            }
-            else{
-                const account = result.user;
+            // 2. 서버 응답 결과 판별
+            if (responseData && responseData.result === "success") {
                 saveLoginUser({
-                    ...account,
-                    employeeKey: account.employee_id,
-                    name: account.name,
-                    email: account.email || loginId.trim(),
-                    department: account.department,
-                    position: account.position,
-                    role: account.role
+                    employeeKey: responseData.user.employee_id || null,
+                    name: responseData.user.name,
+                    email: responseData.user.email,
+                    department: responseData.user.department_id,
+                    position: responseData.user.position,
+                    role: responseData.user.role
                 });
-    
+                
                 navigate('/main');
+            } else {
+                alert(responseData || "로그인에 실패했습니다.");
             }
         } catch (error) {
-            alert(error.message || '로그인에 실패했습니다.');
+            // 3. 입력값 누락, 401 불일치, DB 조회 오류 등 모든 예외 알림을 '여기서 단 한 번만' 띄웁니다!
+            alert(error.message);
         }
     };
+
 
     const registerHendle = (e) => {
         e.preventDefault();
@@ -51,7 +46,7 @@ function Home() {
 
 
     return (
-        <div className="login-page">
+        <div className="login-page" data-theme='light'>
             <div className="login-border">
                 <header>
                     <h2>ERP 시스템</h2>
@@ -73,7 +68,7 @@ function Home() {
                                         e.target.value
                                     )
                                 }
-                            // required
+                                // required
                             />
                         </div>
                         <div>
@@ -90,7 +85,7 @@ function Home() {
                                         e.target.value
                                     )
                                 }
-                            // required
+                                // required
                             />
                         </div>
                         <div>
@@ -104,7 +99,8 @@ function Home() {
                         </button>
                     </form>
                 </main>
-                <footer style={{paddingTop: '50px'}}>
+                <footer>
+                    <br />
                     <small> 계정 분실 시 전산팀에 문의하세요. </small>
                 </footer>
             </div>

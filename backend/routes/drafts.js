@@ -223,6 +223,7 @@ router.get('/departments', (req, res) => {
                  ORDER BY department_id
     `;
 
+    console.log('부서조회 시작')
     db.query(sql, (err,data) => {
         if(err){
             console.error('부서 조회 실패', err);
