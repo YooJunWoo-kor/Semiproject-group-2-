@@ -65,9 +65,7 @@ function ProductDetail() {
     // ?는 존재하면 뒤에 값을 읽고 ||는 없다면 뒤에 값을 넣으라는 명령문
 
     const [inspectionDate, setInspectionDate] = useState(
-        product?.inspectionDate === "-"
-            ? ""
-            : product?.inspectionDate || ""
+        product?.inspectionDate === "-" ? "" : product?.inspectionDate || ""
     );
 
     const [inspector, setInspector] = useState("");
@@ -119,14 +117,8 @@ function ProductDetail() {
                 </div>
 
                 <span
-                    className={
-                        qualityStatus === "통과"
-                            ? "status pass"
-                            : qualityStatus === "불합격"
-                                ? "status fail"
-                                : "status not-tested"
-                    }
-                >
+                    className={qualityStatus === "통과" ? "status pass" : qualityStatus === "불합격" ? "status fail" : "status not-tested"}>
+                        
                     {qualityStatus}
                 </span>
 
@@ -223,9 +215,7 @@ function ProductDetail() {
 
                         <button
                             className={
-                                qualityStatus === "불합격"
-                                    ? "selected"
-                                    : ""
+                                qualityStatus === "불합격" ? "selected" : ""
                             }
                             onClick={() =>
                                 setQualityStatus("불합격")
@@ -236,9 +226,7 @@ function ProductDetail() {
 
                         <button
                             className={
-                                qualityStatus === "미실시"
-                                    ? "selected"
-                                    : ""
+                                qualityStatus === "미실시" ? "selected" : ""
                             }
                             onClick={() =>
                                 setQualityStatus("미실시")
@@ -380,11 +368,7 @@ function ProductDetail() {
 
                                 <span
                                     className={
-                                        product.qualityStatus === "통과"
-                                            ? "status pass"
-                                            : product.qualityStatus === "불합격"
-                                                ? "status fail"
-                                                : "status not-tested"
+                                        product.qualityStatus === "통과" ? "status pass" : product.qualityStatus === "불합격" ? "status fail" : "status not-tested"
                                     }
                                 >
                                     {product.qualityStatus}
