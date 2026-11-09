@@ -146,6 +146,7 @@ app.post('/api/login', (req, res) => {
             e.employee_number,
             e.name,
             e.department_id,
+            d.department_name,
             e.position,
             e.email,
             ea.role,
@@ -183,6 +184,7 @@ app.post('/api/login', (req, res) => {
                     employee_id: user.employee_id,
                     employee_number: user.employee_number,
                     name: user.name,
+                    department_name: user.department_name,
                     department_id: user.department_id,
                     position: user.position,
                     role: user.role
