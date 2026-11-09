@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import BasicCalendar from '../../../components/calendar/BasicCalendar';
 import WeeklyCalendar from '../../../components/weeklycalendar/WeeklyCalendar';
-import StatisticsCard from '../../../components/StatisticsCard';
 import ModalBase from '../../../components/ModalBase'
 import ScheduleModalPopup from './ScheduleModalPopup';
 import axios from 'axios';
 import { formatDateToYYYYMMDD, API_BASE_URL, getLoginUser } from '../../../utils/authStorage';
+import ColorTeg from '../../../components/ColorTeg';
 
 function ScheduleModul() {
     //로그인 유저 정보 get
@@ -91,6 +91,7 @@ function ScheduleModul() {
         <div className="border-container">
             <header className="dashboard-header">
                 <span className="subtitle">일정관리</span>
+                <ColorTeg title={'마감임박'} count={5} type={'개'}/>
                 <div className="dashboard-top">
                     <button
                         type="button"
@@ -101,11 +102,6 @@ function ScheduleModul() {
                     </button>
                 </div>
             </header>
-
-            <section className="stats-section">
-                <StatisticsCard title={"마감임박"} count={"5"} stiyle={0}/>
-                <StatisticsCard title={"주요일정"} count={"5"} stiyle={0}/>
-            </section>
 
             {/* 켈린더에 스케쥴을 보내야 함 */}
             <div style={{

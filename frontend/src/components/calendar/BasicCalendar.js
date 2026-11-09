@@ -123,13 +123,17 @@ function BasicCalendar({ schedule = [] }) {
         slotIndex++;
       }
 
-      // [새로 추가됨] 최대 줄 수를 넘어가면 숨김 처리하고 카운트 증가
+      // 최대 줄 수를 넘어가면 숨김 처리하고 카운트 증가
       if (slotIndex < MAX_SLOT) {
         visibleEvents.push({
           data: item,
           startCol: startCol + 1,
           endCol: endCol + 2,
-          slot: slotIndex
+          slot: slotIndex,
+
+          //이번주 시작/종료일정인지
+          isActualStart: itemStart >= weekStartDate,
+          isActualEnd: itemEnd <= weekEndDate,
         });
       } else {
         for (let col = startCol; col <= endCol; col++) {
@@ -192,30 +196,43 @@ function BasicCalendar({ schedule = [] }) {
 
                 {/* 2. 전면 일정 막대 레이어 */}
                 <div className="g-cal-events-layer">
-                {visibleEvents.map((evt, evtIndex) => {
-                    const item = evt.data;
-                    const typeId = item.typeId !== undefined ? item.typeId : item.type_id;
-                    const bgColor = TOGLE_COLORS?.[typeId] || '#4A90E2';
-                    const titleText = item.title || item.schedule_name || '일정';
+                    {visibleEvents.map((evt, evtIndex) => {
+                      const item = evt.data;
+                      const typeId =
+                        item.typeId !== undefined
+                          ? item.typeId
+                          : item.type_id;
+                      const bgColor = TOGLE_COLORS?.[typeId] || '#4A90E2';
+                      const titleText =
+                        item.title || item.schedule_name || '일정';
 
-                    return (
-                      <button
-                        type="button"
-                        key={item.schedule_id || evtIndex}
-                        className="g-cal-bar"
-                        style={{
-                          gridColumnStart: evt.startCol,
-                          gridColumnEnd: evt.endCol,
-                          gridRowStart: evt.slot + 1, // slot 0 -> 1번째 줄, slot 1 -> 2번째 줄
-                          backgroundColor: bgColor
-                        }}
-                        onClick={() => console.log('선택된 일정:', item)}
-                        title={titleText}
-                      >
-                        {titleText}
-                      </button>
-                    );
-                  })}
+                      // 이번 주에 시작하는 일정이면 왼쪽 둥글게(4px), 이전 주에서 넘어왔으면 직각(0px)
+                      // 이번 주에 끝나는 일정이면 오른쪽 둥글게(4px), 다음 주로 이어지면 직각(0px)
+                      const leftRadius = evt.isActualStart ? '30px' : '0px';
+                      const rightRadius = evt.isActualEnd ? '30px' : '0px';
+                      const dynamicRadius = `${leftRadius} ${rightRadius} ${rightRadius} ${leftRadius}`;
+
+                      return (
+                        <button
+                          type="button"
+                          key={item.schedule_id || evtIndex}
+                          className="g-cal-bar"
+                          style={{
+                            gridColumnStart: evt.startCol,
+                            gridColumnEnd: evt.endCol,
+                            gridRowStart: evt.slot + 1,
+                            backgroundColor: bgColor,
+                            borderRadius: dynamicRadius, // [새로 추가됨] 계산된 모서리 적용
+                            marginLeft: evt.isActualStart ? '1px' : '0px', // [새로 추가됨] 이어질 땐 벽에 딱 붙임
+                            marginRight: evt.isActualEnd ? '1px' : '0px',
+                          }}
+                          onClick={() => console.log('선택된 일정:', item)}
+                          title={titleText}
+                        >
+                          {titleText}
+                        </button>
+                      );
+                    })}
 
                   {/* [새로 추가됨] 3개 이상 넘쳤을 때 표시되는 '+N개 더보기' 버튼 */}
                   {overflowCounts.map((count, dayIdx) => {
@@ -229,7 +246,7 @@ function BasicCalendar({ schedule = [] }) {
                         style={{
                           gridColumnStart: dayIdx + 1,
                           gridColumnEnd: dayIdx + 2,
-                          top: '62px' // 2개 막대 아래(20 + 21*2 = 62px)에 고정
+                          top: '0px' // 2개 막대 아래(20 + 21*2 = 62px)에 고정
                         }}
                         onClick={() => {
                           const clickedDate = formatDate(week[dayIdx]);
