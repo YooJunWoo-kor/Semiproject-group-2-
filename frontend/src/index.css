@@ -148,6 +148,17 @@ form.draft-box > label { display: flex; flex-direction: column; gap: 10px; color
   display: flex; align-items: center; justify-content: flex-end; gap: 10px;
   margin-top: 4px; flex-wrap: wrap;
 }
+
+/* 내 결재 요청 목록의 관리 열에만 가운데 정렬 적용 */
+[data-page="draft-request"] .table-shell th:last-child,
+[data-page="draft-request"] .table-shell td:last-child {
+  text-align: center;
+}
+
+[data-page="draft-request"] .table-shell td:last-child .draft-actions {
+  justify-content: center;
+}
+
 .draft-box > input[type='text'] { max-width: 380px; }
 .draft-item {
   min-width: 0; padding: 20px 22px; background: var(--color-surface);
