@@ -1069,147 +1069,193 @@ export default function Employees() {
         </div>
       </div>
 
-      {loading ? (
-        <p role="status">직원 목록을 불러오는 중입니다.</p>
-      ) : (
-        <div className="hr-organization-grid">
-          <aside className="hr-panel department-panel">
-            <div className="hr-panel-heading">
-              <h2>부서 목록</h2>
-              {isMaster && selectedDepartment !== '전체' ? (
-                <button
-                  type="button"
-                  className="status-badge status-danger"
-                  onClick={deleteDepartment}
-                  disabled={saving}
-                >
-                  부서 삭제
-                </button>
-              ) : (
-                <span>{departments.length}개</span>
-              )}
-            </div>
+      
+{loading ? (
+  <p role="status">직원 목록을 불러오는 중입니다.</p>
+) : (
+  <div className="hr-organization-grid">
 
+    {/* 1. 부서 목록 */}
+    <aside className="hr-panel department-panel">
+      <div className="hr-panel-heading">
+        <h2>부서 목록</h2>
+        <span>{departments.length}개</span>
+      </div>
+
+      <button
+        type="button"
+        className={`department-item ${
+          selectedDepartment === '전체' ? 'selected' : ''
+        }`}
+        onClick={() => setSelectedDepartment('전체')}
+      >
+        <strong>전체 부서</strong>
+        <span>{employees.length}명</span>
+      </button>
+
+      {departmentCards.map((department) => (
+        <button
+          type="button"
+          key={department.departmentId}
+          className={`department-item ${
+            selectedDepartment === String(department.departmentId)
+              ? 'selected'
+              : ''
+          }`}
+          onClick={() =>
+            setSelectedDepartment(String(department.departmentId))
+          }
+        >
+          <strong>{department.departmentName}</strong>
+          <span>{department.memberCount}명</span>
+
+          {department.managerName && (
+            <small>부서장: {department.managerName}</small>
+          )}
+
+          {department.description && (
+            <small>{department.description}</small>
+          )}
+        </button>
+      ))}
+
+      <div className="hr-department-manage">
+        <strong>선택 부서 관리</strong>
+        <p>{selectedDepartmentName}</p>
+
+        {isMaster && (
+          <>
             <button
               type="button"
-              className={`department-item ${selectedDepartment === '전체' ? 'selected' : ''}`}
-              onClick={() => setSelectedDepartment('전체')}
+              className="hr-department-delete-button"
+              onClick={deleteDepartment}
+              disabled={
+                saving ||
+                selectedDepartment === '전체' ||
+                employees.some(
+                  (employee) =>
+                    String(employee.departmentId) ===
+                    selectedDepartment
+                )
+              }
             >
-              <strong>전체 부서</strong>
-              <span>{employees.length}명</span>
+              부서 삭제
             </button>
 
-            {departmentCards.map((department) => (
+            <small>
+              {selectedDepartment === '전체'
+                ? '삭제할 부서를 선택해 주세요.'
+                : employees.some(
+                    (employee) =>
+                      String(employee.departmentId) ===
+                      selectedDepartment
+                  )
+                ? '소속 직원이 있는 부서는 삭제할 수 없습니다.'
+                : '연결된 자료 유무는 서버에서 최종 확인합니다.'}
+            </small>
+          </>
+        )}
+      </div>
+    </aside>
+
+    {/* 2. 소속 직원 목록 */}
+    <section className="hr-panel employee-list-panel">
+      <div className="hr-section-heading">
+        <div>
+          <h2>소속 직원</h2>
+          <p>
+            {selectedDepartmentName} · {filteredEmployees.length}명
+          </p>
+        </div>
+
+        <span>전체 {filteredEmployees.length}명</span>
+      </div>
+
+      <PaginationTable
+        key={
+          search +
+          '-' +
+          selectedDepartment +
+          '-' +
+          selectedStatus +
+          '-' +
+          selectedAccountStatus +
+          '-' +
+          employees.length
+        }
+        title="선택 부서 직원 목록"
+        th={tableHeaders}
+        allData={tableData}
+        itemsPerPage={5}
+      />
+    </section>
+
+    {/* 3. 직원 상세정보 */}
+    <aside className="hr-panel employee-detail-panel">
+      <div className="hr-panel-heading">
+        <h2>직원 상세정보</h2>
+      </div>
+
+      {selectedEmployee ? (
+        <>
+          <div className="hr-detail-summary">
+            <div>
+              <h3>{selectedEmployee.name}</h3>
+              <p>
+                {selectedEmployee.employeeNumber} ·{' '}
+                {selectedEmployee.departmentName || '-'} ·{' '}
+                {selectedEmployee.position}
+              </p>
+            </div>
+
+            <span
+              className={`status-tag ${getEmploymentStatusClass(
+                selectedEmployee.employmentStatus
+              )}`}
+            >
+              {selectedEmployee.employmentStatus}
+            </span>
+          </div>
+
+          <EmployeeDetail employee={selectedEmployee} />
+
+          <div className="employee-detail-actions">
+            {isMaster && (
               <button
                 type="button"
-                key={department.departmentId}
-                className={`department-item ${
-                  selectedDepartment === String(department.departmentId)
-                    ? 'selected'
-                    : ''
-                }`}
-                onClick={() =>
-                  setSelectedDepartment(String(department.departmentId))
-                }
+                onClick={() => openEditModal(selectedEmployee)}
               >
-                <strong>{department.departmentName}</strong>
-                <span>{department.memberCount}명</span>
-                {department.managerName && (
-                  <small>부서장: {department.managerName}</small>
-                )}
-                {department.description && (
-                  <small>{department.description}</small>
-                )}
+                직원 수정
               </button>
-            ))}
-          </aside>
-
-          <section className="hr-panel employee-list-panel">
-            <div className="hr-section-heading">
-              <div>
-                <h2>소속 직원</h2>
-                <p>{selectedDepartmentName} · {filteredEmployees.length}명</p>
-              </div>
-              <span>전체 {filteredEmployees.length}명</span>
-            </div>
-            <PaginationTable
-              key={
-                search +
-                '-' +
-                selectedDepartment +
-                '-' +
-                selectedStatus +
-                '-' +
-                selectedAccountStatus +
-                '-' +
-                employees.length
-              }
-              title="선택 부서 직원 목록"
-              th={tableHeaders}
-              allData={tableData}
-              itemsPerPage={5}
-            />
-          </section>
-
-          <aside className="hr-panel employee-detail-panel">
-            <div className="hr-panel-heading">
-              <h2>직원 상세정보</h2>
-            </div>
-
-            {selectedEmployee ? (
-              <>
-                <div className="hr-detail-summary">
-                  <div>
-                    <h3>{selectedEmployee.name}</h3>
-                    <p>
-                      {selectedEmployee.employeeNumber} ·{' '}
-                      {selectedEmployee.departmentName || '-'} ·{' '}
-                      {selectedEmployee.position}
-                    </p>
-                  </div>
-                  <span
-                    className={`status-tag ${getEmploymentStatusClass(
-                      selectedEmployee.employmentStatus
-                    )}`}
-                  >
-                    {selectedEmployee.employmentStatus}
-                  </span>
-                </div>
-                <EmployeeDetail employee={selectedEmployee} />
-                <div className="employee-detail-actions">
-                  {isMaster && (
-                    <button
-                      type="button"
-                      onClick={() => openEditModal(selectedEmployee)}
-                    >
-                      직원 수정
-                    </button>
-                  )}
-                  {isMaster && selectedEmployee.employmentStatus !== '퇴사' && (
-                    <button
-                      type="button"
-                      onClick={() => retireEmployee(selectedEmployee)}
-                      disabled={saving}
-                    >
-                      퇴사 처리
-                    </button>
-                  )}
-                  <Link
-                    to="/main/hr/attendance"
-                    className="hr-attendance-link"
-                  >
-                    근태 상세 보기
-                  </Link>
-                </div>
-              </>
-            ) : (
-              <p className="hr-empty-state">
-                직원을 선택하면 상세정보가 표시됩니다.
-              </p>
             )}
-          </aside>
-        </div>
+
+            {isMaster &&
+              selectedEmployee.employmentStatus !== '퇴사' && (
+                <button
+                  type="button"
+                  onClick={() => retireEmployee(selectedEmployee)}
+                  disabled={saving}
+                >
+                  퇴사 처리
+                </button>
+              )}
+
+            <Link
+              to="/main/hr/attendance"
+              className="hr-attendance-link"
+            >
+              근태 상세 보기
+            </Link>
+          </div>
+        </>
+      ) : (
+        <p className="hr-empty-state">
+          직원을 선택하면 상세정보가 표시됩니다.
+        </p>
       )}
-    </div>
-  );
-}
+    </aside>
+
+      </div>
+)}
+</div>
+)}

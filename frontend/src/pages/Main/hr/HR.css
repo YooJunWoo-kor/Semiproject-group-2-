@@ -701,12 +701,17 @@
    3. 직원·부서 통합관리
 ======================================== */
 
+/* 직원 · 부서 · 상세정보 3단 레이아웃 */
 .hr-employee-management .hr-organization-grid {
   display: grid;
-  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr) minmax(240px, 280px);
-  gap: 16px;
+  grid-template-columns:
+    180px
+    minmax(210px, 0.6fr)
+    minmax(330px, 1.6fr);
+  gap: 12px;
   align-items: start;
 }
+
 
 .hr-employee-management .stats-section {
   display: grid;
@@ -1877,6 +1882,30 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* =========================================
+   부서 목록 / 소속 직원 / 직원 상세정보
+   3개 패널 하단 높이 통일
+   ========================================= */
+
+   @media (min-width: 1181px) {
+    .hr-employee-management .hr-organization-grid {
+      align-items: stretch;
+    }
+  
+    .hr-employee-management .hr-organization-grid > .hr-panel {
+      height: 100%;
+      box-sizing: border-box;
+      align-self: stretch;
+    }
+  
+    /* 직원 상세정보 버튼을 패널 하단에 배치 */
+    .hr-employee-management .employee-detail-actions {
+      margin-top: auto;
+    }
+  }
+  
 
 
 /* ========================================
