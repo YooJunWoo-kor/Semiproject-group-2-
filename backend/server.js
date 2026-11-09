@@ -13,6 +13,9 @@ const homSurver = require('./routes/homServer');
 const schedule = require('./routes/schedule');
 const DraftServer = require('./routes/drafts');
 const communityRouter = require('./routes/community');
+const financeRouter = require('./routes/financeRouters'); // main 재무 라우터
+const hrRouter = require('./routes/hrRoutes'); // main 인사 라우터
+const Attendance = require('./models/Attendance');
 
 // 품질관리 라우터 추가
 const qualityRoutes = require('./routes/quality');
@@ -22,6 +25,8 @@ app.use(cors());
 app.use(express.json());
 
 // API 연결
+app.use('/api/hr', hrRouter);
+app.use('/api/finance', financeRouter);
 app.use('/api/drafts', DraftServer);
 app.use('/api/AD', homSurver);
 app.use('/api/schedule', schedule);

@@ -9,7 +9,7 @@
     padding: 4px 6px 4px 12px;
     border-radius: 9999px;
     background-color: var(--primary-color, #3b82f6); /* ColorList 변수 기본 적용 */
-    color: #ffffff;
+    color: var(--color-surface);
     font-size: 13px;
     font-weight: 500;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -31,7 +31,7 @@
 
     padding: 0;
     margin: 0;
-    background-color: #ffffff;
+    background-color: var(--color-surface);
     color: #4b5563;
     border-radius: 18px;
 

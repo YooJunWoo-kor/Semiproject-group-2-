@@ -91,8 +91,8 @@ function MyTeskList() {
 
     return (
         <div className="sub-main-contain">
-            <Nav urlist={urlList} />
-            <div className="sub-container">
+            <Nav urlist={urlList} title={'내업무 관리'}/>
+            <div className="border-container">
                 {draftError && <p role="alert">{draftError}</p>}
                 <Routes>
                     <Route index element={

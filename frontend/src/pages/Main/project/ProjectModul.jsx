@@ -20,7 +20,7 @@ export default function ProjectModul({projectlist}) {
   
 
   return (
-    <div className="sub-container">
+    <div className="border-container">
       <header className="dashboard-header">
           <span className='subtitle'>프로젝트 관리</span>
           <div className="dashboard-top">

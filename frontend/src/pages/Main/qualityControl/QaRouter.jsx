@@ -18,7 +18,7 @@ function QaRouter() {
 
     return (
         <div className='sub-main-contain'>
-            <Nav urlist={urlList}/>
+            <Nav urlist={urlList} title={'품질관리'}/>
             <Routes>
                 <Route index element={<Main />} />
                 <Route path="manage/*" element={<QualityTestList />} />

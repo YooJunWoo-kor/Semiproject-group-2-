@@ -16,7 +16,7 @@ function GetPopover({value, layout}){
           
         }}
         >
-          <button onClick = {()=>{
+          <button type='button' onClick = {()=>{
               if(isClick == true){
                 setIsClick(false);
               }else{

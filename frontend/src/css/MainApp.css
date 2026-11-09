@@ -1,27 +1,19 @@
 .main-sell{
-    
 }
 
 .main-content {
     display: flex;
-    justify-content: center;
+    flex-flow: column;
     padding: 10px 50px;
     width: calc(100%);
     min-height: 80vh;
     margin: 0 auto;
-    gap:50px;
-
     min-height: calc(100vh - 120px);
 }
 
-.main-board{}
-
-/* 화면 너비가 500이하로 줄어들 때 */
-@media (max-width: 900px){
-    .main-content{
-        flex-direction: column;
-        align-items: center;
-    }
+.main-board{
+  display: flex;
+  flex:1;
 }
 
 .main-bord{
@@ -29,14 +21,14 @@
     width: min(800px, calc(100% - 78px));
     background-color: red;
     border-radius: var(--radius-card);
+    
 }
 
 /* 헤더 전체: 제목(좌)과 버튼 묶음(우) 양 끝 배치 */
-.board-header {
+.main-Arrow-bord {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
+    max-height: 50px;
+    top:0;
     margin-bottom: 12px;
   }
 
@@ -65,7 +57,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background-color: #ffffff;
+    background-color: var(--color-surface);
     border: 1px solid #e2e8f0;
     border-radius: 50%;
     font-size: 11px;
@@ -85,23 +77,25 @@
   }
 
 .nav-bord{
-    width: min(480px, calc(100%));
+    width: min(270px);
+    display: flex;
 }
 
 .main-grid{
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 5px;
 }
 
 .main-card{
     text-align: center;
     min-width: 130px;
-    min-height: 130px;
+    min-height: 150px;
     border: 1px solid var(--color-line);
     box-shadow: var(--card-shadow);
     border-radius: var(--radius-card);
-    background-color: #fff;
+    background-color: var(--color-surface);
+    font-size: var(--subFont-size-2);
 }
 
 .link-icon-wrapper {

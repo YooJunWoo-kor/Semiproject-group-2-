@@ -127,7 +127,6 @@ function BasicCalendar({ schedule = [] }) {
                               style={{
                                 // border: `1px solid ${setColor}`,
                                 backgroundColor: setColor,
-                                color: "#fff",
                                 borderRadius: `10px`,
                                 textAlign: 'center'
                               }}

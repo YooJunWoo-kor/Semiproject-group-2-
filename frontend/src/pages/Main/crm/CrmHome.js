@@ -79,7 +79,7 @@ export default function CrmHome({ data }) {
   }));
 
   return (
-    <div className="sub-container">
+    <div className="border-container">
       {/* 1. 상단 대시보드 헤더 */}
       <header className="dashboard-header">
         <span className="subtitle">고객관계관리 대시보드</span>

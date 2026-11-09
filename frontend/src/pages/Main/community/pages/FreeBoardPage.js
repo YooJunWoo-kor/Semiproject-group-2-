@@ -10,100 +10,52 @@ import {
     addFreePost,
     updateFreePost,
     deleteFreePost,
-    getEmployee,
     addFreeComment,
     deleteFreeComment
 } from '../../../../utils/communityApi';
+import { getLoginUser } from '../../../../utils/authStorage';
 
 
-function FreeBoardPage({ communityItems }) {
+function FreeBoardPage() {
 
     const location = useLocation();
 
-
-    // ==========================================
     // 1. 로그인 직원 정보 관리
-    // ==========================================
+    console.log('로그인 직원 정보:', getLoginUser())
+    const [employee, setEmployee] = useState(getLoginUser());
 
-    const [employee, setEmployee] = useState(null);
-
-    useEffect(() => {
-
-        const fetchEmployee = async () => {
-
-            try {
-
-                const data = await getEmployee('master@enova.co.kr');
-
-                setEmployee(data);
-
-                console.log('로그인 직원 정보:', data);
-
-            } catch (error) {
-
-                console.error('직원 정보 조회 실패:', error);
-
-            }
-
-        };
-
-        fetchEmployee();
-
-    }, []);
-
-
-    // ==========================================
     // 2. 게시글 데이터 관리
-    // ==========================================
-
     const [items, setItems] = useState([]);
 
     // MySQL에서 게시글 전체 조회
     useEffect(() => {
-
         const fetchPosts = async () => {
-
             try {
-
                 const posts = await getFreePosts();
-
+                
                 setItems(posts);
-
                 console.log('MySQL 게시글 목록:', posts);
-
 
                 // 다른 화면에서 선택한 게시글이 있다면 상세 보기
                 const selectedItemId = location.state?.selectedItemId;
 
-                if (selectedItemId) {
 
+                if (selectedItemId) {
                     const selectedPost = posts.find(
                         (item) =>
                             String(item.id) === String(selectedItemId)
                     );
-
                     if (selectedPost) {
-
                         setSelected(selectedPost);
-
                         setView('detail');
-
                     }
-
                 }
-
             } catch (error) {
-
                 console.error('게시글 조회 실패:', error);
-
                 alert('게시글 목록을 불러오지 못했습니다.');
-
             }
-
         };
-
         fetchPosts();
-
     }, []);
 
 
@@ -548,14 +500,10 @@ function FreeBoardPage({ communityItems }) {
 
     }));
 
-
-    // ==========================================
     // 12. 화면 출력
-    // ==========================================
-
     return (
 
-        <div className="sub-container">
+        <div className="border-container">
 
 
             {/* 상단 공통 헤더 */}
@@ -620,7 +568,6 @@ function FreeBoardPage({ communityItems }) {
                         </label>
 
                     </div>
-
 
                     <PaginationTable
                         title="자유게시판 목록"

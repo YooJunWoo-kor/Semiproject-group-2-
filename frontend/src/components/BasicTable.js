@@ -4,13 +4,7 @@ import React from "react";
 
 function BasicTable({title, th, td}){
     th = th == null ? ["메뉴1","메뉴2","메뉴3","메뉴4","메뉴5",] : th;
-    td = td == null ? [
-        {content: ["메뉴1","메뉴2","메뉴3","메뉴4","메뉴5",]}
-        ,{content: ["메뉴1","메뉴2","메뉴3","메뉴4","메뉴5",]}
-        ,{content: ["메뉴1","메뉴2","메뉴3","메뉴4","메뉴5",]}
-        ,{content: ["메뉴1","메뉴2","메뉴3","메뉴4","메뉴5",]}
-        ,{content: ["메뉴1","메뉴2","메뉴3","메뉴4","메뉴5",]}
-    ] : td;
+    td = td.length == 0 ? false : td;
 
     title = title == null ? "테이블제목" : title;
 
@@ -27,12 +21,26 @@ function BasicTable({title, th, td}){
                             <th>{item}</th>
                         ))}
                     </tr>
-                    {td.map((item)=>{
-                        return <tr>{item.content.map((item)=>(
-                            <td style={{
-                                fontSize:"13"
-                            }}>{item}</td>
-                        ))}</tr>
+
+                    {!td ?
+                        <tr
+                            style={{
+                                height:'200px'
+                            }}
+                        ><td
+                            colSpan={th.length}
+                            style={{
+                                textAlign: 'center'
+
+                            }}
+                        >등록된 정보가 없습니다.</td></tr>
+
+                        : td.map((item)=>{
+                            return <tr>{item.content.map((item)=>(
+                                <td style={{
+                                    fontSize:"13"
+                                }}>{item}</td>
+                            ))}</tr>
                     })}
                 </table>
             </div>

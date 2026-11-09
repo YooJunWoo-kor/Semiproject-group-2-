@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import PaginationTable from '../../../../components/PaginationTable';
 
-function SuggestionPage({ communityItems }) {
-  const { items, updateItem, removeItem } = communityItems;
+function SuggestionPage() {
+  const items = [];
+  const { updateItem, removeItem } = [];
   const location = useLocation();
   const initialSelected = items.find((item) => item.id === location.state?.selectedItemId) || null;
 
@@ -101,7 +102,7 @@ function SuggestionPage({ communityItems }) {
   }));
 
   return (
-    <div className="sub-container">
+    <div className="border-container">
       {/* 1. 상단 공통 헤더 */}
       <header className="dashboard-header">
         <span className="subtitle">개선 건의</span>

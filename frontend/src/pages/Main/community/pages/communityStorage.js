@@ -2,9 +2,8 @@ const STORAGE_NAME = "cosmetics-erp-community:";
 const FILE_DATABASE = "cosmetics-erp-files";
 const FILE_STORE = "attachments";
 
-// localStorage에서 게시판 데이터를 불러옵니다.
-export function loadItems(name) {
-  const savedItems = localStorage.getItem(STORAGE_NAME + name);
+export function loadItems() {
+  const savedItems = null;
 
   if (savedItems !== null) {
     try {

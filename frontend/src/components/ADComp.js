@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { getAttendance } from "../utils/authStorage";
 import BasicCalendar from "../components/calendar/BasicCalendar.js";
 import WeeklyCalendar from "../components/weeklycalendar/WeeklyCalendar.js";
-import './ADComp.css';
+import '../css/ADComp.css';
 import ADBord from "./ADBord.js";
 
 function ADComp(){
@@ -54,10 +54,10 @@ function ADComp(){
           <div style={{
             display: 'flex',
             flexDirection: 'row',
-            justifyContent: 'space-between',
             alignItems: 'stretch',
             gap: '20px',                /* 달력과 출퇴근 카드 사이 간격 */
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            flex: '1'
           }}>
             {/* 좌측: 달력 컴포넌트 */}
             <div className="attendance-card">

@@ -63,7 +63,7 @@ export default function CustomersPage({ data, setData }) {
   }));
 
   return (
-    <div className="sub-container">
+    <div className="border-container">
       {/* 1. 표준 헤더 및 액션 버튼 */}
       <header className="dashboard-header">
         <span className="subtitle">회원 관리</span>

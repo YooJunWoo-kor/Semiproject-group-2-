@@ -25,7 +25,7 @@
 
 .erp-top-nav a:hover{
   background-color: var(--color-brand-dark);
-  color: var(--color-brand-soft);
+  color: var(--color-surface);
 }
 
 .erp-top-nav a.active{
@@ -67,7 +67,7 @@
   top: 100%;                 /* a 생성 위치 */
   right: 0;                  /* 헤더 우측 끝 정렬 */
   min-width: 140px;
-  background-color: #ffffff;
+  background-color: var(--color-surface);
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   box-shadow: var(--card-shadow);

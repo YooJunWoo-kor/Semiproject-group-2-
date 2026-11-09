@@ -73,7 +73,7 @@ export default function ConsultationsPage({ data, setData }) {
   }));
 
   return (
-    <div className="sub-container">
+    <div className="border-container">
       {/* 1. 상단 공통 헤더 (신규 등록 버튼 제거 완료) */}
       <header className="dashboard-header">
         <span className="subtitle">상담 관리</span>

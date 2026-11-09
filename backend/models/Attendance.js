@@ -50,14 +50,16 @@ class Attendance{
             check_out_at = now(),
             attendance_status = '정상'
           where 
-            employee_id = 9999
+            employee_id = ?
             and work_date = CURDATE()
         `;
         db.query(query,[employee_id],(err, results)=>{
           if(err){
+            console.log("적용실패");
             return reject(err);
           }
           else{
+            console.log("퇴근처리 완료");
             return resolve(results);
           }
         })
