@@ -45,60 +45,65 @@ const sql = `
      
     })}
 )
-
+ 
     
+router.post('/inspections', (req, res) => {
 
-    router.post('/inspections',(req, res) => {
-        const {
-            productId,
-            inspectionDate,
-            inspector,
-            qualityStatus,
-            failReason,
-            memo,
-            qualityScore
-        } = req.body;
+    const {
+        productId, inspectionDate, inspector,
+        qualityStatus, failReason, memo,
+        qualityScore, checklist
+    } = req.body;
 
-        const sql = `
-            INSERT INTO quality_inspections
-            (
-                product_id,
-                inspection_date,
-                inspector,
-                quality_status,
-                fail_reason,
-                memo,
-                quality_score
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            
-            `
+    if (!productId || !inspectionDate || !inspector || !Array.isArray(checklist) || !checklist.length) {
+        return res.status(400).json({ message: "필수 정보가 없습니다." });
+    }
 
-        const values = [
-            productId,
-            inspectionDate,
-            inspector,
-            qualityStatus,
-            failReason,
-            memo,
-            qualityScore
-        ]
-    
-        db.query(sql, values, (err, result) => {
+    // 1. 품질검사 정보 저장
+    const sql = `
+        INSERT INTO quality_inspections
+        (product_id, inspection_date, inspector, quality_status,
+         fail_reason, memo, quality_score)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const values = [
+        productId, inspectionDate, inspector, qualityStatus,
+        failReason || null, memo || "", qualityScore
+    ];
+
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ message: "검사 저장 실패" });
+        }
+
+        // 2. 체크리스트 저장
+        const items = checklist.map(item => [
+            result.insertId,
+            item.name,
+            item.description || "",
+            item.result,
+            item.custom ? 1 : 0
+        ]);
+
+        const itemSql = `
+            INSERT INTO quality_inspection_items
+            (inspection_id, item_name, description, result, is_custom)
+            VALUES ?
+        `;
+
+        db.query(itemSql, [items], (err) => {
             if (err) {
-                console.error("검사 정보 저장 실패:", err);
-            
-                return res.status(500).json({
-                    message: "검사 정보를 저장할 수 없습니다"
-                });
+                console.error(err);
+                return res.status(500).json({ message: "체크리스트 저장 실패" });
             }
-    
-            return res.status(201).json({
-                message: '품질검사 등록 성공',
-                inspectionId : result.insertId
-            })
+
+            res.status(201).json({ message: "저장 완료" });
         });
     });
+});
+
 
 
 
@@ -124,6 +129,7 @@ const sql = `
                 p.variant_text,
                 COALESCE(i.quality_status, '미실시') AS quality_status,
                 DATE_FORMAT(i.inspection_date, '%Y-%m-%d') AS inspection_date,
+                i.inspector,
                 i.memo
             FROM quality_products p
             LEFT JOIN quality_inspections i
@@ -157,6 +163,69 @@ const sql = `
             return res.json(rows[0]);
         });
     });
-    
 
+
+    router.get('/products/:id/inspections', (req, res) => {
+        const productId = Number(req.params.id);
+    
+        if (!Number.isSafeInteger(productId) || productId <= 0) {
+            return res.status(400).json({
+                message: "올바른 제품 ID가 필요합니다."
+            });
+        }
+    
+        const sql = `
+            SELECT
+                inspection_id,
+                product_id,
+                DATE_FORMAT(inspection_date, '%Y-%m-%d') AS inspection_date,
+                inspector,
+                quality_status,
+                fail_reason,
+                memo,
+                quality_score
+            FROM quality_inspections
+            WHERE product_id = ?
+            ORDER BY inspection_date DESC, inspection_id DESC
+        `;
+    
+        db.query(sql, [productId], (err, rows) => {
+            if (err) {
+                console.error("검사 이력 조회 실패:", err);
+                return res.status(500).json({
+                    message: "검사 이력을 불러올 수 없습니다."
+                });
+            }
+    
+            return res.json(rows);
+        });
+    });
+
+
+    router.get('/inspections/:id/items', (req, res) => {
+
+        const inspectionId = Number(req.params.id);
+    
+        const sql = `
+            SELECT *
+            FROM quality_inspection_items
+            WHERE inspection_id = ?
+            ORDER BY item_id
+        `;
+    
+        db.query(sql, [inspectionId], (err, rows) => {
+    
+            if (err) {
+                console.error("체크리스트 조회 실패:", err);
+                return res.status(500).json({
+                    message: "체크리스트 조회 실패"
+                });
+            }
+    
+            res.json(rows);
+        });
+    });
+    
+    
+    
 module.exports = router;

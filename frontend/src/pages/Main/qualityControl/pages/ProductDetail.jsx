@@ -22,6 +22,11 @@ function ProductDetail() {
     const [memo, setMemo] = useState("");
     
     const [isSaving, setIsSaving] = useState(false);
+    const [inspectionHistory, setInspectionHistory] = useState([]);
+    const [historyRefresh, setHistoryRefresh] = useState(0);
+
+    const [selectedInspectionId, setSelectedInspectionId] = useState(null);
+    const [historyChecklist, setHistoryChecklist] = useState(null);
 
     const [checklist, setChecklist] = useState(
         defaultQualityChecklist.map(item => ({
@@ -114,10 +119,57 @@ useEffect(() => {
 
 
 
+useEffect(() => {
+    async function loadHistory() {
+        try {
+            // 1. 제품의 검사 이력 가져오기
+            const response = await axios.get(
+                `${API_BASE_URL}/quality/products/${id}/inspections`
+            );
+
+            const history = response.data;
+            setInspectionHistory(history);
+
+            if (history.length === 0) return;
+
+            
+
+        } catch (error) {
+            console.error("체크리스트 조회 실패:", error);
+        }
+    }
+
+    loadHistory();
+}, [id, historyRefresh]);
+
+
+
+
+
 
     if (!product) {
         return <p>제품을 찾을 수 없습니다.</p>;
     }
+
+
+const loadHistoryChecklist = async (inspectionId) => {
+
+    setSelectedInspectionId(inspectionId);
+    setHistoryChecklist(null);
+
+    try {
+        const response = await axios.get(
+            `${API_BASE_URL}/quality/inspections/${inspectionId}/items`
+        );
+
+        setHistoryChecklist(response.data);
+
+    } catch (error) {
+        console.error("체크리스트 조회 실패:", error);
+        alert("체크리스트를 불러오지 못했습니다.");
+        setSelectedInspectionId(null);
+    }
+};
 
 
     
@@ -143,7 +195,8 @@ const handleSave = async () => {
         qualityStatus,
         failReason: qualityStatus === "불합격" ? failReason.trim() : null,
         memo: memo.trim(),
-        qualityScore: Number(qualityScore)
+        qualityScore: Number(qualityScore),
+        checklist: checklist
     };
 
     try {
@@ -159,6 +212,7 @@ const handleSave = async () => {
         setProduct(prev => ({
             ...prev,
             qualityStatus,
+            inspector: inspector.trim(),
             inspectionDate,
             memo: memo.trim()
         }));
@@ -172,7 +226,13 @@ const handleSave = async () => {
     } finally {
         setIsSaving(false);
     }
+
+    setHistoryRefresh(prev => prev + 1);
 };
+
+    const selectedInspection = inspectionHistory.find(
+        item => item.inspection_id === selectedInspectionId
+    );
 
 
 
@@ -419,44 +479,70 @@ const handleSave = async () => {
                             <th>검사자</th>
                             <th>검사결과</th>
                             <th>비고</th>
+                            <th>체크리스트</th>
                         </tr>
 
                     </thead>
 
 
+                    
                     <tbody>
+                        {inspectionHistory.length === 0 ? (
+                            <tr>
+                                <td colSpan={4}>
+                                    등록된 검사 이력이 없습니다.
+                                </td>
+                            </tr>
+                        ) : (
+                            inspectionHistory.map(item => (
+                                <tr key={item.inspection_id}>
+                                    <td>{item.inspection_date}</td>
 
-                        <tr>
+                                    <td>{item.inspector || "-"}</td>
 
-                            <td>
-                                {product.inspectionDate}
-                            </td>
+                                    <td>
+                                        <span className={
+                                            item.quality_status === "통과" ? "status pass" : item.quality_status === "불합격" ? "status fail" : "status not-tested"
+                                        }>
+                                            {item.quality_status}
+                                        </span>
+                                    </td>
 
-                            <td>
-                                {product.inspector || "-"}
-                            </td>
+                                    <td>{item.memo || item.fail_reason || "-"}</td>
 
-                            <td>
-
-                                <span
-                                    className={
-                                        product.qualityStatus === "통과" ? "status pass" : product.qualityStatus === "불합격" ? "status fail" : "status not-tested"
-                                    }
-                                >
-                                    {product.qualityStatus}
-                                </span>
-
-                            </td>
-
-                            <td>
-                                {product.memo || "-"}
-                            </td>
-
-                        </tr>
-
+                                    <button type="button" onClick={() => loadHistoryChecklist(item.inspection_id)}>
+                                        보기
+                                    </button>
+                                </tr>
+                            ))
+                        )}
                     </tbody>
 
+
                 </table>
+
+                {selectedInspectionId !== null && (
+                        
+                        <div>
+                            <h3>{selectedInspection?.inspection_date} {selectedInspection?.inspector} 검사자 체크리스트</h3>
+
+                            {historyChecklist === null ? (
+                                <p>불러오는 중...</p>
+                            ) : historyChecklist.length === 0 ? (
+                                <p>저장된 체크리스트가 없습니다.</p>
+                            ) : (
+                                <ul>
+                                    {historyChecklist.map(item => (
+                                        <li key={item.item_id}>
+                                            {item.item_name} : {item.result}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    )}
+
+                    <hr/>
 
             </section>
 

@@ -1,9 +1,47 @@
 
-import React from "react";
-import products from "./pages/product";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { API_BASE_URL } from "../../../utils/authStorage";
 import "./pages/QualityControl.css";
 
 function Main() {
+
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    // DB에서 제품 목록 가져오기
+    useEffect(() => {
+
+        async function loadProducts() {
+            try {
+                const response = await axios.get(
+                    `${API_BASE_URL}/quality/products`
+                );
+
+                const data = response.data.map(item => ({
+                    id: item.product_id,
+                    code: item.product_code,
+                    name: item.product_name,
+                    qualityStatus: item.quality_status,
+                    inspectionDate: item.inspection_date || "-",
+                    memo: item.memo || ""
+                }));
+
+                setProducts(data);
+
+            } catch (err) {
+                console.error("대시보드 조회 실패:", err);
+                setError("품질 데이터를 불러오지 못했습니다.");
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        loadProducts();
+
+    }, []);
+
     // 품질 상태별 제품 개수
     const passCount = products.filter(
         product => product.qualityStatus === "통과"
@@ -17,13 +55,29 @@ function Main() {
         product => product.qualityStatus === "미실시"
     ).length;
 
-    // 최근 품질검사 제품
-    const recentProducts = products.slice(0, 5);
+    // 검사일이 있는 제품 중 최근 5개
+    const recentProducts = products
+        .filter(product => product.inspectionDate !== "-")
+        .sort((a, b) =>
+            b.inspectionDate.localeCompare(a.inspectionDate) // 검사일 최신순 정렬
+        )
+        .slice(0, 5);
 
-    // 불합격 제품
+    // 최신 검사 결과가 불합격인 제품
     const failedProducts = products.filter(
         product => product.qualityStatus === "불합격"
     );
+
+    if (loading) {
+        return <p>품질 데이터를 불러오는 중입니다.</p>;
+    }
+
+    if (error) {
+        return <p>{error}</p>;
+    }
+
+    // 기존 return JSX는 아래에 그대로 유지
+
 
     return (
         <div className="border-container">
