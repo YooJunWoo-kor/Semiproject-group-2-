@@ -1,21 +1,28 @@
-
+/* 회의실 예약: 기본 3열 카드 배치 */
 .meeting-room-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 20px;
+    width: 100%;
+    min-width: 0;
     margin-top: 24px;
 }
 
 .meeting-room-card {
-    min-height: 160px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 12px;
+    width: 100%;
+    min-width: 0;
+    min-height: 160px;
+    padding: 20px;
+    text-align: center;
+    color: var(--color-ink);
     background: var(--color-surface);
     border: 1px solid var(--color-line);
-    border-radius: var(--radius-card);
+    border-radius: var(--radius-card, 12px);
     box-shadow: var(--card-shadow);
 }
 
@@ -23,63 +30,26 @@
     border-color: var(--color-brand);
 }
 
+.meeting-room-card:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+}
+
 .meeting-room-card h3,
 .meeting-room-card p {
     margin: 0;
+    overflow-wrap: anywhere;
 }
 
 @media (max-width: 700px) {
     .meeting-room-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
     }
 }
 
 @media (max-width: 480px) {
     .meeting-room-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
-
-
-.meeting-room-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px;
-    margin-top: 24px;
-}
-
-.meeting-room-card {
-    min-height: 160px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-card);
-    box-shadow: var(--card-shadow);
-}
-
-.meeting-room-card:hover {
-    border-color: var(--color-brand);
-}
-
-.meeting-room-card h3,
-
-.meeting-room-card p {
-    margin: 0;
-}
-
-@media (max-width: 700px) {
-    .meeting-room-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 480px) {
-    .meeting-room-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
