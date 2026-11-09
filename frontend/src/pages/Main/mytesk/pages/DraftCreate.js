@@ -19,6 +19,7 @@ function DraftCreate({
     const [selectedDepartment, setSelectedDepartment] = useState("");
     const [departments, setDepartments] = useState([]);
 
+    const [searchParams] = useSearchParams();
 
     const [title, setTitle] = useState("");
 
@@ -44,7 +45,6 @@ function DraftCreate({
     const [amount, setAmount] = useState("");
     const [useDate, setUseDate] = useState("");
 
-    const [searchParams] = useSearchParams();
 
 
 

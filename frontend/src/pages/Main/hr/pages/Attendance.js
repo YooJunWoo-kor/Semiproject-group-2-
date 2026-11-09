@@ -5,6 +5,7 @@ import PaginationTable from "../../../../components/PaginationTable";
 import ModalBase from "../../../../components/ModalBase";
 import { getLoginUser } from "../../../../utils/authStorage";
 import {
+  decideHrLeave,
   getHrAttendance,
   getHrLeaves,
   getHrOrganization,
@@ -464,6 +465,47 @@ export default function Attendance() {
     setSelectedEmployeeId(null);
   }
 
+  async function decideLeave(leave, decision) {
+    const employeeId = Number(loginUser?.employeeKey);
+
+    if (!Number.isSafeInteger(employeeId) || employeeId < 1 || saving) {
+      setLeaveError("로그인 사용자 정보를 확인해 주세요.");
+      return;
+    }
+
+    const actionLabel = decision === "approve" ? "승인" : "반려";
+
+    if (!window.confirm(`${leave.employeeName}님의 휴가 신청을 ${actionLabel}할까요?`)) {
+      return;
+    }
+
+    setSaving(true);
+    setLeaveError("");
+    setNotice("");
+
+    try {
+      const response = await decideHrLeave(leave.draftId, employeeId, decision);
+      const leaveResponse = await getHrLeaves(selectedMonth);
+
+      if (
+        !leaveResponse.data.success ||
+        !Array.isArray(leaveResponse.data.data)
+      ) {
+        throw new Error("휴가 신청 응답 형식이 올바르지 않습니다.");
+      }
+
+      setLeaveData(leaveResponse.data.data);
+      setNotice(response.data.message || `휴가 신청이 ${actionLabel}되었습니다.`);
+    } catch (requestError) {
+      setLeaveError(
+        requestError.response?.data?.message ||
+        `휴가 신청을 ${actionLabel}하지 못했습니다.`
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   // 선택 직원의 휴가만 계산합니다. 직원 목록은 두 탭에서 동일합니다.
   const selectedEmployeeLeaves = leaveData
     .filter((leave) =>
@@ -482,21 +524,49 @@ export default function Attendance() {
     .reduce((total, leave) => total + Number(leave.leaveDays || 0), 0);
 
   const leaveTableHeaders = [
-    "휴가 유형", "시작일", "종료일", "일수", "신청 상태", "신청일", "사유"
+    "휴가 유형", "시작일", "종료일", "일수", "신청 상태", "신청일", "사유", "승인자", "승인일", "관리"
   ];
-  const leaveTableData = selectedEmployeeLeaves.map((leave) => ({
-    content: [
-      leave.leaveType || "휴가",
-      leave.startDate || "-",
-      leave.endDate || "-",
-      `${leave.leaveDays ?? "-"}일`,
-      <span className={`status-tag ${getLeaveStatusClass(leave.applicationStatus)}`}>
-        {leave.applicationStatus || "-"}
-      </span>,
-      leave.applicationDate || "-",
-      leave.reason || "-"
-    ]
-  }));
+  const leaveTableData = selectedEmployeeLeaves.map((leave) => {
+    const canDecide =
+      leave.applicationStatus === "승인대기" &&
+      Number(leave.approverId) === Number(loginUser?.employeeKey);
+
+    return {
+      content: [
+        leave.leaveType || "휴가",
+        leave.startDate || "-",
+        leave.endDate || "-",
+        `${leave.leaveDays ?? "-"}일`,
+        <span className={`status-tag ${getLeaveStatusClass(leave.applicationStatus)}`}>
+          {leave.applicationStatus || "-"}
+        </span>,
+        leave.applicationDate || "-",
+        leave.reason || "-",
+        leave.approverName || "-",
+        leave.approvalDate || "-",
+        canDecide ? (
+          <div className="attendance-leave-actions">
+            <button
+              type="button"
+              className="erp-primary-button"
+              onClick={() => decideLeave(leave, "approve")}
+              disabled={saving}
+            >
+              승인
+            </button>
+            <button
+              type="button"
+              className="attendance-leave-reject-button"
+              onClick={() => decideLeave(leave, "reject")}
+              disabled={saving}
+            >
+              반려
+            </button>
+          </div>
+        ) : "-"
+      ]
+    };
+  });
 
   return (
     <div className="border-container hr-attendance-management">
@@ -784,7 +854,7 @@ export default function Attendance() {
                 )}
                 <p className="attendance-leave-api-notice">
                   휴가 신청은 내업무의 기안 작성 기능으로 진행합니다.
-                  이 화면은 현재 승인·반려 조회만 지원합니다.
+                  현재 결재 순서의 승인자는 이 화면에서 승인·반려할 수 있습니다.
                 </p>
               </>
             )}

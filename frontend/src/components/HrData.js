@@ -33,6 +33,14 @@ export function getHrLeaves(month) {
   });
 }
 
+// 기존 전자결재 API로 휴가 기안의 승인·반려를 처리합니다.
+export function decideHrLeave(draftId, employeeId, decision) {
+  return axios.post(API_BASE_URL + '/drafts/' + draftId + '/decision', {
+    employeeId,
+    decision
+  });
+}
+
 // 출근·퇴근은 유지하고 근태 상태와 메모만 수정합니다.
 export function updateHrAttendance(attendanceId, data) {
   return axios.put(API_BASE_URL + '/hr/attendance/' + attendanceId, data);

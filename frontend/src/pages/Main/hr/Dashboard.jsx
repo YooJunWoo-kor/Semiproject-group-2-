@@ -1,7 +1,5 @@
 import StatisticsCard from '../../../components/StatisticsCard';
-import { getLoginUser } from '../../../utils/authStorage';
 import { useEffect, useState } from 'react';
-import ModalBase from '../../../components/ModalBase';
 import {
     getHrAttendance,
     getHrDepartmentAttendance,
@@ -16,23 +14,9 @@ function formatDate(date) {
     return `${year}-${month}-${day}`;
 }
 
-function TestModal() {
-    return (
-        <div>
-            테스트용 모달
-            <div style={{ height: '500px' }}>테스트용 모달</div>
-        </div>
-    );
-}
-
 export default function Dashboard() {
     // HR 대시보드는 조직 현황과 오늘의 근태 요약을 함께 보여줍니다.
     // 조직 정보와 근태 정보를 각각 조회해 HR 요약 화면에 전달합니다.
-    const loginUser = getLoginUser();
-    const isMaster = loginUser?.role === 'MASTER';
-
-    const [isModal, setIsModal] = useState(false);
-
     // 달력·리스트에서 사용할 전체 근태자료
     const [attendanceData, setAttendanceData] = useState([]);
     const [attendanceLoading, setAttendanceLoading] = useState(true);
@@ -65,14 +49,6 @@ export default function Dashboard() {
     const todayLeaveCount = todayAttendance.filter(
         (attendance) => attendance.status === '휴가'
     ).length;
-
-    function openModal() {
-        setIsModal(true);
-    }
-
-    function closeModal() {
-        setIsModal(false);
-    }
 
     useEffect(() => {
         let ignore = false;
@@ -244,25 +220,7 @@ export default function Dashboard() {
         <div className="border-container">
             <header className="dashboard-header">
                 <span className="subtitle">인사관리 대시보드</span>
-
-                <div className="dashboard-top">
-                    {isMaster && (
-                        <button
-                            onClick={openModal}
-                            className="register-btn"
-                        >
-                            직원 등록하기
-                        </button>
-                    )}
-                </div>
             </header>
-
-            {isModal && (
-                <ModalBase
-                    onClose={closeModal}
-                    layout={<TestModal />}
-                />
-            )}
 
             <section className="stats-section">
                 <StatisticsCard title="전체직원" count={String(employees.length)} stiyle={1} />
