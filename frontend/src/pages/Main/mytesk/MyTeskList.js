@@ -82,7 +82,6 @@ function MyTeskList() {
 
     const urlList = [
         { name: "출결관리", url: mainUrl },
-        { name: "결재 대시보드", url: mainUrl + "/approval-dashboard" },
         { name: "기안 작성", url: mainUrl + "/draft-create" },
         { name: "내 결재 요청", url: mainUrl + "/draft-request" },
         { name: "결재할 문서", url: mainUrl + "/draft-received" },
