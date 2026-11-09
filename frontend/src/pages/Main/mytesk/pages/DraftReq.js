@@ -42,11 +42,12 @@ function DraftReq({ drafts, setEditingDraft, onDraftChanged }) {
     
             <PaginationTable
                 title="내 결재 요청"
-                th={["제목", "문서 종류", "작성일", "상태"]}
+                th={["제목", "문서 종류", "내용", "작성일", "상태", "관리"]}
                 allData={requestedDrafts.map(draft => ({
                     content: [
                         draft.title,
                         draft.draftType,
+                        draft.content,
                         draft.createdAt,
                         draft.status
                     ]

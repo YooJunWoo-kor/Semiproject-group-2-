@@ -1,6 +1,7 @@
 import React from "react";
 import axios from "axios";
 import { API_BASE_URL, getLoginUser } from "../../../../utils/authStorage";
+import PaginationTable from "../../../../components/PaginationTable";
 
 
 function DraftReceived({ drafts, onDraftChanged }) {
@@ -23,24 +24,41 @@ function DraftReceived({ drafts, onDraftChanged }) {
     return (
         <div className="draft-box">
             <h2>요청이 온 기안서</h2>
-            {drafts.length === 0 ? (
-                <p>요청받은 기안서가 없습니다.</p>
-            ) : drafts.map(draft => (
-                <div key={draft.id} className="draft-item">
-                    <p>결재요청자 : {draft.writerName}</p>
-                    <p>제목 : {draft.title}</p>
-                    <p>문서 종류 : {draft.draftType}</p>
-                    <p>내용 : {draft.content}</p>
-                    <p>작성일 : {draft.createdAt}</p>
-                    <p>상태 : {draft.status}</p>
-                    <button className="erp-primary-button" type="button" onClick={() => handleDecision(draft.id, "approve")}>
+            
+{drafts.length === 0 ? (
+    <p>요청받은 기안서가 없습니다.</p>
+) : (
+    <PaginationTable
+        title="결재할 문서"
+        th={["결재요청자", "제목", "문서 종류", "내용", "작성일", "상태", "관리"]}
+        allData={drafts.map(draft => ({
+            content: [
+                draft.writerName,
+                draft.title,
+                draft.draftType,
+                draft.content,
+                draft.createdAt,
+                draft.status,
+                <div className="draft-actions">
+                    <button
+                        className="erp-primary-button"
+                        type="button"
+                        onClick={() => handleDecision(draft.id, "approve")}
+                    >
                         승인
                     </button>
-                    <button type="button" onClick={() => handleDecision(draft.id, "reject")}>
+                    <button
+                        type="button"
+                        onClick={() => handleDecision(draft.id, "reject")}>
                         반려
                     </button>
                 </div>
-            ))}
+            ]
+        }))}
+        itemsPerPage={5}
+    />
+)}
+
         </div>
     );
 }

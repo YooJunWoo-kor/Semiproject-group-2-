@@ -10,6 +10,7 @@ import DraftComp from "./pages/DraftComp";
 import DraftReceived from "./pages/DraftReceived";
 import DraftApproved from "./pages/DraftApproved";
 import { API_BASE_URL, getEmployeeAccounts, getLoginUser } from "../../../utils/authStorage";
+import DraftDashboard from "./pages/DraftDashboard";
 
 
 
@@ -87,6 +88,7 @@ function MyTeskList() {
 
     const urlList = [
         { name: "출결관리", url: mainUrl },
+        {name : "전자결재 대시보드", url: mainUrl + "/draft-dashboard"},
         { name: "기안 작성", url: mainUrl + "/draft-create" },
         { name: "내 결재 요청", url: mainUrl + "/draft-request" },
         { name: "결재할 문서", url: mainUrl + "/draft-received" },
@@ -125,6 +127,8 @@ function MyTeskList() {
                     <Route path="draft-approved" element={
                         <DraftApproved drafts={approvedDrafts} loginUser={loginUser} />
                     } />
+
+                    <Route path="draft-dashboard" element = { <DraftDashboard drafts={drafts} receivedDrafts={receivedDrafts} approvedDrafts={approvedDrafts}/>}/>
                 </Routes>
             </div>
         </div>
