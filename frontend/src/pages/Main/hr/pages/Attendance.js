@@ -603,7 +603,7 @@ export default function Attendance() {
         </nav>
 
         <label className="attendance-filter-field">
-          <span>기준 월</span>
+      
           <input
             type="month"
             value={selectedMonth}
@@ -611,19 +611,21 @@ export default function Attendance() {
           />
         </label>
         <label className="attendance-filter-field">
-          <span>부서</span>
+          
           <select
             value={selectedDepartment}
             onChange={(event) => setSelectedDepartment(event.target.value)}
           >
             <option value="전체">전체</option>
             {departmentList.map((department) => (
-              <option key={department} value={department}>{department}</option>
+              <option key={department} value={department}>
+                {department}
+              </option>
             ))}
           </select>
         </label>
         <label className="attendance-filter-field attendance-keyword-field">
-          <span>직원명</span>
+          
           <input
             type="text"
             placeholder="직원명 검색"
@@ -655,18 +657,38 @@ export default function Attendance() {
             type="button"
             className="erp-primary-button"
             onClick={() => {
-              if (selectedAttendance.length > 0) {
+              if (activeTab === "leave") {
+                navigate("/main/mytesk/draft-create?type=leave");
+                return;
+              }
+
+              if (isMaster && selectedAttendance.length > 0) {
                 openAttendanceEdit(selectedAttendance[0]);
               }
             }}
-            disabled={selectedAttendance.length === 0}
+            disabled={
+              activeTab === "attendance" &&
+              (!isMaster || selectedAttendance.length === 0)
+            }
+            style={{
+              visibility:
+                activeTab === "attendance" && !isMaster
+                  ? "hidden"
+                  : "visible"
+            }}
+            aria-hidden={activeTab === "attendance" && !isMaster}
+            tabIndex={
+              activeTab === "attendance" && !isMaster ? -1 : 0
+            }
             title={
-              selectedAttendance.length === 0
-                ? "수정할 일별 근태 기록이 없습니다."
-                : "선택 직원의 최근 일별 근태 기록을 수정합니다."
+              activeTab === "leave"
+                ? "휴가 신청서를 작성합니다."
+                : selectedAttendance.length === 0
+                  ? "수정할 일별 근태 기록이 없습니다."
+                  : "선택 직원의 최근 일별 근태 기록을 수정합니다."
             }
           >
-            근태수정
+            {activeTab === "leave" ? "휴가신청" : "근태수정"}
           </button>
         )}
       </section>
@@ -705,10 +727,9 @@ export default function Attendance() {
                     <button
                       key={employee.employeeId}
                       type="button"
-                      className={`employee-item ${
-                        String(employee.employeeId) === String(selectedEmployeeId)
+                      className={`employee-item ${String(employee.employeeId) === String(selectedEmployeeId)
                           ? "active" : ""
-                      }`}
+                        }`}
                       onClick={() => setSelectedEmployeeId(employee.employeeId)}
                     >
                       <span className="employee-item-info">

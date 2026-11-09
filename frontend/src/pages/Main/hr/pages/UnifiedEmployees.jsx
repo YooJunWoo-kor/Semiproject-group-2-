@@ -62,9 +62,8 @@ function apiError(error, fallback) {
 function DetailRow({ title, value, emphasis = false }) {
   return (
     <div
-      className={`hr-employee-detail-field${
-        emphasis ? " hr-pay-emphasis" : ""
-      }`}
+      className={`hr-employee-detail-field${emphasis ? " hr-pay-emphasis" : ""
+        }`}
     >
       <span>{title}</span>
       <strong>{value ?? "-"}</strong>
@@ -397,6 +396,7 @@ export default function UnifiedEmployees() {
   const [departments, setDepartments] = useState([]);
   const [selectedDept, setSelectedDept] = useState("전체");
   const [selectedId, setSelectedId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [employmentStatus, setEmploymentStatus] = useState("전체");
   const [accountStatus, setAccountStatus] = useState("전체");
@@ -547,12 +547,57 @@ export default function UnifiedEmployees() {
     ]
   );
 
+
+  // 직원 목록 페이지네이션
+  const itemsPerPage = 7;
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filtered.length / itemsPerPage)
+  );
+
+  const effectivePage = Math.min(currentPage, totalPages);
+
+  const startIndex = (effectivePage - 1) * itemsPerPage;
+
+  const visibleEmployees = filtered.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
+  // 페이지 번호는 최대 5개씩 표시
+  const pageNumberCount = Math.min(5, totalPages);
+
+  const pageStart = Math.max(
+    1,
+    Math.min(
+      effectivePage - 2,
+      totalPages - pageNumberCount + 1
+    )
+  );
+
+  const pageNumbers = Array.from(
+    { length: pageNumberCount },
+    (_, index) => pageStart + index
+  );
+
+  // 현재 페이지 안에서 선택한 직원 유지
   const selected =
-    filtered.find(
+    visibleEmployees.find(
       (emp) => String(emp.employeeId) === String(selectedId)
     ) ||
-    filtered[0] ||
+    visibleEmployees[0] ||
     null;
+
+  // 페이지 변경 또는 필터 변경으로 선택 직원이 사라지면
+  // 현재 페이지의 첫 번째 직원 자동 선택
+  useEffect(() => {
+    const nextId = selected?.employeeId ?? null;
+
+    if (String(selectedId) !== String(nextId)) {
+      setSelectedId(nextId);
+    }
+  }, [selectedId, selected?.employeeId]);
 
   const selectedDepartment = departments.find(
     (item) => String(item.departmentId) === selectedDept
@@ -565,8 +610,8 @@ export default function UnifiedEmployees() {
     selectedDept === "전체"
       ? []
       : employees.filter(
-          (emp) => String(emp.departmentId) === selectedDept
-        );
+        (emp) => String(emp.departmentId) === selectedDept
+      );
 
   const working = employees.filter(
     (emp) => emp.employmentStatus === "재직"
@@ -588,6 +633,7 @@ export default function UnifiedEmployees() {
   function chooseDept(value) {
     setSelectedDept(value);
     setSelectedId(null);
+    setCurrentPage(1);
     setDetailTab("info");
   }
 
@@ -602,6 +648,7 @@ export default function UnifiedEmployees() {
     setEmploymentStatus("전체");
     setAccountStatus("전체");
     setSelectedId(null);
+    setCurrentPage(1);
     setDetailTab("info");
   }
 
@@ -646,14 +693,14 @@ export default function UnifiedEmployees() {
 
       const response = edit
         ? await updateHrEmployee(employeeForm.employeeId, {
-            name: employeeForm.name,
-            departmentId: employeeForm.departmentId,
-            position: employeeForm.position,
-            email: employeeForm.email,
-            phone: employeeForm.phone,
-            hireDate: employeeForm.hireDate,
-            employmentStatus: employeeForm.employmentStatus
-          })
+          name: employeeForm.name,
+          departmentId: employeeForm.departmentId,
+          position: employeeForm.position,
+          email: employeeForm.email,
+          phone: employeeForm.phone,
+          hireDate: employeeForm.hireDate,
+          employmentStatus: employeeForm.employmentStatus
+        })
         : await createHrEmployee(employeeForm);
 
       if (!response.data.success) {
@@ -804,16 +851,16 @@ export default function UnifiedEmployees() {
     setPayForm(
       existed
         ? {
-            baseSalary: String(payroll.baseSalary ?? 0),
-            allowance: String(payroll.allowance ?? 0),
-            bonus: String(payroll.bonus ?? 0),
-            deduction: String(payroll.deduction ?? 0),
-            paymentDate: payroll.paymentDate || "",
-            paymentStatus:
-              payroll.paymentStatus === "급여 미등록"
-                ? "지급대기"
-                : payroll.paymentStatus || "지급대기"
-          }
+          baseSalary: String(payroll.baseSalary ?? 0),
+          allowance: String(payroll.allowance ?? 0),
+          bonus: String(payroll.bonus ?? 0),
+          deduction: String(payroll.deduction ?? 0),
+          paymentDate: payroll.paymentDate || "",
+          paymentStatus:
+            payroll.paymentStatus === "급여 미등록"
+              ? "지급대기"
+              : payroll.paymentStatus || "지급대기"
+        }
         : { ...emptyPay }
     );
 
@@ -875,14 +922,14 @@ export default function UnifiedEmployees() {
       const response =
         payroll.payrollId !== null
           ? await updateHrPayroll(
-              payroll.payrollId,
-              values
-            )
+            payroll.payrollId,
+            values
+          )
           : await createHrPayroll({
-              employeeId: selected.employeeId,
-              payMonth,
-              ...values
-            });
+            employeeId: selected.employeeId,
+            payMonth,
+            ...values
+          });
 
       if (!response.data.success) {
         throw new Error("급여 저장 응답이 올바르지 않습니다.");
@@ -960,7 +1007,10 @@ export default function UnifiedEmployees() {
             aria-label="통합검색"
             placeholder="사번, 이름, 이메일, 직급 검색"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
           />
 
           <select
@@ -982,9 +1032,11 @@ export default function UnifiedEmployees() {
           <select
             aria-label="재직 상태"
             value={employmentStatus}
-            onChange={(e) =>
-              setEmploymentStatus(e.target.value)
-            }
+            // 재직 상태 select
+            onChange={(e) => {
+              setEmploymentStatus(e.target.value);
+              setCurrentPage(1);
+            }}
           >
             <option value="전체">전체 재직상태</option>
             <option value="재직">재직</option>
@@ -995,9 +1047,10 @@ export default function UnifiedEmployees() {
           <select
             aria-label="계정 상태"
             value={accountStatus}
-            onChange={(e) =>
-              setAccountStatus(e.target.value)
-            }
+            onChange={(e) => {
+              setAccountStatus(e.target.value);
+              setCurrentPage(1);
+            }}
           >
             <option value="전체">전체 계정</option>
             <option value="ACTIVE">활성</option>
@@ -1068,9 +1121,8 @@ export default function UnifiedEmployees() {
 
             <button
               type="button"
-              className={`department-item${
-                selectedDept === "전체" ? " selected" : ""
-              }`}
+              className={`department-item${selectedDept === "전체" ? " selected" : ""
+                }`}
               onClick={() => chooseDept("전체")}
             >
               <strong>전체 부서</strong>
@@ -1081,7 +1133,7 @@ export default function UnifiedEmployees() {
               const members = employees.filter(
                 (emp) =>
                   String(emp.departmentId) ===
-                    String(dept.departmentId) &&
+                  String(dept.departmentId) &&
                   emp.employmentStatus === "재직"
               ).length;
 
@@ -1089,11 +1141,10 @@ export default function UnifiedEmployees() {
                 <button
                   key={dept.departmentId}
                   type="button"
-                  className={`department-item${
-                    selectedDept === String(dept.departmentId)
-                      ? " selected"
-                      : ""
-                  }`}
+                  className={`department-item${selectedDept === String(dept.departmentId)
+                    ? " selected"
+                    : ""
+                    }`}
                   onClick={() =>
                     chooseDept(String(dept.departmentId))
                   }
@@ -1156,32 +1207,73 @@ export default function UnifiedEmployees() {
             </div>
 
             <div className="hr-single-employee-list">
-              {filtered.length === 0 ? (
+              {visibleEmployees.length === 0 ? (
                 <p className="hr-empty-state">
                   조건에 맞는 직원이 없습니다.
                 </p>
               ) : (
-                filtered.map((emp) => (
+                visibleEmployees.map((emp) => (
                   <button
                     key={emp.employeeId}
                     type="button"
-                    className={`hr-single-employee${
-                      selected?.employeeId === emp.employeeId
-                        ? " selected"
-                        : ""
-                    }`}
+                    className={`hr-single-employee${String(selected?.employeeId) === String(emp.employeeId)
+                      ? " selected"
+                      : ""
+                      }`}
                     onClick={() => chooseEmployee(emp)}
+                    title={`${emp.employeeNumber || "-"} · ${emp.name}`}
                   >
                     <strong>{emp.name}</strong>
-                    <span>{emp.employeeNumber}</span>
-                    <small>
-                      {emp.position || "-"} ·{" "}
-                      {emp.employmentStatus}
-                    </small>
+                    <span>{emp.employeeNumber || "-"}</span>
+                    <small>{emp.position || "-"}</small>
                   </button>
                 ))
               )}
             </div>
+
+            {totalPages > 1 && (
+              <div
+                className="pagination-container"
+                aria-label="직원 목록 페이지"
+              >
+                <button
+                  type="button"
+                  className="page-btn nav-btn"
+                  onClick={() => setCurrentPage(effectivePage - 1)}
+                  disabled={effectivePage === 1}
+                  aria-label="이전 페이지"
+                >
+                  &lt;
+                </button>
+
+                <div className="page-numbers">
+                  {pageNumbers.map((page) => (
+                    <button
+                      key={page}
+                      type="button"
+                      className={`page-btn number-btn ${effectivePage === page ? "active" : ""
+                        }`}
+                      onClick={() => setCurrentPage(page)}
+                      aria-current={
+                        effectivePage === page ? "page" : undefined
+                      }
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className="page-btn nav-btn"
+                  onClick={() => setCurrentPage(effectivePage + 1)}
+                  disabled={effectivePage === totalPages}
+                  aria-label="다음 페이지"
+                >
+                  &gt;
+                </button>
+              </div>
+            )}
           </section>
 
           {/* 오른쪽: 직원 상세정보 / 급여관리 */}
@@ -1239,13 +1331,12 @@ export default function UnifiedEmployees() {
                   </div>
 
                   <span
-                    className={`status-tag ${
-                      selected.employmentStatus === "재직"
-                        ? "working"
-                        : selected.employmentStatus === "휴직"
-                          ? "leave"
-                          : "off"
-                    }`}
+                    className={`status-tag ${selected.employmentStatus === "재직"
+                      ? "working"
+                      : selected.employmentStatus === "휴직"
+                        ? "leave"
+                        : "off"
+                      }`}
                   >
                     {selected.employmentStatus}
                   </span>
@@ -1442,26 +1533,26 @@ export default function UnifiedEmployees() {
       {/* 직원 등록·수정 모달 */}
       {(modal === "employee-add" ||
         modal === "employee-edit") && (
-        <ModalBase
-          title={
-            modal === "employee-edit"
-              ? "직원 정보 수정"
-              : "신규 직원 등록"
-          }
-          onClose={() => setModal("")}
-          layout={
-            <EmployeeForm
-              form={employeeForm}
-              setForm={setEmployeeForm}
-              departments={departments}
-              isEdit={modal === "employee-edit"}
-              saving={saving}
-              onSave={saveEmployee}
-              onClose={() => setModal("")}
-            />
-          }
-        />
-      )}
+          <ModalBase
+            title={
+              modal === "employee-edit"
+                ? "직원 정보 수정"
+                : "신규 직원 등록"
+            }
+            onClose={() => setModal("")}
+            layout={
+              <EmployeeForm
+                form={employeeForm}
+                setForm={setEmployeeForm}
+                departments={departments}
+                isEdit={modal === "employee-edit"}
+                saving={saving}
+                onSave={saveEmployee}
+                onClose={() => setModal("")}
+              />
+            }
+          />
+        )}
 
       {/* 부서 등록 모달 */}
       {modal === "department" && (

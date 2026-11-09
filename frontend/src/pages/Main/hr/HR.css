@@ -1,258 +1,93 @@
+
 /* ========================================
-   1. HR 대시보드 및 근태 카드
+   HR 통합 CSS
+   - HR.css + HRUnified.css 통합
+   - 근태/휴가 관리
+   - 인사/조직 통합관리
+   - 급여관리
+   - 모달 및 반응형
+======================================== */
+
+/* ========================================
+   1. HR 공통
 ======================================== */
 
 .sub-main-contain > .hr-attendance-management,
 .sub-main-contain > .hr-employee-management,
+.sub-main-contain > .hr-single-management,
 .sub-main-contain > .hr-payroll-management {
-    flex: 1 1 auto;
-    width: auto;
-    max-width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
+  flex: 1 1 auto;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
-.hr-attendance-view {
+.hr-attendance-management,
+.hr-employee-management,
+.hr-single-management,
+.hr-payroll-management {
+  min-width: 0;
+  box-sizing: border-box;
 }
 
-.hr-department-attendance {
+.hr-attendance-management > .dashboard-header,
+.hr-single-management > .dashboard-header {
+  margin-bottom: 14px;
 }
 
 .hr-attendance-view .basic-calendar-schedule {
-    width: 100%;
-    padding: 1px 2px;
-    box-sizing: border-box;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    font-size: 9px;
-    line-height: 1.4;
-    letter-spacing: -0.3px;
+  width: 100%;
+  padding: 1px 2px;
+  box-sizing: border-box;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 9px;
+  line-height: 1.4;
+  letter-spacing: -0.3px;
 }
 
 .hr-department-attendance .table-shell {
-    overflow-x: auto;
+  overflow-x: auto;
 }
 
 .hr-department-attendance table {
-    min-width: 420px;
-    table-layout: fixed;
+  min-width: 420px;
+  table-layout: fixed;
 }
 
 .hr-department-attendance th,
 .hr-department-attendance td {
-    padding: 6px 4px;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    font-size: 11px;
+  padding: 6px 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
 }
 
 .hr-department-attendance .status-tag {
-    padding: 2px 5px;
-    white-space: nowrap;
-    font-size: 10px;
+  padding: 2px 5px;
+  white-space: nowrap;
+  font-size: 10px;
 }
 
 /* ========================================
-   2. 근태관리
+   2. 근태관리 - 필터 및 탭
 ======================================== */
 
+/*
+   기존 문제:
+   - 탭과 조회 조건 사이에 큰 빈 공간
+   - 탭 버튼과 입력창의 세로 기준선 불일치
+   - 화면에 따라 버튼 간격 및 높이 차이
 
-.hr-attendance-management .attendance-tabs {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 6px;
-  margin: 0 auto 0 0;
-  padding: 0;
-  border-bottom: 0;
-}
-
-.hr-attendance-management .attendance-tabs button {
-  height: 38px;
-  min-height: 38px;
-  padding: 7px 14px;
-  color: var(--color-muted);
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-
-
-.hr-attendance-management .attendance-tabs button.active {
-    color: var(--color-surface);
-    background: var(--color-brand);
-    border-color: var(--color-brand);
-}
-
-.hr-attendance-management .attendance-leave-empty {
-    display: flex;
-    min-height: 260px;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    color: var(--color-muted);
-    text-align: center;
-}
-
-.hr-attendance-management .attendance-leave-empty strong {
-    color: var(--color-ink);
-    font-size: 15px;
-}
-
-.hr-attendance-management .attendance-leave-empty span {
-    font-size: 12px;
-}
-
-.hr-attendance-management .leave-empty-full {
-    margin-top: 16px;
-    padding: 42px 18px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-card);
-    box-shadow: var(--card-shadow);
-}
-
-.hr-attendance-management .attendance-leave-summary {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
-    margin: 16px 0;
-}
-
-.hr-attendance-management .attendance-leave-summary .summary-item {
-    min-width: 0;
-}
-
-.hr-attendance-management .attendance-leave-summary-empty .summary-item strong {
-    color: var(--color-muted);
-}
-
-.hr-attendance-management .attendance-leave-layout .employee-item {
-    min-height: 82px;
-    align-items: flex-start;
-}
-
-.hr-attendance-management .attendance-leave-layout .employee-attendance-rate {
-    max-width: 112px;
-    line-height: 1.35;
-    text-align: right;
-}
-
-.hr-attendance-management .attendance-leave-layout .employee-attendance-rate small {
-    white-space: normal;
-}
-
-.hr-attendance-management .attendance-leave-detail-list {
-    margin: 0;
-}
-
-.hr-attendance-management .attendance-leave-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    margin: 14px 0 4px;
-}
-
-.hr-attendance-management .attendance-leave-actions button {
-    min-height: 32px;
-    padding: 6px 14px;
-    border-radius: 7px;
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.hr-attendance-management .attendance-leave-actions button:disabled {
-    cursor: not-allowed;
-    opacity: 0.55;
-}
-
-.hr-attendance-management .attendance-leave-reject-button {
-    color: var(--color-muted);
-    background: var(--color-surface);
-    border: 1px solid var(--color-line);
-}
-
-.hr-attendance-management .attendance-leave-detail-list > div {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 10px 0;
-    border-bottom: 1px solid #edf2f7;
-}
-
-.hr-attendance-management .attendance-leave-detail-list dt {
-    color: var(--color-muted);
-    font-size: 12px;
-    white-space: nowrap;
-}
-
-.hr-attendance-management .attendance-leave-detail-list dd {
-    margin: 0;
-    color: var(--color-ink);
-    font-size: 13px;
-    text-align: right;
-    overflow-wrap: anywhere;
-}
-
-.hr-attendance-management .attendance-leave-balance,
-.hr-attendance-management .attendance-leave-balance-empty {
-    margin-top: 16px;
-    padding: 13px 14px;
-    background: var(--color-brand-soft);
-    border: 1px solid var(--color-line);
-    border-radius: 9px;
-}
-
-.hr-attendance-management .attendance-leave-balance > strong,
-.hr-attendance-management .attendance-leave-balance-empty strong {
-    display: block;
-    color: var(--color-brand);
-    font-size: 13px;
-}
-
-.hr-attendance-management .attendance-leave-balance > div {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.hr-attendance-management .attendance-leave-balance > div span {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    color: var(--color-muted);
-    font-size: 11px;
-}
-
-.hr-attendance-management .attendance-leave-balance b {
-    color: var(--color-ink);
-    font-size: 15px;
-}
-
-.hr-attendance-management .attendance-leave-balance-empty span {
-    display: block;
-    margin-top: 4px;
-    color: var(--color-muted);
-    font-size: 11px;
-}
-
-.hr-attendance-management .attendance-leave-api-notice {
-    margin: 16px 0 0;
-    padding: 10px 12px;
-    color: var(--color-muted);
-    background: var(--color-canvas);
-    border-radius: 8px;
-    font-size: 12px;
-}
+   수정:
+   - align-items: flex-end
+   - 탭 margin-right: auto 제거
+   - 각 컨트롤 높이 38px
+   - 검색 조건을 탭 바로 오른쪽에 배치
+*/
 
 .hr-attendance-management .attendance-filter {
   display: flex;
@@ -260,45 +95,126 @@
   align-items: flex-end;
   justify-content: flex-start;
   gap: 10px;
-  margin-bottom: 14px;
+
+  width: 100%;
+  min-height: 90px;
+  margin: 0 0 14px;
   padding: 12px 16px;
+  box-sizing: border-box;
+
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
   box-shadow: var(--card-shadow);
 }
 
+.hr-attendance-management .attendance-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  flex: 0 0 250px;
+  width: 250px;
+
+  align-self: flex-end;
+  gap: 6px;
+
+  margin: 0 16px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.hr-attendance-management .attendance-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 10px;
+  box-sizing: border-box;
+
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.hr-attendance-management .attendance-tabs button.active {
+  color: var(--color-surface);
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+}
+
 .hr-attendance-management .attendance-filter-field {
   display: flex;
-  flex: 0 1 125px;
+  flex: 0 0 125px;
   flex-direction: column;
+
+  width: 125px;
+  min-width: 0;
   gap: 6px;
-  min-width: 110px;
+  margin: 0;
+}
+
+.hr-attendance-management .attendance-filter-field > span {
+  display: block;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
 }
 
 .hr-attendance-management .attendance-keyword-field {
-  flex-basis: 160px;
+  flex: 0 0 160px;
+  width: 160px;
 }
 
 .hr-attendance-management .attendance-filter-field input,
 .hr-attendance-management .attendance-filter-field select {
+  display: block;
   width: 100%;
+
   height: 38px;
   min-height: 38px;
-  padding: 6px 10px;
+  max-height: 38px;
+  padding: 0 10px;
   box-sizing: border-box;
-  font-size: 13px;
-}
 
-
-.hr-attendance-management .attendance-reset-button {
-  height: 38px;
-  min-height: 38px;
-  padding: 8px 16px;
   color: var(--color-ink);
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: 8px;
+
+  font-size: 13px;
+  line-height: normal;
+}
+
+.hr-attendance-management .attendance-reset-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 80px;
+  width: 80px;
+  height: 38px;
+  min-height: 38px;
+
+  margin: 0;
+  padding: 0 10px;
+  box-sizing: border-box;
+
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
@@ -311,414 +227,594 @@
 }
 
 .hr-attendance-management .attendance-filter > .erp-primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 96px;
+  width: 96px;
   height: 38px;
   min-height: 38px;
+
+  margin: 0;
+  padding: 0 10px;
+  box-sizing: border-box;
+
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
   white-space: nowrap;
-  flex-shrink: 0;
 }
+
+/*
+   근태수정/휴가신청 버튼이 렌더링되지 않는 경우
+   빈 공간을 확보해 필터 너비 변화를 줄임.
+*/
+
+.hr-attendance-management
+.attendance-filter:not(:has(> .erp-primary-button))::after {
+  content: "";
+  flex: 0 0 96px;
+  width: 96px;
+  height: 38px;
+}
+
+/* ========================================
+   3. 근태관리 - 직원 / 상세 패널
+======================================== */
 
 .hr-attendance-management .attendance-layout {
-    display: flex;
-    align-items: flex-start;
-    gap: 18px;
-    width: 100%;
-    min-width: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
 }
 
-
 .hr-attendance-management .attendance-layout .employee-list-panel {
-    flex: 0 0 290px;
-    width: 290px;
-    max-width: none;
-    min-width: 260px;
-    gap: 14px;
-    border-color: var(--color-line);
-    box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+
+  flex: 0 0 290px;
+  width: 290px;
+  min-width: 260px;
+  max-width: none;
+
+  height: 650px;
+  padding: 16px;
+  box-sizing: border-box;
+  gap: 14px;
+
+  overflow: hidden;
+
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
 }
 
 .hr-attendance-management .employee-list-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--color-line);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-line);
 }
 
 .hr-attendance-management .employee-list-header h2,
 .hr-attendance-management .attendance-detail-header h2 {
-    margin: 0;
-    color: var(--color-ink);
-    font-size: 18px;
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 18px;
 }
 
 .hr-attendance-management .employee-list-header p,
 .hr-attendance-management .attendance-detail-header p {
-    margin: 4px 0 0;
-    color: var(--color-muted);
-    font-size: 12px;
+  margin: 4px 0 0;
+  color: var(--color-muted);
+  font-size: 12px;
 }
 
 .hr-attendance-management .employee-list-header > strong {
-    color: var(--color-brand);
-    font-size: 13px;
+  color: var(--color-brand);
+  font-size: 13px;
 }
 
 .hr-attendance-management .employee-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 630px;
-    overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+
+  gap: 8px;
+  min-height: 0;
+  max-height: none;
+
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .hr-attendance-management .employee-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    width: 100%;
-    min-height: 66px;
-    padding: 10px 12px;
-    color: var(--color-ink);
-    background: var(--color-surface);
-    border: 1px solid var(--color-line);
-    border-radius: 9px;
-    text-align: left;
-    cursor: pointer;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  width: 100%;
+  min-width: 0;
+  min-height: 66px;
+
+  padding: 10px 12px;
+  box-sizing: border-box;
+
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 9px;
+
+  text-align: left;
+  cursor: pointer;
 }
 
 .hr-attendance-management .employee-item:hover {
-    border-color: var(--color-brand);
+  border-color: var(--color-brand);
 }
 
 .hr-attendance-management .employee-item.active {
-    background: var(--color-brand-soft);
-    border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+  border-color: var(--color-brand);
 }
 
 .hr-attendance-management .employee-item-info {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    min-width: 0;
-    color: var(--color-muted);
-    font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+
+  color: var(--color-muted);
+  font-size: 12px;
 }
 
 .hr-attendance-management .employee-item-info .emp-name {
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .hr-attendance-management .employee-attendance-rate {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    flex-shrink: 0;
-    gap: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  gap: 2px;
 }
 
 .hr-attendance-management .employee-attendance-rate small {
-    color: var(--color-muted);
-    font-size: 10px;
+  color: var(--color-muted);
+  font-size: 10px;
 }
 
 .hr-attendance-management .employee-attendance-rate strong {
-    color: var(--color-brand);
-    font-size: 15px;
+  color: var(--color-brand);
+  font-size: 15px;
 }
 
+/* 상세 패널 */
+
 .hr-attendance-management .attendance-detail-panel {
-    flex: 1 1 auto;
-    min-width: 0;
-    padding: 18px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-card);
-    box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 650px;
+
+  padding: 18px;
+  box-sizing: border-box;
+  overflow: hidden;
+
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
 }
 
 .hr-attendance-management .attendance-detail-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 18px;
-    margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
 }
 
 .hr-attendance-management .attendance-detail-header .attendance-badge {
-    display: inline-block;
-    margin-bottom: 7px;
+  display: inline-block;
+  margin-bottom: 7px;
 }
 
 .hr-attendance-management .detail-attendance-rate {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    flex-shrink: 0;
-    gap: 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  gap: 3px;
 }
 
 .hr-attendance-management .detail-attendance-rate span {
-    color: var(--color-muted);
-    font-size: 11px;
+  color: var(--color-muted);
+  font-size: 11px;
 }
 
 .hr-attendance-management .detail-attendance-rate strong {
-    color: var(--color-brand);
-    font-size: 24px;
+  color: var(--color-brand);
+  font-size: 24px;
 }
 
 .hr-attendance-management .attendance-summary {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(80px, 1fr));
-    gap: 10px;
-    margin-bottom: 18px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
 }
 
 .hr-attendance-management .summary-item {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    padding: 12px 14px;
-    background: var(--color-canvas);
-    border: 1px solid var(--color-line);
-    border-radius: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+
+  padding: 12px 14px;
+
+  background: var(--color-canvas);
+  border: 1px solid var(--color-line);
+  border-radius: 9px;
 }
 
 .hr-attendance-management .summary-item span {
-    color: var(--color-muted);
-    font-size: 11px;
+  color: var(--color-muted);
+  font-size: 11px;
 }
 
 .hr-attendance-management .summary-item strong {
-    color: var(--color-ink);
-    font-size: 20px;
+  color: var(--color-ink);
+  font-size: 20px;
 }
 
-.hr-attendance-management .attendance-detail-panel .pagination-table-wrapper {
-    min-width: 0;
+/* ========================================
+   4. 근태관리 - 테이블 / 페이지네이션
+======================================== */
+
+.hr-attendance-management
+.attendance-detail-panel .pagination-table-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+
+  min-width: 0;
+  min-height: 480px;
 }
 
-.hr-attendance-management .attendance-detail-panel .pagination-table-wrapper > .attendance-card {
-    max-width: 100%;
-    min-width: 0;
-    padding: 0 0 30px;
-    border: 0;
-    box-shadow: none;
+.hr-attendance-management
+.attendance-detail-panel .pagination-table-wrapper > .attendance-card {
+  max-width: 100%;
+  min-width: 0;
+  padding: 0 0 30px;
+  border: 0;
+  box-shadow: none;
 }
 
-.hr-attendance-management .attendance-detail-panel .table-shell {
-    width: 100%;
+.hr-attendance-management
+.attendance-detail-panel .pagination-container {
+  margin-top: auto;
+}
+
+.hr-attendance-management
+.attendance-detail-panel .table-shell {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .hr-attendance-management .attendance-detail-panel table {
-    min-width: 720px;
+  min-width: 720px;
 }
 
 .hr-attendance-management .attendance-detail-panel th,
 .hr-attendance-management .attendance-detail-panel td {
-    white-space: nowrap;
+  white-space: nowrap;
 }
 
 .hr-attendance-management .status-tag.late {
-    color: #b45309;
-    background: #fff7ed;
+  color: #b45309;
+  background: #fff7ed;
 }
 
 .hr-attendance-management .status-tag.leave {
-    color: var(--color-brand);
-    background: var(--color-brand-soft);
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
 }
 
 .hr-attendance-management .attendance-feedback,
 .hr-attendance-management .attendance-empty {
-    margin: 0;
-    padding: 34px 18px;
-    color: var(--color-muted);
-    text-align: center;
+  margin: 0;
+  padding: 34px 18px;
+  color: var(--color-muted);
+  text-align: center;
 }
 
 .hr-attendance-management .attendance-error {
-    color: #b42318;
+  color: #b42318;
 }
 
 .hr-attendance-management .attendance-success {
-    color: #047857;
+  color: #047857;
 }
 
 .hr-attendance-management .attendance-row-edit-button {
-    min-height: 28px;
-    padding: 4px 8px;
-    color: var(--color-brand);
-    background: var(--color-surface);
-    border: 1px solid var(--color-line);
-    border-radius: 6px;
-    font-size: 11px;
-    cursor: pointer;
+  min-width: 50px;
+  min-height: 32px;
+  padding: 4px 8px;
+
+  color: var(--color-brand);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+
+  font-size: 11px;
+  cursor: pointer;
 }
 
 .hr-attendance-management .attendance-row-edit-button:hover {
-    color: var(--color-surface);
-    background: var(--color-brand);
-    border-color: var(--color-brand);
+  color: var(--color-surface);
+  background: var(--color-brand);
+  border-color: var(--color-brand);
 }
 
+/* ========================================
+   5. 휴가 신청 / 승인
+======================================== */
+
+.hr-attendance-management .attendance-leave-empty {
+  display: flex;
+  min-height: 260px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.hr-attendance-management .attendance-leave-empty strong {
+  color: var(--color-ink);
+  font-size: 15px;
+}
+
+.hr-attendance-management .attendance-leave-empty span {
+  font-size: 12px;
+}
+
+.hr-attendance-management .leave-empty-full {
+  margin-top: 16px;
+  padding: 42px 18px;
+
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
+}
+
+.hr-attendance-management .attendance-leave-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.hr-attendance-management .attendance-leave-summary .summary-item {
+  min-width: 0;
+}
+
+.hr-attendance-management
+.attendance-leave-summary-empty .summary-item strong {
+  color: var(--color-muted);
+}
+
+.hr-attendance-management .attendance-leave-layout .employee-item {
+  min-height: 82px;
+  align-items: flex-start;
+}
+
+.hr-attendance-management
+.attendance-leave-layout .employee-attendance-rate {
+  max-width: 112px;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.hr-attendance-management
+.attendance-leave-layout .employee-attendance-rate small {
+  white-space: normal;
+}
+
+.hr-attendance-management .attendance-leave-detail-list {
+  margin: 0;
+}
+
+.hr-attendance-management .attendance-leave-detail-list > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+
+  padding: 10px 0;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.hr-attendance-management .attendance-leave-detail-list dt {
+  color: var(--color-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.hr-attendance-management .attendance-leave-detail-list dd {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 13px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.hr-attendance-management .attendance-leave-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 14px 0 4px;
+}
+
+.hr-attendance-management .attendance-leave-actions button {
+  min-width: 54px;
+  min-height: 32px;
+  padding: 6px 14px;
+
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hr-attendance-management .attendance-leave-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.hr-attendance-management .attendance-leave-reject-button {
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+}
+
+.hr-attendance-management .attendance-leave-balance,
+.hr-attendance-management .attendance-leave-balance-empty {
+  margin-top: 16px;
+  padding: 13px 14px;
+
+  background: var(--color-brand-soft);
+  border: 1px solid var(--color-line);
+  border-radius: 9px;
+}
+
+.hr-attendance-management .attendance-leave-balance > strong,
+.hr-attendance-management .attendance-leave-balance-empty strong {
+  display: block;
+  color: var(--color-brand);
+  font-size: 13px;
+}
+
+.hr-attendance-management .attendance-leave-balance > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.hr-attendance-management .attendance-leave-balance > div span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.hr-attendance-management .attendance-leave-balance b {
+  color: var(--color-ink);
+  font-size: 15px;
+}
+
+.hr-attendance-management .attendance-leave-balance-empty span {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.hr-attendance-management .attendance-leave-api-notice {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+
+  color: var(--color-muted);
+  background: var(--color-canvas);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+/* ========================================
+   6. 근태 수정 모달
+======================================== */
+
 .hr-attendance-management .attendance-edit-form {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .hr-attendance-management .attendance-edit-summary {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    padding: 12px;
-    background: var(--color-canvas);
-    border: 1px solid var(--color-line);
-    border-radius: 9px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+
+  background: var(--color-canvas);
+  border: 1px solid var(--color-line);
+  border-radius: 9px;
 }
 
 .hr-attendance-management .attendance-edit-summary div {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .hr-attendance-management .attendance-edit-summary span,
 .hr-attendance-management .attendance-edit-field > span {
-    color: var(--color-muted);
-    font-size: 11px;
-    font-weight: 700;
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .hr-attendance-management .attendance-edit-summary strong {
-    color: var(--color-ink);
-    font-size: 13px;
+  color: var(--color-ink);
+  font-size: 13px;
 }
 
 .hr-attendance-management .attendance-edit-field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .hr-attendance-management .attendance-edit-field select,
 .hr-attendance-management .attendance-edit-field textarea {
-    width: 100%;
-    box-sizing: border-box;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .hr-attendance-management .attendance-edit-field textarea {
-    min-height: 92px;
-    resize: vertical;
+  min-height: 92px;
+  resize: vertical;
 }
 
 .hr-attendance-management .attendance-edit-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    margin-top: 4px;
-}
-
-@media (max-width: 1100px) {
-    .hr-attendance-management .attendance-filter {
-        flex-wrap: wrap;
-        justify-content: flex-start;
-    }
-
-    .hr-attendance-management .attendance-tabs {
-        flex: 1 1 100%;
-        margin-right: 0;
-    }
-
-    .hr-attendance-management .attendance-layout {
-        flex-direction: column;
-    }
-
-    .hr-attendance-management .attendance-layout .employee-list-panel {
-        width: 100%;
-        max-width: none;
-        box-sizing: border-box;
-    }
-
-    .hr-attendance-management .employee-list {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(220px, 1fr));
-        max-height: none;
-    }
-
-    .hr-attendance-management .attendance-detail-panel {
-        width: 100%;
-        box-sizing: border-box;
-    }
-}
-
-@media (max-width: 720px) {
-    .hr-attendance-management .employee-list,
-    .hr-attendance-management .attendance-summary {
-        grid-template-columns: 1fr;
-    }
-
-    .hr-attendance-management .attendance-filter-field {
-        flex: 1 1 145px;
-        min-width: 0;
-    }
-
-    .hr-attendance-management .attendance-keyword-field {
-        flex-basis: 100%;
-    }
-
-    .hr-attendance-management .attendance-detail-header {
-        align-items: flex-start;
-    }
-
-    .hr-attendance-management .attendance-tabs {
-        flex-direction: row;
-        flex-wrap: wrap;
-    }
-
-    .hr-attendance-management .attendance-tabs button {
-        width: auto;
-    }
-
-    .hr-attendance-management .attendance-edit-summary {
-        grid-template-columns: 1fr;
-    }
-
-    .hr-attendance-management .attendance-leave-summary {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .hr-attendance-management .attendance-leave-balance > div {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 480px) {
-    .hr-attendance-management .attendance-leave-summary {
-        grid-template-columns: 1fr;
-    }
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 /* ========================================
-   3. 직원·부서 통합관리
+   7. 인사/조직 통합관리 - 공통
 ======================================== */
-
-/* 직원 · 부서 · 상세정보 3단 레이아웃 */
-.hr-employee-management .hr-organization-grid {
-  display: grid;
-  grid-template-columns:
-    180px
-    minmax(210px, 0.6fr)
-    minmax(330px, 1.6fr);
-  gap: 12px;
-  align-items: start;
-}
-
 
 .hr-employee-management .stats-section {
   display: grid;
@@ -730,6 +826,7 @@
   width: 100%;
   max-width: none;
   min-width: 0;
+  box-sizing: border-box;
 }
 
 .hr-employee-management .dashboard-top {
@@ -748,10 +845,12 @@
 .hr-employee-management .hr-panel {
   min-width: 0;
   padding: 16px;
-  border: 1px solid var(--color-line);
-  border-radius: 12px;
+  box-sizing: border-box;
+
   background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
 }
 
 .hr-employee-management .department-panel,
@@ -771,30 +870,39 @@
 
 .hr-employee-management .hr-panel-heading h2 {
   margin: 0;
-  color: #0f172a;
+  color: var(--color-ink);
   font-size: 16px;
 }
 
 .hr-employee-management .hr-panel-heading span {
-  color: #64748b;
+  color: var(--color-muted);
   font-size: 12px;
 }
+
+/* 통합관리 필터 */
 
 .hr-employee-management .hr-filter-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: nowrap;
   gap: 12px;
-  flex-wrap: wrap;
-  margin: 16px 0 14px;
-  padding: 14px 16px;
+
+  width: 100%;
+  min-height: 90px;
+
+  margin: 14px 0;
+  padding: 12px 16px;
+  box-sizing: border-box;
+
+  background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--card-shadow);
 }
 
 .hr-employee-management .hr-filter-result {
+  flex: 0 0 auto;
   color: var(--color-muted);
   font-size: 13px;
   white-space: nowrap;
@@ -802,7 +910,12 @@
 
 .hr-employee-management .hr-filter-controls {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(120px, 0.7fr)) auto auto;
+  grid-template-columns:
+    minmax(180px, 1fr)
+    repeat(3, minmax(100px, 0.7fr))
+    auto
+    auto;
+
   align-items: center;
   gap: 8px;
   flex: 1 1 760px;
@@ -812,6 +925,7 @@
 .hr-employee-management .hr-filter-controls input,
 .hr-employee-management .hr-filter-controls select,
 .hr-employee-management .hr-filter-controls button {
+  height: 38px;
   min-height: 38px;
   box-sizing: border-box;
 }
@@ -821,24 +935,14 @@
   width: 100%;
 }
 
-.hr-employee-management .hr-filter-query-button {
-  color: var(--color-surface);
-  background: var(--color-brand);
-  border-color: var(--color-brand);
-}
-
-.hr-employee-management .hr-filter-query-button:hover {
-  color: var(--color-surface);
-  background: var(--color-brand-dark);
-  border-color: var(--color-brand-dark);
-}
-
+.hr-employee-management .hr-filter-query-button,
 .hr-employee-management .hr-department-register-button {
   color: var(--color-surface);
   background: var(--color-brand);
   border-color: var(--color-brand);
 }
 
+.hr-employee-management .hr-filter-query-button:hover,
 .hr-employee-management .hr-department-register-button:hover {
   color: var(--color-surface);
   background: var(--color-brand-dark);
@@ -853,46 +957,80 @@
   opacity: 0.65;
 }
 
+/* ========================================
+   8. 통합관리 - 3개 패널
+======================================== */
+
+.hr-employee-management .hr-organization-grid {
+  display: grid;
+  grid-template-columns:
+    180px
+    minmax(230px, 0.7fr)
+    minmax(330px, 1.6fr);
+
+  gap: 12px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.hr-employee-management .hr-organization-grid > .hr-panel {
+  min-width: 0;
+  height: 100%;
+  box-sizing: border-box;
+  align-self: stretch;
+}
+
 .hr-employee-management .department-item {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 4px 8px;
+
   width: 100%;
+  min-width: 0;
   padding: 10px 12px;
-  border: 1px solid #e2e8f0;
+  box-sizing: border-box;
+
+  border: 1px solid var(--color-line);
   border-radius: 8px;
   background: var(--color-surface);
-  color: #334155;
+
+  color: var(--color-ink);
   text-align: left;
   cursor: pointer;
 }
 
 .hr-employee-management .department-item:hover,
 .hr-employee-management .department-item.selected {
-  border-color: #3b82f6;
-  background: #eff6ff;
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
 }
 
 .hr-employee-management .department-item strong {
-  color: #0f172a;
+  min-width: 0;
+  color: var(--color-ink);
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .hr-employee-management .department-item span {
-  color: #64748b;
+  color: var(--color-muted);
   font-size: 12px;
 }
 
 .hr-employee-management .department-item small {
   flex-basis: 100%;
-  color: #64748b;
+  color: var(--color-muted);
   font-size: 11px;
+  overflow-wrap: anywhere;
 }
 
 .hr-employee-management .employee-list-panel {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 650px;
   overflow-x: hidden;
 }
 
@@ -933,11 +1071,13 @@
   font-size: 12px;
 }
 
-.hr-employee-management .employee-list-panel tbody tr:has(.hr-selected-employee) {
+.hr-employee-management
+.employee-list-panel tbody tr:has(.hr-selected-employee) {
   background: var(--color-brand-soft);
 }
 
-.hr-employee-management .employee-list-panel tbody tr:has(.hr-selected-employee) td:first-child {
+.hr-employee-management
+.employee-list-panel tbody tr:has(.hr-selected-employee) td:first-child {
   border-left: 3px solid var(--color-brand);
 }
 
@@ -950,6 +1090,10 @@
   color: #64748b;
   background: #f1f5f9;
 }
+
+/* ========================================
+   9. 통합관리 - 직원 상세정보
+======================================== */
 
 .hr-employee-management .hr-detail-summary {
   display: flex;
@@ -1010,19 +1154,28 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 14px;
+  margin-top: auto;
+  padding-top: 14px;
 }
 
 .hr-employee-management .employee-detail-actions button,
 .hr-employee-management .hr-attendance-link {
-  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 38px;
   padding: 7px 10px;
+  box-sizing: border-box;
+
   border: 1px solid var(--color-line);
   border-radius: 8px;
   background: var(--color-surface);
   color: var(--color-ink);
+
   font-size: 12px;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .hr-employee-management .employee-detail-actions button:hover,
@@ -1036,62 +1189,393 @@
   min-height: 260px;
   margin: 0;
   place-items: center;
-  color: #64748b;
+  color: var(--color-muted);
   font-size: 13px;
   text-align: center;
 }
 
-@media (max-width: 1180px) {
-  .hr-employee-management .hr-organization-grid {
-    grid-template-columns: minmax(190px, 230px) minmax(0, 1fr);
-  }
+/* ========================================
+   10. 기존 HRUnified.css 통합
+======================================== */
 
-  .hr-employee-management .employee-detail-panel {
-    grid-column: 1 / -1;
-  }
+.hr-single-management .stats-section {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
-@media (max-width: 760px) {
-  .hr-employee-management .stats-section {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.hr-single-management .stats-section > .content-card {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
 
-  .hr-employee-management .hr-filter-card,
-  .hr-employee-management .hr-filter-controls {
-    align-items: stretch;
-  }
+.hr-single-management .hr-single-filters {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: 7px;
+  min-width: 0;
+}
 
-  .hr-employee-management .hr-filter-controls {
-    grid-template-columns: 1fr 1fr;
-    justify-content: stretch;
-  }
+.hr-single-management .hr-single-filters input,
+.hr-single-management .hr-single-filters select,
+.hr-single-management .hr-single-filters button {
+  height: 38px;
+  min-height: 38px;
+  padding: 0 9px;
+  box-sizing: border-box;
 
-  .hr-employee-management .hr-filter-controls input,
-  .hr-employee-management .hr-filter-controls select,
-  .hr-employee-management .hr-filter-controls button {
-    width: auto;
-  }
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-ink);
 
-  .hr-employee-management .hr-filter-controls input {
-    grid-column: 1 / -1;
-    width: 100%;
-  }
+  font-size: 12px;
+  white-space: nowrap;
+}
 
-  .hr-employee-management .hr-organization-grid {
-    grid-template-columns: 1fr;
-  }
+.hr-single-management .hr-single-filters input {
+  flex: 1 1 150px;
+  min-width: 125px;
+}
 
-  .hr-employee-management .employee-detail-panel {
-    grid-column: auto;
-  }
+.hr-single-management .hr-single-filters select {
+  flex: 0 1 112px;
+  min-width: 100px;
+}
 
-  .hr-employee-management .employee-list-panel {
-    overflow-x: auto;
-  }
+.hr-single-management .hr-single-filters button {
+  flex: 0 0 auto;
+  min-width: 74px;
+  cursor: pointer;
+}
+
+.hr-single-management .hr-single-filters .erp-primary-button {
+  min-width: 90px;
+  color: #fff;
+  background: var(--color-brand);
+  border: 1px solid var(--color-brand);
+}
+
+/* 부서 관리 */
+
+.hr-single-management .hr-single-dept-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line);
+}
+
+.hr-single-management .hr-single-dept-actions strong {
+  font-size: 12px;
+}
+
+.hr-single-management .hr-single-dept-actions > span,
+.hr-single-management .hr-single-dept-actions > small {
+  color: var(--color-muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.hr-single-management .hr-single-delete {
+  min-width: 90px;
+  min-height: 38px;
+  padding: 0 12px;
+
+  color: #b91c1c;
+  background: var(--color-surface);
+  border: 1px solid #f3b4b4;
+  border-radius: 8px;
+
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.hr-single-management .hr-single-delete:disabled {
+  color: #94a3b8;
+  background: #f8fafc;
+  border-color: var(--color-line);
+  cursor: not-allowed;
+}
+
+/* 직원 목록: 7개 카드 높이 */
+
+.hr-single-management .hr-single-employee-list {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+
+  gap: 7px;
+  height: 504px;
+  min-height: 504px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.hr-single-management .hr-single-employee {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+
+  align-items: center;
+  gap: 3px 8px;
+
+  width: 100%;
+  min-width: 0;
+  height: 66px;
+  min-height: 66px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+
+  text-align: left;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.hr-single-management .hr-single-employee strong {
+  grid-column: 1;
+  grid-row: 1;
+
+  min-width: 0;
+  color: var(--color-ink);
+  font-size: 13px;
+
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.hr-single-management .hr-single-employee span {
+  grid-column: 2;
+  grid-row: 1;
+
+  color: var(--color-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hr-single-management .hr-single-employee small {
+  grid-column: 1 / -1;
+  grid-row: 2;
+
+  min-width: 0;
+  color: var(--color-muted);
+  font-size: 11px;
+
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.hr-single-management .hr-single-employee.selected,
+.hr-single-management .hr-single-employee:hover {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+/* 직원 목록 페이지네이션 */
+
+.hr-single-management .employee-list-panel .pagination-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+
+  gap: 8px;
+  margin-top: auto;
+  padding: 12px 0 0;
+}
+
+.hr-single-management .employee-list-panel .page-numbers {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.hr-single-management .employee-list-panel .page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  box-sizing: border-box;
+
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.hr-single-management .employee-list-panel .page-btn:hover:not(:disabled) {
+  border-color: var(--color-brand);
+  background: var(--color-canvas);
+}
+
+.hr-single-management .employee-list-panel .page-btn.active {
+  color: #fff;
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+  font-weight: 700;
+}
+
+.hr-single-management .employee-list-panel .page-btn:disabled {
+  color: #cbd5e1;
+  background: var(--color-canvas);
+  cursor: not-allowed;
+}
+
+/* 직원 상세 탭 */
+
+.hr-single-management .hr-single-detail-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.hr-single-management .hr-single-detail-tabs button {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px;
+  box-sizing: border-box;
+
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hr-single-management .hr-single-detail-tabs button.active {
+  color: #fff;
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+}
+
+.hr-single-management .hr-single-month {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.hr-single-management .hr-single-month input {
+  min-width: 0;
+  height: 38px;
+  padding: 6px;
+  box-sizing: border-box;
+
+  border: 1px solid var(--color-line);
+  border-radius: 7px;
+}
+
+.hr-single-management .employee-detail-actions {
+  margin-top: auto;
+  padding-top: 14px;
+}
+
+.hr-single-management .hr-pay-emphasis strong {
+  color: var(--color-brand);
+  font-size: 16px;
+}
+
+.hr-single-management .hr-single-alert {
+  margin: 0 0 12px;
+  font-size: 13px;
+}
+
+.hr-single-management .hr-single-error {
+  color: #b91c1c;
+}
+
+.hr-single-management .hr-single-success {
+  color: #047857;
 }
 
 /* ========================================
-   4. 급여관리
+   11. 직원 / 부서 / 급여 입력 모달
+======================================== */
+
+.hr-unified-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hr-unified-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.hr-unified-form input,
+.hr-unified-form select,
+.hr-unified-form textarea {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+
+  border: 1px solid var(--color-line);
+  border-radius: 7px;
+  font-size: 13px;
+}
+
+.hr-unified-form label:has(textarea),
+.hr-unified-form .hr-form-context,
+.hr-unified-form .hr-form-totals,
+.hr-unified-form .hr-modal-actions {
+  grid-column: 1 / -1;
+}
+
+.hr-unified-form .hr-form-context {
+  margin: 0;
+  padding: 10px;
+  background: var(--color-canvas);
+  border-radius: 7px;
+}
+
+.hr-unified-form .hr-form-totals {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hr-unified-form .hr-modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+/* ========================================
+   12. 급여관리 - 기존 기능 스타일
 ======================================== */
 
 .hr-payroll-management .dashboard-header {
@@ -1109,6 +1593,7 @@
 .hr-payroll-management .payroll-header-actions button {
   min-height: 36px;
   padding: 7px 12px;
+
   color: var(--color-muted);
   background: var(--color-surface);
   border: 1px solid var(--color-line);
@@ -1124,6 +1609,7 @@
 .hr-payroll-management .payroll-process-card {
   margin: 18px 0 14px;
   padding: 18px;
+
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
@@ -1157,6 +1643,7 @@
 .hr-payroll-management .payroll-process-heading > span {
   flex-shrink: 0;
   padding: 4px 9px;
+
   background: var(--color-brand-soft);
   border-radius: 999px;
   color: var(--color-brand);
@@ -1178,6 +1665,7 @@
   gap: 10px;
   min-width: 0;
   padding: 12px;
+
   background: #f8fafc;
   border: 1px solid var(--color-line);
   border-radius: 10px;
@@ -1199,10 +1687,12 @@
   width: 28px;
   height: 28px;
   place-items: center;
+
   color: var(--color-muted);
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: 50%;
+
   font-size: 12px;
   font-weight: 800;
 }
@@ -1262,6 +1752,7 @@
 .hr-payroll-management .payroll-warning-card span {
   display: inline-block;
   margin-right: 5px;
+
   color: #b42318;
   font-size: 30px;
   font-weight: 700;
@@ -1274,6 +1765,7 @@
   gap: 8px;
   margin: 14px 0 0;
   padding: 11px 14px;
+
   border: 1px solid;
   border-radius: 9px;
   font-size: 13px;
@@ -1300,6 +1792,7 @@
 .hr-payroll-management .payroll-filter-card {
   margin: 14px 0;
   padding: 12px 16px;
+
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
@@ -1317,10 +1810,12 @@
 .hr-payroll-management .payroll-tabs button {
   min-height: 36px;
   padding: 7px 14px;
+
   color: var(--color-muted);
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: 8px;
+
   font-size: 13px;
   font-weight: 600;
 }
@@ -1333,7 +1828,13 @@
 
 .hr-payroll-management .payroll-filter-controls {
   display: grid;
-  grid-template-columns: 140px 140px 140px minmax(200px, 260px) auto;
+  grid-template-columns:
+    140px
+    140px
+    140px
+    minmax(200px, 260px)
+    auto;
+
   align-items: end;
   justify-content: end;
   gap: 10px;
@@ -1381,16 +1882,21 @@
 .hr-payroll-management .payroll-loading {
   margin: 0;
   padding: 48px 18px;
+
   color: var(--color-muted);
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
+
   text-align: center;
 }
 
 .hr-payroll-management .payroll-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 330px);
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(280px, 330px);
+
   align-items: start;
   gap: 16px;
 }
@@ -1450,9 +1956,11 @@
 .hr-payroll-management .payroll-employee-name {
   width: fit-content;
   padding: 0;
+
   color: var(--color-brand);
   background: transparent;
   border: 0;
+
   font-size: 13px;
   font-weight: 700;
   text-align: left;
@@ -1474,6 +1982,7 @@
   align-items: center;
   min-height: 24px;
   padding: 3px 8px;
+
   border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
@@ -1498,6 +2007,7 @@
 .hr-payroll-management .payroll-detail-panel {
   min-width: 0;
   padding: 18px;
+
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
@@ -1596,11 +2106,197 @@
   min-height: 360px;
   margin: 0;
   padding: 16px;
+
   place-items: center;
   color: var(--color-muted);
   font-size: 13px;
   text-align: center;
 }
+
+/* ========================================
+   13. 반응형 - 근태관리
+======================================== */
+
+@media (max-width: 1100px) {
+  .hr-attendance-management .attendance-filter {
+    flex-wrap: wrap;
+    align-items: flex-end;
+    height: auto;
+    min-height: 90px;
+  }
+
+  .hr-attendance-management .attendance-tabs {
+    flex: 1 1 100%;
+    width: 100%;
+    margin: 0;
+  }
+
+  .hr-attendance-management .attendance-filter-field {
+    flex: 1 1 125px;
+    width: auto;
+  }
+
+  .hr-attendance-management .attendance-keyword-field {
+    flex: 1 1 160px;
+  }
+
+  .hr-attendance-management .attendance-layout {
+    flex-direction: column;
+  }
+
+  .hr-attendance-management .attendance-layout .employee-list-panel {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    height: 360px;
+  }
+
+  .hr-attendance-management .employee-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .hr-attendance-management .attendance-detail-panel {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 720px) {
+  .hr-attendance-management .employee-list,
+  .hr-attendance-management .attendance-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hr-attendance-management .attendance-filter-field {
+    flex: 1 1 145px;
+    min-width: 0;
+  }
+
+  .hr-attendance-management .attendance-keyword-field {
+    flex-basis: 100%;
+  }
+
+  .hr-attendance-management .attendance-detail-header {
+    align-items: flex-start;
+  }
+
+  .hr-attendance-management .attendance-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hr-attendance-management .attendance-edit-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hr-attendance-management .attendance-leave-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hr-attendance-management .attendance-leave-balance > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hr-attendance-management .attendance-reset-button,
+  .hr-attendance-management .attendance-filter > .erp-primary-button {
+    flex: 1 1 100px;
+    width: auto;
+  }
+
+  .hr-attendance-management
+  .attendance-filter:not(:has(> .erp-primary-button))::after {
+    flex: 1 1 100px;
+    width: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .hr-attendance-management .attendance-leave-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ========================================
+   14. 반응형 - 인사/조직 통합관리
+======================================== */
+
+@media (max-width: 1180px) {
+  .hr-employee-management .hr-filter-card {
+    flex-wrap: wrap;
+  }
+
+  .hr-single-management .hr-single-filters {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .hr-employee-management .hr-organization-grid {
+    grid-template-columns: 180px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .hr-employee-management .hr-organization-grid > .hr-panel {
+    height: auto;
+  }
+
+  .hr-employee-management .employee-detail-panel {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .hr-employee-management .stats-section {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hr-employee-management .hr-filter-card,
+  .hr-employee-management .hr-filter-controls {
+    align-items: stretch;
+  }
+
+  .hr-employee-management .hr-filter-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+  }
+
+  .hr-employee-management .hr-filter-controls input,
+  .hr-employee-management .hr-filter-controls select,
+  .hr-employee-management .hr-filter-controls button {
+    width: auto;
+  }
+
+  .hr-employee-management .hr-filter-controls input {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .hr-employee-management .hr-organization-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hr-employee-management .employee-detail-panel {
+    grid-column: auto;
+  }
+
+  .hr-single-management .hr-single-filters input,
+  .hr-single-management .hr-single-filters select,
+  .hr-single-management .hr-single-filters button {
+    flex: 1 1 130px;
+    min-width: 0;
+  }
+
+  .hr-unified-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ========================================
+   15. 반응형 - 급여관리
+======================================== */
 
 @media (max-width: 1180px) {
   .hr-payroll-management .payroll-summary-grid {
@@ -1617,7 +2313,7 @@
   }
 
   .hr-payroll-management .payroll-workspace {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .hr-payroll-management .payroll-detail-panel {
@@ -1665,7 +2361,7 @@
   .hr-payroll-management .payroll-process-steps,
   .hr-payroll-management .payroll-summary-grid,
   .hr-payroll-management .payroll-filter-controls {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .hr-payroll-management .payroll-search-field {
@@ -1674,28 +2370,490 @@
 }
 
 
-/* =========================================
-   부서 목록 / 소속 직원 / 직원 상세정보
-   3개 패널 하단 높이 통일
-   ========================================= */
+/* ========================================
+   근태관리 필터 최종 정렬
+   - 박스 높이 축소
+   - 컨트롤 세로 중앙 정렬
+   - 탭 왼쪽 / 검색 조건 오른쪽
+======================================== */
 
-   @media (min-width: 1181px) {
-    .hr-employee-management .hr-organization-grid {
-      align-items: stretch;
-    }
-  
-    .hr-employee-management .hr-organization-grid > .hr-panel {
-      height: 100%;
-      box-sizing: border-box;
-      align-self: stretch;
-    }
-  
-    /* 직원 상세정보 버튼을 패널 하단에 배치 */
-    .hr-employee-management .employee-detail-actions {
-      margin-top: auto;
-    }
+.hr-attendance-management .attendance-filter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+
+  width: 100%;
+  height: 58px;
+  min-height: 58px;
+  padding: 8px 12px;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+/* 왼쪽 탭 */
+.hr-attendance-management .attendance-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 0 0 250px;
+
+  width: 250px;
+  margin: 0 auto 0 0;
+  padding: 0;
+  align-self: center;
+  gap: 6px;
+}
+
+/* 입력 필드 */
+.hr-attendance-management .attendance-filter-field {
+  position: relative;
+  display: flex;
+  flex: 0 0 125px;
+  align-items: center;
+  justify-content: center;
+
+  width: 125px;
+  height: 38px;
+  min-width: 0;
+  margin: 0;
+  gap: 0;
+  align-self: center;
+}
+
+/* 설명 라벨은 화면에서만 숨김 */
+.hr-attendance-management .attendance-filter-field > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* 직원명 검색 너비 */
+.hr-attendance-management .attendance-keyword-field {
+  flex: 0 0 160px;
+  width: 160px;
+}
+
+/* 높이 통일 */
+.hr-attendance-management .attendance-tabs button,
+.hr-attendance-management .attendance-filter-field input,
+.hr-attendance-management .attendance-filter-field select,
+.hr-attendance-management .attendance-reset-button,
+.hr-attendance-management .attendance-filter > .erp-primary-button {
+  height: 38px;
+  min-height: 38px;
+  max-height: 38px;
+  margin-top: 0;
+  margin-bottom: 0;
+  box-sizing: border-box;
+}
+
+/* 초기화 버튼 */
+.hr-attendance-management .attendance-reset-button {
+  flex: 0 0 80px;
+  width: 80px;
+  padding: 0 10px;
+}
+
+/* 근태수정 / 휴가신청 버튼 */
+.hr-attendance-management .attendance-filter > .erp-primary-button {
+  flex: 0 0 96px;
+  width: 96px;
+  padding: 0 10px;
+}
+
+/* 반응형 */
+@media (max-width: 1100px) {
+  .hr-attendance-management .attendance-filter {
+    height: auto;
+    min-height: 58px;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 8px 12px;
   }
-  
+
+  .hr-attendance-management .attendance-tabs {
+    flex: 1 1 100%;
+    width: 100%;
+    margin: 0;
+  }
+
+  .hr-attendance-management .attendance-filter-field {
+    flex: 1 1 125px;
+    width: auto;
+  }
+
+  .hr-attendance-management .attendance-keyword-field {
+    flex: 1 1 160px;
+    width: auto;
+  }
+}
+
+/* ==============================================
+   인사·조직 통합관리 화면 최종 정렬
+   기존 HR.css 맨 아래에 추가
+============================================== */
+
+/* 1. 검색 필터 전체 박스 높이 축소 */
+
+.hr-employee-management.hr-single-management .hr-filter-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+
+  width: 100%;
+  height: 58px;
+  min-height: 58px;
+  padding: 8px 12px;
+  margin: 12px 0;
+  gap: 12px;
+
+  box-sizing: border-box;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
+}
+
+/* 왼쪽 조회 직원 수 */
+
+.hr-employee-management.hr-single-management .hr-filter-result {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 4px;
+  margin-right: auto;
+
+  color: var(--color-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.hr-employee-management.hr-single-management .hr-filter-result strong {
+  color: var(--color-brand);
+}
+
+/* 2. 검색 조건과 버튼 오른쪽 정렬 */
+
+.hr-employee-management.hr-single-management .hr-single-filters {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 1 auto;
+  flex-wrap: nowrap;
+
+  width: auto;
+  min-width: 0;
+  gap: 7px;
+  margin-left: auto;
+}
+
+/* 검색창 / 셀렉트 / 버튼 높이 통일 */
+
+.hr-employee-management.hr-single-management
+.hr-single-filters input,
+
+.hr-employee-management.hr-single-management
+.hr-single-filters select,
+
+.hr-employee-management.hr-single-management
+.hr-single-filters button {
+  display: block;
+
+  height: 38px;
+  min-height: 38px;
+  max-height: 38px;
+
+  margin: 0;
+  padding: 0 10px;
+  box-sizing: border-box;
+
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+
+  font-size: 12px;
+  line-height: normal;
+  white-space: nowrap;
+}
+
+/* 통합 검색창 */
+
+.hr-employee-management.hr-single-management
+.hr-single-filters input {
+  flex: 1 1 190px;
+  width: 190px;
+  min-width: 145px;
+  background: var(--color-surface);
+}
+
+/* 부서 / 재직상태 / 계정상태 */
+
+.hr-employee-management.hr-single-management
+.hr-single-filters select {
+  flex: 0 1 115px;
+  width: 115px;
+  min-width: 100px;
+  background: var(--color-surface);
+}
+
+/* 초기화 버튼 */
+
+.hr-employee-management.hr-single-management
+.hr-single-filters button:not(.erp-primary-button) {
+  flex: 0 0 74px;
+  width: 74px;
+
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* 직원 등록 / 부서 등록 버튼 */
+
+.hr-employee-management.hr-single-management
+.hr-single-filters .erp-primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 86px;
+  width: 86px;
+
+  color: #ffffff;
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hr-employee-management.hr-single-management
+.hr-single-filters .erp-primary-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ==============================================
+   3. 부서 / 직원 / 상세정보 패널 높이 통일
+============================================== */
+
+.hr-employee-management.hr-single-management
+.hr-organization-grid {
+  display: grid;
+  grid-template-columns:
+    180px
+    minmax(230px, 0.7fr)
+    minmax(330px, 1.6fr);
+
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.hr-employee-management.hr-single-management
+.hr-organization-grid > .hr-panel {
+  min-width: 0;
+  min-height: 650px;
+  height: 100%;
+  box-sizing: border-box;
+  align-self: stretch;
+}
+
+/* 가운데 직원 목록 */
+
+.hr-employee-management.hr-single-management
+.employee-list-panel {
+  display: flex;
+  flex-direction: column;
+
+  min-width: 0;
+  min-height: 650px;
+  overflow: hidden;
+}
+
+/* 직원 카드 7개 높이를 기준으로 목록 영역 고정 */
+
+.hr-employee-management.hr-single-management
+.hr-single-employee-list {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 504px;
+
+  gap: 7px;
+  height: 504px;
+  min-height: 504px;
+  min-width: 0;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 직원 개별 카드 */
+
+.hr-employee-management.hr-single-management
+.hr-single-employee {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+
+  flex: 0 0 66px;
+  align-items: center;
+  gap: 3px 8px;
+
+  width: 100%;
+  height: 66px;
+  min-height: 66px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+
+  text-align: left;
+  cursor: pointer;
+}
+
+.hr-employee-management.hr-single-management
+.hr-single-employee strong {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+}
+
+.hr-employee-management.hr-single-management
+.hr-single-employee span {
+  color: var(--color-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.hr-employee-management.hr-single-management
+.hr-single-employee small {
+  grid-column: 1 / -1;
+
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.hr-employee-management.hr-single-management
+.hr-single-employee.selected,
+
+.hr-employee-management.hr-single-management
+.hr-single-employee:hover {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+/* 페이지네이션은 직원 목록 하단 */
+
+.hr-employee-management.hr-single-management
+.employee-list-panel .pagination-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+/* 직원 상세정보 버튼 아래쪽 배치 */
+
+.hr-employee-management.hr-single-management
+.employee-detail-actions {
+  margin-top: auto;
+  padding-top: 14px;
+}
+
+/* ==============================================
+   4. 화면 너비에 따른 반응형
+============================================== */
+
+@media (max-width: 1250px) {
+  .hr-employee-management.hr-single-management
+  .hr-filter-card {
+    height: auto;
+    min-height: 58px;
+    flex-wrap: wrap;
+  }
+
+  .hr-employee-management.hr-single-management
+  .hr-filter-result {
+    flex: 0 0 100%;
+  }
+
+  .hr-employee-management.hr-single-management
+  .hr-single-filters {
+    flex: 1 1 100%;
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 1180px) {
+  .hr-employee-management.hr-single-management
+  .hr-organization-grid {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+
+  .hr-employee-management.hr-single-management
+  .employee-detail-panel {
+    grid-column: 1 / -1;
+  }
+
+  .hr-employee-management.hr-single-management
+  .hr-organization-grid > .hr-panel {
+    height: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .hr-employee-management.hr-single-management
+  .hr-organization-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hr-employee-management.hr-single-management
+  .employee-detail-panel {
+    grid-column: auto;
+  }
+
+  .hr-employee-management.hr-single-management
+  .hr-single-filters {
+    justify-content: flex-start;
+  }
+
+  .hr-employee-management.hr-single-management
+  .hr-single-filters input,
+
+  .hr-employee-management.hr-single-management
+  .hr-single-filters select,
+
+  .hr-employee-management.hr-single-management
+  .hr-single-filters button {
+    flex: 1 1 130px;
+    width: auto;
+    min-width: 0;
+  }
+}
+
+
+
 
 
 /* ========================================
