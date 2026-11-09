@@ -19,7 +19,7 @@ function toDraft(draft, loginUser) {
         DRAFT: "임시저장",
         PENDING: "결재대기",
         APPROVED: "최종승인",
-        REJECTED: "반려"
+        REJECTED: "반려",
     };
     return {
         id: draft.draft_id,
@@ -57,7 +57,7 @@ function MyTeskList() {
         loadEmployees();
     }, []);
 
-    const loadDrafts = useCallback(async () => {
+    const loadDrafts = async () => {
         if (!Number.isSafeInteger(employeeId) || employeeId <= 0) return;
         try {
             const params = { employeeId };
@@ -74,7 +74,7 @@ function MyTeskList() {
             console.error("기안서 목록 조회 오류:", error);
             setDraftError("기안서 목록을 불러오지 못했습니다. 서버 연결 상태를 확인해주세요.");
         }
-    }, [employeeId]);
+    };
 
     useEffect(() => {
         loadDrafts();
@@ -105,7 +105,6 @@ function MyTeskList() {
                         <DraftCreate
                             employees={employees}
                             loginUser={loginUser}
-                            drafts={drafts}
                             setDrafts={setDrafts}
                             editingDraft={editingDraft}
                             setEditingDraft={setEditingDraft}
@@ -114,12 +113,10 @@ function MyTeskList() {
                     } />
                     <Route path="draft-complete" element={<DraftComp drafts={drafts} />} />
                     <Route path="draft-request" element={
-                        <DraftReq drafts={drafts} loginUser={loginUser}
-                            setEditingDraft={setEditingDraft} onDraftChanged={loadDrafts} />
+                        <DraftReq drafts={drafts} setEditingDraft={setEditingDraft} onDraftChanged={loadDrafts} />
                     } />
                     <Route path="draft-received" element={
-                        <DraftReceived drafts={receivedDrafts} loginUser={loginUser}
-                            onDraftChanged={loadDrafts} />
+                        <DraftReceived drafts={receivedDrafts} onDraftChanged={loadDrafts} />
                     } />
                     <Route path="draft-approved" element={
                         <DraftApproved drafts={approvedDrafts} loginUser={loginUser} />

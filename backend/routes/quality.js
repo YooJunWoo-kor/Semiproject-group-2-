@@ -36,6 +36,8 @@ router.get('/products', (req,res) => {
     })}
 )
 
+    
+
     router.post('/inspections',(req, res) => {
         const {
             productId,
@@ -87,5 +89,30 @@ router.get('/products', (req,res) => {
             })
         });
     });
+
+
+router.get('/products/:id', (req,res) => {
+    const productId = Number(req.params.id);
+
+    if(!Number.isSafeInteger(productId) || productId <= 0){
+        return res.status(400).json({
+            message: '올바른 제품 ID가 필요합니다'
+        })
+    }
+
+    const sql = `
+        SELECT
+            p.product_id,
+            p.product_code,
+            p.product_name,
+            p.product_type,
+            p.company,
+            p.price,
+            p.stock,
+            p.image_url,
+            p.variant_text
+            COALESCE(i.quality_status, '미실시') AS quality_status
+    `
+})
 
 module.exports = router;

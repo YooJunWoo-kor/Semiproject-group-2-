@@ -10,10 +10,10 @@ import Nav from '../../../components/Nav.js';
 function QaRouter() {
     let mainUrl = "/main/qa/"
     const urlList = [
-        {name:"품질 대시보드", url:mainUrl+"/*"}
-        ,{name:"제품 목록", url:mainUrl+"/products"}
-        ,{name:"검사 목록", url:mainUrl+"/test-list"}
-        ,{name:"분석 그래프", url:mainUrl+"/graph"}
+        {name:"품질 대시보드", url:mainUrl + "*"}
+        ,{name:"제품 목록", url:mainUrl + "products"}
+        ,{name:"검사 목록", url:mainUrl + "test-list"}
+        ,{name:"분석 그래프", url:mainUrl + "graph"}
     ];
 
     return (

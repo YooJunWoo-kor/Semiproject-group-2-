@@ -1,12 +1,27 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import products from "./product";
+import axios from "axios";
+
+import { API_BASE_URL } from "../../../../utils/authStorage";
 import defaultQualityChecklist from "./QualityChecklist";
 import { calculateQualityScore } from "../../../../utils/qualityScore";
+
+
 
 function ProductDetail() {
 
     const { id } = useParams();
+    
+    const [product, setProduct] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    const [qualityStatus, setQualityStatus] = useState("미실시");
+    const [inspectionDate, setInspectionDate] = useState("");
+    const [inspector, setInspector] = useState("");
+    const [failReason, setFailReason] = useState("");
+    const [memo, setMemo] = useState("");
+    
+    const [isSaving, setIsSaving] = useState(false);
 
     const [checklist, setChecklist] = useState(
         defaultQualityChecklist.map(item => ({
@@ -51,30 +66,49 @@ function ProductDetail() {
         setNewChecklistName("");
     };
 
+    
+useEffect(() => {
+    
+    async function loadProduct() {
+        setLoading(true);
+        setProduct(null);
 
+        try {
+            const response = await axios.get(
+                `${API_BASE_URL}/quality/products/${id}`
+            );
 
-    const product = products.find(
-        product => product.id === Number(id)
-    );
-    // id가 같은 제품만 상세화면에 나오게하기
+            const data = response.data;
 
+            const productData = {
+                id: data.product_id,
+                code: data.product_code,
+                name: data.product_name,
+                type: data.product_type,
+                company: data.company,
+                price: Number(data.price ?? 0), // ?? 값이 null이거나 undefined면 0
+                stock: data.stock,
+                image: data.image_url,
+                variantText: data.variant_text,
+                qualityStatus: data.quality_status,
+                inspectionDate: data.inspection_date || "-",
+                memo: data.memo || ""
+            };
 
-    const [qualityStatus, setQualityStatus] = useState(
-        product?.qualityStatus || "미실시"
-    );
-    // ?는 존재하면 뒤에 값을 읽고 ||는 없다면 뒤에 값을 넣으라는 명령문
+            setProduct(productData);
 
-    const [inspectionDate, setInspectionDate] = useState(
-        product?.inspectionDate === "-" ? "" : product?.inspectionDate || ""
-    );
+            setQualityStatus(data.quality_status || "미실시");
+            setInspectionDate(data.inspection_date || "");
+            setMemo(data.memo || "");
 
-    const [inspector, setInspector] = useState("");
+        } catch (error) {
+            console.log("상세페이지 에러");
+        }
+    }
 
-    const [failReason, setFailReason] = useState("");
+    loadProduct();
 
-    const [memo, setMemo] = useState(
-        product?.memo || ""
-    );
+}, [id]);
 
 
 
@@ -84,21 +118,60 @@ function ProductDetail() {
     }
 
 
-    const handleSave = () => {
+    
+const handleSave = async () => {
 
-        const inspectionData = {
-            productId: product.id,
+    if (isSaving || !product) return;
+
+    // 필수 입력값 검사
+    if (!inspectionDate || !inspector.trim()) {
+        alert("검사일과 검사자를 입력해주세요.");
+        return;
+    }
+
+    if (qualityStatus === "불합격" && !failReason.trim()) {
+        alert("불합격 사유를 입력해주세요.");
+        return;
+    }
+
+    const inspectionData = {
+        productId: product.id,
+        inspectionDate,
+        inspector: inspector.trim(),
+        qualityStatus,
+        failReason: qualityStatus === "불합격" ? failReason.trim() : null,
+        memo: memo.trim(),
+        qualityScore: Number(qualityScore)
+    };
+
+    try {
+        setIsSaving(true);
+
+        const response = await axios.post(
+            `${API_BASE_URL}/quality/inspections`, inspectionData
+        );
+
+        console.log("검사 저장 성공:", response.data);
+
+        // 화면의 최근 검사 정보도 변경
+        setProduct(prev => ({
+            ...prev,
             qualityStatus,
             inspectionDate,
-            inspector,
-            failReason,
-            memo,
-            checklist,
-            qualityScore
-        };
+            memo: memo.trim()
+        }));
 
         alert("검사 결과가 저장되었습니다.");
-    };
+
+    } catch (error) {
+        console.error("검사 저장 실패:", error);
+        alert("검사 결과를 저장하지 못했습니다.");
+
+    } finally {
+        setIsSaving(false);
+    }
+};
+
 
 
     return (
@@ -202,9 +275,7 @@ function ProductDetail() {
 
                         <button
                             className={
-                                qualityStatus === "통과"
-                                    ? "selected"
-                                    : ""
+                                qualityStatus === "통과" ? "selected" : ""
                             }
                             onClick={() =>
                                 setQualityStatus("통과")
@@ -248,8 +319,7 @@ function ProductDetail() {
 
                         <input
                             type="date"
-                            value={inspectionDate}
-                            onChange={(e) =>
+                            value={inspectionDate} onChange={(e) =>
                                 setInspectionDate(e.target.value)
                             }
                         />

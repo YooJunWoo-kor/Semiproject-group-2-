@@ -4,10 +4,10 @@ import { getLoginUser } from "../../../../utils/authStorage";
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api";
 
-function DraftReceived({ drafts, loginUser, onDraftChanged }) {
+function DraftReceived({ drafts, onDraftChanged }) {
     async function handleDecision(id, decision) {
         const employeeId = getLoginUser()?.employeeKey;
-        if (decision === "reject" && !window.confirm("이 기안서를 반려하시겠습니까?")) return;
+        if (decision === "reject" && !window.confirm("이 기안서를 반려하시겠습니까?")) return; // !window.confirm == "확인", "취소" 반대됨
         try {
             await axios.post(`${API_BASE_URL}/drafts/${id}/decision`, {
                 employeeId,
