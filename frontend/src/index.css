@@ -123,30 +123,42 @@ hr { border: 0; border-top: 1px solid var(--color-line); }
 .login-page form > div { display: grid; gap: 8px; }
 
 
-/* 마이페이지 관련 클레스 분리하면 좋을듯*/
-.draft-box {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
 
-.draft-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
+/* 기안서 작성/목록: 기존 border-container, 입력, 버튼, 테마 토큰 재사용 */
+.draft-box { display: grid; gap: 18px; min-width: 0; }
+.border-container > .draft-box > h2 {
+  margin: 0; padding-bottom: 16px; color: var(--color-brand); border-bottom: 1px solid var(--color-line);
 }
-
-.draft-row > label {
-  flex: 1;
-  min-width: 180px;
+form.draft-box > label, form.draft-box > .draft-row, form.draft-box > .draft-box {
+  min-width: 0; padding: 18px 20px; background: var(--color-surface);
+  border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--card-shadow);
 }
-
+form.draft-box > label { display: flex; flex-direction: column; gap: 10px; color: var(--color-ink); font-weight: 700; }
+.draft-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-width: 0; }
+.draft-row > label { flex: 1 1 200px; min-width: 0; }
+.draft-row > p {
+  flex: 1 1 170px; margin: 0; padding: 12px 14px;
+  background: #f8fbfc; border: 1px solid var(--color-line); border-radius: var(--layer-radius);
+  color: var(--color-ink); font-size: .88rem;
+}
+.draft-row > h4 { margin: 0 auto 0 0; color: var(--color-ink); }
+.draft-row > span { flex: 1; min-width: 170px; overflow-wrap: anywhere; }
+.draft-box > p { margin: 0; }
 .draft-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 16px;
-  flex-wrap: wrap;
+  display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+  margin-top: 4px; flex-wrap: wrap;
+}
+.draft-box > input[type='text'] { max-width: 380px; }
+.draft-item {
+  min-width: 0; padding: 20px 22px; background: var(--color-surface);
+  border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--card-shadow);
+}
+.draft-item-title { margin: 0 0 12px; color: var(--color-brand); font-size: 1.05rem; }
+.draft-item p { margin: 0; padding: 5px 0; font-size: .9rem; overflow-wrap: anywhere; }
+.draft-item .draft-actions { padding-top: 14px; margin-top: 14px; border-top: 1px solid var(--color-line); }
+.draft-item > button { margin-top: 12px; margin-right: 8px; }
+@media (max-width: 680px) {
+  form.draft-box > label, form.draft-box > .draft-row, form.draft-box > .draft-box, .draft-item { padding: 16px; }
+  .draft-row > p, .draft-row > label { flex-basis: 100%; }
+  .draft-actions > button { flex: 1 1 auto; }
 }

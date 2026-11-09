@@ -1,21 +1,38 @@
 import React from "react";
+import PaginationTable from "../../../../components/PaginationTable";
 
 function DraftApproved({ drafts }) {
     return (
-        <div>
+        <div className="draft-box">
             <h2>내가 승인한 기안서</h2>
-            {drafts.length === 0 ? (
-                <p>승인한 기안서가 없습니다.</p>
-            ) : drafts.map(draft => (
-                <div key={draft.id} className="draft-item">
-                    <p>작성자 : {draft.writerName}</p>
-                    <p>제목 : {draft.title}</p>
-                    <p>문서 종류 : {draft.draftType}</p>
-                    <p>내용 : {draft.content}</p>
-                    <p>작성일 : {draft.createdAt}</p>
-                    <p>문서 상태 : {draft.status}</p>
-                </div>
-            ))}
+            
+{drafts.length === 0 ? (
+    <p>승인한 기안서가 없습니다.</p>
+) : (
+    <PaginationTable
+        title="결재 완료"
+        th={[
+            "작성자",
+            "제목",
+            "문서 종류",
+            "내용",
+            "작성일",
+            "문서 상태"
+        ]}
+        allData={drafts.map(draft => ({
+            content: [
+                draft.writerName,
+                draft.title,
+                draft.draftType,
+                draft.content,
+                draft.createdAt,
+                draft.status
+            ]
+        }))}
+        itemsPerPage={5}
+    />
+)}
+
         </div>
     );
 }

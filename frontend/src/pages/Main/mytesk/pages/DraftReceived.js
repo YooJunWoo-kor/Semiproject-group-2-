@@ -1,13 +1,13 @@
 import React from "react";
 import axios from "axios";
-import { getLoginUser } from "../../../../utils/authStorage";
+import { API_BASE_URL, getLoginUser } from "../../../../utils/authStorage";
+import PaginationTable from "../../../../components/PaginationTable";
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api";
 
-function DraftReceived({ drafts, loginUser, onDraftChanged }) {
+function DraftReceived({ drafts, onDraftChanged }) {
     async function handleDecision(id, decision) {
         const employeeId = getLoginUser()?.employeeKey;
-        if (decision === "reject" && !window.confirm("이 기안서를 반려하시겠습니까?")) return;
+        if (decision === "reject" && !window.confirm("이 기안서를 반려하시겠습니까?")) return; // !window.confirm == "확인", "취소" 반대됨
         try {
             await axios.post(`${API_BASE_URL}/drafts/${id}/decision`, {
                 employeeId,
@@ -22,26 +22,43 @@ function DraftReceived({ drafts, loginUser, onDraftChanged }) {
     }
 
     return (
-        <div>
+        <div className="draft-box">
             <h2>요청이 온 기안서</h2>
-            {drafts.length === 0 ? (
-                <p>요청받은 기안서가 없습니다.</p>
-            ) : drafts.map(draft => (
-                <div key={draft.id} className="draft-item">
-                    <p>결재요청자 : {draft.writerName}</p>
-                    <p>제목 : {draft.title}</p>
-                    <p>문서 종류 : {draft.draftType}</p>
-                    <p>내용 : {draft.content}</p>
-                    <p>작성일 : {draft.createdAt}</p>
-                    <p>상태 : {draft.status}</p>
-                    <button type="button" onClick={() => handleDecision(draft.id, "approve")}>
+            
+{drafts.length === 0 ? (
+    <p>요청받은 기안서가 없습니다.</p>
+) : (
+    <PaginationTable
+        title="결재할 문서"
+        th={["결재요청자", "제목", "문서 종류", "내용", "작성일", "상태", "관리"]}
+        allData={drafts.map(draft => ({
+            content: [
+                draft.writerName,
+                draft.title,
+                draft.draftType,
+                draft.content,
+                draft.createdAt,
+                draft.status,
+                <div className="draft-actions">
+                    <button
+                        className="erp-primary-button"
+                        type="button"
+                        onClick={() => handleDecision(draft.id, "approve")}
+                    >
                         승인
                     </button>
-                    <button type="button" onClick={() => handleDecision(draft.id, "reject")}>
+                    <button
+                        type="button"
+                        onClick={() => handleDecision(draft.id, "reject")}>
                         반려
                     </button>
                 </div>
-            ))}
+            ]
+        }))}
+        itemsPerPage={5}
+    />
+)}
+
         </div>
     );
 }
