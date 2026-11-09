@@ -119,4 +119,46 @@ router.post('/setSchedule', (req, res) => {
     })
 })
 
+router.get('/getSchedulData', async (req, res)=>{
+    try{
+        const [rows] = await db.promise().query(
+            `select * from schedule where schedule_type = 'PUBLIC' or schedule_type = 1 order by start_date `
+        );
+
+        return res.status(200).json(rows);
+    } catch(error){
+        console.log('조회 실패', error);
+        return res.status(500).json({status:false, massage: '조회실패'});
+    }
+})
+
+router.post('/getMySchedule', async (req, res) => {
+    const employeeID = req.body.userID;
+    const query = `
+    select *
+    from schedule
+    where schedule_id in (
+        select schedule_id
+        from schedule_attendee
+        where employee_id = ?
+        order by schedule_id
+        )`;
+        
+    db.query(query, employeeID, (err,data)=>{
+        if(err){
+            console.log('내 스케쥴 데이터 DB에러');
+            return res.status(500).json({status: false, massege: '내 스케쥴 데이터 DB에러'});
+        }
+
+        if(data && data.length > 0){
+            console.log(data);
+            return res.status(200).json(data);
+        }
+        else{
+            console.log('내 스케쥴 데이터 조회 실패', data);
+            return res.status(400).json({status: false, data:'내 스케줄 대이터 조회 실패'});
+        }
+    });
+})
+
 module.exports = router;
