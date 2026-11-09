@@ -68,7 +68,7 @@ function ProductDetail() {
 
     
 useEffect(() => {
-    
+
     async function loadProduct() {
         setLoading(true);
         setProduct(null);
@@ -86,6 +86,7 @@ useEffect(() => {
                 name: data.product_name,
                 type: data.product_type,
                 company: data.company,
+                inspector: data.inspector,
                 price: Number(data.price ?? 0), // ?? 값이 null이거나 undefined면 0
                 stock: data.stock,
                 image: data.image_url,
@@ -431,7 +432,7 @@ const handleSave = async () => {
                             </td>
 
                             <td>
-                                -
+                                {product.inspector || "-"}
                             </td>
 
                             <td>
