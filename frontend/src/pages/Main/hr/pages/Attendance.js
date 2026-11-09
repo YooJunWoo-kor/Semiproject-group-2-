@@ -300,7 +300,7 @@ export default function Attendance() {
           setLeaveData([]);
           setLeaveError(
             requestError.response?.data?.message ||
-              "휴가 신청 정보를 불러오지 못했습니다."
+            "휴가 신청 정보를 불러오지 못했습니다."
           );
         }
       } finally {
@@ -507,7 +507,7 @@ export default function Attendance() {
       console.error("근태 수정 오류:", requestError);
       setError(
         requestError.response?.data?.message ||
-          "근태 정보를 수정하지 못했습니다."
+        "근태 정보를 수정하지 못했습니다."
       );
     } finally {
       setSaving(false);
@@ -523,57 +523,40 @@ export default function Attendance() {
 
   return (
     <div className="border-container hr-attendance-management">
+
       <header className="dashboard-header">
         <div>
           <span className="subtitle">근태관리</span>
           <span className="subtext">
-          임직원의 출근 현황과 근태 상태를 조회하고 관리합니다.
+            임직원의 출근 현황과 근태 상태를 조회하고 관리합니다.
           </span>
-        </div>
-        <div className="dashboard-top">
-          {isMaster && activeTab === "attendance" && (
-            <button
-              type="button"
-              className="register-btn"
-              onClick={() =>
-                selectedAttendance.length > 0 &&
-                openAttendanceEdit(selectedAttendance[0])
-              }
-              disabled={selectedAttendance.length === 0}
-              title={
-                selectedAttendance.length === 0
-                  ? "수정할 일별 근태 기록이 없습니다."
-                  : "선택 직원의 최근 일별 근태 기록을 수정합니다."
-              }
-            >
-              근태수정
-            </button>
-          )}
         </div>
       </header>
 
-      <nav className="attendance-tabs" aria-label="근태관리 메뉴">
-        <button
-          type="button"
-          role="tab"
-          className={activeTab === "attendance" ? "active" : ""}
-          aria-selected={activeTab === "attendance"}
-          onClick={() => setActiveTab("attendance")}
-        >
-          근태 기록
-        </button>
-        <button
-          type="button"
-          role="tab"
-          className={activeTab === "leave" ? "active" : ""}
-          aria-selected={activeTab === "leave"}
-          onClick={() => setActiveTab("leave")}
-        >
-          휴가 신청·승인
-        </button>
-      </nav>
-
       <section className="attendance-filter" aria-label="근태 조회 조건">
+        {/* 왼쪽: 탭 */}
+        <nav className="attendance-tabs" aria-label="근태관리 메뉴">
+          <button
+            type="button"
+            role="tab"
+            className={activeTab === "attendance" ? "active" : ""}
+            aria-selected={activeTab === "attendance"}
+            onClick={() => setActiveTab("attendance")}
+          >
+            근태 기록
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={activeTab === "leave" ? "active" : ""}
+            aria-selected={activeTab === "leave"}
+            onClick={() => setActiveTab("leave")}
+          >
+            휴가 신청·승인
+          </button>
+        </nav>
+
+        {/* 가운데: 조회 조건 */}
         <label className="attendance-filter-field">
           <span>기준 월</span>
           <input
@@ -582,6 +565,7 @@ export default function Attendance() {
             onChange={(event) => setSelectedMonth(event.target.value)}
           />
         </label>
+
         <label className="attendance-filter-field">
           <span>부서</span>
           <select
@@ -596,6 +580,7 @@ export default function Attendance() {
             ))}
           </select>
         </label>
+
         <label className="attendance-filter-field attendance-keyword-field">
           <span>직원명</span>
           <input
@@ -605,140 +590,161 @@ export default function Attendance() {
             onChange={(event) => setKeyword(event.target.value)}
           />
         </label>
+
+        {/* 오른쪽: 관리 버튼 */}
         <button
           type="button"
-          className="register-btn attendance-reset-button"
+          className="attendance-reset-button"
           onClick={resetFilters}
         >
           초기화
         </button>
+
+        {isMaster && activeTab === "attendance" && (
+          <button
+            type="button"
+            className="erp-primary-button"
+            onClick={() =>
+              selectedAttendance.length > 0 &&
+              openAttendanceEdit(selectedAttendance[0])
+            }
+            disabled={selectedAttendance.length === 0}
+            title={
+              selectedAttendance.length === 0
+                ? "수정할 일별 근태 기록이 없습니다."
+                : "선택 직원의 최근 일별 근태 기록을 수정합니다."
+            }
+          >
+            근태수정
+          </button>
+        )}
       </section>
+
 
       {/* 근태 기록 탭과 휴가 신청·승인 탭의 본문을 전환합니다. */}
       {activeTab === "attendance" ? (
         loading ? (
-        <p className="attendance-feedback" role="status">
-          근태자료를 불러오는 중입니다.
-        </p>
+          <p className="attendance-feedback" role="status">
+            근태자료를 불러오는 중입니다.
+          </p>
         ) : error ? (
-        <p className="attendance-feedback attendance-error" role="alert">
-          {error}
-        </p>
+          <p className="attendance-feedback attendance-error" role="alert">
+            {error}
+          </p>
         ) : (
-        <div className="attendance-layout">
-          <section className="attendance-card employee-list-panel">
-            <div className="employee-list-header">
-              <div>
-                <h2>직원 목록</h2>
-                <p>{selectedMonth || "기준 월 미선택"}</p>
+          <div className="attendance-layout">
+            <section className="attendance-card employee-list-panel">
+              <div className="employee-list-header">
+                <div>
+                  <h2>직원 목록</h2>
+                  <p>{selectedMonth || "기준 월 미선택"}</p>
+                </div>
+                <strong>{employeeList.length}명</strong>
               </div>
-              <strong>{employeeList.length}명</strong>
-            </div>
-            {employeeList.length === 0 ? (
-              <p className="attendance-empty">조건에 맞는 직원이 없습니다.</p>
-            ) : (
-              <div className="employee-list">
-                {employeeList.map((employee) => (
-                  <button
-                    key={employee.employeeId}
-                    type="button"
-                    className={`employee-item ${
-                      String(employee.employeeId) ===
-                      String(selectedEmployeeId)
-                        ? "active"
-                        : ""
-                    }`}
-                    onClick={() => setSelectedEmployeeId(employee.employeeId)}
-                  >
-                    <span className="employee-item-info">
-                      <strong className="emp-name">
-                        {employee.employeeName}
-                      </strong>
-                      <span>
-                        {employee.departmentName} ·{" "}
-                        <span className="emp-position">
-                          {employee.position}
+              {employeeList.length === 0 ? (
+                <p className="attendance-empty">조건에 맞는 직원이 없습니다.</p>
+              ) : (
+                <div className="employee-list">
+                  {employeeList.map((employee) => (
+                    <button
+                      key={employee.employeeId}
+                      type="button"
+                      className={`employee-item ${String(employee.employeeId) ===
+                          String(selectedEmployeeId)
+                          ? "active"
+                          : ""
+                        }`}
+                      onClick={() => setSelectedEmployeeId(employee.employeeId)}
+                    >
+                      <span className="employee-item-info">
+                        <strong className="emp-name">
+                          {employee.employeeName}
+                        </strong>
+                        <span>
+                          {employee.departmentName} ·{" "}
+                          <span className="emp-position">
+                            {employee.position}
+                          </span>
                         </span>
                       </span>
-                    </span>
-                    <span className="employee-attendance-rate">
-                      <small>출근율</small>
+                      <span className="employee-attendance-rate">
+                        <small>출근율</small>
+                        <strong>
+                          {calculateAttendanceRate(
+                            attendanceData,
+                            selectedMonth,
+                            employee.employeeId
+                          )}
+                        </strong>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="attendance-detail-panel">
+              {selectedEmployee ? (
+                <>
+                  <div className="attendance-detail-header">
+                    <div>
+                      <span className="attendance-badge">선택 직원</span>
+                      <h2>{selectedEmployee.employeeName}</h2>
+                      <p>
+                        {selectedEmployee.departmentName} ·{" "}
+                        {selectedEmployee.position}
+                      </p>
+                    </div>
+                    <div className="detail-attendance-rate">
+                      <span>출근율</span>
                       <strong>
                         {calculateAttendanceRate(
                           attendanceData,
                           selectedMonth,
-                          employee.employeeId
+                          selectedEmployee.employeeId
                         )}
                       </strong>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="attendance-detail-panel">
-            {selectedEmployee ? (
-              <>
-                <div className="attendance-detail-header">
-                  <div>
-                    <span className="attendance-badge">선택 직원</span>
-                    <h2>{selectedEmployee.employeeName}</h2>
-                    <p>
-                      {selectedEmployee.departmentName} ·{" "}
-                      {selectedEmployee.position}
+                    </div>
+                  </div>
+                  <div className="attendance-summary">
+                    <div className="summary-item">
+                      <span>근무일</span>
+                      <strong>{selectedAttendance.length}</strong>
+                    </div>
+                    <div className="summary-item">
+                      <span>정상</span>
+                      <strong>{normalCount}</strong>
+                    </div>
+                    <div className="summary-item">
+                      <span>지각</span>
+                      <strong>{lateCount}</strong>
+                    </div>
+                    <div className="summary-item">
+                      <span>휴가</span>
+                      <strong>{leaveCount}</strong>
+                    </div>
+                  </div>
+                  {tableData.length > 0 ? (
+                    <PaginationTable
+                      key={`${selectedEmployeeId}-${selectedMonth}`}
+                      title="일별 근태 기록"
+                      th={tableHeaders}
+                      allData={tableData}
+                      itemsPerPage={8}
+                    />
+                  ) : (
+                    <p className="attendance-empty">
+                      해당 월의 근태 기록이 없습니다.
                     </p>
-                  </div>
-                  <div className="detail-attendance-rate">
-                    <span>출근율</span>
-                    <strong>
-                      {calculateAttendanceRate(
-                        attendanceData,
-                        selectedMonth,
-                        selectedEmployee.employeeId
-                      )}
-                    </strong>
-                  </div>
-                </div>
-                <div className="attendance-summary">
-                  <div className="summary-item">
-                    <span>근무일</span>
-                    <strong>{selectedAttendance.length}</strong>
-                  </div>
-                  <div className="summary-item">
-                    <span>정상</span>
-                    <strong>{normalCount}</strong>
-                  </div>
-                  <div className="summary-item">
-                    <span>지각</span>
-                    <strong>{lateCount}</strong>
-                  </div>
-                  <div className="summary-item">
-                    <span>휴가</span>
-                    <strong>{leaveCount}</strong>
-                  </div>
-                </div>
-                {tableData.length > 0 ? (
-                  <PaginationTable
-                    key={`${selectedEmployeeId}-${selectedMonth}`}
-                    title="일별 근태 기록"
-                    th={tableHeaders}
-                    allData={tableData}
-                    itemsPerPage={8}
-                  />
-                ) : (
-                  <p className="attendance-empty">
-                    해당 월의 근태 기록이 없습니다.
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="attendance-empty">
-                상세 근태를 확인할 직원을 선택해 주세요.
-              </p>
-            )}
-          </section>
-        </div>
+                  )}
+                </>
+              ) : (
+                <p className="attendance-empty">
+                  상세 근태를 확인할 직원을 선택해 주세요.
+                </p>
+              )}
+            </section>
+          </div>
         )
       ) : (
         leaveLoading ? (
@@ -771,90 +777,89 @@ export default function Attendance() {
             </section>
             <div className="attendance-layout attendance-leave-layout">
               <section className="attendance-card employee-list-panel">
-              <div className="employee-list-header">
-                <div>
-                  <h2>휴가 신청 직원</h2>
-                  <p>{selectedMonth || "기준 월 미선택"}</p>
+                <div className="employee-list-header">
+                  <div>
+                    <h2>휴가 신청 직원</h2>
+                    <p>{selectedMonth || "기준 월 미선택"}</p>
+                  </div>
+                  <strong>{employeeList.length}명</strong>
                 </div>
-                <strong>{employeeList.length}명</strong>
-              </div>
-              {employeeList.length === 0 ? (
-                <p className="attendance-empty">직원 데이터가 없습니다.</p>
-              ) : (
-                <div className="employee-list">
-                  {employeeList.map((employee) => (
-                    <button
-                      key={employee.employeeId}
-                      type="button"
-                      className={`employee-item ${
-                        String(employee.employeeId) ===
-                        String(selectedEmployeeId)
-                          ? "active"
-                          : ""
-                      }`}
-                      onClick={() => setSelectedEmployeeId(employee.employeeId)}
-                    >
-                      <span className="employee-item-info">
-                        <strong className="emp-name">
-                          {employee.employeeName}
-                        </strong>
-                        <span>
-                          {employee.departmentName || "부서 미지정"} ·{" "}
-                          <span className="emp-position">
-                            {employee.position || "직급 미지정"}
+                {employeeList.length === 0 ? (
+                  <p className="attendance-empty">직원 데이터가 없습니다.</p>
+                ) : (
+                  <div className="employee-list">
+                    {employeeList.map((employee) => (
+                      <button
+                        key={employee.employeeId}
+                        type="button"
+                        className={`employee-item ${String(employee.employeeId) ===
+                            String(selectedEmployeeId)
+                            ? "active"
+                            : ""
+                          }`}
+                        onClick={() => setSelectedEmployeeId(employee.employeeId)}
+                      >
+                        <span className="employee-item-info">
+                          <strong className="emp-name">
+                            {employee.employeeName}
+                          </strong>
+                          <span>
+                            {employee.departmentName || "부서 미지정"} ·{" "}
+                            <span className="emp-position">
+                              {employee.position || "직급 미지정"}
+                            </span>
                           </span>
                         </span>
-                      </span>
-                      <span className="employee-attendance-rate">
-                        <small>휴가 신청</small>
-                        <strong>-</strong>
-                        <small>신청 없음</small>
-                        <small>잔여 휴가 정보 없음</small>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
+                        <span className="employee-attendance-rate">
+                          <small>휴가 신청</small>
+                          <strong>-</strong>
+                          <small>신청 없음</small>
+                          <small>잔여 휴가 정보 없음</small>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </section>
 
               <section className="attendance-detail-panel">
-              {selectedEmployee ? (
-                <>
-                  <div className="attendance-detail-header">
-                    <div>
-                      <span className="attendance-badge">휴가 신청·승인</span>
-                      <h2>{selectedEmployee.employeeName}</h2>
-                      <p>
-                        {selectedEmployee.departmentName || "부서 미지정"} ·{" "}
-                        {selectedEmployee.position || "직급 미지정"}
-                      </p>
+                {selectedEmployee ? (
+                  <>
+                    <div className="attendance-detail-header">
+                      <div>
+                        <span className="attendance-badge">휴가 신청·승인</span>
+                        <h2>{selectedEmployee.employeeName}</h2>
+                        <p>
+                          {selectedEmployee.departmentName || "부서 미지정"} ·{" "}
+                          {selectedEmployee.position || "직급 미지정"}
+                        </p>
+                      </div>
+                      <span className="status-tag off">신청 없음</span>
                     </div>
-                    <span className="status-tag off">신청 없음</span>
-                  </div>
-                  <dl className="attendance-leave-detail-list">
-                    <div><dt>휴가 유형</dt><dd>-</dd></div>
-                    <div><dt>시작일</dt><dd>-</dd></div>
-                    <div><dt>종료일</dt><dd>-</dd></div>
-                    <div><dt>휴가 일수</dt><dd>-</dd></div>
-                    <div><dt>신청 사유</dt><dd>-</dd></div>
-                    <div><dt>신청 상태</dt><dd>-</dd></div>
-                    <div><dt>신청일</dt><dd>-</dd></div>
-                    <div><dt>승인자</dt><dd>-</dd></div>
-                    <div><dt>승인일</dt><dd>-</dd></div>
-                  </dl>
-                  <div className="attendance-leave-balance-empty">
-                    <strong>잔여 휴가 정보 없음</strong>
-                    <span>잔여 휴가 계산에 필요한 DB 정보가 없습니다.</span>
-                  </div>
-                  <p className="attendance-leave-api-notice">
-                    휴가 신청 데이터가 없습니다. 현재 휴가 신청 API가 준비되지 않았습니다.
+                    <dl className="attendance-leave-detail-list">
+                      <div><dt>휴가 유형</dt><dd>-</dd></div>
+                      <div><dt>시작일</dt><dd>-</dd></div>
+                      <div><dt>종료일</dt><dd>-</dd></div>
+                      <div><dt>휴가 일수</dt><dd>-</dd></div>
+                      <div><dt>신청 사유</dt><dd>-</dd></div>
+                      <div><dt>신청 상태</dt><dd>-</dd></div>
+                      <div><dt>신청일</dt><dd>-</dd></div>
+                      <div><dt>승인자</dt><dd>-</dd></div>
+                      <div><dt>승인일</dt><dd>-</dd></div>
+                    </dl>
+                    <div className="attendance-leave-balance-empty">
+                      <strong>잔여 휴가 정보 없음</strong>
+                      <span>잔여 휴가 계산에 필요한 DB 정보가 없습니다.</span>
+                    </div>
+                    <p className="attendance-leave-api-notice">
+                      휴가 신청 데이터가 없습니다. 현재 휴가 신청 API가 준비되지 않았습니다.
+                    </p>
+                  </>
+                ) : (
+                  <p className="attendance-empty">
+                    직원을 선택하면 휴가 상세정보가 표시됩니다.
                   </p>
-                </>
-              ) : (
-                <p className="attendance-empty">
-                  직원을 선택하면 휴가 상세정보가 표시됩니다.
-                </p>
-              )}
+                )}
               </section>
             </div>
           </>
@@ -896,12 +901,11 @@ export default function Attendance() {
                       <button
                         key={employee.employeeId}
                         type="button"
-                        className={`employee-item ${
-                          String(employee.employeeId) ===
-                          String(selectedLeaveEmployeeId)
+                        className={`employee-item ${String(employee.employeeId) ===
+                            String(selectedLeaveEmployeeId)
                             ? "active"
                             : ""
-                        }`}
+                          }`}
                         onClick={() =>
                           setSelectedLeaveEmployeeId(employee.employeeId)
                         }
