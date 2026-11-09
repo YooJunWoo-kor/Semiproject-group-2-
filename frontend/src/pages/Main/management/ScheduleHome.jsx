@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Routes, Route, Navigate, Link, NavLink } from 'react-router-dom';
 import ScheduleModul from './ScheduleModul';
 
@@ -7,6 +7,7 @@ import ScheduleModul from './ScheduleModul';
 export default function ScheduleHome() {
   const mainUrl = '/main/schedule';
   const cabinetUrl = mainUrl + '/cabinet'
+  const [dataType, setDataType] = useState('1');
 
   return (
     <div className="sub-main-contain">
@@ -25,23 +26,38 @@ export default function ScheduleHome() {
           }}/>
 
           {/* 버튼 클릭하면, 들어온 데이터들 필터링 */}
-          <form onSubmit={(e)=>{e.preventDefault()}}className='schedule-nav'>
+          <form
+            onChange={(e)=>{
+              setDataType(e.target.value);
+            }}
+            className='schedule-nav'
+          >
             <label>
-              <input type="radio" value="1" name="scheduleFilter" defaultChecked />
+              <input 
+                type="radio"
+                value="1"
+                name="scheduleFilter"
+                checked={Number(dataType) === 1}
+              />
               전체보기
             </label>
             <label>
               <input type='radio' value="2" name="scheduleFilter"/>
-              마감임박
+              내 일정
             </label>
             <label>
               <input type='radio' value="3" name="scheduleFilter"/>
+              마감임박
+            </label>
+            <label>
+              <input type='radio' value="4" name="scheduleFilter"/>
               주요일정
             </label>
+            
           </form>
       </div>
       <Routes>
-        <Route path='/' element={<ScheduleModul />} />
+        <Route path='/' element={<ScheduleModul dataType={dataType}/>} />
         <Route path="*" element={<Navigate to="/main/schedule" replace />} />
       </Routes>
     </div>

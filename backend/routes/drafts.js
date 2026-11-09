@@ -230,9 +230,10 @@ router.post('/:draftId/decision', async (req, res) => {
 
 //2. 부서 api
 router.get('/departments', (req, res) => {
-    const sql = `SELECT department_id, department_name
-                 FROM departments
-                 ORDER BY department_id
+    const sql = `
+        SELECT department_id, department_name
+            FROM departments
+            ORDER BY department_id
     `;
 
     console.log('부서조회 시작')
@@ -244,6 +245,7 @@ router.get('/departments', (req, res) => {
             })
         }
 
+        console.log('부서조회 성공', data);
         res.json(data);
     })
 })
