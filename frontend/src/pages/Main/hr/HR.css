@@ -2,6 +2,16 @@
    1. HR 대시보드 및 근태 카드
 ======================================== */
 
+.sub-main-contain > .hr-attendance-management,
+.sub-main-contain > .hr-employee-management,
+.sub-main-contain > .hr-payroll-management {
+    flex: 1 1 auto;
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
 .hr-attendance-view {
 }
 
@@ -240,11 +250,12 @@
 
 .hr-attendance-management .attendance-filter {
     display: grid;
-    grid-template-columns: 170px 190px minmax(220px, 1fr) auto;
+    grid-template-columns: 150px 170px minmax(180px, 260px) auto;
     align-items: end;
-    gap: 12px;
-    margin-bottom: 20px;
-    padding: 16px 18px;
+    justify-content: end;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 12px 16px;
     background: var(--color-surface);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-card);
@@ -596,7 +607,8 @@
 
 @media (max-width: 1100px) {
     .hr-attendance-management .attendance-filter {
-        grid-template-columns: repeat(2, minmax(180px, 1fr));
+        grid-template-columns: repeat(2, minmax(180px, 260px));
+        justify-content: end;
     }
 
     .hr-attendance-management .attendance-layout {
@@ -665,7 +677,7 @@
 
 .hr-employee-management .hr-organization-grid {
   display: grid;
-  grid-template-columns: minmax(210px, 240px) minmax(520px, 1fr) minmax(280px, 320px);
+  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr) minmax(240px, 280px);
   gap: 16px;
   align-items: start;
 }
@@ -843,7 +855,7 @@
 
 .hr-employee-management .employee-list-panel {
   min-width: 0;
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
 .hr-employee-management .employee-list-panel .pagination-table-wrapper,
@@ -853,11 +865,11 @@
 }
 
 .hr-employee-management .employee-list-panel .table-shell {
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
 .hr-employee-management .employee-list-panel table {
-  min-width: 980px;
+  min-width: 0;
 }
 
 .hr-employee-management .hr-section-heading {
@@ -1248,8 +1260,8 @@
 }
 
 .hr-payroll-management .payroll-filter-card {
-  margin: 18px 0 14px;
-  padding: 14px 16px;
+  margin: 14px 0;
+  padding: 12px 16px;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
@@ -1283,8 +1295,9 @@
 
 .hr-payroll-management .payroll-filter-controls {
   display: grid;
-  grid-template-columns: 150px 150px 150px minmax(220px, 1fr) auto;
+  grid-template-columns: 140px 140px 140px minmax(200px, 260px) auto;
   align-items: end;
+  justify-content: end;
   gap: 10px;
 }
 
@@ -1557,7 +1570,8 @@
   }
 
   .hr-payroll-management .payroll-filter-controls {
-    grid-template-columns: repeat(3, minmax(140px, 1fr));
+    grid-template-columns: repeat(3, minmax(140px, 220px));
+    justify-content: end;
   }
 
   .hr-payroll-management .payroll-search-field {

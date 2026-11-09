@@ -7,6 +7,7 @@ import StatisticsCard from '../../../../components/StatisticsCard';
 import {
   createHrDepartment,
   createHrEmployee,
+  deleteHrDepartment,
   getHrEmployees,
   getHrOrganization,
   retireHrEmployee,
@@ -71,13 +72,11 @@ const departments = ['개발팀', '인사팀', '디자인팀', '마케팅팀', '
 const positions = ['사원', '대리', '과장', '팀장', '부장'];
 
 const emptyRegisterForm = {
-  employeeNumber: '',
   name: '',
   departmentId: '',
   position: positions[0],
   email: '',
   phone: '',
-  hireDate: '',
   password: ''
 };
 
@@ -154,18 +153,18 @@ function EmployeeForm(props) {
   return (
     <form onSubmit={props.onSubmit}>
       <div style={formGridStyle}>
-        <div>
-          <label style={labelStyle}>사번</label>
-          <input
-            name="employeeNumber"
-            value={form.employeeNumber}
-            onChange={changeForm}
-            disabled={props.isEdit}
-            placeholder="예: EMP-1001"
-            required
-            style={inputStyle}
-          />
-        </div>
+        {props.isEdit && (
+          <div>
+            <label style={labelStyle}>사번</label>
+            <input
+              name="employeeNumber"
+              value={form.employeeNumber}
+              onChange={changeForm}
+              disabled
+              style={inputStyle}
+            />
+          </div>
+        )}
 
         <div>
           <label style={labelStyle}>이름</label>
@@ -239,17 +238,19 @@ function EmployeeForm(props) {
           />
         </div>
 
-        <div>
-          <label style={labelStyle}>입사일</label>
-          <input
-            type="date"
-            name="hireDate"
-            value={form.hireDate}
-            onChange={changeForm}
-            required
-            style={inputStyle}
-          />
-        </div>
+        {props.isEdit && (
+          <div>
+            <label style={labelStyle}>입사일</label>
+            <input
+              type="date"
+              name="hireDate"
+              value={form.hireDate}
+              onChange={changeForm}
+              required
+              style={inputStyle}
+            />
+          </div>
+        )}
 
         {props.isEdit ? (
           <div>
@@ -282,6 +283,12 @@ function EmployeeForm(props) {
           </div>
         )}
       </div>
+
+      {!props.isEdit && (
+        <p className="subtext">
+          사번은 자동 생성되며, 입사일은 오늘 날짜로 저장됩니다.
+        </p>
+      )}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}>
         <button type="button" onClick={props.onCancel}>
@@ -691,6 +698,65 @@ export default function Employees() {
     }
   }
 
+  // 현재 선택한 부서에 소속 직원이 없을 때만 삭제합니다.
+  async function deleteDepartment() {
+    if (!isMaster || selectedDepartment === '전체') {
+      return;
+    }
+
+    const department = departments.find(
+      (item) => String(item.departmentId) === selectedDepartment
+    );
+
+    if (!department) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `${department.departmentName} 부서를 삭제할까요?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    setNotice('');
+
+    try {
+      const response = await deleteHrDepartment(department.departmentId);
+
+      if (!response.data.success) {
+        throw new Error('부서 삭제 응답이 올바르지 않습니다.');
+      }
+
+      const [departmentResponse, employeeResponse] = await getHrOrganization();
+
+      if (
+        !departmentResponse.data.success ||
+        !Array.isArray(departmentResponse.data.data) ||
+        !employeeResponse.data.success ||
+        !Array.isArray(employeeResponse.data.data)
+      ) {
+        throw new Error('조직 정보 응답 형식이 올바르지 않습니다.');
+      }
+
+      setDepartments(departmentResponse.data.data);
+      setEmployees(employeeResponse.data.data);
+      setSelectedDepartment('전체');
+      setSelectedEmployee(null);
+      setNotice(response.data.message || '부서가 삭제되었습니다.');
+    } catch (requestError) {
+      console.error('부서 삭제 오류:', requestError);
+      setError(
+        getApiErrorMessage(requestError, '부서를 삭제하지 못했습니다.')
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   // 선택한 직원의 기본 정보만 수정합니다.
   async function updateEmployee(event) {
     // 선택 직원의 수정 내용을 저장하고 상세 패널까지 최신 값으로 갱신합니다.
@@ -784,27 +850,15 @@ export default function Employees() {
     }
   }
 
-  const tableHeaders = [
-    '사번',
-    '이름',
-    '부서',
-    '직급',
-    '이메일',
-    '재직 상태',
-    '계정 상태',
-    '관리'
-  ];
+  const tableHeaders = ['사번', '이름', '직급'];
 
   // 기존 PaginationTable이 사용하는 content 배열 형식으로 행을 구성합니다.
   const tableData = filteredEmployees.map((employee) => ({
     content: [
-      <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: '600' }}>
-        {employee.employeeNumber}
-      </span>,
+      employee.employeeNumber,
       <button
         type="button"
         onClick={() => setSelectedEmployee(employee)}
-        style={{ padding: 0, color: '#1d4ed8', background: 'none', border: 0, cursor: 'pointer', textDecoration: 'underline' }}
       >
         <strong
           className={`emp-name ${
@@ -816,51 +870,7 @@ export default function Employees() {
           {employee.name}
         </strong>
       </button>,
-      employee.departmentName || '-',
-      <span className="emp-position">{employee.position}</span>,
-      employee.email,
-      <span
-        className={`status-tag ${getEmploymentStatusClass(
-          employee.employmentStatus
-        )}`}
-      >
-        {employee.employmentStatus}
-      </span>,
-      <span
-        className={`status-tag account-status-tag ${
-          employee.accountStatus === 'ACTIVE' ? 'working' : 'off'
-        }`}
-      >
-        {getAccountStatusLabel(employee.accountStatus)}
-      </span>,
-      <div style={{ display: 'flex', gap: '4px', whiteSpace: 'nowrap' }}>
-        <button
-          type="button"
-          onClick={() => setSelectedEmployee(employee)}
-          style={{ padding: '3px 7px', fontSize: '11px' }}
-        >
-          상세
-        </button>
-        {isMaster && (
-          <button
-            type="button"
-            onClick={() => openEditModal(employee)}
-            style={{ padding: '3px 7px', fontSize: '11px' }}
-          >
-            수정
-          </button>
-        )}
-        {isMaster && employee.employmentStatus !== '퇴사' && (
-          <button
-            type="button"
-            onClick={() => retireEmployee(employee)}
-            disabled={saving}
-            style={{ padding: '3px 7px', color: '#b91c1c', fontSize: '11px' }}
-          >
-            퇴사
-          </button>
-        )}
-      </div>
+      <span className="emp-position">{employee.position}</span>
     ]
   }));
 
@@ -1066,7 +1076,18 @@ export default function Employees() {
           <aside className="hr-panel department-panel">
             <div className="hr-panel-heading">
               <h2>부서 목록</h2>
-              <span>{departments.length}개</span>
+              {isMaster && selectedDepartment !== '전체' ? (
+                <button
+                  type="button"
+                  className="status-badge status-danger"
+                  onClick={deleteDepartment}
+                  disabled={saving}
+                >
+                  부서 삭제
+                </button>
+              ) : (
+                <span>{departments.length}개</span>
+              )}
             </div>
 
             <button

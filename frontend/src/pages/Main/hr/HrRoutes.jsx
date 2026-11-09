@@ -1,8 +1,7 @@
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 
 import Dashboard from './Dashboard.jsx';
 import Employees from './pages/Employees.jsx';
-import Departments from './pages/Departments.jsx';
 import Attendance from './pages/Attendance.js';
 import Payroll from './pages/Payroll.jsx';
 import SystemSettings from './pages/SystemSettings.jsx';
@@ -17,7 +16,6 @@ export default function HrRoutes() {
       {name:"대시보드", url:mainUrl+"/"}
       ,{name:"근태·휴가 관리", url:mainUrl+"/attendance"}
       ,{name:"인사·조직 관리", url:mainUrl+"/employees"}
-      ,{name:"부서 관리", url:mainUrl+"/departments"}
       ,{name:"급여 관리", url:mainUrl+"/payroll"}
       ,{name:"시스템 품목관리", url:mainUrl+"/settings"}
   ];
@@ -29,7 +27,7 @@ export default function HrRoutes() {
       <Routes>
           <Route index element={<Dashboard />} />
           <Route path="employees" element={<Employees />} />
-          <Route path="departments" element={<Departments />} />
+          <Route path="departments" element={<Navigate to="/main/hr/employees" replace />} />
           <Route path="attendance" element={<Attendance />} />
           <Route path="payroll" element={<Payroll />} />
           <Route path="settings" element={<SystemSettings />} />

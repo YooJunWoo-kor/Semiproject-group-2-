@@ -866,16 +866,7 @@ export default function Payroll() {
 
             {selectedEmp ? (
               <>
-                <div className="payroll-detail-employee">
-                  <strong>{selectedEmp.employeeName}</strong>
-                  <span>{selectedEmp.employeeNumber}</span>
-                  <p>{selectedEmp.departmentName || '-'} · {selectedEmp.position || '-'}</p>
-                </div>
                 <dl className="payroll-detail-list">
-                  <div className="payroll-detail-row">
-                    <dt>급여월</dt>
-                    <dd>{selectedPayMonth}</dd>
-                  </div>
                   <div className="payroll-detail-row">
                     <dt>기본급</dt>
                     <dd>{selectedEmp.payrollId === null ? '-' : formatMoney(selectedEmp.baseSalary)}</dd>
@@ -885,19 +876,11 @@ export default function Payroll() {
                     <dd>{selectedEmp.payrollId === null ? '-' : formatMoney(selectedEmp.allowance)}</dd>
                   </div>
                   <div className="payroll-detail-row">
-                    <dt>상여금</dt>
-                    <dd>{selectedEmp.payrollId === null ? '-' : formatMoney(selectedEmp.bonus)}</dd>
-                  </div>
-                  <div className="payroll-detail-row">
                     <dt>공제액</dt>
                     <dd>{selectedEmp.payrollId === null ? '-' : formatMoney(selectedEmp.deduction)}</dd>
                   </div>
-                  <div className="payroll-detail-row payroll-detail-total">
-                    <dt>세전 총액</dt>
-                    <dd>{selectedEmp.payrollId === null ? '-' : formatMoney(selectedEmp.grossPay)}</dd>
-                  </div>
                   <div className="payroll-detail-row payroll-detail-net">
-                    <dt>실지급액</dt>
+                    <dt>실수령액</dt>
                     <dd>{selectedEmp.payrollId === null ? '-' : formatMoney(selectedEmp.netPay)}</dd>
                   </div>
                   <div className="payroll-detail-row">

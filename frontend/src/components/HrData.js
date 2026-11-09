@@ -11,6 +11,11 @@ export function createHrDepartment(data) {
   return axios.post(API_BASE_URL + '/hr/departments', data);
 }
 
+// 소속 직원이 없는 선택 부서를 삭제합니다.
+export function deleteHrDepartment(departmentId) {
+  return axios.delete(API_BASE_URL + '/hr/departments/' + departmentId);
+}
+
 // HR 직원 목록을 DB에서 조회합니다.
 export function getHrEmployees() {
   return axios.get(API_BASE_URL + '/hr/employees');
