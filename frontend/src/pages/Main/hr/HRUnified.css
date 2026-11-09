@@ -1,582 +1,345 @@
 
 /* =========================================
-   인사 · 조직 · 급여 통합 화면
+   인사·조직 단일 통합 화면
+   기존 HR.css 다음에 import
    ========================================= */
 
-/* 1. 통합 페이지 */
-
-.hr-unified-page {
+   .sub-main-contain > .hr-single-management {
     flex: 1 1 auto;
-    width: 100%;
     min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
   }
   
-  .hr-unified-content {
-    width: 100%;
-    min-width: 0;
+  /* 상단 제목 */
+  .hr-single-management > .dashboard-header {
+    margin-bottom: 14px;
   }
   
-  .hr-unified-content > .border-container {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-  }
-  
-  
-  /* =========================================
-     2. 상단 제목
-     ========================================= */
-  
-  .hr-unified-header {
-    padding: 2px 0 14px;
-    border-bottom: 1px solid var(--color-line, #dbe5ef);
-  }
-  
-  .hr-unified-header h1 {
-    margin: 0 0 6px;
-    color: var(--color-ink, #0f172a);
-    font-size: 24px;
-    font-weight: 700;
-  }
-  
-  .hr-unified-header p {
-    margin: 0;
-    color: var(--color-muted, #64748b);
-    font-size: 13px;
-  }
-  
-  
-  /* =========================================
-     3. 직원 · 급여 탭
-     ========================================= */
-  
-  .hr-unified-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 14px 0;
-    padding: 0;
-  }
-  
-  .hr-unified-tabs button {
-    min-height: 40px;
-    padding: 9px 18px;
-    border: 1px solid var(--color-line, #dbe5ef);
-    border-radius: 9px;
-    background: var(--color-surface, #fff);
-    color: var(--color-muted, #64748b);
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  
-  .hr-unified-tabs button:hover {
-    border-color: var(--color-brand, #1875e5);
-  }
-  
-  .hr-unified-tabs button.active {
-    border-color: var(--color-brand, #1875e5);
-    background: var(--color-brand, #1875e5);
-    color: #fff;
-  }
-  
-  
-  /* =========================================
-     4. 기존 페이지 중복 제목 정리
-     ========================================= */
-  
-  /* 직원·부서 페이지의 기존 제목은 숨기고
-     직원 등록 / 부서 등록 버튼은 유지 */
-  
-  .hr-unified-page
-  .hr-employee-management
-  > .dashboard-header {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    min-height: 38px;
-    margin: 0 0 12px;
-    padding: 0;
-    border: 0;
-  }
-  
-  .hr-unified-page
-  .hr-employee-management
-  > .dashboard-header
-  > div:first-child {
-    display: none;
-  }
-  
-  .hr-unified-page
-  .hr-employee-management
-  .dashboard-top {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  
-  /* 급여 화면의 중복 제목 제거
-     기존 급여 기능은 그대로 유지 */
-  
-  .hr-unified-page
-  .hr-payroll-management
-  > .dashboard-header {
-    display: none;
-  }
-  
-  
-  /* =========================================
-     5. 상단 통계 카드
-     ========================================= */
-  
-  .hr-unified-page
-  .hr-employee-management
-  .stats-section {
+  /* 통계 카드 */
+  .hr-single-management .stats-section {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
   }
   
-  .hr-unified-page
-  .hr-employee-management
-  .stats-section > .content-card {
+  .hr-single-management .stats-section > .content-card {
     width: 100%;
-    min-width: 0;
-    min-height: 105px;
     max-width: none;
-    box-sizing: border-box;
+    min-width: 0;
   }
   
-  .hr-unified-page
-  .hr-employee-management
-  .stats-section
-  > .content-card
-  > div:last-child {
-    padding: 12px 14px !important;
-  }
-  
-  
-  /* =========================================
-     6. 검색 필터 영역
-     ========================================= */
-  
-  .hr-unified-page
-  .hr-employee-management
-  .hr-filter-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+  /* 검색 및 등록 버튼 */
+  .hr-single-management .hr-filter-card {
     margin: 14px 0;
     padding: 12px 14px;
-    flex-wrap: wrap;
   }
   
-  .hr-unified-page
-  .hr-employee-management
-  .hr-filter-controls {
+  .hr-single-management .hr-single-filters {
+    display: flex;
+    flex: 1 1 750px;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
     min-width: 0;
   }
   
-  .hr-unified-page
-  .hr-employee-management
-  .hr-filter-controls input,
-  .hr-unified-page
-  .hr-employee-management
-  .hr-filter-controls select,
-  .hr-unified-page
-  .hr-employee-management
-  .hr-filter-controls button {
+  .hr-single-management .hr-single-filters input,
+  .hr-single-management .hr-single-filters select,
+  .hr-single-management .hr-single-filters button {
+    box-sizing: border-box;
     min-height: 38px;
+    padding: 7px 10px;
+    border: 1px solid var(--color-line, #cbd5e1);
+    border-radius: 7px;
+    font-size: 12px;
+  }
+  
+  .hr-single-management .hr-single-filters input {
+    flex: 1 1 180px;
+    min-width: 150px;
+  }
+  
+  .hr-single-management .hr-single-filters select {
+    flex: 0 1 125px;
+    min-width: 110px;
+  }
+  
+  .hr-single-management .hr-single-filters button {
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  
+  .hr-single-management .hr-single-filters .erp-primary-button {
+    color: #fff;
+    background: var(--color-brand, #1875e5);
+    border-color: var(--color-brand, #1875e5);
+  }
+  
+  /* 3단 구조: 상세정보를 가장 넓게 */
+  .hr-single-management .hr-organization-grid {
+    display: grid;
+    grid-template-columns:
+      180px
+      minmax(210px, 0.6fr)
+      minmax(330px, 1.6fr);
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  /* 세 패널 하단 높이 통일 */
+  .hr-single-management .hr-organization-grid > .hr-panel {
+    min-width: 0;
+    height: 100%;
     box-sizing: border-box;
   }
   
-  
-  /* =========================================
-     7. 3단 레이아웃
-     부서 목록 / 소속 직원 / 상세정보
-     ========================================= */
-  
-  @media (min-width: 1181px) {
-  
-    .hr-unified-page
-    .hr-employee-management
-    .hr-organization-grid {
-      display: grid;
-  
-      grid-template-columns:
-        180px
-        minmax(210px, 0.6fr)
-        minmax(330px, 1.6fr);
-  
-      gap: 12px;
-      align-items: stretch;
-    }
-  
-    /* 3개 패널 하단 높이 동일 */
-  
-    .hr-unified-page
-    .hr-employee-management
-    .hr-organization-grid > .hr-panel {
-      height: 100%;
-      min-width: 0;
-      box-sizing: border-box;
-      align-self: stretch;
-    }
-  
-    /* 상세정보 하단에 관리 버튼 배치 */
-  
-    .hr-unified-page
-    .hr-employee-management
-    .employee-detail-actions {
-      margin-top: auto;
-    }
-  }
-  
-  
-  /* =========================================
-     8. 부서 목록
-     ========================================= */
-  
-  .hr-unified-page
-  .hr-employee-management
-  .department-panel {
+  .hr-single-management .department-panel,
+  .hr-single-management .employee-detail-panel {
     display: flex;
     flex-direction: column;
-    position: relative;
-    gap: 10px;
   }
   
-  .hr-unified-page
-  .hr-employee-management
-  .department-item {
-    width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-  }
-  
-  /* 부서 목록의 제목은 그대로 유지 */
-  
-  .hr-unified-page
-  .hr-employee-management
-  .department-panel
-  .hr-panel-heading {
+  /* 왼쪽: 선택 부서 관리 */
+  .hr-single-management .hr-single-dept-actions {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
     gap: 8px;
-  }
-  
-  
-  /* =========================================
-     9. 부서 삭제 버튼 하단 이동
-     기존 JSX의 삭제 함수 그대로 사용
-     ========================================= */
-  
-  /* 특정 부서가 선택되어 삭제 버튼이 보이면
-     패널 하단에 관리 영역 공간 확보 */
-  
-  .hr-unified-page
-  .hr-employee-management
-  .department-panel:has(
-    .hr-panel-heading .status-danger
-  ) {
-    padding-bottom: 112px;
-  }
-  
-  /* 관리 영역 제목 */
-  
-  .hr-unified-page
-  .hr-employee-management
-  .department-panel:has(
-    .hr-panel-heading .status-danger
-  )::after {
-    content: "선택 부서 관리";
-    position: absolute;
-    left: 16px;
-    right: 16px;
-    bottom: 66px;
+    margin-top: auto;
     padding-top: 12px;
-    border-top: 1px solid var(--color-line, #dbe5ef);
-    color: var(--color-ink, #0f172a);
-    font-size: 13px;
-    font-weight: 700;
+    border-top: 1px solid var(--color-line, #e2e8f0);
   }
   
-  /* 기존 제목 옆 버튼을
-     왼쪽 패널 하단으로 이동 */
+  .hr-single-management .hr-single-dept-actions strong {
+    font-size: 12px;
+  }
   
-  .hr-unified-page
-  .hr-employee-management
-  .department-panel
-  .hr-panel-heading
-  .status-danger {
-    position: absolute;
-    left: 16px;
-    right: 16px;
-    bottom: 16px;
-    z-index: 1;
+  .hr-single-management .hr-single-dept-actions > span,
+  .hr-single-management .hr-single-dept-actions > small {
+    color: #64748b;
+    font-size: 11px;
+    overflow-wrap: anywhere;
+  }
   
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  
-    width: calc(100% - 32px);
-    height: 36px;
-    padding: 7px 12px;
-    box-sizing: border-box;
-  
+  /* 부서 삭제 버튼 */
+  .hr-single-management .hr-single-delete {
+    min-height: 36px;
     color: #b91c1c;
+    border: 1px solid #f3b4b4;
     background: #fff;
-    border: 1px solid #f2a6a6;
     border-radius: 8px;
+    cursor: pointer;
+  }
+  
+  .hr-single-management .hr-single-delete:disabled {
+    color: #94a3b8;
+    border-color: #e2e8f0;
+    background: #f8fafc;
+    cursor: not-allowed;
+  }
+  
+  /* 가운데: 소속 직원 목록 */
+  .hr-single-management .hr-single-employee-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  
+  .hr-single-management .hr-single-employee {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 3px 6px;
+    padding: 10px;
+    text-align: left;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  
+  .hr-single-management .hr-single-employee strong {
+    min-width: 0;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+  
+  .hr-single-management .hr-single-employee span,
+  .hr-single-management .hr-single-employee small {
+    font-size: 11px;
+    color: #64748b;
+  }
+  
+  .hr-single-management .hr-single-employee small {
+    grid-column: 1 / -1;
+  }
+  
+  .hr-single-management .hr-single-employee.selected,
+  .hr-single-management .hr-single-employee:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+  }
+  
+  /* 오른쪽: 직원 정보 / 급여관리 버튼 */
+  .hr-single-management .hr-single-detail-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+  
+  .hr-single-management .hr-single-detail-tabs button {
+    min-height: 38px;
+    padding: 8px;
+    border: 1px solid var(--color-line, #cbd5e1);
+    border-radius: 8px;
+    background: #fff;
+    color: #475569;
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
   }
   
-  .hr-unified-page
-  .hr-employee-management
-  .department-panel
-  .hr-panel-heading
-  .status-danger:hover:not(:disabled) {
-    color: #991b1b;
-    background: #fff1f2;
+  .hr-single-management .hr-single-detail-tabs button.active {
+    background: var(--color-brand, #1875e5);
+    border-color: var(--color-brand, #1875e5);
+    color: #fff;
   }
   
-  .hr-unified-page
-  .hr-employee-management
-  .department-panel
-  .hr-panel-heading
-  .status-danger:disabled {
-    color: #94a3b8;
-    background: #f8fafc;
-    border-color: #e2e8f0;
-    cursor: not-allowed;
-  }
-  
-  
-  /* =========================================
-     10. 소속 직원 영역
-     ========================================= */
-  
-  .hr-unified-page
-  .hr-employee-management
-  .employee-list-panel {
-    min-width: 0;
-    overflow: hidden;
-  }
-  
-  .hr-unified-page
-  .hr-employee-management
-  .employee-list-panel
-  .attendance-card {
-    min-width: 0;
-    max-width: 100%;
-  }
-  
-  .hr-unified-page
-  .hr-employee-management
-  .employee-list-panel
-  .table-shell {
-    max-width: 100%;
-    overflow-x: auto;
-  }
-  
-  .hr-unified-page
-  .hr-employee-management
-  .employee-list-panel table {
-    width: 100%;
-    min-width: 270px;
-  }
-  
-  .hr-unified-page
-  .hr-employee-management
-  .employee-list-panel th,
-  .hr-unified-page
-  .hr-employee-management
-  .employee-list-panel td {
-    padding: 8px 6px;
-    font-size: 12px;
-    white-space: nowrap;
-  }
-  
-  
-  /* =========================================
-     11. 직원 상세정보
-     ========================================= */
-  
-  .hr-unified-page
-  .hr-employee-management
-  .employee-detail-panel {
+  /* 급여 기준월 선택 */
+  .hr-single-management .hr-single-month {
     display: flex;
-    flex-direction: column;
-    min-width: 0;
-    gap: 10px;
-  }
-  
-  .hr-unified-page
-  .hr-employee-management
-  .hr-detail-summary {
-    display: flex;
-    align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
-  }
-  
-  .hr-unified-page
-  .hr-employee-management
-  .hr-employee-detail-fields {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .hr-unified-page
-  .hr-employee-management
-  .hr-employee-detail-field {
-    display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 12px;
-    min-width: 0;
+    font-size: 12px;
+    color: #475569;
   }
   
-  .hr-unified-page
-  .hr-employee-management
-  .hr-employee-detail-field strong {
+  .hr-single-management .hr-single-month input {
     min-width: 0;
-    text-align: right;
-    overflow-wrap: anywhere;
+    height: 36px;
+    padding: 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
   }
   
-  .hr-unified-page
-  .hr-employee-management
-  .employee-detail-actions {
+  /* 상세정보 관리 버튼 하단 배치 */
+  .hr-single-management .employee-detail-actions {
+    margin-top: auto;
+    padding-top: 14px;
+  }
+  
+  /* 실수령액 강조 */
+  .hr-single-management .hr-pay-emphasis strong {
+    color: #1875e5;
+    font-size: 16px;
+  }
+  
+  /* 결과 안내 */
+  .hr-single-management .hr-single-alert {
+    margin: 0 0 12px;
+    font-size: 13px;
+  }
+  
+  .hr-single-management .hr-single-error {
+    color: #b91c1c;
+  }
+  
+  .hr-single-management .hr-single-success {
+    color: #047857;
+  }
+  
+  /* 직원·부서·급여 입력 모달 */
+  .hr-unified-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  
+  .hr-unified-form label {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    color: #475569;
+    font-size: 12px;
   }
   
-  
-  /* =========================================
-     12. 급여 관리 화면
-     ========================================= */
-  
-  .hr-unified-page
-  .hr-payroll-management {
+  .hr-unified-form input,
+  .hr-unified-form select,
+  .hr-unified-form textarea {
     width: 100%;
-    min-width: 0;
+    min-height: 36px;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    font-size: 13px;
   }
   
-  .hr-unified-page
-  .hr-payroll-management
-  .payroll-filter-card {
-    margin-top: 14px;
+  .hr-unified-form label:has(textarea),
+  .hr-unified-form .hr-form-context,
+  .hr-unified-form .hr-form-totals,
+  .hr-unified-form .hr-modal-actions {
+    grid-column: 1 / -1;
   }
   
-  .hr-unified-page
-  .hr-payroll-management
-  .payroll-workspace {
-    min-width: 0;
+  .hr-unified-form .hr-form-context {
+    margin: 0;
+    padding: 10px;
+    background: #f8fafc;
+    border-radius: 7px;
   }
   
-  .hr-unified-page
-  .hr-payroll-management
-  .payroll-list-panel {
-    min-width: 0;
+  .hr-unified-form .hr-form-totals {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
   }
   
-  .hr-unified-page
-  .hr-payroll-management
-  .payroll-detail-panel {
-    min-width: 0;
+  .hr-unified-form .hr-modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 8px;
   }
   
-  
-  /* =========================================
-     13. 반응형
-     ========================================= */
-  
+  /* 반응형 */
   @media (max-width: 1180px) {
-  
-    .hr-unified-page
-    .hr-employee-management
-    .hr-organization-grid {
-      display: grid;
-      grid-template-columns:
-        minmax(180px, 230px)
-        minmax(0, 1fr);
-      gap: 12px;
+    .hr-single-management .hr-organization-grid {
+      grid-template-columns: 180px minmax(0, 1fr);
       align-items: start;
     }
   
-    .hr-unified-page
-    .hr-employee-management
-    .employee-detail-panel {
+    .hr-single-management .employee-detail-panel {
       grid-column: 1 / -1;
     }
   
-    .hr-unified-page
-    .hr-employee-management
-    .hr-filter-controls {
-      width: 100%;
+    .hr-single-management .hr-organization-grid > .hr-panel {
+      height: auto;
     }
   }
   
   @media (max-width: 760px) {
-  
-    .hr-unified-header h1 {
-      font-size: 20px;
+    .hr-single-management .hr-organization-grid {
+      grid-template-columns: minmax(0, 1fr);
     }
   
-    .hr-unified-tabs button {
-      flex: 1 1 130px;
-    }
-  
-    .hr-unified-page
-    .hr-employee-management
-    .stats-section {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  
-    .hr-unified-page
-    .hr-employee-management
-    .hr-organization-grid {
-      grid-template-columns: 1fr;
-    }
-  
-    .hr-unified-page
-    .hr-employee-management
-    .employee-detail-panel {
+    .hr-single-management .employee-detail-panel {
       grid-column: auto;
     }
   
-    .hr-unified-page
-    .hr-employee-management
-    .employee-list-panel {
-      overflow-x: auto;
-    }
-  }
-  
-  @media (max-width: 480px) {
-  
-    .hr-unified-header h1 {
-      font-size: 18px;
+    .hr-single-management .stats-section {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   
-    .hr-unified-tabs {
-      gap: 6px;
+    .hr-single-management .hr-single-filters > * {
+      flex: 1 1 130px;
     }
   
-    .hr-unified-tabs button {
-      padding: 8px 10px;
-      font-size: 12px;
+    .hr-unified-form {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
   
