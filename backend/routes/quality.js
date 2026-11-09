@@ -4,24 +4,34 @@ const db = require('../db');
 
 //제품 목록 조회
 router.get('/products', (req,res) => {
-    const sql = 
-    `SELECT p.product_id, p.product_code, p.inspector, p.product_name, p.product_type, p.company, p.price, p.stock, p.image_url, p.variant_text,
-     COALESCE(i.quality_status, '미실시') AS quality_status, 
-    /* 검사 결과가 NULL이면 "미실시"로 표시 */
-     DATE_FORMAT(i.inspection_date, '%Y-%m-%d') AS inspection_date,
-     i.memo
-     FROM quality_products p
-     LEFT JOIN  quality_inspections i
-    /* 아직 검사하지 않은 제품도 목록에 포함 */
+    
+const sql = `
+    SELECT
+        p.product_id,
+        p.product_code,
+        p.product_name,
+        p.product_type,
+        p.company,
+        p.price,
+        p.stock,
+        p.image_url,
+        p.variant_text,
+        COALESCE(i.quality_status, '미실시') AS quality_status,
+        DATE_FORMAT(i.inspection_date, '%Y-%m-%d') AS inspection_date,
+        i.inspector,
+        i.memo
+    FROM quality_products p
+    LEFT JOIN quality_inspections i
         ON i.inspection_id = (
             SELECT i2.inspection_id
             FROM quality_inspections i2
             WHERE i2.product_id = p.product_id
             ORDER BY i2.inspection_date DESC, i2.inspection_id DESC
-            LIMIT 1 
-            /* 제품별 가장 최근 검사 결과 한 건만 선택 */
-        ) 
-     ORDER BY p.product_id`
+            LIMIT 1
+        )
+    ORDER BY p.product_id
+    `;
+
 
      db.query(sql, (err, data) => {
         if(err){
