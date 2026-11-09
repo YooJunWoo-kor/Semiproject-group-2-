@@ -30,7 +30,7 @@ function DraftReq({ drafts, setEditingDraft, onDraftChanged }) {
     }
 
     return (
-        <div>
+        <div className="draft-box">
             <h2>요청된 기안서 / 임시저장된 기안서</h2>
             <input type="text" placeholder="제목 검색" value={searchText}
                 onChange={e => setSearchText(e.target.value)} />

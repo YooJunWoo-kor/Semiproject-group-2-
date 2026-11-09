@@ -420,6 +420,7 @@ function DraftCreate({
 
                     <button
                         type="button"
+                        className="erp-primary-button"
                         onClick={(e) => handleSubmit(e, "submit")}
                     >
                         결재 요청
@@ -468,6 +469,7 @@ function DraftCreate({
                 <div className="draft-actions">
                     <button
                         type="button"
+                        className="erp-primary-button"
                         onClick={() => {
                             if (!tempApprover) {
                                 alert("직원을 선택해주세요.");

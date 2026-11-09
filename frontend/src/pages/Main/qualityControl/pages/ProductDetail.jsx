@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
+import "./QualityControl.css";
 
 import { API_BASE_URL } from "../../../../utils/authStorage";
 import defaultQualityChecklist from "./QualityChecklist";
@@ -241,7 +242,7 @@ const handleSave = async () => {
         <div className="product-detail-page">
 
 
-            <div className="detail-top">
+            <div className="detail-top quality-page-header">
 
                 <div>
                     <h1>{product.name}</h1>
@@ -252,7 +253,7 @@ const handleSave = async () => {
                 </div>
 
                 <span
-                    className={qualityStatus === "통과" ? "status pass" : qualityStatus === "불합격" ? "status fail" : "status not-tested"}>
+                    className={qualityStatus === "통과" ? "quality-status is-pass" : qualityStatus === "불합격" ? "quality-status is-fail" : "quality-status is-wait"}>
                         
                     {qualityStatus}
                 </span>
@@ -260,7 +261,7 @@ const handleSave = async () => {
             </div>
 
 
-            <section className="product-info-card">
+            <section className="product-info-card quality-panel">
 
                 <div className="detail-image-area">
 
@@ -315,7 +316,7 @@ const handleSave = async () => {
             </section>
 
 
-            <section className="inspection-card">
+            <section className="inspection-card quality-panel">
 
                 <div className="section-title">
 
@@ -444,7 +445,7 @@ const handleSave = async () => {
                 <div className="detail-save-area">
 
                     <button
-                        className="save-button"
+                        className="save-button erp-primary-button"
                         onClick={handleSave}
                     >
                         검사 결과 저장
@@ -455,7 +456,7 @@ const handleSave = async () => {
             </section>
 
 
-            <section className="inspection-history-card">
+            <section className="inspection-history-card quality-panel">
 
                 <div className="section-title">
 
@@ -470,7 +471,8 @@ const handleSave = async () => {
                 </div>
 
 
-                <table className="quality-table">
+                <div className="quality-table-shell">
+                <table className="quality-table quality-data-table">
 
                     <thead>
 
@@ -489,7 +491,7 @@ const handleSave = async () => {
                     <tbody>
                         {inspectionHistory.length === 0 ? (
                             <tr>
-                                <td colSpan={4}>
+                                <td colSpan={5}>
                                     등록된 검사 이력이 없습니다.
                                 </td>
                             </tr>
@@ -502,7 +504,7 @@ const handleSave = async () => {
 
                                     <td>
                                         <span className={
-                                            item.quality_status === "통과" ? "status pass" : item.quality_status === "불합격" ? "status fail" : "status not-tested"
+                                            item.quality_status === "통과" ? "quality-status is-pass" : item.quality_status === "불합격" ? "quality-status is-fail" : "quality-status is-wait"
                                         }>
                                             {item.quality_status}
                                         </span>
@@ -510,9 +512,11 @@ const handleSave = async () => {
 
                                     <td>{item.memo || item.fail_reason || "-"}</td>
 
-                                    <button type="button" onClick={() => loadHistoryChecklist(item.inspection_id)}>
-                                        보기
-                                    </button>
+                                    <td>
+                                        <button type="button" onClick={() => loadHistoryChecklist(item.inspection_id)}>
+                                            보기
+                                        </button>
+                                    </td>
                                 </tr>
                             ))
                         )}
@@ -520,10 +524,11 @@ const handleSave = async () => {
 
 
                 </table>
+                </div>
 
                 {selectedInspectionId !== null && (
                         
-                        <div>
+                        <div className="quality-panel">
                             <h3>{selectedInspection?.inspection_date} {selectedInspection?.inspector} 검사자 체크리스트</h3>
 
                             {historyChecklist === null ? (
@@ -546,7 +551,7 @@ const handleSave = async () => {
 
             </section>
 
-            <section className="quality-checklist">
+            <section className="quality-checklist quality-panel">
 
                 <h2>품질 검사 체크리스트</h2>
 
@@ -570,6 +575,7 @@ const handleSave = async () => {
                         <div>
                             <button
                                 type="button"
+                                className={item.result === "통과" ? "selected" : ""}
                                 onClick={() =>
                                     changeChecklistResult(
                                         item.id,
@@ -582,6 +588,7 @@ const handleSave = async () => {
 
                             <button
                                 type="button"
+                                className={item.result === "불합격" ? "selected" : ""}
                                 onClick={() =>
                                     changeChecklistResult(
                                         item.id,
@@ -594,6 +601,7 @@ const handleSave = async () => {
 
                             <button
                                 type="button"
+                                className={item.result === "미실시" ? "selected" : ""}
                                 onClick={() =>
                                     changeChecklistResult(
                                         item.id,

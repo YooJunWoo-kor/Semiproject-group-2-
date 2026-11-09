@@ -80,7 +80,7 @@ function Main() {
 
 
     return (
-        <div className="border-container">
+        <div className="quality-dashboard-page">
 
             {/* 대시보드 제목 */}
             <header className="dashboard-header">

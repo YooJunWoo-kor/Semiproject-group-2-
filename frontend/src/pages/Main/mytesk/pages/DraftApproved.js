@@ -2,7 +2,7 @@ import React from "react";
 
 function DraftApproved({ drafts }) {
     return (
-        <div>
+        <div className="draft-box">
             <h2>내가 승인한 기안서</h2>
             {drafts.length === 0 ? (
                 <p>승인한 기안서가 없습니다.</p>

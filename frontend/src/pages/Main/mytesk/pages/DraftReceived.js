@@ -22,7 +22,7 @@ function DraftReceived({ drafts, onDraftChanged }) {
     }
 
     return (
-        <div>
+        <div className="draft-box">
             <h2>요청이 온 기안서</h2>
             {drafts.length === 0 ? (
                 <p>요청받은 기안서가 없습니다.</p>
@@ -34,7 +34,7 @@ function DraftReceived({ drafts, onDraftChanged }) {
                     <p>내용 : {draft.content}</p>
                     <p>작성일 : {draft.createdAt}</p>
                     <p>상태 : {draft.status}</p>
-                    <button type="button" onClick={() => handleDecision(draft.id, "approve")}>
+                    <button className="erp-primary-button" type="button" onClick={() => handleDecision(draft.id, "approve")}>
                         승인
                     </button>
                     <button type="button" onClick={() => handleDecision(draft.id, "reject")}>
