@@ -17,46 +17,37 @@ import WeeklyCalendar from '../../../components/weeklycalendar/WeeklyCalendar';
 */
 
 export default function ProjectModul({projectlist}) {
-  
-
   return (
     <div className="border-container">
       <header className="dashboard-header">
           <span className='subtitle'>프로젝트 관리</span>
           <div className="dashboard-top">
-                    {/* MASTER에게만 표시 */}
-                    {(
-                        <Link
-                            to="/main/hr/employees"
-                            className="register-btn"
-                        >
-                            프로젝트 등록
-                        </Link>
-                    )}
+                    {
+                      <Link
+                          to="/main/hr/employees"
+                          className="register-btn"
+                      >
+                          + 프로젝트 등록
+                      </Link>
+                    }
                  </div>
       </header>
-      <section className="stats-section">
-        <StatisticsCard title="등록된 프로젝트" count={projectlist.length} stiyle={0}/>
-        <StatisticsCard title="내 프로젝트" count={3} stiyle={0}/>
-        <StatisticsCard title="이번달" count={5} stiyle={0}/>
-        <StatisticsCard title="이번주" count={projectlist.length} stiyle={0}/>
-      </section>
-      
-      <div style={{
-        display: "flex",
-        gap: '30px'
-      }}>
+      <div style={{display:'flex', gap: '30px'}}>
+        <section className="stats-section">
+          <StatisticsCard title="등록된 프로젝트" count={projectlist.length} stiyle={0}/>
+          <StatisticsCard title="내 프로젝트" count={3} stiyle={0}/>
+          <StatisticsCard title="이번달" count={5} stiyle={0}/>
+          <StatisticsCard title="이번주" count={projectlist.length} stiyle={0}/>
+        </section>
+        
         <div style={{
-          flex: '0.5'
+          flex: '1',
         }}>
-          <BasicCalendar schedule={projectlist}/>
+            <BasicCalendar schedule={projectlist}/>
         </div>
-        <div style={{
-          flex: '0.5'
-        }} >
-          <WeeklyCalendar schedule={projectlist}/>
-        </div>
+
       </div>
+      
     </div>
   );
 }
