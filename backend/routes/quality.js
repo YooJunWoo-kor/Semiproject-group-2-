@@ -1,3 +1,4 @@
+
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
@@ -132,10 +133,8 @@ router.post("/products", (req, res) => {
             });
         }
 
-        // 이미지 경로만 DB에 저장
-        const imageUrl = req.file
-            ? `/Images/${req.file.filename}`
-            : null;
+        // 이미지 경로 DB에 저장
+        const imageUrl = req.file ? `${req.protocol}://${req.get("host")}/Images/${req.file.filename}` : null;
 
         const sql = `
             INSERT INTO quality_products
@@ -155,7 +154,7 @@ router.post("/products", (req, res) => {
         const values = [
             productCode.trim(),
             productName.trim(),
-            productType?.trim() || null,
+            "화장품",
             company?.trim() || null,
             parsedPrice,
             parsedStock,

@@ -14,7 +14,6 @@ function ProductList() {
     const [productForm, setProductForm] = useState({
         productCode: "",
         productName: "",
-        productType: "",
         company: "",
         price: "",
         stock: "",
@@ -220,7 +219,7 @@ function ProductList() {
                 <ModalBase title="제품등록" onClose={() => setIsRegisterOpen(false)}
                     layout={
                         <div>
-                            <form onSubmit={{handleProductSubmit}}/>
+                            <form onSubmit={handleProductSubmit}>
 
                                 <div>
                                     <label>제품코드 *</label>
@@ -239,16 +238,6 @@ function ProductList() {
                                     />
                                 </div>
 
-                                <div>
-                                    <label>제품 종류</label>
-                                    <input
-                                        type="text"
-                                        name="productType"
-                                        value={productForm.productType}
-                                        onChange={handleInputChange}
-                                        placeholder="화장품"
-                                    />
-                                </div>
 
                                 <div>
                                     <label>제조사</label>
