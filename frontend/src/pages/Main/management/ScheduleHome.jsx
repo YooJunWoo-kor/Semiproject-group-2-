@@ -1,27 +1,22 @@
 import React from 'react';
-import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import { Routes, Route, Navigate, Link, NavLink } from 'react-router-dom';
 import ScheduleModul from './ScheduleModul';
-import ScheduleRoomTimetable from './pages/ScheduleRoomTimetable';
-import MeetingRoomManagement from './pages/MeetingRoomManagement';
-import Nav from '../../../components/Nav';
 
 
 // 일정관리 진입점: 경로와 화면 연결만 담당합니다.
 export default function ScheduleHome() {
   const mainUrl = '/main/schedule';
-  const urlList = [
-    { name: '메인', url: mainUrl },
-    { name: '회의실 시간표', url: mainUrl + '/room' },
-    { name: '회의실 관리', url: mainUrl + '/rooms' },
-  ];
+  const cabinetUrl = mainUrl + '/cabinet'
 
   return (
     <div className="sub-main-contain">
-      <div className="sub-main-nav">
-        <ul>
-          <li>일정관리</li>
-          <li><Link to ={mainUrl}>일정관리</Link></li>
-          <li><Link to ={mainUrl}>회의실 등록</Link></li>
+      <div className="sub-border">
+          <p>일정관리</p>
+          <nav className="sub-main-nav">
+            <NavLink key={mainUrl} to ={mainUrl} end>일정관리</NavLink>
+            <NavLink key={cabinetUrl} to ={cabinetUrl} end>회의실 등록</NavLink>
+          </nav>
+
           {/* 가운데줄 */}
           <hr style = {{
             marginLeft:"40px",
@@ -44,12 +39,9 @@ export default function ScheduleHome() {
               주요일정
             </label>
           </form>
-        </ul>
       </div>
       <Routes>
-        <Route index element={<ScheduleModul />} />
-        <Route path="room/*" element={<ScheduleRoomTimetable />} />
-        <Route path="rooms" element={<MeetingRoomManagement />} />
+        <Route path='/' element={<ScheduleModul />} />
         <Route path="*" element={<Navigate to="/main/schedule" replace />} />
       </Routes>
     </div>

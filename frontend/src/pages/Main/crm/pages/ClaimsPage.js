@@ -57,7 +57,7 @@ export default function ClaimsPage({ data, setData }) {
   });
 
   return (
-    <div className="sub-container">
+    <div className="border-container">
       <header className="dashboard-header">
         <span className="subtitle">클레임 관리</span>
       </header>

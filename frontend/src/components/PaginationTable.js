@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import BasicTable from './BasicTable';
-import './PaginationTable.css';
+import '../css/PaginationTable.css';
 
 //기본 게시판 모듈, BasicTable활용
 
-function PaginationTable({ title, th, allData = [], itemsPerPage = 5 }) {
+function PaginationTable({ title, th, allData = [], itemsPerPage = 5, style = 1 }) {
+  
   // 현재 페이지 번호 (1부터 시작)
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -33,8 +34,10 @@ function PaginationTable({ title, th, allData = [], itemsPerPage = 5 }) {
     if (currentPage < totalPages) setCurrentPage((prev) => prev + 1);
   };
 
+  const setClass = style == 1 ? "pagination-table-wrapper" : "border-container";
+
   return (
-    <div className="pagination-table-wrapper">
+    <div className={setClass}>
       {/* 기존 BasicTable에 잘라낸 td와 title, th를 그대로 전달 */}
       <BasicTable title={title} th={th} td={currentTd} />
 

@@ -46,7 +46,7 @@ function Home() {
 
 
     return (
-        <div className="login-page">
+        <div className="login-page" data-theme='light'>
             <div className="login-border">
                 <header>
                     <h2>ERP 시스템</h2>
@@ -100,7 +100,6 @@ function Home() {
                     </form>
                 </main>
                 <footer>
-                    <button onClick={registerHendle}> 회원가입 </button>
                     <br />
                     <small> 계정 분실 시 전산팀에 문의하세요. </small>
                 </footer>

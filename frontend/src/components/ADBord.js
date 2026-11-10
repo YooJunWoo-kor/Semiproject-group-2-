@@ -13,7 +13,7 @@ async function setAttendens(){
     } catch (error) {
     }
 }
-
+ 
 //퇴근데이터 생성 및 처리
 async function updateAttendens(){
     const userInfo = localStorage.getItem(LOGIN_USER_KEY);
@@ -40,7 +40,7 @@ function ADBord({dataSet, btnStl}){
     }, [btnStl]);
 
     return (
-        <div className="attendance-card">
+        <div className="attendance-card" style={{maxWidth: '250px'}}>
             <div className="attendance-card-header">
             <span className="attendance-badge">근태 관리</span>
             </div>

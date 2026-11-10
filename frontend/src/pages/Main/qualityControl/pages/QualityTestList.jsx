@@ -1,12 +1,44 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import products from "./product";
 import "./QualityControl.css";
+import axios from "axios";
+import { API_BASE_URL } from "../../../../utils/authStorage";
 
 function QualityTestList() {
     const navigate = useNavigate();
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("전체");
+
+
+const [products, setProducts] = useState([]);
+
+    useEffect(() => {
+        async function loadProducts() {
+            try {
+                const response = await axios.get(
+                    `${API_BASE_URL}/quality/products`
+                );
+
+                const data = response.data.map(item => ({
+                    id: item.product_id,
+                    code: item.product_code,
+                    name: item.product_name,
+                    company: item.company,
+                    qualityStatus: item.quality_status,
+                    inspectionDate: item.inspection_date || "-"
+                }));
+
+                setProducts(data);
+
+            } catch (error) {
+                console.error("검사 목록 조회 실패:", error);
+            }
+        }
+
+        loadProducts();
+    }, []);
+
+
 
     const filteredProducts = products.filter(product => {
         const searchMatch =
@@ -20,9 +52,13 @@ function QualityTestList() {
     });
 
     return (
-        <div className="sub-container">
-            <header className="dashboard-header">
-                <span className='subtitle'>품질검사 관리</span>
+        <div className="quality-test-page">
+            <header className="quality-page-header">
+                <div>
+                    <span className="quality-eyebrow">INSPECTIONS</span>
+                    <h1>품질검사 관리</h1>
+                    <p>제품별 품질검사 상태와 최근 검사일을 확인합니다.</p>
+                </div>
                 <div className="quality-header-badge">총 {filteredProducts.length}건</div>
             </header>
 

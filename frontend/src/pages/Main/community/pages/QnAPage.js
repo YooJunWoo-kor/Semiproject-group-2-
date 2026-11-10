@@ -1,226 +1,372 @@
-import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+// [수정] DB의 게시판별 컬럼명과 employee_id 연결 / 첨부파일 기능 없음
+// [수정] Q&A 본문 화면과 글쓰기·수정 모달 연결
+import React, { useState, useEffect, useRef } from 'react';
 import PaginationTable from '../../../../components/PaginationTable';
-
-function QnAPage({ communityItems }) {
-  const { items, updateItem, removeItem } = communityItems;
-  const location = useLocation();
-  const initialSelected = items.find((item) => item.id === location.state?.selectedItemId) || null;
-
-  const [query, setQuery] = useState('');
-  const [view, setView] = useState(initialSelected ? 'detail' : 'list'); // 'list' | 'detail'
-  const [selected, setSelected] = useState(initialSelected);
-  const [comment, setComment] = useState('');
-
-  const filtered = items.filter((item) =>
-    `${item.title} ${item.author}`.toLowerCase().includes(query.toLowerCase())
-  );
-
-  const handleOpenWriteModal = () => {
-    // 나중에 공통 모달(Modal) 컴포넌트 오픈 로직을 연결할 자리입니다.
-    alert('공통 글작성 모달을 띄울 예정입니다.');
-  };
-
-  const remove = (itemToRemove = selected) => {
-    if (!itemToRemove || !window.confirm('이 글을 삭제할까요?')) return;
-
-    removeItem(itemToRemove.id);
-    if (selected && selected.id === itemToRemove.id) {
-      setSelected(null);
-      setView('list');
-    }
-  };
-
-  const saveComment = () => {
-    if (!comment.trim()) {
-      alert('댓글 내용을 입력해 주세요.');
-      return;
-    }
-
-    const newComment = {
-      id: Date.now(),
-      content: comment.trim(),
-      author: '임시 사용자',
-      createdAt: new Date().toISOString().slice(0, 10),
+import ModalBase from '../../../../components/ModalBase';
+import { getLoginUser } from '../../../../utils/authStorage';
+import { getQnAPosts, addQnAPost, updateQnAPost, deleteQnAPost, addQnAComment, updateQnAComment, deleteQnAComment } from '../../../../utils/communityApi';
+export default function QnAPage() {
+    const [items, setItems] = useState([]);
+    const [query, setQuery] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
+    const [message, setMessage] = useState('');
+    // [추가] 선택된 글이 있으면 본문 화면, 없으면 목록
+    const [selectedId, setSelectedId] = useState(null);
+    const selected = items.find(item => item.qa_id === selectedId);
+    const [modal, setModal] = useState(false);
+    const [editingId, setEditingId] = useState(null);
+    const [title, setTitle] = useState('');
+    const [content, setContent] = useState('');
+    const [category, setCategory] = useState('질문');
+    const [formError, setFormError] = useState('');
+    const [busy, setBusy] = useState(false);
+    const lock = useRef(false);
+    // [추가] Q&A 댓글 입력값
+    const [editingCommentId, setEditingCommentId] = useState(null);
+    const [editingComment, setEditingComment] = useState('');
+    const [comment, setComment] = useState('');
+    useEffect(() => {
+        setComment('');
+        setEditingCommentId(null);
+    }, [selectedId]);
+    const saveComment = event => {
+        event.preventDefault();
+        if (!comment.trim() || !selected) {
+            setMessage('댓글 내용을 입력해 주세요.');
+            return;
+        }
+        let employee;
+        try {
+            employee = getLoginUser();
+        } catch {
+            setMessage('로그인 정보를 확인해 주세요.');
+            return;
+        }
+        if (!Number.isInteger(Number(employee?.employee_id ?? employee?.employeeKey)) || Number(employee?.employee_id ?? employee?.employeeKey) <= 0) {
+            setMessage('로그인 직원 정보를 확인해 주세요.');
+            return;
+        }
+        run(() => addQnAComment(selected.qa_id, {
+            content: comment.trim(),
+            employee_id: Number(employee.employee_id ?? employee.employeeKey)
+        }), () => setComment(''), '댓글이 등록되었습니다.');
     };
+    useEffect(() => {
+        let active = true;
+        getQnAPosts().then(rows => {
+            if (active) setItems(rows);
+        }).catch(() => {
+            if (active) setLoadError('Q&A 목록을 불러오지 못했습니다.');
+        }).finally(() => {
+            if (active) setLoading(false);
+        });
+        return () => {
+            active = false;
+        };
+    }, []);
 
-    const savedItem = {
-      ...selected,
-      comments: [...(selected.comments || []), newComment],
-      updatedAt: new Date().toISOString().slice(0, 10),
+    // [추가] DB 저장 성공과 재조회 실패를 구분하여 중복 등록 방지
+    const run = async (operation, afterSuccess, successMessage, form = false) => {
+        if (lock.current) return;
+        lock.current = true;
+        setBusy(true);
+        setFormError('');
+        setMessage('');
+        let saved = false;
+        try {
+            await operation();
+            saved = true;
+            afterSuccess();
+            setItems(await getQnAPosts());
+            setMessage(successMessage);
+        } catch (error) {
+            const text = saved ? '변경은 저장되었습니다. 목록을 다시 불러오지 못했으니 새로고침해 주세요.' : error.response?.data?.message || '처리에 실패했습니다.';
+            if (form && !saved) setFormError(text);else setMessage(text);
+        } finally {
+            lock.current = false;
+            setBusy(false);
+        }
     };
-
-    updateItem(savedItem);
-    setSelected(savedItem);
-    setComment('');
-  };
-
-  const removeComment = (id) => {
-    if (!window.confirm('댓글을 삭제할까요?')) return;
-
-    const savedItem = {
-      ...selected,
-      comments: (selected.comments || []).filter((item) => item.id !== id),
-      updatedAt: new Date().toISOString().slice(0, 10),
+    const openWrite = (item = null) => {
+        setEditingId(item?.qa_id ?? null);
+        setTitle(item?.qa_title || '');
+        setContent(item?.qa_content || '');
+        setCategory(item?.category || '질문');
+        setFormError('');
+        setMessage('');
+        setModal(true);
     };
-
-    updateItem(savedItem);
-    setSelected(savedItem);
-  };
-
-  const tableHeaders = ['번호', '제목', '작성자', '작성일', '댓글수', '관리'];
-
-  const tableData = filtered.map((item, index) => ({
-    content: [
-      filtered.length - index,
-      <span
-        className="table-link-title"
-        onClick={() => {
-          setSelected(item);
-          setView('detail');
-        }}
-      >
-        {item.title}
-      </span>,
-      item.author,
-      item.createdAt || item.updatedAt || '-',
-      (item.comments || []).length,
-      <div className="table-actions">
-        <button type="button" onClick={handleOpenWriteModal}>
-          수정
-        </button>
-        <button
-          type="button"
-          className="danger-button"
-          onClick={() => remove(item)}
-        >
-          삭제
-        </button>
-      </div>,
-    ],
-  }));
-
-  return (
-    <div className="sub-container">
-      {/* 1. 상단 공통 헤더 */}
-      <header className="dashboard-header">
-        <span className="subtitle">질의응답 게시판</span>
-        <div className="dashboard-top">
-          {view === 'list' && (
-            <button
-              type="button"
-              className="register-btn"
-              onClick={handleOpenWriteModal}
-            >
-              + 글쓰기
-            </button>
-          )}
-          {view !== 'list' && (
-            <button type="button" onClick={() => setView('list')}>
-              목록으로
-            </button>
-          )}
-        </div>
-      </header>
-
-      <hr />
-
-      {/* 2. 목록 뷰 */}
-      {view === 'list' && (
-        <>
-          <div className="filter-bar">
-            <label className="search-field">
-              검색:
-              <input
-                type="text"
-                placeholder="제목 또는 작성자 검색"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </label>
-          </div>
-
-          <PaginationTable
-            title="자유게시판 목록"
-            th={tableHeaders}
-            allData={tableData}
-            itemsPerPage={10}
-          />
-        </>
-      )}
-
-      {/* 3. 상세 보기 뷰 */}
-      {view === 'detail' && selected && (
-        <article className="detail-card">
-          <header>
-            <h3>{selected.title}</h3>
-            <span className="subtext">
-              작성자: {selected.author} | 작성일: {selected.createdAt} | 최근수정: {selected.updatedAt}
-            </span>
-          </header>
-
-          <hr />
-
-          <div className="detail-body">
-            {selected.content}
-          </div>
-
-          <div className="table-actions">
-            <button type="button" onClick={handleOpenWriteModal}>
-              수정
-            </button>
-            <button
-              type="button"
-              className="danger-button"
-              onClick={() => remove(selected)}
-            >
-              삭제
-            </button>
-          </div>
-
-          <hr />
-
-          {/* 댓글 영역 */}
-          <section className="comment-section">
-            <h4>댓글 ({(selected.comments || []).length})</h4>
-            <div className="comment-list">
-              {(selected.comments || []).map((c) => (
-                <div key={c.id} className="comment-item">
-                  <div className="comment-meta">
-                    <strong>{c.author}</strong>
-                    <span className="subtext">({c.createdAt})</span>
-                    <p className="comment-text">{c.content}</p>
-                  </div>
-                  <button
+    const closeModal = () => {
+        if (!lock.current) setModal(false);
+    };
+    const savePost = event => {
+        event.preventDefault();
+        if (![title, content, category].every(value => value.trim())) {
+            setFormError('제목, 내용과 분류를 입력해 주세요.');
+            return;
+        }
+        let employee;
+        try {
+            employee = getLoginUser();
+        } catch {
+            setFormError('로그인 정보를 확인해 주세요.');
+            return;
+        }
+        if (!Number.isInteger(Number(employee?.employee_id ?? employee?.employeeKey)) || Number(employee?.employee_id ?? employee?.employeeKey) <= 0) {
+            setFormError('로그인 직원 정보를 확인해 주세요.');
+            return;
+        }
+        const post = {
+            qa_title: title.trim(),
+            qa_content: content.trim(),
+            category,
+            employee_id: Number(employee.employee_id ?? employee.employeeKey)
+        };
+        run(() => editingId == null ? addQnAPost(post) : updateQnAPost(editingId, post), () => {
+            setModal(false);
+            setQuery('');
+        }, editingId == null ? 'Q&A이 등록되었습니다.' : 'Q&A이 수정되었습니다.', true);
+    };
+    const remove = item => {
+        if (busy || !window.confirm('이 Q&A을 삭제할까요?')) return;
+        run(() => deleteQnAPost(item.qa_id), () => {
+            setItems(previous => previous.filter(post => post.qa_id !== item.qa_id));
+            if (selectedId === item.qa_id) setSelectedId(null);
+        }, 'Q&A이 삭제되었습니다.');
+    };
+    const openDetail = item => {
+        setSelectedId(item.qa_id);
+        setMessage('');
+    };
+    const editComment = (event, c) => {
+        event.preventDefault();
+        if (!editingComment.trim()) return;
+        run(() => updateQnAComment(selected.qa_id, c.qa_cmt_id, {
+            content: editingComment.trim()
+        }), () => setEditingCommentId(null), '댓글이 수정되었습니다.');
+    };
+    const removeComment = c => {
+        if (busy || !window.confirm('댓글을 삭제할까요?')) return;
+        run(() => deleteQnAComment(selected.qa_id, c.qa_cmt_id), () => setEditingCommentId(null), '댓글이 삭제되었습니다.');
+    };
+    const dateTime = value => value ? new Date(value).toLocaleString('ko-KR', {
+        timeZone: 'Asia/Seoul'
+    }) : '-';
+    // [추가] 공백만 입력한 경우도 브라우저 입력란 안내로 표시합니다.
+    const validateText = event => event.currentTarget.setCustomValidity(event.currentTarget.value && !event.currentTarget.value.trim() ? '공백을 제외한 내용을 입력하세요.' : '');
+    const date = value => value ? new Date(value).toLocaleDateString('sv-SE', {
+        timeZone: 'Asia/Seoul'
+    }) : '-';
+    const keyword = query.trim().toLowerCase();
+    const filtered = items.filter(item => `${item.qa_title} ${item.qa_content} ${item.employee_name || '작성자 미확인'}`.toLowerCase().includes(keyword));
+    const actions = item => <div className="table-actions">
+                <button
                     type="button"
+                    disabled={busy}
+                    onClick={() => openWrite(item)}>수정</button>
+                <button
+                    type="button"
+                    disabled={busy}
                     className="danger-button"
-                    onClick={() => removeComment(c.id)}
-                  >
-                    삭제
-                  </button>
-                </div>
-              ))}
-              {(selected.comments || []).length === 0 && (
-                <p className="no-data">등록된 댓글이 없습니다.</p>
-              )}
-            </div>
-
-            <div className="comment-input-wrap">
-              <input
-                type="text"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="댓글을 입력하세요"
-              />
-              <button type="button" className="register-btn" onClick={saveComment}>
-                댓글 등록
-              </button>
-            </div>
-          </section>
-        </article>
-      )}
-    </div>
-  );
+                    onClick={() => remove(item)}>삭제</button>
+        </div>;
+    // [수정] 제목 클릭으로 본문 표시, 목록에 관리 버튼 추가
+    const tableData = filtered.map(item => ({
+        content: [item.qa_id, item.category, <button
+            key={`title-${item.qa_id}`}
+            type="button"
+            className="table-link-title"
+            style={{
+            border: 0,
+            background: 'transparent',
+            padding: 0,
+            font: 'inherit',
+            color: 'inherit',
+            cursor: 'pointer',
+            textAlign: 'left'
+        }}
+            disabled={busy}
+            onClick={() => openDetail(item)}>{item.qa_title}</button>, item.employee_name || '작성자 미확인', date(item.created_at), (item.comments || []).length, <React.Fragment key={`actions-${item.qa_id}`}>{actions(item)}</React.Fragment>]
+    }));
+    const inputStyle = {
+        display: 'block',
+        width: '100%',
+        boxSizing: 'border-box',
+        marginTop: 6,
+        padding: '10px 12px',
+        border: '1px solid #ccd6e5',
+        borderRadius: 8,
+        font: 'inherit'
+    };
+    const layout = <form
+        onSubmit={savePost}
+        style={{
+        width: 'min(520px, calc(100vw - 96px))',
+        maxHeight: 'calc(100vh - 180px)',
+        overflowY: 'auto'
+    }}>
+                <fieldset
+                    disabled={busy}
+                    style={{
+            border: 0,
+            padding: 0,
+            margin: 0,
+            display: 'grid',
+            gap: 16,
+            minWidth: 0
+        }}>
+                        <label>제목<input
+                            required
+                            onInput={validateText}
+                            maxLength={200}
+                            style={inputStyle}
+                            value={title}
+                            onChange={event => setTitle(event.target.value)} /></label>
+                        <label>분류<select
+                            style={inputStyle}
+                            value={category}
+                            onChange={event => setCategory(event.target.value)}>
+                                {!["질문", "기타"].includes(category) && <option value={category}>{category}</option>}
+                                {["질문", "기타"].map(value => <option
+                                    key={value}
+                                    value={value}>{value}</option>)}
+                        </select></label>
+                        <label>내용<textarea
+                            required
+                            onInput={validateText}
+                            rows={8}
+                            style={{
+                    ...inputStyle,
+                    resize: 'vertical'
+                }}
+                            value={content}
+                            onChange={event => setContent(event.target.value)} /></label>
+                        {formError && <p role="alert">{formError}</p>}
+                        <div className="table-actions"><button
+                            type="button"
+                            onClick={closeModal}>취소</button><button
+                            type="submit"
+                            className="erp-primary-button">{busy ? '저장 중…' : editingId == null ? '등록하기' : '수정하기'}</button></div>
+                </fieldset>
+        </form>;
+    return <div className="border-container">
+                <header className="dashboard-header"><span className="subtitle">Q&A</span><div className="dashboard-top">
+                        {selected ? <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => setSelectedId(null)}>목록으로</button> : <button
+                            type="button"
+                            className="register-btn"
+                            disabled={loading || busy || !!loadError}
+                            onClick={() => openWrite()}>+ 글쓰기</button>}
+                </div></header><hr />
+                {loading && <p className="no-data">Q&A을 불러오는 중입니다.</p>}
+                {loadError && <p role="alert">{loadError}</p>}
+                {!modal && message && <p role="status">{message}</p>}
+                {!loading && !loadError && !selected && <>
+                        <div className="filter-bar"><label className="search-field">검색:<input
+                            placeholder="제목, 내용 또는 작성자 검색"
+                            value={query}
+                            onChange={event => setQuery(event.target.value)} /></label></div>
+                        <PaginationTable
+                            key={keyword}
+                            title="Q&A 목록"
+                            th={['번호', '분류', '제목', '작성자', '작성일', '댓글수', '관리']}
+                            allData={tableData}
+                            itemsPerPage={10} />
+                </>}
+                {!loading && !loadError && selected && <article className="detail-card">
+                        <h3>{selected.qa_title}</h3>
+                        <p className="subtext">작성자: {selected.employee_name || '작성자 미확인'} | 분류: {selected.category} | 작성일: {date(selected.created_at)} | 최근 수정: {date(selected.updated_at)}</p><hr />
+                        <div
+                            className="detail-body"
+                            style={{
+                whiteSpace: 'pre-wrap',
+                overflowWrap: 'anywhere'
+            }}>{selected.qa_content}</div>
+                        {actions(selected)}
+                        {/* ===== [추가] Q&A 댓글 목록·입력창 시작 ===== */}
+                        <hr />
+                        <section className="comment-section">
+                                <h4>댓글 ({(selected.comments || []).length})</h4>
+                                <div className="comment-list">
+                                        {(selected.comments || []).map(c => <div
+                                            className="comment-item"
+                                            key={c.qa_cmt_id}>
+                                                <div className="comment-meta"><strong>{c.employee_name || '작성자 미확인'}</strong><span className="subtext"> ({dateTime(c.created_at)}) {c.updated_at && ' | 수정: ' + dateTime(c.updated_at)}</span>
+                                                        {editingCommentId === c.qa_cmt_id ? <form onSubmit={event => editComment(event, c)}>
+                                                                <input
+                                                                    aria-label="댓글 수정 내용"
+                                                                    required
+                                                                    onInput={validateText}
+                                                                    maxLength={10000}
+                                                                    style={inputStyle}
+                                                                    value={editingComment}
+                                                                    onChange={event => setEditingComment(event.target.value)}
+                                                                    disabled={busy} />
+                                                                <button
+                                                                    type="submit"
+                                                                    disabled={busy}>저장</button><button
+                                                                    type="button"
+                                                                    disabled={busy}
+                                                                    onClick={() => setEditingCommentId(null)}>취소</button>
+                                                        </form> : <>
+                                                                <p
+                                                                    className="comment-text"
+                                                                    style={{
+                                    whiteSpace: 'pre-wrap',
+                                    overflowWrap: 'anywhere'
+                                }}>{c.content}</p>
+                                                                <div className="table-actions"><button
+                                                                    type="button"
+                                                                    disabled={busy}
+                                                                    onClick={() => {
+                                        setEditingCommentId(c.qa_cmt_id);
+                                        setEditingComment(c.content);
+                                    }}>수정</button><button
+                                        type="button"
+                                        disabled={busy}
+                                        onClick={() => removeComment(c)}>삭제</button></div>
+                                                        </>}
+                                                </div>
+                                        </div>)}
+                                        {(selected.comments || []).length === 0 && <p className="no-data">등록된 댓글이 없습니다.</p>}
+                                </div>
+                                <form
+                                    className="comment-input-wrap"
+                                    style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 10,
+                    alignItems: 'center'
+                }}
+                                    onSubmit={saveComment}>
+                                        <input
+                                            required
+                                            onInput={validateText}
+                                            aria-label="댓글 내용"
+                                            placeholder="댓글을 입력하세요"
+                                            maxLength={10000}
+                                            disabled={busy}
+                                            value={comment}
+                                            onChange={event => setComment(event.target.value)}
+                                            style={{
+                        ...inputStyle,
+                        flex: '1 1 240px',
+                        width: 'auto'
+                    }} />
+                                        <button
+                                            type="submit"
+                                            className="register-btn"
+                                            disabled={busy}>댓글 등록</button>
+                                </form>
+                        </section>
+                        {/* ===== [추가] Q&A 댓글 목록·입력창 끝 ===== */}
+                </article>}
+                {modal && <ModalBase
+                    onClose={closeModal}
+                    title={editingId == null ? 'Q&A 글쓰기' : 'Q&A 수정'}
+                    layout={layout} />}
+        </div>;
 }
-
-export default QnAPage;

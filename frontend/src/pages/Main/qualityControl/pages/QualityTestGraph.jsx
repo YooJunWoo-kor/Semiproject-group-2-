@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Bar, Pie } from "react-chartjs-2";
-import products from "./product";
+import axios from "axios";
+import { API_BASE_URL } from "../../../../utils/authStorage";
 import "./QualityTestGraph.css";
 
 import {
@@ -27,6 +28,8 @@ ChartJS.register(
 const ANIMATION_DURATION = 900;
 
 const barValuePlugin = {
+
+
     id: "barValuePlugin",
     afterDatasetsDraw(chart) {
         const { ctx, chartArea } = chart;
@@ -59,6 +62,37 @@ const barValuePlugin = {
 };
 
 function QualityTestGraph() {
+
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        async function loadProducts() {
+            try {
+                const response = await axios.get(
+                    `${API_BASE_URL}/quality/products`
+                );
+
+                const data = response.data.map(item => ({
+                    qualityStatus: item.quality_status
+                }));
+
+                setProducts(data);
+
+            } catch (err) {
+                console.error("그래프 데이터 조회 실패:", err);
+                setError("그래프 데이터를 불러오지 못했습니다.");
+
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        loadProducts();
+    }, []);
+
+
     const [graphType, setGraphType] = useState("result");
     const [animationKey, setAnimationKey] = useState(0);
     const [animatedValues, setAnimatedValues] = useState({
@@ -95,7 +129,7 @@ function QualityTestGraph() {
         fail: failCount,
         wait: notTestedCount,
         rate: passRate
-    }), [passCount, failCount, notTestedCount, passRate]);
+    }), [products.length, passCount, failCount, notTestedCount, passRate]);
 
     useEffect(() => {
         let animationFrameId;
@@ -239,13 +273,25 @@ function QualityTestGraph() {
             }
         }
     };
+    
+    if (loading) {
+        return <p>그래프 데이터를 불러오는 중입니다.</p>;
+    }
+    
+    if (error) {
+        return <p>{error}</p>;
+    }
 
     return (
-        <div className="sub-container">
-            <header className="dashboard-header">
-                <span className='subtitle'>품질검사 분석</span>
-            </header>
-            
+        <div className="quality-graph-page">
+            <div className="page-header quality-graph-header">
+                <div>
+                    <span className="eyebrow">QUALITY ANALYTICS</span>
+                    <h1>품질검사 분석</h1>
+                    <p>품질검사 결과와 통과 비율을 한눈에 확인합니다.</p>
+                </div>
+            </div>
+
             <div className="graph-summary" aria-live="polite">
                 <div className="graph-summary-card">
                     <span>전체 제품</span>

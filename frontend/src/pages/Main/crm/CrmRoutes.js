@@ -36,7 +36,7 @@ export default function CrmRoutes() {
   // 왼쪽 메뉴와 현재 경로의 페이지를 한 레이아웃에 표시합니다.
   return (
     <div className="sub-main-contain">
-      <Nav urlist={urlList} />
+      <Nav urlist={urlList} title={'고객관리'}/>
       
         <Routes>
           <Route index element={<CrmHome data={data} setData={setData} />} />

@@ -1,30 +1,38 @@
 
-// backend/server.js
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+
 const db = require('./db');
 const app = express();
 
-// 기존 프론트엔드 API 주소와 맞춘 포트
 const PORT = process.env.PORT || 4000;
 
-// main에서 추가된 근태 및 일정 라우터
+// 라우터
 const homSurver = require('./routes/homServer');
 const schedule = require('./routes/schedule');
+const DraftServer = require('./routes/drafts');
+const communityRouter = require('./routes/community');
+const financeRouter = require('./routes/financeRouters'); // main 재무 라우터
+const hrRouter = require('./routes/hrRoutes'); // main 인사 라우터
+const Attendance = require('./models/Attendance');
 
+// 품질관리 라우터 추가
+const qualityRoutes = require('./routes/quality');
+
+// 미들웨어
 app.use(cors());
 app.use(express.json());
 
-
-//커뮤니티관련해서 추가 코드
-const communityRouter = require('./routes/community');
-// 커뮤니티 API
+// API 연결
+app.use('/api/hr', hrRouter);
+app.use('/api/finance', financeRouter);
+app.use('/api/drafts', DraftServer);
+app.use('/api/AD', homSurver);
+app.use('/api/schedule', schedule);
 app.use('/api/community', communityRouter);
+app.use('/api/quality', qualityRoutes);
 
-
-
-// 2. [사원 등록 API] RegisterPage 폼 전송 수신
 app.post('/api/register', async (req, res) => {
     const { employeeId, name, email, password, department, position, phone } = req.body;
 
@@ -37,7 +45,7 @@ app.post('/api/register', async (req, res) => {
             INSERT INTO users (employee_id, name, email, password, department, position, phone)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
-        const [result] = await db.query(query, [
+        const [result] = await db.promise().query(query, [
             employeeId,
             name,
             email,
@@ -59,6 +67,62 @@ app.post('/api/register', async (req, res) => {
 });
 
 // 3. [사원 목록 조회 API]
+app.get('/api/users', (req, res) => {
+
+    const query = `
+        SELECT
+            e.employee_id,
+            e.employee_number,
+            e.name,
+            e.department_id,
+            d.department_name,
+            e.position,
+            e.email,
+            ea.role,
+            ea.account_status
+        FROM employees e
+        LEFT JOIN departments d
+            ON e.department_id = d.department_id
+        INNER JOIN employee_accounts ea
+            ON e.employee_id = ea.employee_id
+        WHERE ea.account_status = 'ACTIVE'
+        ORDER BY e.employee_id
+    `;
+
+    db.query(query, (err, data) => {
+
+        if (err) {
+            console.error('직원 목록 조회 에러:', err);
+
+            return res.status(500).json({
+                message: '직원 목록 조회 실패'
+            });
+        }
+
+        res.json(data);
+    });
+});
+
+app.post('/api/attendance', async (req, res) =>{
+        try{
+            const empNumber = req.body?.empNumber ?? req.body?.userID;
+            const records = await Attendance.getData(empNumber);
+
+            res.json({
+                result: 'success',
+                data: records
+            });
+        }
+        catch(err){
+            return res.json({result:'fail'}) 
+        }
+    }
+)
+
+
+
+
+// 3. [사원 목록 조회 API]
 app.get('/api/users', async (req, res) => {
     try {
         const [rows] = await db.query(
@@ -73,6 +137,9 @@ app.get('/api/users', async (req, res) => {
 
 // 기존 로그인 API
 app.post('/api/login', (req, res) => {
+
+    console.log("로그인 요청 도착", req.body.email);
+    console.log('작동중');
     const query = `
         SELECT
             e.employee_id,
@@ -84,8 +151,9 @@ app.post('/api/login', (req, res) => {
             ea.role,
             ea.account_status
         FROM employees e
-        INNER JOIN employee_accounts ea ON e.employee_id = ea.employee_id
+        INNER JOIN employee_accounts ea ON e.employee_id = ea.employee_id 
         WHERE e.email = ? AND ea.password_hash = ?`;
+        // employee_accounts와 join하는 이유는 권한,상태 등이    employee_accounts에 있기 때문이다.
 
     const value = [
         req.body.email,
@@ -127,12 +195,6 @@ app.post('/api/login', (req, res) => {
         }
     });
 });
-
-// main에서 추가된 근태 관리 API
-app.use('/api/AD', homSurver);
-
-// main에서 추가된 일정 관리 API
-app.use('/api/schedule', schedule);
 
 // 서버 실행
 app.listen(PORT, '0.0.0.0', () => {

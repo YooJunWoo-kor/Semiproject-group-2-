@@ -2,19 +2,19 @@ import React from "react";
 
 function DraftComp({drafts}) {
     const completedDrafts = drafts.filter((draft) => {
-        return draft.status === "완료";
+        return draft.status === "최종승인";
     })
 
     return (
-        <div>
-            <h2>완료된 기안서</h2>
+        <div className="draft-box">
+            <h2>최종승인된 기안서</h2>
 
             {completedDrafts.length === 0 ? (
                 <p>완료된 기안서가 없습니다.</p>
             ) : (
                 completedDrafts.map((draft, index) => {
                     return (
-                        <div key={index}>
+                        <div key={draft.id ?? index} className="draft-item">
                             <p>제목 : {draft.title}</p>
                             <p>문서 종류 : {draft.draftType}</p>
                             <p>내용 : {draft.content}</p>

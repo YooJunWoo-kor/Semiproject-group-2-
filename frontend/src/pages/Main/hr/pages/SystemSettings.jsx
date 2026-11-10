@@ -1,4 +1,4 @@
-//회사설정 json형식으로 만들어짐
+// 설정 메뉴는 배열로 관리해 동일한 버튼 구조를 반복 렌더링합니다.
 const settings = [
   { title: '회사 정보', desc: '회사명, 사업자 정보 및 기본 설정', color: 'blue' },
   { title: '사용자 및 권한', desc: '사용자 계정과 메뉴 접근 권한 관리', color: 'purple' },
@@ -7,9 +7,11 @@ const settings = [
 ];
 
 export default function SystemSettings() {
+  // 현재는 HR 설정 메뉴의 기본 화면만 제공하며 저장 로직은 없습니다.
   return (
     <div className="settings-list">
-      {settings.map((s) => ( //map방식으로 하나씩 찾아옴!
+      {/* 실제 설정 화면이 연결되기 전까지는 안내만 표시합니다. */}
+      {settings.map((s) => (
         <button
           key={s.title}
           onClick={() =>

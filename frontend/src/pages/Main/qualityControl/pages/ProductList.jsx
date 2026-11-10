@@ -1,11 +1,47 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import products from "./product";
+import axios from "axios";
+import { API_BASE_URL } from "../../../../utils/authStorage";
 import "./QualityControl.css";
 
 function ProductList() {
     const navigate = useNavigate();
     const [search, setSearch] = useState("");
+    const [products, setProducts] = useState([]);
+
+    useEffect(() => {
+        async function loadProducts() {
+            try{
+                const response = await axios.get(`${API_BASE_URL}/quality/products`);
+
+                console.log("DB 제품 목록", response.data);
+
+                const productList = response.data.map(product => ({
+                    id: product.product_id,
+                    code: product.product_code,
+                    name: product.product_name,
+                    type: product.product_type,
+                    company: product.company,
+
+                    price: product.price,
+                    stock: product.stock,
+
+                    image: product.image_url,
+                    variantText: product.variant_text,
+
+                    qualityStatus: product.quality_status,
+                    inspectionDate: product.inspection_date || "-",
+                    memo: product.memo || ""
+                }));
+
+                setProducts(productList);
+            }catch (error){
+                console.error("제품 목록 조회 실패:", error);
+            }
+        }
+
+        loadProducts();
+    }, [])
 
     const filteredProducts = products.filter(product =>
         product.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -13,9 +49,13 @@ function ProductList() {
     );
 
     return (
-        <div className="sub-container">
-            <header className="dashboard-header">
-                <span className='subtitle'>제품목록</span>
+        <div className="quality-products-page">
+            <header className="quality-page-header">
+                <div>
+                    <span className="quality-eyebrow">PRODUCTS</span>
+                    <h1>제품 목록</h1>
+                    <p>등록된 제품의 기본정보와 재고 현황을 확인합니다.</p>
+                </div>
                 <div className="quality-header-badge">{filteredProducts.length}개 제품</div>
             </header>
 

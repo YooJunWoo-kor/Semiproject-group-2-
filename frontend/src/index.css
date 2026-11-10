@@ -8,6 +8,7 @@
 @import './css/Schedul.css';
 @import './css/ModalPopup.css';
 @import './css/Form.css';
+@import './css/fontSetting.css';
 
 :root {
   font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
@@ -50,7 +51,7 @@ ul{
 /* 공통 입력 요소 */
 input:not([type='checkbox']):not([type='radio']), select, textarea {
   width: 100%; min-height: 42px; padding: 10px 12px; color: var(--color-ink);
-  background: #fff; border: 1px solid #d9deea; border-radius: 9px; outline: none;
+  background: var(--color-surface); border: 1px solid #d9deea; border-radius: 9px; outline: none;
   transition: border-color .18s, box-shadow .18s;
 }
 textarea { min-height: 120px; resize: vertical; }
@@ -66,10 +67,10 @@ button {
 button:hover { border-color: #bcc7dc; background: #f8faff; }
 button:active { transform: translateY(1px); }
 button[type='submit'], .action-btn, .submit-btn, .erp-primary-button {
-  color: #fff; background: var(--color-brand); border-color: var(--color-brand);
+  color: var(--color-surface); background: var(--color-brand); border-color: var(--color-brand);
 }
 button[type='submit']:hover, .action-btn:hover, .submit-btn:hover, .erp-primary-button:hover {
-  color: #fff; background: var(--color-brand-dark); border-color: var(--color-brand-dark);
+  color: var(--color-surface); background: var(--color-brand-dark); border-color: var(--color-brand-dark);
 }
 hr { border: 0; border-top: 1px solid var(--color-line); }
 
@@ -83,19 +84,35 @@ hr { border: 0; border-top: 1px solid var(--color-line); }
 }
 
 
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 100deg;
+  inherits: false;
+}
+
+@keyframes rotateGradient {
+  0% {
+    --angle: 0deg;
+  }
+  100% {
+    --angle: 360deg; 
+  }
+}
+
 /* 로그인 */
 .login-page {
   display: flex;
   min-height: 100vh;
   place-items: center;
   align-items: center;
-  background: radial-gradient(ellipse at 15% 10%, #e8efff 0, transparent 34%), var(--color-canvas);
+  background: linear-gradient(var(--angle), var(--color-brand), var(--color-success));
+  animation: rotateGradient 20s normal infinite;
 }
 
 .login-border{
   display: flex;
   flex-flow: column;
-  background-color: #fff;
+  background-color: var(--color-surface);
   border-radius: 15px;
   padding: 30px;
   padding-bottom: 150px;
@@ -105,3 +122,43 @@ hr { border: 0; border-top: 1px solid var(--color-line); }
 .login-page form { display: grid; gap: 17px; }
 .login-page form > div { display: grid; gap: 8px; }
 
+
+
+/* 기안서 작성/목록: 기존 border-container, 입력, 버튼, 테마 토큰 재사용 */
+.draft-box { display: grid; gap: 18px; min-width: 0; }
+.border-container > .draft-box > h2 {
+  margin: 0; padding-bottom: 16px; color: var(--color-brand); border-bottom: 1px solid var(--color-line);
+}
+form.draft-box > label, form.draft-box > .draft-row, form.draft-box > .draft-box {
+  min-width: 0; padding: 18px 20px; background: var(--color-surface);
+  border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--card-shadow);
+}
+form.draft-box > label { display: flex; flex-direction: column; gap: 10px; color: var(--color-ink); font-weight: 700; }
+.draft-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-width: 0; }
+.draft-row > label { flex: 1 1 200px; min-width: 0; }
+.draft-row > p {
+  flex: 1 1 170px; margin: 0; padding: 12px 14px;
+  background: #f8fbfc; border: 1px solid var(--color-line); border-radius: var(--layer-radius);
+  color: var(--color-ink); font-size: .88rem;
+}
+.draft-row > h4 { margin: 0 auto 0 0; color: var(--color-ink); }
+.draft-row > span { flex: 1; min-width: 170px; overflow-wrap: anywhere; }
+.draft-box > p { margin: 0; }
+.draft-actions {
+  display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+  margin-top: 4px; flex-wrap: wrap;
+}
+.draft-box > input[type='text'] { max-width: 380px; }
+.draft-item {
+  min-width: 0; padding: 20px 22px; background: var(--color-surface);
+  border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--card-shadow);
+}
+.draft-item-title { margin: 0 0 12px; color: var(--color-brand); font-size: 1.05rem; }
+.draft-item p { margin: 0; padding: 5px 0; font-size: .9rem; overflow-wrap: anywhere; }
+.draft-item .draft-actions { padding-top: 14px; margin-top: 14px; border-top: 1px solid var(--color-line); }
+.draft-item > button { margin-top: 12px; margin-right: 8px; }
+@media (max-width: 680px) {
+  form.draft-box > label, form.draft-box > .draft-row, form.draft-box > .draft-box, .draft-item { padding: 16px; }
+  .draft-row > p, .draft-row > label { flex-basis: 100%; }
+  .draft-actions > button { flex: 1 1 auto; }
+}

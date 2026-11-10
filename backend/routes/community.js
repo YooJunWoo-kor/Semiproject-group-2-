@@ -1,314 +1,210 @@
-
 const express = require('express');
 const db = require('../db');
-
 const router = express.Router();
 
-// 1. 직원 정보 조회
+// [유지] 직원 조회 API
 router.get('/employee', async (req, res) => {
-    const { email } = req.query;
-
-    if (!email) {
-        return res.status(400).json({
-            message: '이메일이 필요합니다.'
-        });
-    }
-
+    if (!req.query.email) return res.status(400).json({
+        message: '이메일이 필요합니다.'
+    });
     try {
-        const [rows] = await db.promise().query(
-            `SELECT employee_id, name, email
-             FROM employees
-             WHERE email = ?
-             LIMIT 1`,
-            [email]
-        );
-
-        if (rows.length === 0) {
-            return res.status(404).json({
-                message: '직원 정보를 찾을 수 없습니다.'
-            });
-        }
-
+        const [rows] = await db.promise().query('SELECT employee_id, name, email FROM employees WHERE email = ? LIMIT 1', [req.query.email]);
+        if (!rows.length) return res.status(404).json({
+            message: '직원 정보를 찾을 수 없습니다.'
+        });
         res.json(rows[0]);
-
     } catch (error) {
-        console.error('직원 정보 조회 오류:', error);
-
-        res.status(500).json({
-            message: '직원 정보 조회 실패',
-            error: error.message
-        });
+        fail(res, error);
     }
 });
 
-
-// 2. 게시글 전체 조회
-router.get('/free-posts', async (req, res) => {
+// [수정] 실제 DB 컬럼명으로 조회·저장합니다. 이름은 employees에서 조회합니다.
+// 테이블명과 컬럼명은 아래 고정 설정만 사용하며 사용자 입력으로 만들지 않습니다.
+const boards = [{
+    path: '/free-posts',
+    table: 'free',
+    id: 'post_id',
+    title: 'post_title',
+    body: 'post_content',
+    comment: 'fr_cmt_id'
+}, {
+    path: '/notices',
+    table: 'notice',
+    id: 'nt_id',
+    title: 'nt_title',
+    body: 'nt_content',
+    comment: 'nt_cmt_id',
+    category: '일반공지',
+    notice: true
+}, {
+    path: '/tech-library',
+    table: 'techlibrary',
+    id: 'tl_id',
+    title: 'tl_title',
+    body: 'tl_content',
+    comment: 'tl_cmt_id',
+    category: '기타'
+}, {
+    path: '/qna',
+    table: 'qna',
+    id: 'qa_id',
+    title: 'qa_title',
+    body: 'qa_content',
+    comment: 'qa_cmt_id',
+    category: '질문'
+}, {
+    path: '/suggestions',
+    table: 'suggestion',
+    id: 'sg_id',
+    title: 'sg_title',
+    body: 'sg_content',
+    comment: 'sg_cmt_id',
+    category: '건의'
+}];
+const validId = value => /^\d+$/.test(String(value)) && Number.isSafeInteger(Number(value)) && Number(value) > 0 && Number(value) <= 2147483647;
+const validText = (value, max) => typeof value === 'string' && value.trim().length > 0 && value.trim().length <= max;
+function fail(res, error) {
+    if (error.code === 'ER_NO_REFERENCED_ROW_2') return res.status(400).json({
+        message: '직원 또는 게시글 정보를 확인해 주세요.'
+    });
+    console.error('커뮤니티 처리 오류:', error.message);
+    return res.status(500).json({
+        message: '게시판 처리에 실패했습니다.',
+        error: error.message
+    });
+}
+const handler = action => async (req, res) => {
     try {
-        // 게시글 조회
-        const [posts] = await db.promise().query(
-            `SELECT
-                post_id,
-                post_title,
-                post_content,
-                author,
-                DATE_FORMAT(created_at, '%Y-%m-%d') AS createdAt,
-                DATE_FORMAT(updated_at, '%Y-%m-%d') AS updatedAt
-             FROM free_posts
-             ORDER BY created_at DESC`
-        );
-
-        // 댓글 전체 조회
-        const [comments] = await db.promise().query(
-            `SELECT
-                id,
-                post_id,
-                content,
-                author,
-                DATE_FORMAT(created_at, '%Y-%m-%d') AS createdAt
-             FROM free_comments
-             ORDER BY created_at ASC`
-        );
-
-        // 게시글마다 해당 댓글 연결
-        const result = posts.map((post) => {
-            return {
-                ...post,
-                comments: comments.filter(
-                    (comment) => comment.post_id === post.post_id
-                )
-            };
-        });
-
-        res.json(result);
-
+        await action(req, res);
     } catch (error) {
-        console.error('게시글 조회 오류:', error);
-
-        res.status(500).json({
-            message: '게시글 조회 실패',
-            error: error.message
-        });
+        fail(res, error);
     }
-});
-
-
-// 3. 게시글 등록
-router.post('/free-posts', async (req, res) => {
-    const { title, content, author } = req.body;
-
-    if (!title || !content || !author) {
-        return res.status(400).json({
-            message: '제목, 내용, 작성자는 필수입니다.'
+};
+for (const b of boards) {
+    const posts = b.table + '_posts',
+        comments = b.table + '_comments';
+    const order = b.notice ? 'p.important DESC, ' : '';
+    // [수정] LEFT JOIN이므로 직원이 삭제되어도 게시글·댓글은 남습니다.
+    router.get(b.path, handler(async (req, res) => {
+        const [rows] = await db.promise().query(`SELECT p.*, e.name AS employee_name FROM ${posts} p LEFT JOIN employees e ON p.employee_id = e.employee_id ORDER BY ${order}p.created_at DESC, p.${b.id} DESC`);
+        const [replies] = await db.promise().query(`SELECT c.*, e.name AS employee_name FROM ${comments} c LEFT JOIN employees e ON c.employee_id = e.employee_id ORDER BY c.created_at, c.${b.comment}`);
+        const grouped = new Map();
+        for (const c of replies) {
+            if (!grouped.has(c[b.id])) grouped.set(c[b.id], []);
+            grouped.get(c[b.id]).push(c);
+        }
+        res.json(rows.map(p => ({
+            ...p,
+            comments: grouped.get(p[b.id]) || []
+        })));
+    }));
+    const postInput = req => {
+        const body = req.body || {};
+        if (!validText(body[b.title], 200) || !validText(body[b.body], 1000000)) return null;
+        if (b.table === 'free' && Buffer.byteLength(body[b.body].trim(), 'utf8') > 65535) return null;
+        const values = [body[b.title].trim(), body[b.body].trim()];
+        if (b.category) {
+            const category = body.category ?? b.category;
+            if (!validText(category, 100)) return null;
+            if (b.notice && !['일반공지', '중요공지'].includes(category)) return null;
+            values.push(category.trim());
+            if (b.notice) values.push(category === '중요공지' ? 1 : 0);
+        }
+        return values;
+    };
+    const columns = [b.title, b.body, ...(b.category ? ['category'] : []), ...(b.notice ? ['important'] : [])];
+    router.post(b.path, handler(async (req, res) => {
+        const values = postInput(req);
+        if (!values || !validId(req.body?.employee_id)) return res.status(400).json({
+            message: '제목·내용·분류와 로그인 직원 번호를 확인해 주세요.'
         });
-    }
-
-    try {
-        const [result] = await db.promise().query(
-            `INSERT INTO free_posts
-            (post_title, post_content, author)
-            VALUES (?, ?, ?)`,
-            [title, content, author]
-        );
-
+        const [result] = await db.promise().query(`INSERT INTO ${posts} (${columns.join(',')}, employee_id) VALUES (${[...values, req.body.employee_id].map(() => '?').join(',')})`, [...values, req.body.employee_id]);
         res.status(201).json({
-            message: '게시글 등록 성공',
-            id: result.insertId
+            [b.id]: result.insertId,
+            message: '등록되었습니다.'
         });
-
-    } catch (error) {
-        console.error('게시글 등록 오류:', error);
-
-        res.status(500).json({
-            message: '게시글 등록 실패',
-            error: error.message
+    }));
+    router.put(b.path + '/:postId', handler(async (req, res) => {
+        const values = postInput(req);
+        if (!validId(req.params.postId) || !values) return res.status(400).json({
+            message: '게시글 번호와 입력 내용을 확인해 주세요.'
         });
-    }
-});
-
-
-// 4. 게시글 수정
-router.put('/free-posts/:id', async (req, res) => {
-    const { id } = req.params;
-    const { title, content } = req.body;
-
-    if (!title || !content) {
-        return res.status(400).json({
-            message: '제목과 내용은 필수입니다.'
+        // [수정] 글을 수정해도 최초 작성 직원은 변경하지 않습니다.
+        const [result] = await db.promise().query(`UPDATE ${posts} SET ${columns.map(c => c + ' = ?').join(',')} WHERE ${b.id} = ?`, [...values, req.params.postId]);
+        if (!result.affectedRows) return res.status(404).json({
+            message: '게시글을 찾을 수 없습니다.'
         });
-    }
-
-    try {
-        const [result] = await db.promise().query(
-            `UPDATE free_posts
-             SET post_title = ?, post_content = ?
-             WHERE post_id = ?`,
-            [title, content, id]
-        );
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                message: '게시글을 찾을 수 없습니다.'
-            });
-        }
-
         res.json({
-            message: '게시글 수정 성공'
+            message: '수정되었습니다.'
         });
-
-    } catch (error) {
-        console.error('게시글 수정 오류:', error);
-
-        res.status(500).json({
-            message: '게시글 수정 실패',
-            error: error.message
+    }));
+    router.delete(b.path + '/:postId', handler(async (req, res) => {
+        if (!validId(req.params.postId)) return res.status(400).json({
+            message: '게시글 번호를 확인해 주세요.'
         });
-    }
-});
-
-
-// 5. 게시글 삭제
-router.delete('/free-posts/:id', async (req, res) => {
-    const { id } = req.params;
-
-    try {
-        const [result] = await db.promise().query(
-            'DELETE FROM free_posts WHERE post_id = ?',
-            [id]
-        );
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                message: '게시글을 찾을 수 없습니다.'
-            });
-        }
-
+        // 댓글은 DB 외래키 ON DELETE CASCADE로 함께 삭제됩니다.
+        const [result] = await db.promise().query(`DELETE FROM ${posts} WHERE ${b.id} = ?`, [req.params.postId]);
+        if (!result.affectedRows) return res.status(404).json({
+            message: '게시글을 찾을 수 없습니다.'
+        });
         res.json({
-            message: '게시글 삭제 성공'
+            message: '삭제되었습니다.'
         });
+    }));
 
-    } catch (error) {
-        console.error('게시글 삭제 오류:', error);
-
-        res.status(500).json({
-            message: '게시글 삭제 실패',
-            error: error.message
+    // [추가] 상세 열기 요청에서만 조회수 증가. 수정일시는 유지합니다.
+    if (b.notice) router.post(b.path + '/:postId/view', handler(async (req, res) => {
+        if (!validId(req.params.postId)) return res.status(400).json({
+            message: '게시글 번호를 확인해 주세요.'
         });
-    }
-});
-
-
-// 6. 댓글 등록
-router.post('/free-posts/:postId/comments', async (req, res) => {
-    const { postId } = req.params;
-    const { content, author } = req.body;
-
-    if (!content || !author) {
-        return res.status(400).json({
-            message: '댓글 내용과 작성자는 필수입니다.'
+        const [result] = await db.promise().query(`UPDATE ${posts} SET views = views + 1, updated_at = updated_at WHERE ${b.id} = ?`, [req.params.postId]);
+        if (!result.affectedRows) return res.status(404).json({
+            message: '게시글을 찾을 수 없습니다.'
         });
-    }
-
-    try {
-        const [result] = await db.promise().query(
-            `INSERT INTO free_comments
-            (post_id, content, author)
-            VALUES (?, ?, ?)`,
-            [postId, content, author]
-        );
-
+        const [rows] = await db.promise().query(`SELECT views FROM ${posts} WHERE ${b.id} = ?`, [req.params.postId]);
+        res.json({
+            views: rows[0]?.views ?? 0
+        });
+    }));
+    router.post(b.path + '/:postId/comments', handler(async (req, res) => {
+        if (!validId(req.params.postId) || !validId(req.body?.employee_id) || !validText(req.body?.content, 10000)) return res.status(400).json({
+            message: '댓글 내용과 직원 번호를 확인해 주세요.'
+        });
+        const [result] = await db.promise().query(`INSERT INTO ${comments} (${b.id}, content, employee_id) VALUES (?, ?, ?)`, [req.params.postId, req.body.content.trim(), req.body.employee_id]);
         res.status(201).json({
-            message: '댓글 등록 성공',
-            id: result.insertId
+            [b.comment]: result.insertId,
+            message: '댓글이 등록되었습니다.'
         });
-
-    } catch (error) {
-        console.error('댓글 등록 오류:', error);
-
-        res.status(500).json({
-            message: '댓글 등록 실패',
-            error: error.message
+    }));
+    // [유지] 자유게시판 댓글 URL은 기존 /comments/:commentId를 유지합니다.
+    const commentPath = b.table === 'free' ? '/comments/:commentId' : b.path + '/:postId/comments/:commentId';
+    const commentWhere = `${b.comment} = ?` + (b.table === 'free' ? '' : ` AND ${b.id} = ?`);
+    const commentIds = req => b.table === 'free' ? [req.params.commentId] : [req.params.commentId, req.params.postId];
+    router.put(commentPath, handler(async (req, res) => {
+        if (!commentIds(req).every(validId) || !validText(req.body?.content, 10000)) return res.status(400).json({
+            message: '댓글 번호와 내용을 확인해 주세요.'
         });
-    }
-});
-
-
-// 7. 댓글 수정
-router.put('/comments/:id', async (req, res) => {
-    const { id } = req.params;
-    const { content } = req.body;
-
-    if (typeof content !== 'string' || !content.trim()) {
-        return res.status(400).json({
-            message: '댓글 내용은 필수입니다.'
+        const [result] = await db.promise().query(`UPDATE ${comments} SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE ${commentWhere}`, [req.body.content.trim(), ...commentIds(req)]);
+        if (!result.affectedRows) return res.status(404).json({
+            message: '댓글을 찾을 수 없습니다.'
         });
-    }
-
-    try {
-        // 댓글이 존재하는지 먼저 확인
-        const [rows] = await db.promise().query(
-            'SELECT id FROM free_comments WHERE id = ?',
-            [id]
-        );
-
-        if (rows.length === 0) {
-            return res.status(404).json({
-                message: '댓글을 찾을 수 없습니다.'
-            });
-        }
-
-        // 댓글 내용 수정
-        await db.promise().query(
-            `UPDATE free_comments
-             SET content = ?
-             WHERE id = ?`,
-            [content.trim(), id]
-        );
-
         res.json({
-            message: '댓글 수정 성공'
+            message: '댓글이 수정되었습니다.'
         });
-
-    } catch (error) {
-        console.error('댓글 수정 오류:', error);
-
-        res.status(500).json({
-            message: '댓글 수정 실패',
-            error: error.message
+    }));
+    router.delete(commentPath, handler(async (req, res) => {
+        if (!commentIds(req).every(validId)) return res.status(400).json({
+            message: '댓글 번호를 확인해 주세요.'
         });
-    }
-});
-
-
-// 8. 댓글 삭제
-router.delete('/comments/:id', async (req, res) => {
-    const { id } = req.params;
-
-    try {
-        const [result] = await db.promise().query(
-            'DELETE FROM free_comments WHERE id = ?',
-            [id]
-        );
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                message: '댓글을 찾을 수 없습니다.'
-            });
-        }
-
+        const [result] = await db.promise().query(`DELETE FROM ${comments} WHERE ${commentWhere}`, commentIds(req));
+        if (!result.affectedRows) return res.status(404).json({
+            message: '댓글을 찾을 수 없습니다.'
+        });
         res.json({
-            message: '댓글 삭제 성공'
+            message: '댓글이 삭제되었습니다.'
         });
+    }));
+}
 
-    } catch (error) {
-        console.error('댓글 삭제 오류:', error);
-
-        res.status(500).json({
-            message: '댓글 삭제 실패',
-            error: error.message
-        });
-    }
-});
-
-
+// [삭제] 업무자료실 첨부파일 API는 사용하지 않습니다.
 module.exports = router;

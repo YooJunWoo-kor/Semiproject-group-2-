@@ -1,923 +1,567 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import PaginationTable from '../../../../components/PaginationTable';
 import ModalBase from '../../../../components/ModalBase';
 
 // 자유게시판 API
-import {
-    getFreePosts,
-    addFreePost,
-    updateFreePost,
-    deleteFreePost,
-    getEmployee,
-    addFreeComment,
-    deleteFreeComment,
-    updateFreeComment
-} from '../../../../utils/communityApi';
-
-
-function FreeBoardPage({ communityItems }) {
-
+import { getFreePosts, addFreePost, updateFreePost, deleteFreePost, addFreeComment, deleteFreeComment, updateFreeComment } from '../../../../utils/communityApi';
+import { getLoginUser } from '../../../../utils/authStorage';
+function FreeBoardPage() {
     const location = useLocation();
 
-
-    // ==========================================
     // 1. 로그인 직원 정보 관리
-    // ==========================================
+    console.log('로그인 직원 정보:', getLoginUser());
+    const [employee, setEmployee] = useState(getLoginUser());
 
-    const [employee, setEmployee] = useState(null);
-
-    useEffect(() => {
-
-        const fetchEmployee = async () => {
-
-            try {
-
-                const data = await getEmployee('master@enova.co.kr');
-
-                setEmployee(data);
-
-                console.log('로그인 직원 정보:', data);
-
-            } catch (error) {
-
-                console.error('직원 정보 조회 실패:', error);
-
-            }
-
-        };
-
-        fetchEmployee();
-
-    }, []);
-
-
-    // ==========================================
     // 2. 게시글 데이터 관리
-    // ==========================================
-
     const [items, setItems] = useState([]);
 
     // MySQL에서 게시글 전체 조회
     useEffect(() => {
-
         const fetchPosts = async () => {
-
             try {
-
                 const posts = await getFreePosts();
-
                 setItems(posts);
-
                 console.log('MySQL 게시글 목록:', posts);
-
 
                 // 다른 화면에서 선택한 게시글이 있다면 상세 보기
                 const selectedItemId = location.state?.selectedItemId;
-
                 if (selectedItemId) {
-
-                    const selectedPost = posts.find(
-                        (item) =>
-                            String(item.post_id) === String(selectedItemId)
-                    );
-
+                    const selectedPost = posts.find(item => String(item.post_id) === String(selectedItemId));
                     if (selectedPost) {
-
                         setSelected(selectedPost);
-
                         setView('detail');
-
                     }
-
                 }
-
             } catch (error) {
-
                 console.error('게시글 조회 실패:', error);
-
                 alert('게시글 목록을 불러오지 못했습니다.');
-
             }
-
         };
-
         fetchPosts();
-
     }, []);
-
 
     // 게시글 목록 다시 불러오기
     const refreshPosts = async () => {
-
         const posts = await getFreePosts();
-
         setItems(posts);
-
         return posts;
-
     };
-
 
     // ==========================================
     // 3. 기존 화면 상태 관리
     // ==========================================
 
     const [query, setQuery] = useState('');
-
     const [view, setView] = useState('list');
-
     const [selected, setSelected] = useState(null);
-
     const [comment, setComment] = useState('');
 
     // 댓글 수정 상태 관리
     const [editingCommentId, setEditingCommentId] = useState(null);
-
     const [editingCommentContent, setEditingCommentContent] = useState('');
-
 
     // ==========================================
     // 4. 모달과 게시글 입력값 관리
     // ==========================================
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-
     const [editingItem, setEditingItem] = useState(null);
-
     const [title, setTitle] = useState('');
-
     const [content, setContent] = useState('');
 
+    // [추가] DB 날짜를 한국 시간으로 표시합니다.
+    const date = value => value ? new Date(value).toLocaleDateString('sv-SE', {
+        timeZone: 'Asia/Seoul'
+    }) : '-';
+    const dateTime = value => value ? new Date(value).toLocaleString('ko-KR', {
+        timeZone: 'Asia/Seoul'
+    }) : '-';
 
     // 검색
-    const filtered = items.filter((item) =>
-        `${item.post_title} ${item.author}`
-            .toLowerCase()
-            .includes(query.toLowerCase())
-    );
-
+    const filtered = items.filter(item => `${item.post_title} ${item.employee_name || '작성자 미확인'}`.toLowerCase().includes(query.toLowerCase()));
 
     // ==========================================
     // 5. 글쓰기 / 수정 모달 열기
     // ==========================================
 
     const handleOpenWriteModal = (item = null) => {
-
         setEditingItem(item);
-
         setTitle(item ? item.post_title : '');
-
         setContent(item ? item.post_content : '');
-
         setIsModalOpen(true);
-
     };
-
 
     // 모달 닫기
     const handleCloseWriteModal = () => {
-
         setIsModalOpen(false);
-
         setEditingItem(null);
-
         setTitle('');
-
         setContent('');
-
     };
-
 
     // ==========================================
     // 6. 게시글 저장
     // ==========================================
 
-    const savePost = async (event) => {
-
+    const savePost = async event => {
         event.preventDefault();
 
-
-        if (!title.trim()) {
-
-            alert('제목을 입력해 주세요.');
-
-            return;
-
+        // [수정] alert 대신 브라우저 입력란 검증을 사용합니다.
+        const form = event.currentTarget;
+        for (const input of form.querySelectorAll('[required]')) {
+            input.setCustomValidity(input.value && !input.value.trim() ? '공백을 제외한 내용을 입력하세요.' : '');
         }
-
-
-        if (!content.trim()) {
-
-            alert('내용을 입력해 주세요.');
-
-            return;
-
-        }
-
+        if (!form.reportValidity()) return;
 
         // 직원 정보 확인
         if (!employee) {
-
             alert('직원 정보를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');
-
             return;
-
         }
-
-
         try {
-
             // 게시글 수정
             if (editingItem) {
-
                 await updateFreePost(editingItem.post_id, {
-                    title: title.trim(),
-                    content: content.trim()
+                    post_title: title.trim(),
+                    post_content: content.trim()
                 });
-
-
                 const posts = await refreshPosts();
-
-                const updatedPost = posts.find(
-                    (item) => item.post_id === editingItem.post_id
-                );
-
-
+                const updatedPost = posts.find(item => item.post_id === editingItem.post_id);
                 if (selected && selected.post_id === editingItem.post_id) {
-
                     setSelected(updatedPost || null);
-
                 }
-
                 alert('게시글이 수정되었습니다.');
-
             }
-
 
             // 새 게시글 등록
             else {
-
                 await addFreePost({
-                    title: title.trim(),
-                    content: content.trim(),
-                    author: employee.name
+                    post_title: title.trim(),
+                    post_content: content.trim(),
+                    employee_id: Number(employee.employee_id ?? employee.employeeKey)
                 });
-
-
                 await refreshPosts();
-
                 alert('게시글이 등록되었습니다.');
-
             }
-
-
             handleCloseWriteModal();
-
         } catch (error) {
-
             console.error('게시글 저장 실패:', error);
-
             alert('게시글 저장에 실패했습니다.');
-
         }
-
     };
-
 
     // ==========================================
     // 7. 게시글 삭제
     // ==========================================
 
     const remove = async (itemToRemove = selected) => {
-
         if (!itemToRemove || !window.confirm('이 글을 삭제할까요?')) {
-
             return;
-
         }
-
-
         try {
-
             await deleteFreePost(itemToRemove.post_id);
-
             await refreshPosts();
-
-
             if (selected && selected.post_id === itemToRemove.post_id) {
-
                 setSelected(null);
-
                 setView('list');
-
             }
-
             alert('게시글이 삭제되었습니다.');
-
         } catch (error) {
-
             console.error('게시글 삭제 실패:', error);
-
             alert('게시글 삭제에 실패했습니다.');
-
         }
-
     };
-
 
     // ==========================================
     // 8. 댓글 저장
     // ==========================================
 
     const saveComment = async () => {
-
         if (!comment.trim()) {
-
             alert('댓글 내용을 입력해 주세요.');
-
             return;
-
         }
-
-
         if (!employee) {
-
             alert('직원 정보를 불러오지 못했습니다.');
-
             return;
-
         }
-
-
         if (!selected) {
-
             alert('게시글을 먼저 선택해 주세요.');
-
             return;
-
         }
-
-
         try {
-
             await addFreeComment(selected.post_id, {
                 content: comment.trim(),
-                author: employee.name
+                employee_id: Number(employee.employee_id ?? employee.employeeKey)
             });
-
-
             const posts = await refreshPosts();
-
-            const updatedPost = posts.find(
-                (item) => item.post_id === selected.post_id
-            );
-
-
+            const updatedPost = posts.find(item => item.post_id === selected.post_id);
             if (updatedPost) {
-
                 setSelected(updatedPost);
-
             }
-
             setComment('');
-
             alert('댓글이 등록되었습니다.');
-
         } catch (error) {
-
             console.error('댓글 등록 실패:', error);
-
             alert('댓글 등록에 실패했습니다.');
-
         }
-
     };
-
 
     // ==========================================
     // 9. 댓글 삭제
     // ==========================================
 
-    const removeComment = async (id) => {
-
+    const removeComment = async id => {
         if (!window.confirm('댓글을 삭제할까요?')) {
-
             return;
-
         }
-
-
         try {
-
             await deleteFreeComment(id);
-
-
             const posts = await refreshPosts();
-
-            const updatedPost = posts.find(
-                (item) => item.post_id === selected.post_id
-            );
-
-
+            const updatedPost = posts.find(item => item.post_id === selected.post_id);
             if (updatedPost) {
-
                 setSelected(updatedPost);
-
             }
-
             alert('댓글이 삭제되었습니다.');
-
         } catch (error) {
-
             console.error('댓글 삭제 실패:', error);
-
             alert('댓글 삭제에 실패했습니다.');
-
         }
-
     };
-
 
     // ==========================================
     // 10. 댓글 수정
     // ==========================================
 
     // 수정 버튼 클릭
-    const handleEditComment = (c) => {
-
-        setEditingCommentId(c.id);
-
+    const handleEditComment = c => {
+        setEditingCommentId(c.fr_cmt_id);
         setEditingCommentContent(c.content);
-
     };
-
 
     // 댓글 수정 취소
     const cancelEditComment = () => {
-
         setEditingCommentId(null);
-
         setEditingCommentContent('');
-
     };
 
-
     // 댓글 수정 저장
-    const saveEditComment = async (id) => {
-
+    const saveEditComment = async id => {
         if (!editingCommentContent.trim()) {
-
             alert('댓글 내용을 입력해 주세요.');
-
             return;
-
         }
-
-
         try {
-
             await updateFreeComment(id, {
                 content: editingCommentContent.trim()
             });
-
-
             const posts = await refreshPosts();
-
-            const updatedPost = posts.find(
-                (item) => item.post_id === selected.post_id
-            );
-
-
+            const updatedPost = posts.find(item => item.post_id === selected.post_id);
             if (updatedPost) {
-
                 setSelected(updatedPost);
-
             }
-
-
             setEditingCommentId(null);
-
             setEditingCommentContent('');
-
             alert('댓글이 수정되었습니다.');
-
         } catch (error) {
-
             console.error('댓글 수정 실패:', error);
-
             alert('댓글 수정에 실패했습니다.');
-
         }
-
     };
-
 
     // ==========================================
     // 11. 모달 입력 폼
     // ==========================================
 
-    const writeModalLayout = (
+    const writeModalLayout = <form onSubmit={savePost}>
 
-        <form onSubmit={savePost}>
+                        <div>
 
-            <div>
+                                <label>제목</label>
 
-                <label>제목</label>
+                                <input
+                                    type="text"
+                                    required
+                                    maxLength={200}
+                                    onInput={e => e.currentTarget.setCustomValidity('')}
+                                    placeholder="제목을 입력해 주세요."
+                                    value={title}
+                                    onChange={e => setTitle(e.target.value)} />
 
-                <input
-                    type="text"
-                    placeholder="제목을 입력해 주세요."
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                />
+                        </div>
 
-            </div>
+                        <div>
 
+                                <label>내용</label>
 
-            <div>
+                                <textarea
+                                    required
+                                    onInput={e => e.currentTarget.setCustomValidity('')}
+                                    placeholder="내용을 입력해 주세요."
+                                    value={content}
+                                    onChange={e => setContent(e.target.value)}
+                                    rows="8" />
 
-                <label>내용</label>
+                        </div>
 
-                <textarea
-                    placeholder="내용을 입력해 주세요."
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    rows="8"
-                />
+                        <div style={{
+            marginTop: '15px',
+            textAlign: 'right'
+        }}>
 
-            </div>
+                                <button
+                                    type="submit"
+                                    className="erp-primary-button">
+                                        {editingItem ? '수정하기' : '등록하기'}
+                                </button>
 
+                        </div>
 
-            <div style={{ marginTop: '15px', textAlign: 'right' }}>
-
-                <button type="submit" className="erp-primary-button">
-                    {editingItem ? '수정하기' : '등록하기'}
-                </button>
-
-            </div>
-
-        </form>
-
-    );
-
+                </form>;
 
     // ==========================================
     // 12. 테이블 데이터
     // ==========================================
 
-    const tableHeaders = [
-        '번호',
-        '제목',
-        '작성자',
-        '작성일',
-        '댓글수',
-        '관리'
-    ];
-
-
+    const tableHeaders = ['번호', '제목', '작성자', '작성일', '댓글수', '관리'];
     const tableData = filtered.map((item, index) => ({
+        content: [filtered.length - index, <span
+            className="table-link-title"
+            onClick={() => {
+            setSelected(item);
+            setView('detail');
+        }}>
+                                {item.post_title}
+                        </span>, item.employee_name || '작성자 미확인', date(item.created_at), (item.comments || []).length, <div className="table-actions">
 
-        content: [
+                                <button
+                                    type="button"
+                                    onClick={() => handleOpenWriteModal(item)}>
+                                        수정
+                                </button>
 
-            filtered.length - index,
+                                <button
+                                    type="button"
+                                    className="danger-button"
+                                    onClick={() => remove(item)}>
+                                        삭제
+                                </button>
 
-
-            <span
-                className="table-link-title"
-                onClick={() => {
-                    setSelected(item);
-                    setView('detail');
-                }}
-            >
-                {item.post_title}
-            </span>,
-
-
-            item.author,
-
-
-            item.createdAt || item.updatedAt || '-',
-
-
-            (item.comments || []).length,
-
-
-            <div className="table-actions">
-
-                <button
-                    type="button"
-                    onClick={() => handleOpenWriteModal(item)}
-                >
-                    수정
-                </button>
-
-
-                <button
-                    type="button"
-                    className="danger-button"
-                    onClick={() => remove(item)}
-                >
-                    삭제
-                </button>
-
-            </div>,
-
-        ],
-
+                        </div>]
     }));
-
 
     // ==========================================
     // 13. 화면 출력
     // ==========================================
 
-    return (
+    return <div className="border-container">
 
-        <div className="sub-container">
+                        {/* 상단 공통 헤더 */}
 
+                        <header className="dashboard-header">
 
-            {/* 상단 공통 헤더 */}
+                                <span className="subtitle">자유게시판</span>
 
-            <header className="dashboard-header">
+                                <div className="dashboard-top">
 
-                <span className="subtitle">자유게시판</span>
+                                        {view === 'list' && <button
+                                            type="button"
+                                            className="register-btn"
+                                            onClick={() => handleOpenWriteModal()}>
+                                                        + 글쓰기
+                                                </button>}
 
-                <div className="dashboard-top">
-
-                    {view === 'list' && (
-
-                        <button
-                            type="button"
-                            className="register-btn"
-                            onClick={() => handleOpenWriteModal()}
-                        >
-                            + 글쓰기
-                        </button>
-
-                    )}
-
-
-                    {view !== 'list' && (
-
-                        <button
-                            type="button"
-                            onClick={() => setView('list')}
-                        >
-                            목록으로
-                        </button>
-
-                    )}
-
-                </div>
-
-            </header>
-
-
-            <hr />
-
-
-            {/* 게시글 목록 */}
-
-            {view === 'list' && (
-
-                <>
-
-                    <div className="filter-bar">
-
-                        <label className="search-field">
-
-                            검색:
-
-                            <input
-                                type="text"
-                                placeholder="제목 또는 작성자 검색"
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                            />
-
-                        </label>
-
-                    </div>
-
-
-                    <PaginationTable
-                        title="자유게시판 목록"
-                        th={tableHeaders}
-                        allData={tableData}
-                        itemsPerPage={10}
-                    />
-
-                </>
-
-            )}
-
-
-            {/* 게시글 상세 보기 */}
-
-            {view === 'detail' && selected && (
-
-                <article className="detail-card">
-
-                    <header>
-
-                        <h3>{selected.post_title}</h3>
-
-                        <span className="subtext">
-
-                            작성자: {selected.author} |
-                            작성일: {selected.createdAt} |
-                            최근수정: {selected.updatedAt}
-
-                        </span>
-
-                    </header>
-
-
-                    <hr />
-
-
-                    <div className="detail-body">
-                        {selected.post_content}
-                    </div>
-
-
-                    <div className="table-actions">
-
-                        <button
-                            type="button"
-                            onClick={() => handleOpenWriteModal(selected)}
-                        >
-                            수정
-                        </button>
-
-
-                        <button
-                            type="button"
-                            className="danger-button"
-                            onClick={() => remove(selected)}
-                        >
-                            삭제
-                        </button>
-
-                    </div>
-
-
-                    <hr />
-
-
-                    {/* 댓글 영역 */}
-
-                    <section className="comment-section">
-
-                        <h4>댓글 ({(selected.comments || []).length})</h4>
-
-
-                        <div className="comment-list">
-
-                            {(selected.comments || []).map((c) => (
-
-                                <div key={c.id} className="comment-item">
-
-                                    <div className="comment-meta">
-
-                                        <strong>{c.author}</strong>
-
-                                        <span className="subtext">
-                                            ({c.createdAt})
-                                        </span>
-
-
-                                        {/* 댓글 수정 중인 경우 */}
-
-                                        {String(editingCommentId) === String(c.id) ? (
-
-                                            <div>
-
-                                                <input
-                                                    type="text"
-                                                    value={editingCommentContent}
-                                                    onChange={(e) =>
-                                                        setEditingCommentContent(e.target.value)
-                                                    }
-                                                />
-
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() => saveEditComment(c.id)}
-                                                >
-                                                    저장
-                                                </button>
-
-
-                                                <button
-                                                    type="button"
-                                                    onClick={cancelEditComment}
-                                                >
-                                                    취소
-                                                </button>
-
-                                            </div>
-
-                                        ) : (
-
-                                            <p className="comment-text">
-                                                {c.content}
-                                            </p>
-
-                                        )}
-
-                                    </div>
-
-
-                                    {/* 수정 중이 아닐 때만 수정 / 삭제 버튼 표시 */}
-
-                                    {String(editingCommentId) !== String(c.id) && (
-
-                                        <div className="table-actions">
-
-                                            <button
-                                                type="button"
-                                                onClick={() => handleEditComment(c)}
-                                            >
-                                                수정
-                                            </button>
-
-
-                                            <button
-                                                type="button"
-                                                className="danger-button"
-                                                onClick={() => removeComment(c.id)}
-                                            >
-                                                삭제
-                                            </button>
-
-                                        </div>
-
-                                    )}
+                                        {view !== 'list' && <button
+                                            type="button"
+                                            onClick={() => setView('list')}>
+                                                        목록으로
+                                                </button>}
 
                                 </div>
 
-                            ))}
+                        </header>
+
+                        <hr />
+
+                        {/* 게시글 목록 */}
+
+                        {view === 'list' && <>
+
+                                        <div className="filter-bar">
+
+                                                <label className="search-field">
+
+                                                        검색:
+
+                                                        <input
+                                                            type="text"
+                                                            placeholder="제목 또는 작성자 검색"
+                                                            value={query}
+                                                            onChange={e => setQuery(e.target.value)} />
+
+                                                </label>
+
+                                        </div>
+
+                                        <PaginationTable
+                                            title="자유게시판 목록"
+                                            th={tableHeaders}
+                                            allData={tableData}
+                                            itemsPerPage={10} />
+
+                                </>}
+
+                        {/* 게시글 상세 보기 */}
+
+                        {view === 'detail' && selected && <article className="detail-card">
+
+                                        <header>
+
+                                                <h3>{selected.post_title}</h3>
+
+                                                <span className="subtext">
+
+                                                        작성자: {selected.employee_name || '작성자 미확인'} |
+                                                        작성일: {date(selected.created_at)} |
+                                                        최근수정: {date(selected.updated_at)}
+
+                                                </span>
+
+                                        </header>
+
+                                        <hr />
+
+                                        <div className="detail-body">
+                                                {selected.post_content}
+                                        </div>
+
+                                        <div className="table-actions">
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleOpenWriteModal(selected)}>
+                                                        수정
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    className="danger-button"
+                                                    onClick={() => remove(selected)}>
+                                                        삭제
+                                                </button>
+
+                                        </div>
+
+                                        <hr />
+
+                                        {/* 댓글 영역 */}
+
+                                        <section className="comment-section">
+
+                                                <h4>댓글 ({(selected.comments || []).length})</h4>
+
+                                                <div className="comment-list">
+
+                                                        {(selected.comments || []).map(c => <div
+                                                            key={c.fr_cmt_id}
+                                                            className="comment-item">
+
+                                                                        <div className="comment-meta">
+
+                                                                                <strong>{c.employee_name || '작성자 미확인'}</strong>
+
+                                                                                <span className="subtext">
+                                                                                        ({dateTime(c.created_at)}) {c.updated_at && ' | 수정: ' + dateTime(c.updated_at)}
+                                                                                </span>
 
 
-                            {(selected.comments || []).length === 0 && (
+                                                                                {/* 댓글 수정 중인 경우 */}
 
-                                <p className="no-data">
-                                    등록된 댓글이 없습니다.
-                                </p>
+                                                                                {String(editingCommentId) === String(c.fr_cmt_id) ? <div>
 
-                            )}
-
-                        </div>
-
-
-                        <div className="comment-input-wrap">
-
-                            <input
-                                type="text"
-                                value={comment}
-                                onChange={(e) => setComment(e.target.value)}
-                                placeholder="댓글을 입력하세요"
-                            />
+                                                                                                <input
+                                                                                                    type="text"
+                                                                                                    value={editingCommentContent}
+                                                                                                    onChange={e => setEditingCommentContent(e.target.value)} />
 
 
-                            <button
-                                type="button"
-                                className="register-btn"
-                                onClick={saveComment}
-                            >
-                                댓글 등록
-                            </button>
-
-                        </div>
-
-                    </section>
-
-                </article>
-
-            )}
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    onClick={() => saveEditComment(c.fr_cmt_id)}>
+                                                                                                        저장
+                                                                                                </button>
 
 
-            {/* 공통 모달 */}
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    onClick={cancelEditComment}>
+                                                                                                        취소
+                                                                                                </button>
 
-            {isModalOpen && (
+                                                                                        </div> : <p className="comment-text">
+                                                                                                {c.content}
+                                                                                        </p>}
 
-                <ModalBase
-                    onClose={handleCloseWriteModal}
-                    title={editingItem ? '게시글 수정' : '글쓰기'}
-                    layout={writeModalLayout}
-                />
+                                                                        </div>
 
-            )}
 
-        </div>
+                                                                        {/* 수정 중이 아닐 때만 수정 / 삭제 버튼 표시 */}
 
-    );
+                                                                        {String(editingCommentId) !== String(c.fr_cmt_id) && <div className="table-actions">
 
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => handleEditComment(c)}>
+                                                                                                수정
+                                                                                        </button>
+
+
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            className="danger-button"
+                                                                                            onClick={() => removeComment(c.fr_cmt_id)}>
+                                                                                                삭제
+                                                                                        </button>
+
+                                                                                </div>}
+
+                                                                </div>)}
+
+                                                        {(selected.comments || []).length === 0 && <p className="no-data">
+                                                                        등록된 댓글이 없습니다.
+                                                                </p>}
+
+                                                </div>
+
+                                                <div className="comment-input-wrap">
+
+                                                        <input
+                                                            type="text"
+                                                            value={comment}
+                                                            onChange={e => setComment(e.target.value)}
+                                                            placeholder="댓글을 입력하세요" />
+
+                                                        <button
+                                                            type="button"
+                                                            className="register-btn"
+                                                            onClick={saveComment}>
+                                                                댓글 등록
+                                                        </button>
+
+                                                </div>
+
+                                        </section>
+
+                                </article>}
+
+                        {/* 공통 모달 */}
+
+                        {isModalOpen && <ModalBase
+                            onClose={handleCloseWriteModal}
+                            title={editingItem ? '게시글 수정' : '글쓰기'}
+                            layout={writeModalLayout} />}
+
+                </div>;
 }
-
-
 export default FreeBoardPage;
