@@ -4,6 +4,8 @@ import ProjectModul from './ProjectModul';
 import Nav from '../../../components/Nav';
 import ProjectProgress from '../../../components/ProjectProgress';
 import ColorTeg from '../../../components/ColorTeg';
+import ProjectWorkDetail from './page/ProjectWorkDetail';
+import ProjectDetailWorkList from './page/ProjectDetailWorkList';
 
 function ProjectRoutes() {
   const [projectlist, setProjectlist] = useState([
@@ -156,59 +158,12 @@ function ProjectRoutes() {
   );
 }
 
-// 📌 프로젝트 세부 3단 레이아웃 서브페이지
+// 프로젝트 세부
 function ProjectDetail({ project, onUpdateTasks }) {
   const tasks = project.tasks || [];
-  const [selectedTaskId, setSelectedTaskId] = useState(null);
-  const [commentInput, setCommentInput] = useState("");
 
   // 프로젝트 전환 시 선택된 할 일 초기화 (해당 프로젝트의 첫 할 일이 있으면 선택, 없으면 null)
-  useEffect(() => {
-    setSelectedTaskId(tasks[0]?.id || null);
-    setCommentInput("");
-  }, [project.id]);
-
-  const selectedTask = tasks.find((t) => t.id === selectedTaskId) || null;
-
-  // 할 일 상태 토글 ('완료' <-> '진행 중')
-  const toggleTaskStatus = (taskId) => {
-    const nextTasks = tasks.map((task) => {
-      if (task.id === taskId) {
-        return {
-          ...task,
-          status: task.status === "완료" ? "진행 중" : "완료",
-        };
-      }
-      return task;
-    });
-    onUpdateTasks(nextTasks);
-  };
-
-  // 댓글 등록 핸들러
-  const handleAddComment = (e) => {
-    e.preventDefault();
-    if (!commentInput.trim() || !selectedTask) return;
-
-    const newComment = {
-      id: `comment-${Date.now()}`,
-      author: "홍길동",
-      content: commentInput.trim(),
-      createdAt: new Date().toISOString().slice(0, 10),
-    };
-
-    const nextTasks = tasks.map((task) => {
-      if (task.id === selectedTask.id) {
-        return {
-          ...task,
-          comments: [...(task.comments || []), newComment],
-        };
-      }
-      return task;
-    });
-
-    onUpdateTasks(nextTasks);
-    setCommentInput("");
-  };
+  
 
   // 신규 할 일 등록
   const handleCreateTask = () => {
@@ -226,7 +181,7 @@ function ProjectDetail({ project, onUpdateTasks }) {
 
     const nextTasks = [...tasks, newTask];
     onUpdateTasks(nextTasks);
-    setSelectedTaskId(newTask.id);
+    
   };
 
   const test = {id:0, name: '담당자명'};
@@ -249,253 +204,45 @@ function ProjectDetail({ project, onUpdateTasks }) {
         <section
           style={{
             display:'flex',
-            borderRight: "1px solid var(--color-line)",
-            paddingRight: "16px",
-            backgroundColor: 'blue',
+            alignItems: "center",
+            gap: "10px"
           }}
         >
-          <div style={{display:'flex',fontSize: "15px", backgroundColor:'red', justifyContent:''}}>
-            담당자
+          <div style={{display:'flex',fontSize: "15px", fontWeight:'500px'}}>
+            <strong>담당자</strong>
           </div>
           <MemberLayout member={test}/>
-          <h4 style={{ fontSize: "15px", marginBottom: "14px" }}>
-            참여자 ({project.members?.length || 0})
-          </h4>
+          <div style={{display:'flex',fontSize: "15px", fontWeight:'500px'}}>
+            <strong>참여자 ({project.members?.length || 0})</strong>
+          </div>
           <div style={{ display: "flex", gap: "10px" }}>
             {project.members &&
               project.members.map((member) => (
                 <MemberLayout member={member}/>
               ))}
           </div>
-        </section>
-
-        {/* [2열] 할 일 리스트 목록 */}
-        <section
-          style={{
-            flex: "1 1 300px",
-            borderRight: "1px solid var(--color-line)",
-            paddingRight: "16px",
-            minWidth: 0,
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-            <h4 style={{ fontSize: "15px", margin: 0 }}>
-              할 일 목록 ({tasks.length})
-            </h4>
-            <button
+          <button
               type="button"
               className="register-btn"
-              style={{ fontSize: "12px", padding: "4px 10px", minHeight: "auto" }}
+              style={{ fontSize: "12px", marginLeft:'auto'}}
               onClick={handleCreateTask}
             >
               + 할 일 추가
             </button>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {tasks.map((task) => {
-              const isSelected = task.id === selectedTaskId;
-              return (
-                <div
-                  key={task.id}
-                  onClick={() => setSelectedTaskId(task.id)}
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: "8px",
-                    border: isSelected ? "2px solid var(--color-brand)" : "1px solid var(--color-line)",
-                    backgroundColor: isSelected ? "#eff6ff" : "#fff",
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        color: isSelected ? "var(--color-brand)" : "inherit",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {task.title}
-                    </span>
-                    <span
-                      style={{ fontSize: "11px", padding: "2px 8px" }}
-                    >
-                      {task.status}
-                    </span>
-                  </div>
-                  <div style={{ marginTop: "6px", fontSize: "12px", color: "var(--color-muted)" }}>
-                    <span>담당자: {task.assignee?.name || "미지정"}</span>
-                    <span style={{ marginLeft: "10px" }}>댓글 {(task.comments || []).length}</span>
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* 할 일이 없을 때: 데이터 없음 문구 + 추가 버튼 */}
-            {tasks.length === 0 && (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "40px 10px",
-                  textAlign: "center",
-                  gap: "12px",
-                }}
-              >
-                <p className="no-data" style={{ margin: 0 }}>
-                  등록된 할 일이 없습니다.
-                </p>
-                <button
-                  type="button"
-                  className="register-btn"
-                  onClick={handleCreateTask}
-                >
-                  + 첫 번째 할 일 등록
-                </button>
-              </div>
-            )}
-          </div>
         </section>
 
-        {/* [3열] 선택한 할 일 상세 내용 및 하단 댓글 (미선택 시 빈 화면 유지) */}
-        <section style={{ flex: "1.5 1 380px", display: "flex", flexDirection: "column", minWidth: 0 }}>
-          {selectedTask ? (
-            <article className="detail-card" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-              {/* 상단 제목 & 완료 처리 토글 */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
-                <div>
-                  <h3 style={{ margin: "0 0 6px 0", fontSize: "17px" }}>
-                    {selectedTask.title}
-                  </h3>
-                  <div style={{ fontSize: "13px", color: "var(--color-muted)" }}>
-                    <span>담당자: <strong>{selectedTask.assignee?.name}</strong></span>
-                    <span style={{ margin: "0 8px" }}>|</span>
-                    <span>
-                      상태:{" "}
-                      <span
-                        className={`status-badge ${
-                          selectedTask.status === "완료" ? "status-success" : ""
-                        }`}
-                      >
-                        {selectedTask.status}
-                      </span>
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => toggleTaskStatus(selectedTask.id)}
-                  style={{
-                    backgroundColor: selectedTask.status === "완료" ? "#f1f5f9" : "var(--color-brand)",
-                    color: selectedTask.status === "완료" ? "#475569" : "#fff",
-                    borderColor: selectedTask.status === "완료" ? "#cbd5e1" : "var(--color-brand)",
-                    fontSize: "13px",
-                    padding: "6px 14px",
-                    minHeight: "auto",
-                  }}
-                >
-                  {selectedTask.status === "완료" ? "다시 열기" : "✓ 완료 처리"}
-                </button>
-              </div>
-
-              <hr style={{ margin: "14px 0" }} />
-
-              {/* 본문 내용 */}
-              <div style={{ minHeight: "80px", fontSize: "14px", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-                {selectedTask.content || "상세 설명이 없습니다."}
-              </div>
-
-              <hr style={{ margin: "14px 0" }} />
-
-              {/* 댓글 피드 */}
-              <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                <h4 style={{ fontSize: "14px", marginBottom: "10px" }}>
-                  댓글 ({(selectedTask.comments || []).length})
-                </h4>
-
-                <div
-                  style={{
-                    flex: 1,
-                    overflowY: "auto",
-                    maxHeight: "180px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "8px",
-                    marginBottom: "12px",
-                  }}
-                >
-                  {(selectedTask.comments || []).map((comment) => (
-                    <div
-                      key={comment.id}
-                      style={{
-                        padding: "8px 12px",
-                        backgroundColor: "#f8fafc",
-                        borderRadius: "6px",
-                        border: "1px solid var(--color-line)",
-                        fontSize: "13px",
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "3px" }}>
-                        <strong>{comment.author}</strong>
-                        <span className="subtext" style={{ fontSize: "11px" }}>{comment.createdAt}</span>
-                      </div>
-                      <div>{comment.content}</div>
-                    </div>
-                  ))}
-
-                  {(selectedTask.comments || []).length === 0 && (
-                    <p className="no-data" style={{ margin: "10px 0" }}>
-                      등록된 댓글이 없습니다.
-                    </p>
-                  )}
-                </div>
-
-                {/* 댓글 입력 폼 */}
-                <form onSubmit={handleAddComment} style={{ display: "flex", gap: "8px" }}>
-                  <input
-                    type="text"
-                    placeholder="댓글을 입력하세요..."
-                    value={commentInput}
-                    onChange={(e) => setCommentInput(e.target.value)}
-                    style={{ flex: 1, minHeight: "36px", padding: "6px 10px" }}
-                  />
-                  <button
-                    type="submit"
-                    className="erp-primary-button"
-                    style={{ minHeight: "36px", padding: "0 14px", fontSize: "13px" }}
-                  >
-                    등록
-                  </button>
-                </form>
-              </div>
-            </article>
-          ) : (
-            /* 할 일이 없거나 선택되지 않았을 때의 빈 화면 */
-            <div
-              className="detail-card"
-              style={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                alignItems: "center",
-                color: "var(--color-muted)",
-              }}
-            >
-              <p style={{ margin: 0, fontSize: "14px" }}>선택된 할 일이 없습니다.</p>
-              <span style={{ fontSize: "12px", marginTop: "4px" }}>
-                좌측 목록에서 항목을 선택해 상세 내용과 댓글을 확인하세요.
-              </span>
-            </div>
-          )}
+        <section
+          style={{
+            display: 'flex',
+            paddingRight: "16px",
+            minWidth: 0,
+          }}
+        >
+          <ProjectDetailWorkList tasks={tasks} project = {project}/>
+          <ProjectWorkDetail tasks={tasks} onUpdateTasks = {onUpdateTasks}/>
         </section>
+
+        
       </div>
     </div>
   );
