@@ -558,7 +558,7 @@ function PayrollStatementModal({ employee, payroll, onClose }) {
 
 export default function UnifiedEmployees() {
   const user = getLoginUser();
-  const isMaster = user?.role === "MASTER";
+  const isMaster = String(user?.role || "").trim().toUpperCase() === "MASTER";
 
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -722,8 +722,8 @@ export default function UnifiedEmployees() {
 
 
   // 직원 목록 페이지네이션
-  // 직원 목록은 기존 HR 페이지 규칙에 따라 7명 단위로 표시합니다.
-  const itemsPerPage = 7;
+  // 직원 목록은 페이지당 5명씩 표시합니다.
+  const itemsPerPage = 5;
 
   const totalPages = Math.max(
     1,
@@ -1206,9 +1206,6 @@ export default function UnifiedEmployees() {
           <span className="subtitle">
             인사·조직 통합관리
           </span>
-          <span className="subtext">
-            부서를 선택하고 직원 상세정보와 급여를 한 화면에서 관리합니다.
-          </span>
         </div>
       </header>
 
@@ -1427,13 +1424,7 @@ export default function UnifiedEmployees() {
                 </button>
               )}
 
-              <small>
-                {!selectedDepartment
-                  ? "부서를 선택해 주세요."
-                  : deptMembers.length > 0
-                    ? "소속 직원이 있어 삭제할 수 없습니다."
-                    : "삭제 전 확인창이 표시됩니다."}
-              </small>
+              
             </div>
           </aside>
 
@@ -1448,7 +1439,7 @@ export default function UnifiedEmployees() {
               </div>
             </div>
 
-            <div className="hr-single-employee-list">
+            <div className="employee-list">
               {visibleEmployees.length === 0 ? (
                 <p className="hr-empty-state">
                   조건에 맞는 직원이 없습니다.
@@ -1458,16 +1449,35 @@ export default function UnifiedEmployees() {
                   <button
                     key={emp.employeeId}
                     type="button"
-                    className={`hr-single-employee${String(selected?.employeeId) === String(emp.employeeId)
-                      ? " selected"
+                    className={`employee-item${String(selected?.employeeId) === String(emp.employeeId)
+                      ? " active"
                       : ""
                       }`}
                     onClick={() => chooseEmployee(emp)}
                     title={`${emp.employeeNumber || "-"} · ${emp.name}`}
                   >
-                    <strong>{emp.name}</strong>
-                    <span>{emp.employeeNumber || "-"}</span>
-                    <small>{emp.position || "-"}</small>
+                    <span className="employee-item-info">
+                      <span className="employee-name-line">
+                        <strong className="emp-name">{emp.name}</strong>
+                        <span
+                          className={`employee-status-badge ${emp.employmentStatus === "재직"
+                            ? "active"
+                            : emp.employmentStatus === "휴직"
+                              ? "on-leave"
+                              : "retired"
+                            }`}
+                        >
+                          {emp.employmentStatus || "-"}
+                        </span>
+                      </span>
+                      <span>{emp.employeeNumber || "-"}</span>
+                      <span>
+                        {emp.departmentName || "부서 미지정"} ·{" "}
+                        <span className="emp-position">
+                          {emp.position || "직급 미지정"}
+                        </span>
+                      </span>
+                    </span>
                   </button>
                 ))
               )}

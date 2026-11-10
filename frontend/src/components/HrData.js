@@ -48,9 +48,19 @@ export function decideHrLeave(draftId, employeeId, decision) {
   });
 }
 
-// 출근·퇴근은 유지하고 근태 상태와 메모만 수정합니다.
+// 출퇴근 시간·근태 상태·수정 사유를 수정합니다.
 export function updateHrAttendance(attendanceId, data) {
   return axios.put(API_BASE_URL + '/hr/attendance/' + attendanceId, data);
+}
+
+// 관리자가 선택한 직원의 신규 근태 기록을 등록합니다.
+export function createHrAttendance(data) {
+  return axios.post(API_BASE_URL + '/hr/attendance', data);
+}
+
+// 관리자가 선택한 근태 기록을 삭제합니다.
+export function deleteHrAttendance(attendanceId) {
+  return axios.delete(API_BASE_URL + '/hr/attendance/' + attendanceId);
 }
 
 // 선택한 날짜와 부서의 직원별 출결 현황을 조회합니다.

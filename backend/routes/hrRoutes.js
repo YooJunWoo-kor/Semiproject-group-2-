@@ -16,6 +16,10 @@ function isDateString(value) {
         date.toISOString().slice(0, 10) === value;
 }
 
+function isTimeString(value) {
+    return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
 function isEmailString(value) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
@@ -45,6 +49,100 @@ async function departmentExists(departmentId) {
 
     return rows.length > 0;
 }
+
+
+// 관리자가 선택한 직원의 신규 근태 기록을 등록합니다.
+// 저장 요청이 있을 때만 한 건을 생성하며, 동일 직원·날짜 중복은 허용하지 않습니다.
+hrRouter.post('/attendance', async (req, res) => {
+    const employeeId = Number(req.body.employeeId);
+    const workDate = String(req.body.workDate || '').trim();
+    const checkIn = String(req.body.checkIn || '').trim() || null;
+    const checkOut = String(req.body.checkOut || '').trim() || null;
+    const status = String(req.body.status || '').trim();
+    const memo = String(req.body.memo || '').trim();
+    const allowedStatuses = ['정상', '지각', '결근', '휴가', '출장', '휴직', '미출근'];
+
+    if (
+        !Number.isInteger(employeeId) ||
+        employeeId < 1 ||
+        !isDateString(workDate) ||
+        (checkIn !== null && !isTimeString(checkIn)) ||
+        (checkOut !== null && !isTimeString(checkOut)) ||
+        (checkIn !== null && checkOut !== null && checkOut < checkIn) ||
+        !allowedStatuses.includes(status) ||
+        memo.length === 0 ||
+        memo.length > 255
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: '직원, 근무일, 출퇴근 시간, 근태 상태와 수정 사유를 올바르게 입력해 주세요.'
+        });
+    }
+
+    try {
+        const [employeeRows] = await promiseDb.query(
+            'SELECT employee_id FROM employees WHERE employee_id = ? LIMIT 1',
+            [employeeId]
+        );
+
+        if (employeeRows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '등록할 직원을 찾을 수 없습니다.'
+            });
+        }
+
+        const [existingRows] = await promiseDb.query(
+            `SELECT attendance_id
+             FROM attendance
+             WHERE employee_id = ? AND work_date = ?
+             LIMIT 1`,
+            [employeeId, workDate]
+        );
+
+        if (existingRows.length > 0) {
+            return res.status(409).json({
+                success: false,
+                message: '해당 직원의 선택한 날짜 근태 기록이 이미 존재합니다.'
+            });
+        }
+
+        const [result] = await promiseDb.query(
+            `INSERT INTO attendance
+                (employee_id, work_date, check_in_at, check_out_at, attendance_status, memo)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+                employeeId,
+                workDate,
+                checkIn ? `${workDate} ${checkIn}:00` : null,
+                checkOut ? `${workDate} ${checkOut}:00` : null,
+                status,
+                memo
+            ]
+        );
+
+        return res.status(201).json({
+            success: true,
+            data: {
+                attendanceId: result.insertId,
+                employeeId,
+                attendanceDate: workDate,
+                clockIn: checkIn,
+                clockOut: checkOut,
+                status,
+                memo
+            },
+            message: '근태 기록이 등록되었습니다.'
+        });
+    } catch (error) {
+        console.error('신규 근태 등록 오류:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: '근태 기록을 등록하지 못했습니다.'
+        });
+    }
+});
 
 
 // 달력용 근태 기록 조회
@@ -228,44 +326,77 @@ hrRouter.get('/leaves', async (req, res) => {
 });
 
 
-// 근태 상태·메모 수정
-// 출근·퇴근 컬럼은 변경하지 않고 상태와 메모만 UPDATE합니다.
+// 근태 시간·상태·수정 사유를 수정합니다.
 hrRouter.put('/attendance/:attendanceId', async (req, res) => {
     const attendanceId = Number(req.params.attendanceId);
+    const checkIn = String(req.body.checkIn || '').trim() || null;
+    const checkOut = String(req.body.checkOut || '').trim() || null;
     const status = String(req.body.status || '').trim();
     const memo = String(req.body.memo || '').trim();
-    const allowedStatuses = ['정상', '지각', '휴가', '출장', '휴직', '미출근'];
+    const allowedStatuses = ['정상', '지각', '결근', '휴가', '출장', '휴직', '미출근'];
 
     if (
         !Number.isInteger(attendanceId) ||
         attendanceId < 1 ||
+        (checkIn !== null && !isTimeString(checkIn)) ||
+        (checkOut !== null && !isTimeString(checkOut)) ||
+        (checkIn !== null && checkOut !== null && checkOut < checkIn) ||
         !allowedStatuses.includes(status) ||
+        memo.length === 0 ||
         memo.length > 255
     ) {
         return res.status(400).json({
             success: false,
-            message: '근태 상태 또는 메모를 올바르게 입력해 주세요.'
+            message: '출퇴근 시간, 근태 상태와 수정 사유를 올바르게 입력해 주세요.'
         });
     }
 
     try {
-        const [result] = await promiseDb.query(
-            `UPDATE attendance
-             SET attendance_status = ?, memo = ?
-             WHERE attendance_id = ?`,
-            [status, memo || null, attendanceId]
+        const [existingRows] = await promiseDb.query(
+            'SELECT attendance_id FROM attendance WHERE attendance_id = ? LIMIT 1',
+            [attendanceId]
         );
 
-        if (result.affectedRows === 0) {
+        if (existingRows.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: '근태 기록을 찾을 수 없습니다.'
             });
         }
 
+        await promiseDb.query(
+            `UPDATE attendance
+             SET check_in_at = CASE
+                    WHEN ? IS NULL THEN NULL
+                    ELSE CONCAT(DATE(work_date), ' ', ?, ':00')
+                 END,
+                 check_out_at = CASE
+                    WHEN ? IS NULL THEN NULL
+                    ELSE CONCAT(DATE(work_date), ' ', ?, ':00')
+                 END,
+                 attendance_status = ?,
+                 memo = ?
+             WHERE attendance_id = ?`,
+            [
+                checkIn,
+                checkIn,
+                checkOut,
+                checkOut,
+                status,
+                memo,
+                attendanceId
+            ]
+        );
+
         return res.json({
             success: true,
-            data: { attendanceId, status, memo: memo || null },
+            data: {
+                attendanceId,
+                clockIn: checkIn,
+                clockOut: checkOut,
+                status,
+                memo
+            },
             message: '근태 정보가 수정되었습니다.'
         });
     } catch (error) {
@@ -274,6 +405,46 @@ hrRouter.put('/attendance/:attendanceId', async (req, res) => {
         return res.status(500).json({
             success: false,
             message: '근태 정보를 수정하지 못했습니다.'
+        });
+    }
+});
+
+
+// 관리자가 선택한 근태 기록 한 건을 삭제합니다.
+hrRouter.delete('/attendance/:attendanceId', async (req, res) => {
+    const attendanceId = Number(req.params.attendanceId);
+
+    if (!Number.isInteger(attendanceId) || attendanceId < 1) {
+        return res.status(400).json({
+            success: false,
+            message: '올바른 근태 기록 ID를 입력해 주세요.'
+        });
+    }
+
+    try {
+        const [result] = await promiseDb.query(
+            'DELETE FROM attendance WHERE attendance_id = ?',
+            [attendanceId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '삭제할 근태 기록을 찾을 수 없습니다.'
+            });
+        }
+
+        return res.json({
+            success: true,
+            data: { attendanceId },
+            message: '근태 기록이 삭제되었습니다.'
+        });
+    } catch (error) {
+        console.error('근태 기록 삭제 오류:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: '근태 기록을 삭제하지 못했습니다.'
         });
     }
 });
