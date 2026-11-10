@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Routes, Route, Navigate, Link, NavLink } from 'react-router-dom';
 import ScheduleModul from './ScheduleModul';
+import MeetingRoomPage from "./pages/MeetingRoomPage";
 
 
 // 일정관리 진입점: 경로와 화면 연결만 담당합니다.

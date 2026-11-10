@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import PaginationTable from '../../../../components/PaginationTable';
@@ -15,13 +14,12 @@ import {
 } from '../../../../utils/communityApi';
 import { getLoginUser } from '../../../../utils/authStorage';
 
-
 function FreeBoardPage() {
 
     const location = useLocation();
 
     // 1. 로그인 직원 정보 관리
-    console.log('로그인 직원 정보:', getLoginUser())
+    console.log('로그인 직원 정보:', getLoginUser());
     const [employee, setEmployee] = useState(getLoginUser());
 
     // 2. 게시글 데이터 관리
@@ -32,18 +30,17 @@ function FreeBoardPage() {
         const fetchPosts = async () => {
             try {
                 const posts = await getFreePosts();
-                
+
                 setItems(posts);
                 console.log('MySQL 게시글 목록:', posts);
 
                 // 다른 화면에서 선택한 게시글이 있다면 상세 보기
                 const selectedItemId = location.state?.selectedItemId;
 
-
                 if (selectedItemId) {
                     const selectedPost = posts.find(
                         (item) =>
-                            String(item.id) === String(selectedItemId)
+                            String(item.post_id) === String(selectedItemId)
                     );
                     if (selectedPost) {
                         setSelected(selectedPost);
@@ -58,7 +55,6 @@ function FreeBoardPage() {
         fetchPosts();
     }, []);
 
-
     // 게시글 목록 다시 불러오기
     const refreshPosts = async () => {
 
@@ -69,7 +65,6 @@ function FreeBoardPage() {
         return posts;
 
     };
-
 
     // ==========================================
     // 3. 기존 화면 상태 관리
@@ -83,7 +78,6 @@ function FreeBoardPage() {
 
     const [comment, setComment] = useState('');
 
-
     // ==========================================
     // 4. 모달과 게시글 입력값 관리
     // ==========================================
@@ -96,14 +90,12 @@ function FreeBoardPage() {
 
     const [content, setContent] = useState('');
 
-
     // 검색
     const filtered = items.filter((item) =>
-        `${item.title} ${item.author}`
+        `${item.post_title} ${item.author}`
             .toLowerCase()
             .includes(query.toLowerCase())
     );
-
 
     // ==========================================
     // 5. 글쓰기 / 수정 모달 열기
@@ -113,14 +105,13 @@ function FreeBoardPage() {
 
         setEditingItem(item);
 
-        setTitle(item ? item.title : '');
+        setTitle(item ? item.post_title : '');
 
-        setContent(item ? item.content : '');
+        setContent(item ? item.post_content : '');
 
         setIsModalOpen(true);
 
     };
-
 
     // 모달 닫기
     const handleCloseWriteModal = () => {
@@ -135,7 +126,6 @@ function FreeBoardPage() {
 
     };
 
-
     // ==========================================
     // 6. 게시글 저장
     // ==========================================
@@ -143,7 +133,6 @@ function FreeBoardPage() {
     const savePost = async (event) => {
 
         event.preventDefault();
-
 
         if (!title.trim()) {
 
@@ -153,7 +142,6 @@ function FreeBoardPage() {
 
         }
 
-
         if (!content.trim()) {
 
             alert('내용을 입력해 주세요.');
@@ -161,7 +149,6 @@ function FreeBoardPage() {
             return;
 
         }
-
 
         // 직원 정보 확인
         if (!employee) {
@@ -172,26 +159,23 @@ function FreeBoardPage() {
 
         }
 
-
         try {
 
             // 게시글 수정
             if (editingItem) {
 
-                await updateFreePost(editingItem.id, {
-                    title: title.trim(),
-                    content: content.trim()
+                await updateFreePost(editingItem.post_id, {
+                    post_title: title.trim(),
+                    post_content: content.trim()
                 });
-
 
                 const posts = await refreshPosts();
 
                 const updatedPost = posts.find(
-                    (item) => item.id === editingItem.id
+                    (item) => item.post_id === editingItem.post_id
                 );
 
-
-                if (selected && selected.id === editingItem.id) {
+                if (selected && selected.post_id === editingItem.post_id) {
 
                     setSelected(updatedPost || null);
 
@@ -201,23 +185,20 @@ function FreeBoardPage() {
 
             }
 
-
             // 새 게시글 등록
             else {
 
                 await addFreePost({
-                    title: title.trim(),
-                    content: content.trim(),
+                    post_title: title.trim(),
+                    post_content: content.trim(),
                     author: employee.name
                 });
-
 
                 await refreshPosts();
 
                 alert('게시글이 등록되었습니다.');
 
             }
-
 
             handleCloseWriteModal();
 
@@ -231,7 +212,6 @@ function FreeBoardPage() {
 
     };
 
-
     // ==========================================
     // 7. 게시글 삭제
     // ==========================================
@@ -244,15 +224,13 @@ function FreeBoardPage() {
 
         }
 
-
         try {
 
-            await deleteFreePost(itemToRemove.id);
+            await deleteFreePost(itemToRemove.post_id);
 
             await refreshPosts();
 
-
-            if (selected && selected.id === itemToRemove.id) {
+            if (selected && selected.post_id === itemToRemove.post_id) {
 
                 setSelected(null);
 
@@ -272,7 +250,6 @@ function FreeBoardPage() {
 
     };
 
-
     // ==========================================
     // 8. 댓글 저장
     // ==========================================
@@ -287,7 +264,6 @@ function FreeBoardPage() {
 
         }
 
-
         if (!employee) {
 
             alert('직원 정보를 불러오지 못했습니다.');
@@ -295,7 +271,6 @@ function FreeBoardPage() {
             return;
 
         }
-
 
         if (!selected) {
 
@@ -305,21 +280,18 @@ function FreeBoardPage() {
 
         }
 
-
         try {
 
-            await addFreeComment(selected.id, {
+            await addFreeComment(selected.post_id, {
                 content: comment.trim(),
                 author: employee.name
             });
 
-
             const posts = await refreshPosts();
 
             const updatedPost = posts.find(
-                (item) => item.id === selected.id
+                (item) => item.post_id === selected.post_id
             );
-
 
             if (updatedPost) {
 
@@ -341,7 +313,6 @@ function FreeBoardPage() {
 
     };
 
-
     // ==========================================
     // 9. 댓글 삭제
     // ==========================================
@@ -354,18 +325,15 @@ function FreeBoardPage() {
 
         }
 
-
         try {
 
             await deleteFreeComment(id);
 
-
             const posts = await refreshPosts();
 
             const updatedPost = posts.find(
-                (item) => item.id === selected.id
+                (item) => item.post_id === selected.post_id
             );
-
 
             if (updatedPost) {
 
@@ -384,7 +352,6 @@ function FreeBoardPage() {
         }
 
     };
-
 
     // ==========================================
     // 10. 모달 입력 폼
@@ -407,7 +374,6 @@ function FreeBoardPage() {
 
             </div>
 
-
             <div>
 
                 <label>내용</label>
@@ -421,7 +387,6 @@ function FreeBoardPage() {
 
             </div>
 
-
             <div style={{ marginTop: '15px', textAlign: 'right' }}>
 
                 <button type="submit" className="erp-primary-button">
@@ -433,7 +398,6 @@ function FreeBoardPage() {
         </form>
 
     );
-
 
     // ==========================================
     // 11. 테이블 데이터
@@ -448,13 +412,11 @@ function FreeBoardPage() {
         '관리'
     ];
 
-
     const tableData = filtered.map((item, index) => ({
 
         content: [
 
             filtered.length - index,
-
 
             <span
                 className="table-link-title"
@@ -463,18 +425,14 @@ function FreeBoardPage() {
                     setView('detail');
                 }}
             >
-                {item.title}
+                {item.post_title}
             </span>,
-
 
             item.author,
 
-
             item.createdAt || item.updatedAt || '-',
 
-
             (item.comments || []).length,
-
 
             <div className="table-actions">
 
@@ -484,7 +442,6 @@ function FreeBoardPage() {
                 >
                     수정
                 </button>
-
 
                 <button
                     type="button"
@@ -504,7 +461,6 @@ function FreeBoardPage() {
     return (
 
         <div className="border-container">
-
 
             {/* 상단 공통 헤더 */}
 
@@ -526,7 +482,6 @@ function FreeBoardPage() {
 
                     )}
 
-
                     {view !== 'list' && (
 
                         <button
@@ -542,9 +497,7 @@ function FreeBoardPage() {
 
             </header>
 
-
             <hr />
-
 
             {/* 게시글 목록 */}
 
@@ -580,7 +533,6 @@ function FreeBoardPage() {
 
             )}
 
-
             {/* 게시글 상세 보기 */}
 
             {view === 'detail' && selected && (
@@ -589,7 +541,7 @@ function FreeBoardPage() {
 
                     <header>
 
-                        <h3>{selected.title}</h3>
+                        <h3>{selected.post_title}</h3>
 
                         <span className="subtext">
 
@@ -601,14 +553,11 @@ function FreeBoardPage() {
 
                     </header>
 
-
                     <hr />
 
-
                     <div className="detail-body">
-                        {selected.content}
+                        {selected.post_content}
                     </div>
-
 
                     <div className="table-actions">
 
@@ -618,7 +567,6 @@ function FreeBoardPage() {
                         >
                             수정
                         </button>
-
 
                         <button
                             type="button"
@@ -630,16 +578,13 @@ function FreeBoardPage() {
 
                     </div>
 
-
                     <hr />
-
 
                     {/* 댓글 영역 */}
 
                     <section className="comment-section">
 
                         <h4>댓글 ({(selected.comments || []).length})</h4>
-
 
                         <div className="comment-list">
 
@@ -661,7 +606,6 @@ function FreeBoardPage() {
 
                                     </div>
 
-
                                     <button
                                         type="button"
                                         className="danger-button"
@@ -674,7 +618,6 @@ function FreeBoardPage() {
 
                             ))}
 
-
                             {(selected.comments || []).length === 0 && (
 
                                 <p className="no-data">
@@ -685,7 +628,6 @@ function FreeBoardPage() {
 
                         </div>
 
-
                         <div className="comment-input-wrap">
 
                             <input
@@ -694,7 +636,6 @@ function FreeBoardPage() {
                                 onChange={(e) => setComment(e.target.value)}
                                 placeholder="댓글을 입력하세요"
                             />
-
 
                             <button
                                 type="button"
@@ -711,7 +652,6 @@ function FreeBoardPage() {
                 </article>
 
             )}
-
 
             {/* 공통 모달 */}
 
@@ -730,6 +670,5 @@ function FreeBoardPage() {
     );
 
 }
-
 
 export default FreeBoardPage;

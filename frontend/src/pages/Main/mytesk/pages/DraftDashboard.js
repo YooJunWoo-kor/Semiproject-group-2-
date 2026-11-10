@@ -73,21 +73,6 @@ function DraftDashboard({
                 th={["제목", "문서 종류", "작성일", "상태"]}
                 td={recentTableData}
             />
-
-            <header className="dashboard-header">
-                <span className="subtitle">바로가기</span>
-                <div className="dashboard-top">
-                    <Link className="register-btn" to="/main/mytesk/draft-request">
-                        내 결재 요청
-                    </Link>
-                    <Link className="register-btn" to="/main/mytesk/draft-received">
-                        결재할 문서
-                    </Link>
-                    <Link className="register-btn" to="/main/mytesk/draft-approved">
-                        결재 완료
-                    </Link>
-                </div>
-            </header>
         </div>
     );
 }
