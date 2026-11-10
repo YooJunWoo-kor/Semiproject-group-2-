@@ -33,13 +33,24 @@ export default function ProjectModul({projectlist}) {
                  </div>
       </header>
       <div style={{display:'flex', gap: '30px'}}>
-        <section className="stats-section">
-          <StatisticsCard title="등록된 프로젝트" count={projectlist.length} stiyle={0}/>
-          <StatisticsCard title="내 프로젝트" count={3} stiyle={0}/>
-          <StatisticsCard title="이번달" count={5} stiyle={0}/>
-          <StatisticsCard title="이번주" count={projectlist.length} stiyle={0}/>
-        </section>
-        
+        <div style={{flex:'1', display: 'flex', flexFlow:'column', overflowY: 'scroll'}}>
+          <div className='boder' style={{display:'flex', flexFlow:'column', height: '150px', padding: '20px 30px', marginRight: '30px'}}>
+              <div>
+                <p>완료태그</p>
+              </div>
+              <div style={{display:'flex'}}>
+                <div>
+                  <h2>dd</h2>
+                  <p>날짜</p>
+                </div>
+                <div>
+                  <div>상태태그</div>
+                  <button>버튼</button>
+                </div>
+              </div>
+          </div>
+          
+        </div>
         <div style={{
           flex: '1',
         }}>
