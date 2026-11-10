@@ -122,4 +122,35 @@ router.post("/reservations", async (req, res) => {
     }
 });
 
+// 날짜별 회의실 예약 현황 조회
+router.get("/reservations", async (req, res) => {
+
+    const { date } = req.query;
+
+    try {
+        const sql = `
+            SELECT
+                reservation_id,
+                room_id,
+                title,
+                TIME_FORMAT(start_time, '%H:%i') AS start_time,
+                TIME_FORMAT(end_time, '%H:%i') AS end_time
+            FROM meeting_room_reservations
+            WHERE reservation_date = ?
+            ORDER BY room_id, start_time
+        `;
+
+        const [rows] = await db.promise().query(sql, [date]);
+
+        return res.status(200).json(rows);
+
+    } catch (error) {
+        console.error("예약 조회 오류:", error);
+
+        return res.status(500).json({
+            message: "예약 현황 조회에 실패했습니다."
+        });
+    }
+});
+
 module.exports = router;

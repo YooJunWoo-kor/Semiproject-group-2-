@@ -18,7 +18,7 @@ const communityRouter = require('./routes/community');
 const financeRouter = require('./routes/financeRouters'); // main 재무 라우터
 const hrRouter = require('./routes/hrRoutes'); // main 인사 라우터
 const Attendance = require('./models/Attendance');
-const mrRoutes = require('./routes/meetingRoom');
+const mrRoutes = require('./routes/mrRoutes');
 
 // 품질관리 라우터 추가
 const qualityRoutes = require('./routes/quality');

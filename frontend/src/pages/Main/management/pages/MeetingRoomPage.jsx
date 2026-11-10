@@ -4,6 +4,7 @@ import ModalBase from "../../../../components/ModalBase";
 import "./MeetingRoomPage.css"
 import { getTodayString,API_BASE_URL } from "../../../../utils/authStorage";
 import axios from "axios";
+import React, { useEffect, useState } from "react";
 
 const rooms = Array.from({length: 9}, (_, index) => ({
     id : index + 1,
@@ -23,6 +24,8 @@ function MeetingRoomPage() {
     const [endTime, setEndTime] = useState("");
     const [startTime, setStartTime] = useState("");
     const [selectedDate, setselectedDate] = useState(getTodayString());
+    const [reservations, setReservations] = useState([]);
+    const [refreshKey, setRefreshKey] = useState(0);
 
     // 시작 시간보다 늦은 종료 시간만 표시
     const endTimeOptions = [...timeOptions, "24:00"].filter(
@@ -38,13 +41,47 @@ function MeetingRoomPage() {
         } 
     };
 
+    useEffect(() => {
+        const fetchReservations = async () => {
+            try {
+                const response = await axios.get(
+                    `${API_BASE_URL}/meeting-rooms/reservations`,
+                    {
+                        params: { date: selectedDate }
+                    }
+                );
+    
+                setReservations(response.data);
+    
+            } catch (error) {
+                console.error("예약 조회 오류:", error);
+                setReservations([]);
+            }
+        };
+    
+        fetchReservations();
+    
+    }, [selectedDate, refreshKey]);
+
     const handleRoomClick = (room) => {
-        if(!selectedDate || !startTime || !endTime){
-            alert("예약 날짜와 시작/종료 시간을 선택해주세요");
+        if (!selectedDate || !startTime || !endTime) {
+            alert("예약 날짜와 시간을 선택해주세요.");
             return;
         }
+    
+        const isReserved = reservations.some(reservation => // 조건을 만족하는 것 하나라도 있으면 예약된 것
+            Number(reservation.room_id) === room.id &&
+            reservation.start_time < endTime &&
+            reservation.end_time > startTime
+        );
+    
+        if (isReserved) {
+            alert("이미 예약된 시간입니다.");
+            return;
+        }
+    
         setSelectedRoom(room);
-    }
+    };
 
     const [reservationForm, setReservationForm] = useState({
         title: "",
@@ -178,7 +215,7 @@ const handleReservationSubmit = async (e) => {
                     onClose={() => setSelectedRoom(null)}
                     layout={
                         <div className="draft-box">
-                            <form onSubmit={{handleReservationSubmit}}>
+                            <form onSubmit={handleReservationSubmit}>
                     
                                 <h3>{selectedRoom.name}</h3>
                     
