@@ -1,22 +1,28 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BasicCalendar from '../../../components/calendar/BasicCalendar';
-import { API_BASE_URL } from '../../../utils/authStorage'
+import { API_BASE_URL, formatDateToYYYYMMDD } from '../../../utils/authStorage'
 import axios from 'axios';
 
 export default function ProjectModul({projectlist}) {
 
-  const projectData = async function(){
+  const[projectData, setProjectData] = useState([]);
+
+  const getProjectData = async function(){
     try{
-        const data = await axios.get(API_BASE_URL + '/project/getproject')
-        console.log(data.data);
+        let data = await axios.get(API_BASE_URL + '/project/getproject')
+        for(let i = 0; i < data.data.data.length; i++){
+          data.data.data[i].start = formatDateToYYYYMMDD(data.data.data[i].start);
+          data.data.data[i].end = formatDateToYYYYMMDD(data.data.data[i].end);
+        }
+        setProjectData(data.data.data);
     }catch(err){
         alert('데이터 조회 실패', err.data.massage);
     }
   }
 
   useEffect(()=>{
-    projectData();
+    getProjectData();
   },[]);
 
   return (
@@ -44,22 +50,9 @@ export default function ProjectModul({projectlist}) {
             </select>
           </div>
           <div style={{overflowY:'scroll', display: 'flex', flexFlow: 'column', flex:'1'}}>
-            //프로젝트 폼 생성중
-            <div className='boder' style={{display:'flex', flexFlow:'column', height: '200px', padding: '20px 30px', marginRight: '30px'}}>
-                <div>
-                  <p className='attendance-tag tag-emerald'>완료태그</p>
-                </div>
-                <div style={{display:'flex'}}>
-                  <div>
-                    <h3>프로젝트 명</h3>
-                    <p style = {{fontSize : '13px'}}>2024-12-25</p>
-                  </div>
-                  <div style={{marginLeft:'auto', display:'flex', flexFlow:'column', gap:'5px'}}>
-                    <div className='attendance-tag tag-emerald'>상태태그</div>
-                    <button style = {{fontSize:'15px'}}>버튼</button>
-                  </div>
-                </div>
-            </div>
+            {projectData.map((item, index)=>{
+              return <ProjectListModule key={index} data={item}/>
+            })}
           </div>
           
         </div>
@@ -73,4 +66,25 @@ export default function ProjectModul({projectlist}) {
       
     </div>
   );
+}
+
+function ProjectListModule({data}){
+  return (
+    <div className='boder' style={{display:'flex', flexFlow:'column', height: '200px', padding: '20px 30px', marginRight: '30px'}}>
+      <div>
+        <p className='attendance-tag tag-emerald'>완료태그</p>
+      </div>
+      <div style={{display:'flex'}}>
+        <div>
+          <h3>{data.project_name}</h3>
+          <p style = {{fontSize : '13px'}}>시작일: {data.start}</p>
+          <p style = {{fontSize : '13px'}}>종료일: {data.end}</p>
+        </div>
+        <div style={{marginLeft:'auto', display:'flex', flexFlow:'column', gap:'5px'}}>
+          <div className='attendance-tag tag-emerald'>상태태그</div>
+          <button style = {{fontSize:'15px'}}>버튼</button>
+        </div>
+      </div>
+    </div>
+  )
 }
