@@ -142,11 +142,26 @@ hrRouter.get('/attendance', async (req, res) => {
 // 휴가 신청·승인 저장 API가 없어 현재 라우트는 읽기 전용입니다.
 hrRouter.get('/leaves', async (req, res) => {
     const month = String(req.query.month || '').trim();
+    const year = String(req.query.year || '').trim();
 
     if (month && !isPayMonthString(month)) {
         return res.status(400).json({
             success: false,
             message: '휴가 조회 월 형식은 YYYY-MM이어야 합니다.'
+        });
+    }
+
+    if (year && !/^\d{4}$/.test(year)) {
+        return res.status(400).json({
+            success: false,
+            message: '휴가 조회 연도 형식은 YYYY여야 합니다.'
+        });
+    }
+
+    if (month && year) {
+        return res.status(400).json({
+            success: false,
+            message: '휴가 조회는 월 또는 연도 중 하나만 지정해 주세요.'
         });
     }
 
@@ -186,11 +201,17 @@ hrRouter.get('/leaves', async (req, res) => {
         LEFT JOIN employees approver
             ON approver.employee_id = md.approver_id
         WHERE (? = '' OR DATE_FORMAT(dl.start_date, '%Y-%m') = ?)
+          AND (? = '' OR DATE_FORMAT(dl.start_date, '%Y') = ?)
         ORDER BY dl.start_date DESC, dl.leave_id DESC
     `;
 
     try {
-        const [rows] = await promiseDb.query(query, [month, month]);
+        const [rows] = await promiseDb.query(query, [
+            month,
+            month,
+            year,
+            year
+        ]);
 
         return res.json({
             success: true,
@@ -622,6 +643,54 @@ hrRouter.get('/payrolls', async (req, res) => {
         return res.status(500).json({
             success: false,
             message: '급여 정보를 불러오지 못했습니다.'
+        });
+    }
+});
+
+
+// 선택한 직원의 월별 급여 이력 조회
+// 기존 payrolls 테이블의 실제 금액·지급 상태만 반환하고 최신 급여월 순으로 정렬합니다.
+hrRouter.get('/payrolls/employee/:employeeId/history', async (req, res) => {
+    const employeeId = Number(req.params.employeeId);
+
+    if (!Number.isInteger(employeeId) || employeeId < 1) {
+        return res.status(400).json({
+            success: false,
+            message: '직원 식별자가 올바르지 않습니다.'
+        });
+    }
+
+    const query = `
+        SELECT
+            p.payroll_id AS payrollId,
+            p.employee_id AS employeeId,
+            p.pay_month AS payMonth,
+            p.base_salary AS baseSalary,
+            p.allowance,
+            p.bonus,
+            p.deduction,
+            p.gross_pay AS grossPay,
+            p.net_pay AS netPay,
+            DATE_FORMAT(p.payment_date, '%Y-%m-%d') AS paymentDate,
+            COALESCE(p.payment_status, '지급대기') AS paymentStatus
+        FROM payrolls p
+        WHERE p.employee_id = ?
+        ORDER BY p.pay_month DESC, p.payroll_id DESC
+    `;
+
+    try {
+        const [rows] = await promiseDb.query(query, [employeeId]);
+
+        return res.json({
+            success: true,
+            data: rows
+        });
+    } catch (error) {
+        console.error('직원 급여 이력 조회 오류:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: '급여 이력을 불러오지 못했습니다.'
         });
     }
 });

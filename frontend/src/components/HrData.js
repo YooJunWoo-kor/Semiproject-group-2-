@@ -33,6 +33,13 @@ export function getHrLeaves(month) {
   });
 }
 
+// 연차 사용량 집계에 필요한 해당 연도의 휴가 신청 데이터를 조회합니다.
+export function getHrLeavesByYear(year) {
+  return axios.get(API_BASE_URL + '/hr/leaves', {
+    params: { year }
+  });
+}
+
 // 기존 전자결재 API로 휴가 기안의 승인·반려를 처리합니다.
 export function decideHrLeave(draftId, employeeId, decision) {
   return axios.post(API_BASE_URL + '/drafts/' + draftId + '/decision', {
@@ -61,13 +68,6 @@ export function getHrOrganization() {
   return Promise.all([getHrDepartments(), getHrEmployees()]);
 }
 
-// 이미 조회한 직원 배열을 departmentId 기준으로 필터링합니다.
-export function filterHrEmployeesByDepartment(employees, departmentId) {
-  return employees.filter(
-    (employee) => String(employee.departmentId) === String(departmentId)
-  );
-}
-
 // 직원 등록 API를 호출합니다.
 export function createHrEmployee(data) {
   return axios.post(API_BASE_URL + '/hr/employees', data);
@@ -90,6 +90,13 @@ export function getHrPayrolls(payMonth) {
       payMonth
     }
   });
+}
+
+// 선택한 직원의 월별 급여 이력을 조회합니다.
+export function getHrPayrollHistory(employeeId) {
+  return axios.get(
+    API_BASE_URL + '/hr/payrolls/employee/' + employeeId + '/history'
+  );
 }
 
 // 급여 미등록 직원의 급여를 등록합니다.

@@ -22,13 +22,28 @@
   min-width: 0;
   box-sizing: border-box;
 }
-
 .hr-attendance-management,
 .hr-employee-management,
 .hr-single-management,
 .hr-payroll-management {
   min-width: 0;
   box-sizing: border-box;
+}
+
+.hr-dashboard-feedback {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.hr-dashboard-feedback.error {
+  color: #b42318;
+  background: #fff1f0;
+  border-color: #f5c2c0;
 }
 
 .hr-attendance-management > .dashboard-header,
@@ -149,6 +164,17 @@
   color: var(--color-surface);
   background: var(--color-brand);
   border-color: var(--color-brand);
+}
+
+.hr-attendance-management .attendance-main-tabs {
+  flex-basis: 230px;
+  width: 230px;
+}
+
+.hr-attendance-management .attendance-subtabs {
+  flex-basis: 340px;
+  width: 340px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .hr-attendance-management .attendance-filter-field {
@@ -479,6 +505,300 @@
 .hr-attendance-management .summary-item strong {
   color: var(--color-ink);
   font-size: 20px;
+}
+
+.hr-attendance-management .attendance-subview {
+  min-width: 0;
+}
+
+.hr-attendance-management .attendance-subview-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.hr-attendance-management .attendance-subview-heading h3 {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 17px;
+}
+
+.hr-attendance-management .attendance-subview-heading p {
+  margin: 5px 0 0;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.hr-attendance-management .attendance-subview-heading > strong {
+  color: var(--color-brand);
+  font-size: 18px;
+  white-space: nowrap;
+}
+
+.hr-attendance-management .attendance-subview table {
+  min-width: 720px;
+}
+
+.hr-attendance-management .attendance-stat-table table {
+  min-width: 0;
+}
+
+.hr-attendance-management .attendance-stat-table th {
+  width: 35%;
+  color: var(--color-muted);
+  background: var(--color-canvas);
+  text-align: left;
+}
+
+.hr-attendance-management .attendance-stat-table td {
+  font-weight: 700;
+  text-align: right;
+}
+
+.hr-attendance-management .attendance-statistics-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hr-attendance-management .attendance-progress-card {
+  padding: 16px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+.hr-attendance-management .attendance-progress-card-heading,
+.hr-attendance-management .attendance-progress-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.hr-attendance-management .attendance-progress-card-heading {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.hr-attendance-management .attendance-progress-card-heading > div,
+.hr-attendance-management .attendance-progress-heading > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.hr-attendance-management .attendance-progress-card-heading strong {
+  color: var(--color-ink);
+  font-size: 15px;
+}
+
+.hr-attendance-management .attendance-progress-card-heading span,
+.hr-attendance-management .attendance-progress-heading span {
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.hr-attendance-management .attendance-progress-card-heading > b {
+  color: var(--color-brand);
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.hr-attendance-management .attendance-progress-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+  padding-top: 14px;
+}
+
+.hr-attendance-management .attendance-progress-item {
+  position: relative;
+  min-width: 0;
+}
+
+.hr-attendance-management .attendance-progress-heading strong {
+  color: var(--color-ink);
+  font-size: 13px;
+}
+
+.hr-attendance-management .attendance-progress-heading b {
+  color: var(--color-brand);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.hr-attendance-management .attendance-progress-track {
+  width: 100%;
+  height: 10px;
+  margin: 8px 0 4px;
+  overflow: hidden;
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+
+.hr-attendance-management .attendance-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease-in-out;
+}
+
+.hr-attendance-management .attendance-progress-fill.brand {
+  background: var(--color-brand);
+}
+
+.hr-attendance-management .attendance-progress-fill.success {
+  background: #10b981;
+}
+
+.hr-attendance-management .attendance-progress-fill.warning {
+  background: #f59e0b;
+}
+
+.hr-attendance-management .attendance-progress-fill.info {
+  background: #38bdf8;
+}
+
+.hr-attendance-management .attendance-progress-percent {
+  display: block;
+  color: var(--color-muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+.hr-attendance-management .attendance-progress-statuses {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line);
+}
+
+.hr-attendance-management .attendance-progress-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.hr-attendance-management .attendance-progress-status span {
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.hr-attendance-management .attendance-progress-status strong {
+  font-size: 13px;
+}
+
+.hr-attendance-management .attendance-progress-status strong.brand {
+  color: var(--color-brand);
+}
+
+.hr-attendance-management .attendance-progress-status strong.success {
+  color: #059669;
+}
+
+.hr-attendance-management .attendance-progress-status strong.warning {
+  color: #d97706;
+}
+
+.hr-attendance-management .attendance-progress-status strong.info {
+  color: #0284c7;
+}
+
+.hr-attendance-management .attendance-progress-status strong.danger {
+  color: #dc2626;
+}
+
+@media (max-width: 720px) {
+  .hr-attendance-management .attendance-progress-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hr-attendance-management .attendance-progress-statuses {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 상단 조회 폼은 한 줄로 정리하고, 날짜부터의 조회 조건은 오른쪽에 배치합니다. */
+.hr-attendance-management .attendance-filter {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+}
+
+.hr-attendance-management .attendance-filter .attendance-detail-navigation {
+  display: contents;
+}
+
+.hr-attendance-management
+.attendance-filter
+.attendance-detail-navigation
+.attendance-navigation {
+  order: 1;
+  flex: 0 0 250px;
+}
+
+.hr-attendance-management .attendance-filter-controls {
+  order: 2;
+  width: auto;
+  margin-left: auto;
+  flex-wrap: nowrap;
+}
+
+.hr-attendance-management
+.attendance-filter
+.attendance-detail-navigation
+.attendance-detail-actions {
+  order: 3;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 1180px) {
+  .hr-attendance-management .attendance-filter {
+    flex-wrap: wrap;
+  }
+
+  .hr-attendance-management
+  .attendance-filter
+  .attendance-detail-navigation
+  .attendance-navigation {
+    flex: 0 0 250px;
+  }
+
+  .hr-attendance-management .attendance-filter-controls {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .hr-attendance-management .attendance-filter {
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: nowrap;
+  }
+
+  .hr-attendance-management
+  .attendance-filter
+  .attendance-detail-navigation
+  .attendance-navigation,
+  .hr-attendance-management .attendance-filter-controls,
+  .hr-attendance-management
+  .attendance-filter
+  .attendance-detail-navigation
+  .attendance-detail-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .hr-attendance-management .attendance-filter-controls {
+    flex-wrap: wrap;
+  }
 }
 
 /* ========================================
@@ -1182,6 +1502,132 @@
 .hr-employee-management .hr-attendance-link:hover {
   border-color: var(--color-brand);
   color: var(--color-brand);
+}
+
+.hr-employee-management .hr-payroll-actions {
+  justify-content: flex-start;
+}
+
+.hr-employee-management .hr-payroll-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hr-payroll-history-modal,
+.hr-payroll-statement {
+  width: min(840px, calc(100vw - 48px));
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.hr-payroll-modal-context {
+  margin: 0 0 12px;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.hr-payroll-modal-message {
+  margin: 0;
+  padding: 28px 12px;
+  color: var(--color-muted);
+  text-align: center;
+  font-size: 13px;
+}
+
+.hr-payroll-history-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.hr-payroll-history-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.hr-payroll-history-table th,
+.hr-payroll-history-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--color-line);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.hr-payroll-history-table th:first-child,
+.hr-payroll-history-table td:first-child,
+.hr-payroll-history-table th:last-child,
+.hr-payroll-history-table td:last-child {
+  text-align: left;
+}
+
+.hr-payroll-history-table th {
+  color: var(--color-muted);
+  font-weight: 600;
+  background: var(--color-canvas);
+}
+
+.hr-payroll-statement-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.hr-payroll-statement-heading div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hr-payroll-statement-heading strong {
+  font-size: 17px;
+}
+
+.hr-payroll-statement-heading span {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.hr-payroll-statement-employee,
+.hr-payroll-statement-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
+}
+
+.hr-payroll-statement-employee {
+  margin-top: 8px;
+}
+
+.hr-payroll-statement-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 12px;
+  padding-top: 4px;
+  border-top: 2px solid var(--color-ink);
+}
+
+@media (max-width: 760px) {
+  .hr-employee-management .hr-payroll-actions button {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+  }
+
+  .hr-payroll-statement-heading,
+  .hr-payroll-statement-employee,
+  .hr-payroll-statement-fields,
+  .hr-payroll-statement-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hr-payroll-statement-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 .hr-employee-management .hr-empty-state {
@@ -2188,6 +2634,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .hr-attendance-management .attendance-subtabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .hr-attendance-management .attendance-edit-summary {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -2210,6 +2660,162 @@
   .attendance-filter:not(:has(> .erp-primary-button))::after {
     flex: 1 1 100px;
     width: auto;
+  }
+}
+
+/* 기존 주 메뉴는 상단 조회 폼으로 복원하고, 새 하위 메뉴만 선택 직원 영역에 표시합니다. */
+.hr-attendance-management .attendance-filter .attendance-detail-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.hr-attendance-management
+.attendance-filter
+.attendance-detail-navigation
+.attendance-navigation {
+  display: block;
+  width: auto;
+}
+
+.hr-attendance-management
+.attendance-filter
+.attendance-detail-navigation
+.attendance-main-tabs {
+  width: 250px;
+  flex: 0 0 250px;
+}
+
+.hr-attendance-management
+.attendance-filter
+.attendance-detail-navigation
+.attendance-subtabs {
+  display: none;
+}
+
+.hr-attendance-management
+.attendance-filter
+.attendance-detail-navigation
+.attendance-detail-actions {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.hr-attendance-management .attendance-selected-subtabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  width: 390px;
+  max-width: 100%;
+  margin: 0 0 16px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+@media (max-width: 720px) {
+  .hr-attendance-management .attendance-filter .attendance-detail-navigation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .hr-attendance-management
+  .attendance-filter
+  .attendance-detail-navigation
+  .attendance-main-tabs,
+  .hr-attendance-management .attendance-selected-subtabs {
+    width: 100%;
+  }
+
+  .hr-attendance-management
+  .attendance-filter
+  .attendance-detail-navigation
+  .attendance-detail-actions {
+    justify-content: flex-start;
+  }
+}
+
+/* 상단 조회 폼은 한 줄로 정리하고, 날짜부터의 조회 조건은 오른쪽에 배치합니다. */
+.hr-attendance-management .attendance-filter {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+}
+
+.hr-attendance-management .attendance-filter .attendance-detail-navigation {
+  display: contents;
+}
+
+.hr-attendance-management
+.attendance-filter
+.attendance-detail-navigation
+.attendance-navigation {
+  order: 1;
+  flex: 0 0 250px;
+}
+
+.hr-attendance-management .attendance-filter-controls {
+  order: 2;
+  width: auto;
+  margin-left: auto;
+  flex-wrap: nowrap;
+}
+
+.hr-attendance-management
+.attendance-filter
+.attendance-detail-navigation
+.attendance-detail-actions {
+  order: 3;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 1180px) {
+  .hr-attendance-management .attendance-filter {
+    flex-wrap: wrap;
+  }
+
+  .hr-attendance-management
+  .attendance-filter
+  .attendance-detail-navigation
+  .attendance-navigation {
+    flex: 0 0 250px;
+  }
+
+  .hr-attendance-management .attendance-filter-controls {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .hr-attendance-management .attendance-filter {
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: nowrap;
+  }
+
+  .hr-attendance-management
+  .attendance-filter
+  .attendance-detail-navigation
+  .attendance-navigation,
+  .hr-attendance-management .attendance-filter-controls,
+  .hr-attendance-management
+  .attendance-filter
+  .attendance-detail-navigation
+  .attendance-detail-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .hr-attendance-management .attendance-filter-controls {
+    flex-wrap: wrap;
   }
 }
 
@@ -2861,4 +3467,363 @@
 ======================================== */
 
 /* 근태관리와 직원·부서 통합관리의 미디어 쿼리는 각 영역 규칙과 함께 유지합니다. */
+
+/* ========================================
+   근태·휴가관리 탭/필터 최종 배치
+   - 주 메뉴와 하위 메뉴를 한 줄의 탭 영역으로 분리
+   - 검색 조건과 작업 버튼은 별도 줄에서 정렬
+======================================== */
+
+.hr-attendance-management .attendance-filter {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.hr-attendance-management .attendance-navigation {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.hr-attendance-management .attendance-detail-navigation {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+.hr-attendance-management .attendance-detail-navigation .attendance-navigation {
+  gap: 8px;
+}
+
+.hr-attendance-management .attendance-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-line);
+}
+
+.hr-attendance-management .attendance-detail-actions .erp-primary-button {
+  min-width: 96px;
+  height: 36px;
+  min-height: 36px;
+}
+
+/* 상세 패널 안에서도 주 메뉴와 하위 메뉴를 서로 다른 줄에 표시합니다. */
+.hr-attendance-management .attendance-detail-navigation .attendance-navigation {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.hr-attendance-management
+.attendance-detail-navigation
+.attendance-main-tabs {
+  flex: 0 0 auto;
+  width: 250px;
+}
+
+.hr-attendance-management
+.attendance-detail-navigation
+.attendance-subtabs {
+  flex: 0 0 auto;
+  width: 390px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-line);
+}
+
+.hr-attendance-management .attendance-navigation .attendance-tabs {
+  margin: 0;
+  align-self: center;
+}
+
+.hr-attendance-management .attendance-navigation .attendance-main-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  flex: 0 0 250px;
+  width: 250px;
+  gap: 6px;
+}
+
+.hr-attendance-management .attendance-navigation .attendance-subtabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  flex: 0 1 390px;
+  width: 390px;
+  max-width: 100%;
+  gap: 6px;
+}
+
+.hr-attendance-management .attendance-filter-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.hr-attendance-management .attendance-filter-controls .attendance-filter-field {
+  flex: 0 0 125px;
+  width: 125px;
+  height: 38px;
+  min-height: 38px;
+  margin: 0;
+}
+
+.hr-attendance-management .attendance-filter-controls .attendance-keyword-field {
+  flex-basis: 160px;
+  width: 160px;
+}
+
+.hr-attendance-management .attendance-filter-controls .attendance-reset-button,
+.hr-attendance-management .attendance-filter-controls > .erp-primary-button {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 80px;
+  height: 38px;
+  min-height: 38px;
+  max-height: 38px;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.hr-attendance-management .attendance-filter-controls > .erp-primary-button {
+  min-width: 96px;
+}
+
+@media (max-width: 1100px) {
+  .hr-attendance-management .attendance-navigation {
+    flex-wrap: wrap;
+  }
+
+  .hr-attendance-management .attendance-navigation .attendance-main-tabs {
+    flex: 0 1 250px;
+  }
+
+  .hr-attendance-management .attendance-navigation .attendance-subtabs {
+    flex: 1 1 340px;
+  }
+
+  .hr-attendance-management .attendance-filter-controls .attendance-filter-field,
+  .hr-attendance-management .attendance-filter-controls .attendance-keyword-field {
+    flex: 1 1 125px;
+    width: auto;
+  }
+
+  .hr-attendance-management .attendance-filter-controls .attendance-keyword-field {
+    flex-basis: 160px;
+  }
+}
+
+@media (max-width: 720px) {
+  .hr-attendance-management .attendance-navigation {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hr-attendance-management .attendance-navigation .attendance-main-tabs,
+  .hr-attendance-management .attendance-navigation .attendance-subtabs {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  .hr-attendance-management .attendance-detail-actions {
+    justify-content: stretch;
+  }
+
+  .hr-attendance-management .attendance-detail-actions .erp-primary-button {
+    flex: 1 1 130px;
+  }
+
+  .hr-attendance-management .attendance-filter-controls .attendance-filter-field,
+  .hr-attendance-management .attendance-filter-controls .attendance-keyword-field,
+  .hr-attendance-management .attendance-filter-controls .attendance-reset-button,
+  .hr-attendance-management .attendance-filter-controls > .erp-primary-button {
+    flex: 1 1 130px;
+    width: auto;
+    min-width: 0;
+  }
+}
+
+/* 주 메뉴는 상단 조회 폼에 두고, 새 하위 메뉴만 선택 직원 상세에 표시합니다. */
+.hr-attendance-management .attendance-filter .attendance-detail-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.hr-attendance-management
+.attendance-filter
+.attendance-detail-navigation
+.attendance-navigation {
+  display: block;
+  width: auto;
+}
+
+.hr-attendance-management
+.attendance-filter
+.attendance-detail-navigation
+.attendance-main-tabs {
+  width: 250px;
+  flex: 0 0 250px;
+}
+
+.hr-attendance-management
+.attendance-filter
+.attendance-detail-navigation
+.attendance-subtabs {
+  display: none;
+}
+
+.hr-attendance-management
+.attendance-filter
+.attendance-detail-navigation
+.attendance-detail-actions {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.hr-attendance-management .attendance-selected-subtabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-self: flex-start;
+  flex: 0 0 auto;
+  gap: 6px;
+  width: 390px;
+  max-width: 100%;
+  margin: 0 0 16px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+@media (max-width: 720px) {
+  .hr-attendance-management .attendance-filter .attendance-detail-navigation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .hr-attendance-management
+  .attendance-filter
+  .attendance-detail-navigation
+  .attendance-main-tabs,
+  .hr-attendance-management .attendance-selected-subtabs {
+    width: 100%;
+  }
+
+  .hr-attendance-management
+  .attendance-filter
+  .attendance-detail-navigation
+  .attendance-detail-actions {
+    justify-content: flex-start;
+  }
+}
+
+/* 상단 조회 폼 최종 정렬: 메뉴는 왼쪽, 날짜부터의 조건은 오른쪽 */
+.border-container.hr-attendance-management .attendance-filter {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+  height: auto;
+  min-height: 58px;
+}
+
+.border-container.hr-attendance-management
+.attendance-filter
+.attendance-detail-navigation {
+  display: contents;
+}
+
+.border-container.hr-attendance-management
+.attendance-filter
+.attendance-detail-navigation
+.attendance-navigation {
+  order: 1;
+  flex: 0 0 250px;
+  width: 250px;
+  display: block;
+  margin-left: 0;
+  margin-right: 0;
+  align-self: center;
+}
+
+.border-container.hr-attendance-management
+.attendance-filter
+.attendance-detail-navigation
+.attendance-main-tabs {
+  margin: 0;
+  align-self: center;
+}
+
+.border-container.hr-attendance-management
+.attendance-filter
+.attendance-detail-navigation
+.attendance-detail-actions {
+  order: 3;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.border-container.hr-attendance-management .attendance-filter-controls {
+  order: 2;
+  flex: 0 0 auto;
+  width: auto;
+  margin-left: auto;
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 1180px) {
+  .border-container.hr-attendance-management .attendance-filter {
+    flex-wrap: wrap;
+    height: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .border-container.hr-attendance-management .attendance-filter {
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: nowrap;
+  }
+
+  .border-container.hr-attendance-management
+  .attendance-filter
+  .attendance-detail-navigation
+  .attendance-navigation,
+  .border-container.hr-attendance-management .attendance-filter-controls,
+  .border-container.hr-attendance-management
+  .attendance-filter
+  .attendance-detail-navigation
+  .attendance-detail-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .border-container.hr-attendance-management .attendance-filter-controls {
+    flex-wrap: wrap;
+  }
+}
 

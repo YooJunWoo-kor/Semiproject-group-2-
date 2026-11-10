@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import ModalBase from "../../../../components/ModalBase";
 import StatisticsCard from "../../../../components/StatisticsCard";
@@ -10,6 +10,7 @@ import {
   createHrPayroll,
   deleteHrDepartment,
   getHrOrganization,
+  getHrPayrollHistory,
   getHrPayrolls,
   retireHrEmployee,
   updateHrEmployee,
@@ -297,6 +298,50 @@ function DepartmentForm({
   );
 }
 
+
+/* 급여 계산 공통 함수 */
+function calculatePayroll(data) {
+  if (!data) return null;
+
+  const names = [
+    "baseSalary",
+    "allowance",
+    "bonus",
+    "deduction"
+  ];
+
+  const amounts = names.map((name) => Number(data[name]));
+
+  const invalid = amounts.some((amount, index) => {
+    return (
+      data[names[index]] == null ||
+      data[names[index]] === "" ||
+      !Number.isSafeInteger(amount) ||
+      amount < 0
+    );
+  });
+
+  if (invalid) return null;
+
+  const grossPay =
+    amounts[0] + amounts[1] + amounts[2];
+
+  const netPay = grossPay - amounts[3];
+
+  if (
+    !Number.isSafeInteger(grossPay) ||
+    !Number.isSafeInteger(netPay) ||
+    netPay < 0
+  ) {
+    return null;
+  }
+
+  return {
+    grossPay,
+    netPay
+  };
+}
+
 function PayrollForm({
   form,
   setForm,
@@ -312,12 +357,10 @@ function PayrollForm({
       [event.target.name]: event.target.value
     }));
 
-  const gross =
-    Number(form.baseSalary || 0) +
-    Number(form.allowance || 0) +
-    Number(form.bonus || 0);
+  const calculation = calculatePayroll(form);
 
-  const net = gross - Number(form.deduction || 0);
+  const gross = calculation?.grossPay ?? 0;
+  const net = calculation?.netPay ?? 0;
 
   return (
     <form className="hr-unified-form" onSubmit={onSave}>
@@ -388,6 +431,131 @@ function PayrollForm({
   );
 }
 
+function PayrollHistoryModal({
+  employee,
+  history,
+  loading,
+  error,
+  onClose
+}) {
+  let content = null;
+
+  if (loading) {
+    content = (
+      <p className="hr-payroll-modal-message" role="status">
+        급여 이력을 불러오는 중입니다.
+      </p>
+    );
+  } else if (error) {
+    content = (
+      <p className="hr-single-error" role="alert">
+        {error}
+      </p>
+    );
+  } else if (history.length === 0) {
+    content = (
+      <p className="hr-payroll-modal-message">
+        조회된 급여 이력이 없습니다.
+      </p>
+    );
+  } else {
+    content = (
+      <div className="hr-payroll-history-scroll">
+        <table className="hr-payroll-history-table">
+          <thead>
+            <tr>
+              <th>지급 월</th>
+              <th>기본급</th>
+              <th>수당</th>
+              <th>상여금</th>
+              <th>공제액</th>
+              <th>실수령액</th>
+              <th>지급 상태</th>
+            </tr>
+          </thead>
+          <tbody>
+            {history.map((item) => (
+              <tr key={item.payrollId}>
+                <td>{item.payMonth}</td>
+                <td>{money(item.baseSalary)}</td>
+                <td>{money(item.allowance)}</td>
+                <td>{money(item.bonus)}</td>
+                <td>{money(item.deduction)}</td>
+                <td>{money(item.netPay)}</td>
+                <td>{item.paymentStatus || "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  return (
+    <ModalBase
+      title={`${employee.name} 급여 내역`}
+      onClose={onClose}
+      layout={
+        <section className="hr-payroll-history-modal">
+          <p className="hr-payroll-modal-context">
+            {employee.employeeNumber} · 월별 급여 이력
+          </p>
+          {content}
+        </section>
+      }
+    />
+  );
+}
+
+function PayrollStatementModal({ employee, payroll, onClose }) {
+  return (
+    <ModalBase
+      title={`${employee.name} 급여명세서`}
+      onClose={onClose}
+      layout={
+        <section className="hr-payroll-statement">
+          <div className="hr-payroll-statement-heading">
+            <div>
+              <strong>{employee.name}</strong>
+              <span>{employee.employeeNumber}</span>
+            </div>
+            <span>{payroll.payMonth} 급여 기준월</span>
+          </div>
+
+          <div className="hr-payroll-statement-employee">
+            <DetailRow title="부서" value={employee.departmentName || "-"} />
+            <DetailRow title="직급" value={employee.position || "-"} />
+          </div>
+
+          <div className="hr-payroll-statement-fields">
+            <DetailRow title="기본급" value={money(payroll.baseSalary)} />
+            <DetailRow title="수당" value={money(payroll.allowance)} />
+            <DetailRow title="상여금" value={money(payroll.bonus)} />
+            <DetailRow
+              title="공제 내역(총액)"
+              value={money(payroll.deduction)}
+            />
+            <DetailRow title="지급일" value={payroll.paymentDate || "-"} />
+            <DetailRow
+              title="지급 상태"
+              value={payroll.paymentStatus || "-"}
+            />
+          </div>
+
+          <div className="hr-payroll-statement-summary">
+            <DetailRow title="세전 총액" value={money(payroll.grossPay)} />
+            <DetailRow
+              title="실수령액"
+              value={money(payroll.netPay)}
+              emphasis
+            />
+          </div>
+        </section>
+      }
+    />
+  );
+}
+
 export default function UnifiedEmployees() {
   const user = getLoginUser();
   const isMaster = user?.role === "MASTER";
@@ -413,6 +581,10 @@ export default function UnifiedEmployees() {
   const [employeeForm, setEmployeeForm] = useState(emptyEmployee);
   const [departmentForm, setDepartmentForm] = useState(emptyDepartment);
   const [payForm, setPayForm] = useState(emptyPay);
+  const [payrollHistory, setPayrollHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  const historyRequestRef = useRef(0);
 
   async function refreshOrganization() {
     const [departmentResponse, employeeResponse] =
@@ -617,20 +789,42 @@ export default function UnifiedEmployees() {
     (emp) => emp.employmentStatus === "재직"
   ).length;
 
+
   const payroll = payrolls.find(
     (row) =>
       String(row.employeeId) === String(selected?.employeeId)
   );
 
+  /* 등록·수정 가능 여부 */
   const canEditPay =
     isMaster &&
-    selected &&
+    !!selected &&
     selected.employmentStatus !== "퇴사" &&
     !!payroll &&
     !payLoading &&
     !payError;
 
+  const canRegisterPay = canEditPay && payroll.payrollId === null;
+  const canUpdatePay = canEditPay && payroll.payrollId !== null;
+  const canViewPay =
+    isMaster &&
+    !!selected &&
+    selected.employmentStatus !== "퇴사" &&
+    !!payroll &&
+    !payLoading &&
+    !payError;
+  const canViewStatement = canViewPay && payroll.payrollId !== null;
+
+  function clearPayrollHistory() {
+    historyRequestRef.current += 1;
+    setPayrollHistory([]);
+    setHistoryLoading(false);
+    setHistoryError("");
+  }
+
   function chooseDept(value) {
+    clearPayrollHistory();
+    setModal("");
     setSelectedDept(value);
     setSelectedId(null);
     setCurrentPage(1);
@@ -638,11 +832,15 @@ export default function UnifiedEmployees() {
   }
 
   function chooseEmployee(emp) {
+    clearPayrollHistory();
+    setModal("");
     setSelectedId(emp.employeeId);
     setDetailTab("info");
   }
 
   function reset() {
+    clearPayrollHistory();
+    setModal("");
     setSearch("");
     setSelectedDept("전체");
     setEmploymentStatus("전체");
@@ -864,63 +1062,102 @@ export default function UnifiedEmployees() {
         : { ...emptyPay }
     );
 
-    setModal("payroll");
+     setModal("payroll");
+  }
+
+  async function openPayrollHistory() {
+    if (!canViewPay || !selected) {
+      return;
+    }
+
+    const employeeId = selected.employeeId;
+    const requestId = historyRequestRef.current + 1;
+
+    historyRequestRef.current = requestId;
+    setPayrollHistory([]);
+    setHistoryError("");
+    setHistoryLoading(true);
+    setModal("payroll-history");
+
+    try {
+      const response = await getHrPayrollHistory(employeeId);
+
+      if (
+        !response.data.success ||
+        !Array.isArray(response.data.data)
+      ) {
+        throw new Error("급여 이력 응답 형식이 올바르지 않습니다.");
+      }
+
+      if (requestId === historyRequestRef.current) {
+        setPayrollHistory(response.data.data);
+      }
+    } catch (e) {
+      if (requestId === historyRequestRef.current) {
+        setHistoryError(apiError(e, "급여 이력 조회에 실패했습니다."));
+      }
+    } finally {
+      if (requestId === historyRequestRef.current) {
+        setHistoryLoading(false);
+      }
+    }
+  }
+
+  function openPayrollStatement() {
+    if (!canViewStatement) {
+      return;
+    }
+
+    setModal("payroll-statement");
+  }
+
+  // 급여 목록 다시 조회
+  async function reloadPayrolls() {
+    const response = await getHrPayrolls(payMonth);
+
+    if (
+      !response.data.success ||
+      !Array.isArray(response.data.data)
+    ) {
+      throw new Error("급여 재조회에 실패했습니다.");
+    }
+
+    setPayrolls(response.data.data);
   }
 
   async function savePayroll(event) {
     event.preventDefault();
 
-    if (!canEditPay || modal !== "payroll") {
+    if (!canEditPay || modal !== "payroll" || saving) {
       return;
     }
 
-    const names = [
-      "baseSalary",
-      "allowance",
-      "bonus",
-      "deduction"
-    ];
+    const calculation = calculatePayroll(payForm);
 
-    const amounts = names.map((name) =>
-      Number(payForm[name])
-    );
-
-    if (
-      amounts.some(
-        (amount, i) =>
-          payForm[names[i]] === "" ||
-          !Number.isSafeInteger(amount) ||
-          amount < 0
-      )
-    ) {
-      setError("급여 금액은 0 이상의 정수로 입력해 주세요.");
+    if (!calculation) {
+      setError(
+        "급여는 0 이상의 정수로 입력해야 하며, " +
+        "공제액은 세전 총액을 초과할 수 없습니다."
+      );
       return;
     }
 
-    if (
-      amounts[3] >
-      amounts[0] + amounts[1] + amounts[2]
-    ) {
-      setError("공제액은 세전 총액보다 클 수 없습니다.");
-      return;
-    }
+    const values = {
+      baseSalary: Number(payForm.baseSalary),
+      allowance: Number(payForm.allowance),
+      bonus: Number(payForm.bonus),
+      deduction: Number(payForm.deduction),
+      paymentDate: payForm.paymentDate,
+      paymentStatus: payForm.paymentStatus
+    };
 
     setSaving(true);
     setError("");
     setNotice("");
 
-    const values = {
-      baseSalary: amounts[0],
-      allowance: amounts[1],
-      bonus: amounts[2],
-      deduction: amounts[3],
-      paymentDate: payForm.paymentDate,
-      paymentStatus: payForm.paymentStatus
-    };
-
     try {
       const response =
-        payroll.payrollId !== null
+        payroll.payrollId != null
           ? await updateHrPayroll(
             payroll.payrollId,
             values
@@ -932,19 +1169,11 @@ export default function UnifiedEmployees() {
           });
 
       if (!response.data.success) {
-        throw new Error("급여 저장 응답이 올바르지 않습니다.");
+        throw new Error("급여 저장에 실패했습니다.");
       }
 
-      const next = await getHrPayrolls(payMonth);
+      await reloadPayrolls();
 
-      if (
-        !next.data.success ||
-        !Array.isArray(next.data.data)
-      ) {
-        throw new Error("급여 재조회에 실패했습니다.");
-      }
-
-      setPayrolls(next.data.data);
       setModal("");
 
       setNotice(
@@ -956,6 +1185,7 @@ export default function UnifiedEmployees() {
       setSaving(false);
     }
   }
+
 
   return (
     <div className="border-container hr-employee-management hr-single-management">
@@ -1504,16 +1734,35 @@ export default function UnifiedEmployees() {
                           />
                         </div>
 
-                        <div className="employee-detail-actions">
+                        <div className="employee-detail-actions hr-payroll-actions">
                           <button
                             type="button"
                             className="erp-primary-button"
                             onClick={openPayrollModal}
-                            disabled={!canEditPay || saving}
+                            disabled={!canRegisterPay || saving}
                           >
-                            {payroll.payrollId === null
-                              ? "급여 등록"
-                              : "급여 수정"}
+                            급여 등록
+                          </button>
+                          <button
+                            type="button"
+                            onClick={openPayrollModal}
+                            disabled={!canUpdatePay || saving}
+                          >
+                            급여 수정
+                          </button>
+                          <button
+                            type="button"
+                            onClick={openPayrollHistory}
+                            disabled={!canViewPay || saving}
+                          >
+                            급여 내역 조회
+                          </button>
+                          <button
+                            type="button"
+                            onClick={openPayrollStatement}
+                            disabled={!canViewStatement || saving}
+                          >
+                            급여명세서
                           </button>
                         </div>
                       </>
@@ -1575,7 +1824,9 @@ export default function UnifiedEmployees() {
       {/* 급여 등록·수정 모달 */}
       {modal === "payroll" && selected && (
         <ModalBase
-          title={`${selected.name} · ${payMonth} 급여 관리`}
+          title={`${selected.name} · ${payMonth} ${
+            payroll?.payrollId === null ? "급여 등록" : "급여 수정"
+          }`}
           onClose={() => setModal("")}
           layout={
             <PayrollForm
@@ -1590,6 +1841,27 @@ export default function UnifiedEmployees() {
           }
         />
       )}
+
+      {modal === "payroll-history" && selected && (
+        <PayrollHistoryModal
+          employee={selected}
+          history={payrollHistory}
+          loading={historyLoading}
+          error={historyError}
+          onClose={() => setModal("")}
+        />
+      )}
+
+      {modal === "payroll-statement" &&
+        selected &&
+        payroll &&
+        payroll.payrollId !== null && (
+          <PayrollStatementModal
+            employee={selected}
+            payroll={payroll}
+            onClose={() => setModal("")}
+          />
+        )}
     </div>
   );
 }

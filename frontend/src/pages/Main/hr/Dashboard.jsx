@@ -222,6 +222,17 @@ export default function Dashboard() {
                 <span className="subtitle">인사관리 대시보드</span>
             </header>
 
+            {attendanceLoading && (
+                <p className="hr-dashboard-feedback" role="status">
+                    근태 정보를 불러오는 중입니다.
+                </p>
+            )}
+            {attendanceError && (
+                <p className="hr-dashboard-feedback error" role="alert">
+                    {attendanceError}
+                </p>
+            )}
+
             <section className="stats-section">
                 <StatisticsCard title="전체직원" count={String(employees.length)} stiyle={1} />
                 <StatisticsCard title="오늘출근" count={String(todayWorkingCount)} stiyle={1} />

@@ -7,6 +7,7 @@ import { getLoginUser } from "../../../../utils/authStorage";
 import {
   decideHrLeave,
   getHrAttendance,
+  getHrLeavesByYear,
   getHrLeaves,
   getHrOrganization,
   updateHrAttendance
@@ -117,6 +118,441 @@ function getLeaveStatusClass(status) {
   return "late";
 }
 
+function getWorkMinutes(clockIn, clockOut) {
+  if (!clockIn || !clockOut) return null;
+
+  const start = clockIn.split(":");
+  const end = clockOut.split(":");
+  const minutes =
+    Number(end[0]) * 60 +
+    Number(end[1]) -
+    Number(start[0]) * 60 -
+    Number(start[1]);
+
+  return Number.isSafeInteger(minutes) && minutes >= 0 ? minutes : null;
+}
+
+function formatMinutes(minutes) {
+  if (!Number.isSafeInteger(minutes)) return "-";
+
+  return `${Math.floor(minutes / 60)}시간 ${String(minutes % 60).padStart(
+    2,
+    "0"
+  )}분`;
+}
+
+function getAttendanceAnomaly(attendance) {
+  if (attendance.status === "지각") return "지각";
+  if (attendance.status === "미출근") return "결근";
+  if (attendance.status === "출장") return "출장";
+
+  const workMinutes = getWorkMinutes(
+    attendance.clockIn,
+    attendance.clockOut
+  );
+
+  return workMinutes !== null && workMinutes < 8 * 60
+    ? "조기퇴근"
+    : "";
+}
+
+function AttendanceAnomalies({ records }) {
+  const anomalies = records
+    .map((attendance) => ({
+      ...attendance,
+      anomalyType: getAttendanceAnomaly(attendance)
+    }))
+    .filter((attendance) => attendance.anomalyType);
+
+  if (anomalies.length === 0) {
+    return <p className="attendance-empty">이상 근태 기록이 없습니다.</p>;
+  }
+
+  return (
+    <div className="attendance-subview">
+      <div className="attendance-subview-heading">
+        <div>
+          <h3>이상 근태</h3>
+          <p>지각·결근·조기퇴근·출장 기록을 확인합니다.</p>
+        </div>
+        <strong>{anomalies.length}건</strong>
+      </div>
+      <div className="table-shell">
+        <table>
+          <thead>
+            <tr>
+              <th>날짜</th>
+              <th>출근 시간</th>
+              <th>퇴근 시간</th>
+              <th>구분</th>
+              <th>근무시간</th>
+              <th>메모</th>
+            </tr>
+          </thead>
+          <tbody>
+            {anomalies.map((attendance) => (
+              <tr key={attendance.attendanceId}>
+                <td>{attendance.attendanceDate}</td>
+                <td>{attendance.clockIn || "-"}</td>
+                <td>{attendance.clockOut || "-"}</td>
+                <td>
+                  <span className="status-tag late">
+                    {attendance.anomalyType}
+                  </span>
+                </td>
+                <td>
+                  {formatMinutes(
+                    getWorkMinutes(attendance.clockIn, attendance.clockOut)
+                  )}
+                </td>
+                <td>{attendance.memo || "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function AttendanceProgressBar({ label, percent, value, detail, tone = "brand" }) {
+  const safePercent = Math.min(100, Math.max(0, Number(percent) || 0));
+
+  return (
+    <div className="attendance-progress-item">
+      <div className="attendance-progress-heading">
+        <div>
+          <strong>{label}</strong>
+          <span>{detail}</span>
+        </div>
+        <b>{value}</b>
+      </div>
+      <div
+        className="attendance-progress-track"
+        role="progressbar"
+        aria-label={label}
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow={Math.round(safePercent)}
+      >
+        <div
+          className={`attendance-progress-fill ${tone}`}
+          style={{ width: `${safePercent}%` }}
+        />
+      </div>
+      <span className="attendance-progress-percent">
+        {Math.round(safePercent)}%
+      </span>
+    </div>
+  );
+}
+
+function AttendanceStatistics({ records, month, employee }) {
+  const monthRecords = records.filter((attendance) =>
+    String(attendance.attendanceDate || "").startsWith(month)
+  );
+  const workMinutes = monthRecords.reduce((total, attendance) => {
+    const minutes = getWorkMinutes(attendance.clockIn, attendance.clockOut);
+    return total + (minutes || 0);
+  }, 0);
+  const overtimeMinutes = monthRecords.reduce((total, attendance) => {
+    const minutes = getWorkMinutes(attendance.clockIn, attendance.clockOut);
+    return total + (minutes && minutes > 8 * 60 ? minutes - 8 * 60 : 0);
+  }, 0);
+  const recordCount = monthRecords.length;
+  const clockedInCount = monthRecords.filter((item) => item.clockIn).length;
+  const normalCount = monthRecords.filter((item) => item.status === "정상").length;
+  const lateCount = monthRecords.filter((item) => item.status === "지각").length;
+  const leaveCount = monthRecords.filter((item) => item.status === "휴가").length;
+  const businessTripCount = monthRecords.filter((item) => item.status === "출장").length;
+  const absenceCount = monthRecords.filter((item) => item.status === "미출근").length;
+  const expectedWorkMinutes = clockedInCount * 8 * 60;
+  const workTimeRate = expectedWorkMinutes
+    ? (workMinutes / expectedWorkMinutes) * 100
+    : 0;
+
+  return (
+    <div className="attendance-subview">
+      <div className="attendance-subview-heading">
+        <div>
+          <h3>{employee.employeeName} 월별 근태 통계</h3>
+          <p>{month || "기준 월 미선택"} 기준 실제 근태 기록</p>
+        </div>
+      </div>
+      {monthRecords.length === 0 ? (
+        <p className="attendance-empty">해당 월의 근태 기록이 없습니다.</p>
+      ) : (
+        <div className="attendance-statistics-content">
+          <div className="attendance-progress-card">
+            <div className="attendance-progress-card-heading">
+              <div>
+                <strong>월별 근태 진행 현황</strong>
+                <span>기존 일정 진행률 바의 UI를 근태 데이터에 맞게 적용했습니다.</span>
+              </div>
+              <b>{recordCount}건</b>
+            </div>
+
+            <div className="attendance-progress-list">
+              <AttendanceProgressBar
+                label="정상 출근율"
+                percent={recordCount ? (normalCount / recordCount) * 100 : 0}
+                value={`${normalCount}건`}
+                detail={`전체 근태 기록 ${recordCount}건`}
+                tone="brand"
+              />
+              <AttendanceProgressBar
+                label="출근 처리율"
+                percent={recordCount ? (clockedInCount / recordCount) * 100 : 0}
+                value={`${clockedInCount}건`}
+                detail="출근 시간이 저장된 실제 기록"
+                tone="success"
+              />
+              <AttendanceProgressBar
+                label="지각 비율"
+                percent={recordCount ? (lateCount / recordCount) * 100 : 0}
+                value={`${lateCount}건`}
+                detail="DB 상태값이 지각인 기록"
+                tone="warning"
+              />
+              <AttendanceProgressBar
+                label="총 근무시간 달성률"
+                percent={workTimeRate}
+                value={formatMinutes(workMinutes)}
+                detail={`출근일 ${clockedInCount}일 × 8시간 기준 · 초과 ${formatMinutes(overtimeMinutes)}`}
+                tone="info"
+              />
+            </div>
+
+            <div className="attendance-progress-statuses">
+              {[
+                ["정상", normalCount, "brand"],
+                ["지각", lateCount, "warning"],
+                ["휴가", leaveCount, "info"],
+                ["출장", businessTripCount, "success"],
+                ["결근", absenceCount, "danger"]
+              ].map(([label, count, tone]) => (
+                <div className="attendance-progress-status" key={label}>
+                  <span>{label}</span>
+                  <strong className={tone}>{count}건</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LeavePendingView({ leaves, loginEmployeeId, onDecide, saving }) {
+  const pending = leaves.filter(
+    (leave) => leave.applicationStatus === "승인대기"
+  );
+
+  if (pending.length === 0) {
+    return <p className="attendance-empty">승인 대기 중인 휴가 신청이 없습니다.</p>;
+  }
+
+  return (
+    <div className="attendance-subview">
+      <div className="attendance-subview-heading">
+        <div>
+          <h3>승인 대기</h3>
+          <p>현재 로그인한 승인자에게 배정된 신청만 처리할 수 있습니다.</p>
+        </div>
+        <strong>{pending.length}건</strong>
+      </div>
+      <div className="table-shell">
+        <table>
+          <thead>
+            <tr>
+              <th>신청 직원</th>
+              <th>휴가 유형</th>
+              <th>휴가 기간</th>
+              <th>일수</th>
+              <th>신청 사유</th>
+              <th>관리</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pending.map((leave) => {
+              const canDecide =
+                Number(leave.approverId) === Number(loginEmployeeId);
+
+              return (
+                <tr key={leave.leaveId}>
+                  <td>{leave.employeeName}</td>
+                  <td>{leave.leaveType || "휴가"}</td>
+                  <td>{leave.startDate} ~ {leave.endDate}</td>
+                  <td>{leave.leaveDays ?? "-"}일</td>
+                  <td>{leave.reason || "-"}</td>
+                  <td>
+                    {canDecide ? (
+                      <div className="attendance-leave-actions">
+                        <button
+                          type="button"
+                          className="erp-primary-button"
+                          onClick={() => onDecide(leave, "approve")}
+                          disabled={saving}
+                        >
+                          승인
+                        </button>
+                        <button
+                          type="button"
+                          className="attendance-leave-reject-button"
+                          onClick={() => onDecide(leave, "reject")}
+                          disabled={saving}
+                        >
+                          반려
+                        </button>
+                      </div>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function LeaveBalanceView({ employees, leaves, year }) {
+  const approved = leaves.filter(isApprovedLeave);
+  const rows = employees.map((employee) => {
+    const employeeLeaves = approved.filter(
+      (leave) => String(leave.employeeId) === String(employee.employeeId)
+    );
+    const usedDays = employeeLeaves.reduce(
+      (total, leave) => total + Number(leave.leaveDays || 0),
+      0
+    );
+
+    return {
+      employee,
+      usedDays,
+      requestCount: employeeLeaves.length
+    };
+  });
+
+  return (
+    <div className="attendance-subview">
+      <div className="attendance-subview-heading">
+        <div>
+          <h3>직원별 연차 현황</h3>
+          <p>{year}년 승인 완료된 휴가 사용량입니다.</p>
+        </div>
+      </div>
+      <div className="table-shell">
+        <table>
+          <thead>
+            <tr>
+              <th>직원명</th>
+              <th>부서</th>
+              <th>승인 신청</th>
+              <th>사용 일수</th>
+              <th>잔여 일수</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.employee.employeeId}>
+                <td>{row.employee.employeeName}</td>
+                <td>{row.employee.departmentName || "-"}</td>
+                <td>{row.requestCount}건</td>
+                <td>{row.usedDays}일</td>
+                <td>잔여일수 데이터 없음</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="attendance-leave-api-notice">
+        현재 DB에는 연차 부여량·잔여량 컬럼이 없어 승인 완료 휴가의 실제 사용량만 표시합니다.
+      </p>
+    </div>
+  );
+}
+
+function AttendanceSubTabs({
+  activeTab,
+  isAttendanceTab,
+  isAttendanceRecords,
+  setActiveTab
+}) {
+  return (
+    <nav
+      className="attendance-tabs attendance-selected-subtabs"
+      aria-label={isAttendanceTab ? "근태 조회 구분" : "휴가 조회 구분"}
+    >
+      {isAttendanceTab ? (
+        <>
+          <button
+            type="button"
+            role="tab"
+            className={isAttendanceRecords ? "active" : ""}
+            aria-selected={isAttendanceRecords}
+            onClick={() => setActiveTab("attendance-records")}
+          >
+            월별 기록
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={activeTab === "attendance-anomalies" ? "active" : ""}
+            aria-selected={activeTab === "attendance-anomalies"}
+            onClick={() => setActiveTab("attendance-anomalies")}
+          >
+            이상 근태
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={activeTab === "attendance-statistics" ? "active" : ""}
+            aria-selected={activeTab === "attendance-statistics"}
+            onClick={() => setActiveTab("attendance-statistics")}
+          >
+            월별 통계
+          </button>
+        </>
+      ) : (
+        <>
+          <button
+            type="button"
+            role="tab"
+            className={activeTab === "leave-requests" ? "active" : ""}
+            aria-selected={activeTab === "leave-requests"}
+            onClick={() => setActiveTab("leave-requests")}
+          >
+            신청 목록
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={activeTab === "leave-pending" ? "active" : ""}
+            aria-selected={activeTab === "leave-pending"}
+            onClick={() => setActiveTab("leave-pending")}
+          >
+            승인 대기
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={activeTab === "leave-balance" ? "active" : ""}
+            aria-selected={activeTab === "leave-balance"}
+            onClick={() => setActiveTab("leave-balance")}
+          >
+            연차 현황
+          </button>
+        </>
+      )}
+    </nav>
+  );
+}
+
 function AttendanceEditForm({ attendance, onSave, onCancel, saving }) {
   const [form, setForm] = useState({
     status: attendance.status || "정상",
@@ -193,11 +629,14 @@ export default function Attendance() {
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("전체");
   const [keyword, setKeyword] = useState("");
-  const [activeTab, setActiveTab] = useState("attendance");
+  const [activeTab, setActiveTab] = useState("attendance-records");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
   const [leaveData, setLeaveData] = useState([]);
   const [leaveLoading, setLeaveLoading] = useState(false);
   const [leaveError, setLeaveError] = useState("");
+  const [leaveYearData, setLeaveYearData] = useState([]);
+  const [leaveYearLoading, setLeaveYearLoading] = useState(false);
+  const [leaveYearError, setLeaveYearError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -317,6 +756,53 @@ export default function Attendance() {
     };
   }, [selectedMonth]);
 
+  useEffect(() => {
+    if (activeTab !== "leave-balance") {
+      return undefined;
+    }
+
+    let ignore = false;
+    const year = selectedMonth.slice(0, 4) || String(new Date().getFullYear());
+
+    async function loadLeaveYear() {
+      setLeaveYearLoading(true);
+      setLeaveYearError("");
+
+      try {
+        const response = await getHrLeavesByYear(year);
+
+        if (
+          !response.data.success ||
+          !Array.isArray(response.data.data)
+        ) {
+          throw new Error("연차 현황 응답 형식이 올바르지 않습니다.");
+        }
+
+        if (!ignore) {
+          setLeaveYearData(response.data.data);
+        }
+      } catch (requestError) {
+        if (!ignore) {
+          setLeaveYearData([]);
+          setLeaveYearError(
+            requestError.response?.data?.message ||
+            "연차 현황을 불러오지 못했습니다."
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setLeaveYearLoading(false);
+        }
+      }
+    }
+
+    loadLeaveYear();
+
+    return () => {
+      ignore = true;
+    };
+  }, [activeTab, selectedMonth]);
+
   // 부서와 검색어를 동시에 적용해 왼쪽 직원 목록을 구성합니다.
   const departmentList = createDepartmentList(departments);
   const employeeList = createEmployeeList(
@@ -327,6 +813,9 @@ export default function Attendance() {
   const selectedEmployee = employeeList.find(
     (employee) => String(employee.employeeId) === String(selectedEmployeeId)
   );
+  const isAttendanceTab = activeTab.startsWith("attendance-");
+  const isLeaveTab = activeTab.startsWith("leave-");
+  const isAttendanceRecords = activeTab === "attendance-records";
 
   useEffect(() => {
     // 필터 변경으로 기존 선택이 사라지면 첫 번째 직원을 자동 선택합니다.
@@ -581,36 +1070,144 @@ export default function Attendance() {
 
       {/* 두 탭에 공통으로 적용되는 조회 조건 */}
       <section className="attendance-filter" aria-label="근태·휴가 조회 조건">
-        <nav className="attendance-tabs" aria-label="근태관리 메뉴">
-          <button
-            type="button"
-            role="tab"
-            className={activeTab === "attendance" ? "active" : ""}
-            aria-selected={activeTab === "attendance"}
-            onClick={() => setActiveTab("attendance")}
-          >
-            근태 기록
-          </button>
-          <button
-            type="button"
-            role="tab"
-            className={activeTab === "leave" ? "active" : ""}
-            aria-selected={activeTab === "leave"}
-            onClick={() => setActiveTab("leave")}
-          >
-            휴가 신청·승인
-          </button>
-        </nav>
+        <div className="attendance-detail-navigation">
+          <div className="attendance-navigation">
+            <nav
+              className="attendance-tabs attendance-main-tabs"
+              aria-label="근태관리 메뉴"
+            >
+              <button
+                type="button"
+                role="tab"
+                className={isAttendanceTab ? "active" : ""}
+                aria-selected={isAttendanceTab}
+                onClick={() => setActiveTab("attendance-records")}
+              >
+                근태 기록
+              </button>
+              <button
+                type="button"
+                role="tab"
+                className={isLeaveTab ? "active" : ""}
+                aria-selected={isLeaveTab}
+                onClick={() => setActiveTab("leave-requests")}
+              >
+                휴가 신청·승인
+              </button>
+            </nav>
 
-        <label className="attendance-filter-field">
+            <nav
+              className="attendance-tabs attendance-subtabs"
+              aria-label={isAttendanceTab ? "근태 조회 구분" : "휴가 조회 구분"}
+            >
+              {isAttendanceTab ? (
+                <>
+                  <button
+                    type="button"
+                    role="tab"
+                    className={isAttendanceRecords ? "active" : ""}
+                    aria-selected={isAttendanceRecords}
+                    onClick={() => setActiveTab("attendance-records")}
+                  >
+                    월별 기록
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    className={activeTab === "attendance-anomalies" ? "active" : ""}
+                    aria-selected={activeTab === "attendance-anomalies"}
+                    onClick={() => setActiveTab("attendance-anomalies")}
+                  >
+                    이상 근태
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    className={activeTab === "attendance-statistics" ? "active" : ""}
+                    aria-selected={activeTab === "attendance-statistics"}
+                    onClick={() => setActiveTab("attendance-statistics")}
+                  >
+                    월별 통계
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    role="tab"
+                    className={activeTab === "leave-requests" ? "active" : ""}
+                    aria-selected={activeTab === "leave-requests"}
+                    onClick={() => setActiveTab("leave-requests")}
+                  >
+                    신청 목록
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    className={activeTab === "leave-pending" ? "active" : ""}
+                    aria-selected={activeTab === "leave-pending"}
+                    onClick={() => setActiveTab("leave-pending")}
+                  >
+                    승인 대기
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    className={activeTab === "leave-balance" ? "active" : ""}
+                    aria-selected={activeTab === "leave-balance"}
+                    onClick={() => setActiveTab("leave-balance")}
+                  >
+                    연차 현황
+                  </button>
+                </>
+              )}
+            </nav>
+          </div>
+
+          <div className="attendance-detail-actions">
+            {isLeaveTab && (
+              <button
+                type="button"
+                className="erp-primary-button"
+                onClick={() => navigate("/main/mytesk/draft-create?type=leave")}
+              >
+                휴가신청
+              </button>
+            )}
+
+            {isMaster && isAttendanceRecords && (
+              <button
+                type="button"
+                className="erp-primary-button"
+                onClick={() => {
+                  if (selectedAttendance.length > 0) {
+                    openAttendanceEdit(selectedAttendance[0]);
+                  }
+                }}
+                disabled={selectedAttendance.length === 0}
+                title={
+                  selectedAttendance.length === 0
+                    ? "수정할 일별 근태 기록이 없습니다."
+                    : "선택 직원의 최근 일별 근태 기록을 수정합니다."
+                }
+              >
+                근태수정
+              </button>
+            )}
+          </div>
+
+        </div>
+
+          <div className="attendance-filter-controls">
+          <label className="attendance-filter-field">
       
           <input
             type="month"
             value={selectedMonth}
             onChange={(event) => setSelectedMonth(event.target.value)}
           />
-        </label>
-        <label className="attendance-filter-field">
+          </label>
+          <label className="attendance-filter-field">
           
           <select
             value={selectedDepartment}
@@ -623,8 +1220,8 @@ export default function Attendance() {
               </option>
             ))}
           </select>
-        </label>
-        <label className="attendance-filter-field attendance-keyword-field">
+          </label>
+          <label className="attendance-filter-field attendance-keyword-field">
           
           <input
             type="text"
@@ -632,65 +1229,17 @@ export default function Attendance() {
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
           />
-        </label>
+          </label>
 
-        <button
-          type="button"
-          className="attendance-reset-button"
-          onClick={resetFilters}
-        >
-          초기화
-        </button>
-
-        {activeTab === "leave" && (
           <button
             type="button"
-            className="erp-primary-button"
-            onClick={() => navigate("/main/mytesk/draft-create?type=leave")}
+            className="attendance-reset-button"
+            onClick={resetFilters}
           >
-            휴가신청
+            초기화
           </button>
-        )}
 
-        {isMaster && activeTab === "attendance" && (
-          <button
-            type="button"
-            className="erp-primary-button"
-            onClick={() => {
-              if (activeTab === "leave") {
-                navigate("/main/mytesk/draft-create?type=leave");
-                return;
-              }
-
-              if (isMaster && selectedAttendance.length > 0) {
-                openAttendanceEdit(selectedAttendance[0]);
-              }
-            }}
-            disabled={
-              activeTab === "attendance" &&
-              (!isMaster || selectedAttendance.length === 0)
-            }
-            style={{
-              visibility:
-                activeTab === "attendance" && !isMaster
-                  ? "hidden"
-                  : "visible"
-            }}
-            aria-hidden={activeTab === "attendance" && !isMaster}
-            tabIndex={
-              activeTab === "attendance" && !isMaster ? -1 : 0
-            }
-            title={
-              activeTab === "leave"
-                ? "휴가 신청서를 작성합니다."
-                : selectedAttendance.length === 0
-                  ? "수정할 일별 근태 기록이 없습니다."
-                  : "선택 직원의 최근 일별 근태 기록을 수정합니다."
-            }
-          >
-            {activeTab === "leave" ? "휴가신청" : "근태수정"}
-          </button>
-        )}
+        </div>
       </section>
 
       {/* 본문은 근태·휴가 모두 직원 목록(왼쪽) + 상세 내용(오른쪽) 구조입니다. */}
@@ -743,7 +1292,7 @@ export default function Attendance() {
                       </span>
 
                       <span className="employee-attendance-rate">
-                        {activeTab === "attendance" ? (
+                        {isAttendanceTab ? (
                           <>
                             <small>출근율</small>
                             <strong>
@@ -768,12 +1317,22 @@ export default function Attendance() {
 
           {/* 선택 직원별 상세 화면 */}
           <section className="attendance-detail-panel">
+            {selectedEmployee && (
+              <AttendanceSubTabs
+                activeTab={activeTab}
+                isAttendanceTab={isAttendanceTab}
+                isAttendanceRecords={isAttendanceRecords}
+                setActiveTab={setActiveTab}
+              />
+            )}
+
             {!selectedEmployee ? (
               <p className="attendance-empty">
                 상세 정보를 확인할 직원을 선택해 주세요.
               </p>
-            ) : activeTab === "attendance" ? (
-              <>
+            ) : isAttendanceTab ? (
+              isAttendanceRecords ? (
+                <>
                 <div className="attendance-detail-header">
                   <div>
                     <span className="attendance-badge">선택 직원</span>
@@ -819,16 +1378,31 @@ export default function Attendance() {
                 ) : (
                   <p className="attendance-empty">해당 월의 근태 기록이 없습니다.</p>
                 )}
-              </>
-            ) : leaveLoading ? (
+                </>
+              ) : activeTab === "attendance-anomalies" ? (
+                <AttendanceAnomalies records={selectedAttendance} />
+              ) : (
+                <AttendanceStatistics
+                  records={selectedAttendance}
+                  month={selectedMonth}
+                  employee={selectedEmployee}
+                />
+              )
+            ) :
+              (activeTab === "leave-requests" ||
+                activeTab === "leave-pending") &&
+              leaveLoading ? (
               <p className="attendance-feedback" role="status">
                 휴가 신청 내역을 불러오는 중입니다.
               </p>
-            ) : leaveError ? (
+            ) :
+              (activeTab === "leave-requests" ||
+                activeTab === "leave-pending") &&
+              leaveError ? (
               <p className="attendance-feedback attendance-error" role="alert">
                 {leaveError}
               </p>
-            ) : (
+            ) : activeTab === "leave-requests" ? (
               <>
                 <div className="attendance-detail-header">
                   <div>
@@ -878,6 +1452,27 @@ export default function Attendance() {
                   현재 결재 순서의 승인자는 이 화면에서 승인·반려할 수 있습니다.
                 </p>
               </>
+            ) : activeTab === "leave-pending" ? (
+              <LeavePendingView
+                leaves={leaveData}
+                loginEmployeeId={loginUser?.employeeKey}
+                onDecide={decideLeave}
+                saving={saving}
+              />
+            ) : leaveYearLoading ? (
+              <p className="attendance-feedback" role="status">
+                연차 현황을 불러오는 중입니다.
+              </p>
+            ) : leaveYearError ? (
+              <p className="attendance-feedback attendance-error" role="alert">
+                {leaveYearError}
+              </p>
+            ) : (
+              <LeaveBalanceView
+                employees={employees}
+                leaves={leaveYearData}
+                year={selectedMonth.slice(0, 4) || String(new Date().getFullYear())}
+              />
             )}
           </section>
         </div>
