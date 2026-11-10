@@ -25,6 +25,12 @@ export default function ProjectModul({projectlist}) {
     getProjectData();
   },[]);
 
+  const [isModal, setIsModal] = useState(0);
+  const oppenModal = function(){
+    setIsModal(1)
+  };
+  const clossModal = function(){setIsModal(0)};
+
   return (
     <div className="border-container">
       <header className="dashboard-header">
@@ -49,26 +55,22 @@ export default function ProjectModul({projectlist}) {
               <option>완료날짜</option>
             </select>
           </div>
-          <div style={{overflowY:'scroll', display: 'flex', flexFlow: 'column', flex:'1'}}>
+          <div style={{overflowY:'scroll', display: 'flex', flexFlow: 'column', flex:'1', gap: '10px'}}>
             {projectData.map((item, index)=>{
-              return <ProjectListModule key={index} data={item}/>
+              return <ProjectListModule key={index} data={item} buttonClick={oppenModal}/>
             })}
           </div>
           
         </div>
-        <div style={{
-          flex: '1',
-        }}>
+        <div style={{ flex: '1'}}>
             <BasicCalendar schedule={projectlist}/>
         </div>
-
       </div>
-      
     </div>
   );
 }
 
-function ProjectListModule({data}){
+function ProjectListModule({data, buttonClick}){
   return (
     <div className='boder' style={{display:'flex', flexFlow:'column', height: '200px', padding: '20px 30px', marginRight: '30px'}}>
       <div>
@@ -77,12 +79,17 @@ function ProjectListModule({data}){
       <div style={{display:'flex'}}>
         <div>
           <h3>{data.project_name}</h3>
-          <p style = {{fontSize : '13px'}}>시작일: {data.start}</p>
-          <p style = {{fontSize : '13px'}}>종료일: {data.end}</p>
+          <div style={{display:'flex', gap: '15px'}}>
+            <p style = {{fontSize : '13px'}}>시작일: {data.start}</p>
+            <p style = {{fontSize : '13px'}}>종료일: {data.end}</p>
+          </div>
         </div>
         <div style={{marginLeft:'auto', display:'flex', flexFlow:'column', gap:'5px'}}>
           <div className='attendance-tag tag-emerald'>상태태그</div>
-          <button style = {{fontSize:'15px'}}>버튼</button>
+          <button
+            style = {{fontSize:'15px'}}
+            onClick={buttonClick}
+          >상세보기</button>
         </div>
       </div>
     </div>
