@@ -16,6 +16,7 @@ const communityRouter = require('./routes/community');
 const financeRouter = require('./routes/financeRouters'); // main 재무 라우터
 const hrRouter = require('./routes/hrRoutes'); // main 인사 라우터
 const Attendance = require('./models/Attendance');
+const project = require('./routes/project');
 
 // 품질관리 라우터 추가
 const qualityRoutes = require('./routes/quality');
@@ -32,6 +33,7 @@ app.use('/api/AD', homSurver);
 app.use('/api/schedule', schedule);
 app.use('/api/community', communityRouter);
 app.use('/api/quality', qualityRoutes);
+app.use('/api/project', project)
 
 app.post('/api/register', async (req, res) => {
     const { employeeId, name, email, password, department, position, phone } = req.body;
