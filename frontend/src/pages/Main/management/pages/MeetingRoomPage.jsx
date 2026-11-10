@@ -24,6 +24,7 @@ function MeetingRoomPage() {
     const [refreshKey, setRefreshKey] = useState(0);
     const [reservationForm, setReservationForm] = useState(emptyForm);
     const [isSaving, setIsSaving] = useState(false);
+    const [selectedReservation, setSelectedReservation] = useState(null);
 
     useEffect(() => {
         const loadReservations = async () => {
@@ -47,22 +48,8 @@ function MeetingRoomPage() {
     }, [selectedDate, refreshKey]);
 
     const handleRoomClick = (room) => {
-        if (!selectedDate || !startTime || !endTime) {
-            alert("예약 날짜와 시작/종료 시간을 선택해주세요.");
-            return;
-        }
-
-        const isReserved = reservations.some(item =>
-            Number(item.room_id) === room.id &&
-            item.start_time < endTime &&
-            item.end_time > startTime
-        );
-
-        if (isReserved) {
-            alert("이미 예약된 시간입니다.");
-            return;
-        }
-
+        setStartTime("");
+        setEndTime("");
         setSelectedRoom(room);
     };
 
@@ -73,28 +60,24 @@ function MeetingRoomPage() {
 
     const handleReservationSubmit = async (e) => {
         e.preventDefault();
-        if (isSaving || !selectedRoom) return;
-
-        setIsSaving(true);
-
-        try {
-            const response = await axios.post(API_BASE_URL + "/meeting-rooms/reservations", {
-                roomId: selectedRoom.id,
-                reservationDate: selectedDate,
-                startTime,
-                endTime,
-                ...reservationForm
-            });
-
-            alert(response.data.message);
-            setSelectedRoom(null);
-            setReservationForm(emptyForm);
-            setRefreshKey(prev => prev + 1);
-        } catch (error) {
-            alert(error.response?.data?.message || "예약에 실패했습니다.");
-        } finally {
-            setIsSaving(false);
+    
+        if (!selectedDate || !startTime || !endTime) {
+            alert("예약 날짜와 시간을 선택해주세요.");
+            return;
         }
+    
+        const isReserved = reservations.some(item =>
+            Number(item.room_id) === selectedRoom.id &&
+            item.start_time < endTime &&
+            item.end_time > startTime
+        );
+    
+        if (isReserved) {
+            alert("이미 예약된 시간입니다.");
+            return;
+        }
+    
+        // 아래에 기존 axios.post() 예약 등록 코드 유지
     };
 
     return (
@@ -109,49 +92,50 @@ function MeetingRoomPage() {
                     <input type="date" min={getTodayString()} value={selectedDate}
                         onChange={e => setSelectedDate(e.target.value)} />
                 </label>
-                <label>
-                    시작 시간
-                    <select value={startTime} onChange={e => {
-                        setStartTime(e.target.value);
-                        if (endTime <= e.target.value) setEndTime("");
-                    }}>
-                        <option value="">시작 시간 선택</option>
-                        {timeOptions.map(time => <option key={time} value={time}>{time}</option>)}
-                    </select>
-                </label>
-                <label>
-                    종료 시간
-                    <select value={endTime} disabled={!startTime}
-                        onChange={e => setEndTime(e.target.value)}>
-                        <option value="">종료 시간 선택</option>
-                        {[...timeOptions, "24:00"].filter(time => time > startTime).map(time =>
-                            <option key={time} value={time}>{time}</option>
-                        )}
-                    </select>
-                </label>
+
             </div>
 
             <div className="meeting-room-grid">
                 {rooms.map(room => {
-                    const roomReservations = reservations.filter(item => Number(item.room_id) === room.id);
+
+                    const roomReservations = reservations.filter(
+                        item => Number(item.room_id) === room.id
+                    );
 
                     return (
-                        <button key={room.id} type="button" className="meeting-room-card"
-                            onClick={() => handleRoomClick(room)}>
+                        <div key={room.id} className="meeting-room-card">
+
                             <h3>{room.name}</h3>
-                            {roomReservations.length === 0 ? (
-                                <p>예약 없음</p>
-                            ) : (
-                                <div className="meeting-room-slots">
-                                    <span>예약된 시간</span>
-                                    {roomReservations.map(item => (
-                                        <p key={item.reservation_id}>
-                                            {item.start_time} ~ {item.end_time}
-                                        </p>
-                                    ))}
-                                </div>
-                            )}
-                        </button>
+
+                            <div className="meeting-room-slots">
+                                {roomReservations.length === 0 ? (
+                                    <p>예약 없음</p>
+                                ) : (
+                                    roomReservations.map(item => (
+                                        <div key={item.reservation_id}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedReservation(item)}
+                                            >
+                                                {item.title}
+                                            </button>
+
+                                            <span>
+                                                {item.start_time} ~ {item.end_time}
+                                            </span>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => handleRoomClick(room)}
+                            >
+                                예약하기
+                            </button>
+
+                        </div>
                     );
                 })}
             </div>
@@ -160,7 +144,46 @@ function MeetingRoomPage() {
                 <ModalBase title={selectedRoom.name + " 예약"} onClose={() => setSelectedRoom(null)}
                     layout={
                         <form className="draft-box meeting-room-form" onSubmit={handleReservationSubmit}>
-                            <p>{selectedRoom.name} · {selectedDate} · {startTime} ~ {endTime}</p>
+
+                            <p>예약 날짜: {selectedDate}</p>
+
+                            <div className="draft-row">
+                                <label>
+                                    시작 시간
+                                    <select
+                                        value={startTime}
+                                        onChange={(e) => {
+                                            setStartTime(e.target.value);
+                                            setEndTime("");
+                                        }}
+                                        required
+                                    >
+                                        <option value="">시작 시간 선택</option>
+                                        {timeOptions.map(time => (
+                                            <option key={time} value={time}>
+                                                {time}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+
+                                <label>
+                                    종료 시간
+                                    <select
+                                        value={endTime}
+                                        onChange={(e) => setEndTime(e.target.value)}
+                                        disabled={!startTime}
+                                        required
+                                    >
+                                        <option value="">종료 시간 선택</option>
+                                        {[...timeOptions, "24:00"].filter(time => time > startTime).map(time => (
+                                            <option key={time} value={time}>
+                                                {time}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                            </div>
 
                             <label>회의 제목
                                 <input name="title" value={reservationForm.title}
@@ -189,6 +212,7 @@ function MeetingRoomPage() {
                                     {isSaving ? "예약 처리 중..." : "예약하기"}
                                 </button>
                             </div>
+
                         </form>
                     }
                 />

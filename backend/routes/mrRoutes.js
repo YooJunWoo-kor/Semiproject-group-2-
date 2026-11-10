@@ -133,6 +133,10 @@ router.get("/reservations", async (req, res) => {
                 reservation_id,
                 room_id,
                 title,
+                content,
+                reserver_name,
+                phone,
+                email,
                 TIME_FORMAT(start_time, '%H:%i') AS start_time,
                 TIME_FORMAT(end_time, '%H:%i') AS end_time
             FROM meeting_room_reservations
