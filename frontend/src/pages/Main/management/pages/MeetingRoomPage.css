@@ -12,7 +12,9 @@
 }
 
 .meeting-room-filter > label {
-    min-width: 170px;
+    flex: 0 0 190px;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .meeting-room-grid {
@@ -146,5 +148,5 @@
 @media (max-width: 560px) {
     .meeting-room-page { padding: 16px; }
     .meeting-room-grid { grid-template-columns: minmax(0, 1fr); }
-    .meeting-room-filter > label { flex-basis: 100%; }
+    .meeting-room-filter > label { flex-basis: 190px; }
 }
