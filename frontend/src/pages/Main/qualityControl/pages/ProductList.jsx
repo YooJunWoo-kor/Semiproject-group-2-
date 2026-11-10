@@ -57,7 +57,7 @@ function ProductList() {
         }
 
         loadProducts();
-    }, [])
+    }, [refreshKey])
 
     const filteredProducts = products.filter(product =>
         product.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -74,7 +74,7 @@ function ProductList() {
     }
 
     const handleImageChange = (e) => {
-        const file = e.target.file[0];
+        const file = e.target.files[0];
         setImageFile(file || null);
     }
 
@@ -220,10 +220,8 @@ function ProductList() {
                 <ModalBase title="제품등록" onClose={() => setIsRegisterOpen(false)}
                     layout={
                         <div>
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                alert("입력 확인 완료! DB 저장은 다음 단계에 연결합니다");
-                            }}>
+                            <form onSubmit={{handleProductSubmit}}/>
+
                                 <div>
                                     <label>제품코드 *</label>
                                     <input type="text" name="productCode" value={productForm.productCode} onChange={handleInputChange}

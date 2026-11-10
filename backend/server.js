@@ -8,6 +8,8 @@ const app = express();
 
 const PORT = process.env.PORT || 4000;
 
+const path = require("path");
+
 // 라우터
 const homSurver = require('./routes/homServer');
 const schedule = require('./routes/schedule');
@@ -32,6 +34,8 @@ app.use('/api/AD', homSurver);
 app.use('/api/schedule', schedule);
 app.use('/api/community', communityRouter);
 app.use('/api/quality', qualityRoutes);
+
+app.use("/Images", express.static(path.join(__dirname, "uploads/Images")))
 
 app.post('/api/register', async (req, res) => {
     const { employeeId, name, email, password, department, position, phone } = req.body;

@@ -24,7 +24,7 @@ const storage = multer.diskStorage({
     },
 
     filename: (req, file, cb) => {
-        const filename = randomUUID + imageTypes[file.mimetype];
+        const filename = randomUUID() + imageTypes[file.mimetype];
         cb(null, filename);
     }
 })
