@@ -154,7 +154,7 @@ function ProjectRoutes() {
   );
 }
 
-// 📌 상단 진행현황 컴포넌트
+// 상단 진행현황 컴포넌트
 function ProjectProgress({ start, end }) {
   const startDate = new Date(start);
   const endDate = new Date(end);

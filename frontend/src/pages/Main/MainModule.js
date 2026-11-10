@@ -38,7 +38,15 @@ function MainModule() {
   ];
 
   const prevBoard = () => {
-    setIndex((prev) => (prev - 1 + boardList.length) % boardList.length);
+    
+
+    setIndex((prev) => {
+      if(prev === 0){
+        return boardList.length -1;
+      }
+
+      return prev - 1;
+    })
   };
 
   const nextBoard = () => {

@@ -1,12 +1,16 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { getLoginUser } from "../../../../utils/authStorage";
+import { API_BASE_URL, getLoginUser } from "../../../../utils/authStorage";
 import { useNavigate } from "react-router-dom";
+import PaginationTable from "../../../../components/PaginationTable";
+import ModalBase from "../../../../components/ModalBase";
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api";
 
-function DraftReq({ drafts, loginUser, setEditingDraft, onDraftChanged }) {
+
+function DraftReq({ drafts, setEditingDraft, onDraftChanged }) {
     const [searchText, setSearchText] = useState("");
+    const [selectedDraft, setSelectedDraft] = useState(null);
+
     const navigate = useNavigate();
     const employeeId = getLoginUser()?.employeeKey;
 
@@ -30,33 +34,84 @@ function DraftReq({ drafts, loginUser, setEditingDraft, onDraftChanged }) {
     }
 
     return (
-        <div>
+        <div className="draft-box" data-page="draft-request">
             <h2>요청된 기안서 / 임시저장된 기안서</h2>
-            <input type="text" placeholder="제목 검색" value={searchText}
-                onChange={e => setSearchText(e.target.value)} />
-            {requestedDrafts.length === 0 ? (
-                <p>요청된 기안서가 없습니다.</p>
-            ) : requestedDrafts.map((draft, index) => (
-                <div key={draft.id} className="draft-item">
-                    <h3 className="draft-item-title">기안서 #{index + 1}</h3>
-                    <p>제목 : {draft.title}</p>
-                    <p>문서 종류 : {draft.draftType}</p>
-                    <p>내용 : {draft.content}</p>
-                    <p>작성일 : {draft.createdAt}</p>
-                    <p>상태 : {draft.status}</p>
-                    {draft.status === "임시저장" && (
-                        <div className="draft-actions">
-                            <button type="button" onClick={() => {
-                                setEditingDraft(draft);
-                                navigate("/main/mytesk/draft-create");
-                            }}>이어서 작성</button>
-                            <button type="button" onClick={() => handleDelete(draft.id)}>
-                                삭제
-                            </button>
+    
+            <input
+                type="text"
+                placeholder="제목 검색"
+                value={searchText}
+                onChange={e => setSearchText(e.target.value)}
+            />
+    
+            <PaginationTable
+                title="내 결재 요청"
+                th={["제목", "문서 종류", "작성일", "상태", "관리"]}
+                
+                allData={requestedDrafts.map(draft => ({
+                    content: [
+                        <button
+                            type="button"
+                            className="table-link-title"
+                            onClick={() => setSelectedDraft(draft)}
+                        >
+                            {draft.title}
+                        </button>,
+
+                        draft.draftType,
+                        draft.createdAt,
+                        draft.status,
+
+                        draft.status === "임시저장" ? (
+                            <div className="draft-actions">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setEditingDraft(draft);
+                                        navigate("/main/mytesk/draft-create");
+                                    }}
+                                >
+                                    이어서 작성
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => handleDelete(draft.id)}
+                                >
+                                    삭제
+                                </button>
+                            </div>
+                        ) : null
+                    ]
+                }))}
+
+                itemsPerPage={5}
+            />
+
+        {selectedDraft && (
+            <ModalBase
+                title="기안서 상세내용"
+                onClose={() => setSelectedDraft(null)}
+                layout={
+                    <div className="draft-box">
+                        <div className="draft-item">
+                            <h3 className="draft-item-title">
+                                {selectedDraft.title}
+                            </h3>
+
+                            <p>문서 종류 : {selectedDraft.draftType}</p>
+                            <p>작성일 : {selectedDraft.createdAt}</p>
+                            <p>상태 : {selectedDraft.status}</p>
+                            <hr />
+                            <h4>기안 내용</h4>
+                            <p>
+                                {selectedDraft.content || "등록된 내용이 없습니다."}
+                            </p>
                         </div>
-                    )}
-                </div>
-            ))}
+                    </div>
+                }
+            />
+        )}
         </div>
     );
 }

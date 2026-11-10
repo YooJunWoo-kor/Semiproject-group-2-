@@ -6,7 +6,7 @@ function DraftComp({drafts}) {
     })
 
     return (
-        <div>
+        <div className="draft-box">
             <h2>최종승인된 기안서</h2>
 
             {completedDrafts.length === 0 ? (
@@ -14,7 +14,7 @@ function DraftComp({drafts}) {
             ) : (
                 completedDrafts.map((draft, index) => {
                     return (
-                        <div key={index}>
+                        <div key={draft.id ?? index} className="draft-item">
                             <p>제목 : {draft.title}</p>
                             <p>문서 종류 : {draft.draftType}</p>
                             <p>내용 : {draft.content}</p>

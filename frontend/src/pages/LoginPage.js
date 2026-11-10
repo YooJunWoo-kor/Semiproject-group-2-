@@ -23,6 +23,7 @@ function Home() {
                     employeeKey: responseData.user.employee_id || null,
                     name: responseData.user.name,
                     email: responseData.user.email,
+                    departmentName : responseData.user.department_name,
                     department: responseData.user.department_id,
                     position: responseData.user.position,
                     role: responseData.user.role
