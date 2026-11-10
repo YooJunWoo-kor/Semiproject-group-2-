@@ -2,7 +2,8 @@ import { useState } from "react";
 import React from "react";
 import ModalBase from "../../../../components/ModalBase";
 import "./MeetingRoomPage.css"
-import { getTodayString } from "../../../../utils/authStorage";
+import { getTodayString,API_BASE_URL } from "../../../../utils/authStorage";
+import axios from "axios";
 
 const rooms = Array.from({length: 9}, (_, index) => ({
     id : index + 1,
@@ -52,6 +53,48 @@ function MeetingRoomPage() {
         phone: "",
         email: ""
     });
+
+    const [isSaving, setIsSaving] = useState(false);
+
+const handleReservationSubmit = async (e) => {
+    e.preventDefault();
+
+    if (isSaving || !selectedRoom) return;
+
+    try {
+        setIsSaving(true);
+
+        const response = await axios.post(
+            `${API_BASE_URL}/meeting-rooms/reservations`,
+            {
+                roomId: selectedRoom.id,
+                reservationDate: selectedDate,
+                startTime,
+                endTime,
+                ...reservationForm
+            }
+        );
+
+        alert(response.data.message);
+        setSelectedRoom(null);
+
+        setReservationForm({
+            title: "",
+            content: "",
+            reserverName: "",
+            phone: "",
+            email: ""
+        });
+
+    } catch (error) {
+        alert(
+            error.response?.data?.message ||
+            "예약에 실패했습니다."
+        );
+    } finally {
+        setIsSaving(false);
+    }
+};
 
     const handleReservationChange = (e) => {
         const {name, value} = e.target;
@@ -135,7 +178,7 @@ function MeetingRoomPage() {
                     onClose={() => setSelectedRoom(null)}
                     layout={
                         <div className="draft-box">
-                            <form onSubmit={(e) => e.preventDefault()}>
+                            <form onSubmit={{handleReservationSubmit}}>
                     
                                 <h3>{selectedRoom.name}</h3>
                     
@@ -192,6 +235,10 @@ function MeetingRoomPage() {
                                         onChange={handleReservationChange}
                                     />
                                 </div>
+
+                                <button type="submit" disabled={isSaving}>
+                                    {isSaving ? "예약 처리 중..." : "예약하기"}
+                                </button>
                     
                             </form>
                         </div>
