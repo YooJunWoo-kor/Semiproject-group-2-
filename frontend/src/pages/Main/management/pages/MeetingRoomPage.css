@@ -1,10 +1,18 @@
-/* 공통 form-inputs, draft-box, dashboard-header 스타일을 재사용 */
-.meeting-room-filter {
-    align-items: end;
-    margin-bottom: 20px;
+/* 회의실 페이지: 공통 헤더, 입력, 모달, 버튼 스타일 재사용 */
+.meeting-room-page {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    padding: 30px 40px;
 }
+
+.meeting-room-filter {
+    align-items: flex-end;
+    margin-bottom: 24px;
+}
+
 .meeting-room-filter > label {
-    min-width: 180px;
+    min-width: 170px;
 }
 
 .meeting-room-grid {
@@ -16,32 +24,118 @@
 .meeting-room-card {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 12px;
+    gap: 14px;
     min-width: 0;
-    min-height: 150px;
-    padding: 22px 16px;
-    text-align: center;
-    color: var(--color-ink);
+    min-height: 260px;
+    padding: 22px 18px;
     background: var(--color-surface);
     border: 1px solid var(--color-line);
-    border-radius: var(--radius-card);
+    border-radius: var(--radius-card, 12px);
     box-shadow: var(--card-shadow);
 }
-.meeting-room-card:hover,
-.meeting-room-card:focus-visible { border-color: var(--color-brand); }
-.meeting-room-card h3, .meeting-room-card p { margin: 0; }
-.meeting-room-slots { display: grid; gap: 5px; width: 100%; }
-.meeting-room-slots > span { color: var(--color-muted); font-size: .85rem; }
-.meeting-room-slots p { font-size: .88rem; overflow-wrap: anywhere; }
-.meeting-room-form { width: 100%; }
-.meeting-room-form > p { color: var(--color-muted); }
 
-@media (max-width: 700px) {
+.meeting-room-card h3 {
+    margin: 0;
+    text-align: center;
+    color: var(--color-ink);
+}
+
+.meeting-room-slots {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 9px;
+    min-width: 0;
+    max-height: 270px;
+    overflow-y: auto;
+}
+
+.meeting-room-slots > p {
+    margin: 15px 0;
+    color: var(--color-muted);
+    text-align: center;
+}
+
+.meeting-room-slot {
+    display: grid;
+    gap: 6px;
+    padding: 12px 14px;
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    background: #f7fbff;
+}
+
+.meeting-room-title,
+.meeting-room-title:hover {
+    display: block;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--color-brand);
+    text-align: left;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.meeting-room-title:hover {
+    text-decoration: underline;
+}
+
+.meeting-room-title:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 3px;
+}
+
+.meeting-room-slot span {
+    color: var(--color-muted);
+    font-size: .86rem;
+}
+
+.meeting-room-reserve-button {
+    width: 100%;
+    margin-top: auto;
+}
+
+/* ModalBase 내부는 기존 draft-box, draft-row, draft-actions 사용 */
+.meeting-room-page .modal-boder {
+    width: min(580px, 100%);
+}
+
+.meeting-room-form,
+.meeting-room-detail {
+    width: 100%;
+}
+
+.meeting-room-form > p {
+    margin: 0;
+    color: var(--color-muted);
+}
+
+.meeting-room-detail .draft-row {
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--color-line);
+}
+
+.meeting-room-detail .draft-row > strong {
+    flex: 0 0 90px;
+    color: var(--color-ink);
+}
+
+.meeting-room-detail .draft-row > span {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+    .meeting-room-page { padding: 24px; }
     .meeting-room-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 480px) {
-    .meeting-room-grid { grid-template-columns: 1fr; }
+
+@media (max-width: 560px) {
+    .meeting-room-page { padding: 16px; }
+    .meeting-room-grid { grid-template-columns: minmax(0, 1fr); }
     .meeting-room-filter > label { flex-basis: 100%; }
 }
