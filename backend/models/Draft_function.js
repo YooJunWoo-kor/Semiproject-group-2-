@@ -8,6 +8,9 @@ class Draft {
                 SELECT
                     d.draft_id,
                     d.title,
+                    d.document_type,
+                    d.content,
+                    d.detail_data,
                     d.status AS draft_status,
                     s.step_order,
                     e.name AS approver_name,
@@ -37,7 +40,7 @@ class Draft {
     static getByEmployeeId(employeeId) {
         return new Promise((resolve, reject) => {
             const sql = `
-                SELECT draft_id, employee_id, title, document_type, content, status, created_at
+                SELECT draft_id, employee_id, title, document_type, content, detail_data, status, created_at
                 FROM my_draft
                 WHERE employee_id = ?
                 ORDER BY created_at DESC, draft_id DESC
@@ -50,7 +53,7 @@ class Draft {
         return new Promise((resolve, reject) => {
             const sql = `
                 SELECT d.draft_id, d.employee_id, d.title, d.document_type,
-                       d.content, d.status, d.created_at, e.name AS writer_name
+                       d.content, d.detail_data, d.status, d.created_at, e.name AS writer_name
                 FROM my_draft d
                 INNER JOIN draft_approval_steps s ON s.draft_id = d.draft_id
                 LEFT JOIN employees e ON e.employee_id = d.employee_id
@@ -65,7 +68,7 @@ class Draft {
         return new Promise((resolve, reject) => {
             const sql = `
                 SELECT DISTINCT d.draft_id, d.employee_id, d.title, d.document_type,
-                       d.content, d.status, d.created_at, e.name AS writer_name
+                       d.content, d.detail_data, d.status, d.created_at, e.name AS writer_name
                 FROM my_draft d
                 INNER JOIN draft_approval_steps s ON s.draft_id = d.draft_id
                 LEFT JOIN employees e ON e.employee_id = d.employee_id
@@ -76,14 +79,14 @@ class Draft {
         });
     }
 
-    static updateDraft(draftId, employeeId, title, documentType, content) {
+    static updateDraft(draftId, employeeId, title, documentType, content, detailData = {}) {
         return new Promise((resolve, reject) => {
             const sql = `
                 UPDATE my_draft
-                SET title = ?, document_type = ?, content = ?
+                SET title = ?, document_type = ?, content = ?, detail_data = ?
                 WHERE draft_id = ? AND employee_id = ? AND status = 'DRAFT'
             `;
-            db.query(sql, [title, documentType, content, draftId, employeeId],
+            db.query(sql, [title, documentType, content, JSON.stringify(detailData), draftId, employeeId],
                 (err, result) => err ? reject(err) : resolve(result.affectedRows));
         });
     }
@@ -177,7 +180,7 @@ class Draft {
         });
     }
 
-    static create(employeeId, title, documentType, content) {
+    static create(employeeId, title, documentType, content, detailData = {}) {
         return new Promise((resolve, reject) => {
             const sql = `
             INSERT INTO my_draft (
@@ -185,9 +188,10 @@ class Draft {
                 title,
                 document_type,
                 content,
+                detail_data,
                 status
             )
-            VALUES(?, ?, ?, ?, 'DRAFT')
+            VALUES(?, ?, ?, ?, ?, 'DRAFT')
         `;
 
             const values = [
@@ -195,6 +199,7 @@ class Draft {
                 title,
                 documentType,
                 content,
+                JSON.stringify(detailData)
             ];
 
             db.query(sql, values, (err, result) => {
@@ -237,7 +242,7 @@ class Draft {
         })
     }
 
-    static submit(employeeId, title, documentType, content, approverIds) {
+    static submit(employeeId, title, documentType, content, approverIds, detailData = {}) {
         return new Promise((resolve, reject) => {
     
             db.beginTransaction((err) => {
@@ -249,16 +254,18 @@ class Draft {
                         title,
                         document_type,
                         content,
+                        detail_data,
                         status
                     )
-                    VALUES (?, ?, ?, ?, 'PENDING')
+                    VALUES (?, ?, ?, ?, ?, 'PENDING')
                 `;
     
                 const values = [
                     employeeId,
                     title,
                     documentType,
-                    content
+                    content,
+                    JSON.stringify(detailData)
                 ];
     
                 db.query(sql, values, (err, result) => {

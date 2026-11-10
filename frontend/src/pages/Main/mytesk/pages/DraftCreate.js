@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from "react";
 import ModalBase from "../../../../components/ModalBase";
 import axios from "axios";
-import { getLoginUser } from "../../../../utils/authStorage";
+import { API_BASE_URL, getLoginUser } from "../../../../utils/authStorage";
 import DepEmpList from "../../../../components/DepEmpList";
 import { useSearchParams } from "react-router-dom";
 
 
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api"
 
 function DraftCreate({
     loginUser,
@@ -76,13 +75,13 @@ function DraftCreate({
             setDraftType(editingDraft.draftType || "일반");
             setContent(editingDraft.content || "");
             setApprovers(editingDraft.approvers || []);
-
+    
             setStartDate(editingDraft.startDate || "");
             setEndDate(editingDraft.endDate || "");
-
+    
             setItemName(editingDraft.itemName || "");
             setQuantity(editingDraft.quantity || "");
-
+    
             setUseDate(editingDraft.useDate || "");
             setAmount(editingDraft.amount || "");
         }
@@ -146,11 +145,22 @@ function DraftCreate({
             return;
         }
 
+        // 문서 종류별 추가 입력값은 JSON으로 함께 전송한다.
+        let detailData = {};
+        if (draftType === "휴가") {
+            detailData = { startDate, endDate };
+        } else if (draftType === "구매") {
+            detailData = { itemName, quantity };
+        } else if (draftType === "비용") {
+            detailData = { useDate, amount };
+        }
+
         const payload = {
             employeeId,
             title,
             documentType: draftType,
-            content
+            content,
+            detailData
         };
 
         try {
@@ -217,7 +227,7 @@ function DraftCreate({
 
                     <p>작성자 : {loginUser.name}</p>
 
-                    <p>부서 : {loginUser.department_id}</p>
+                    <p>부서 : {loginUser.departmentName}</p>
 
                     <p>직책 : {loginUser.position}</p>
 
@@ -431,6 +441,7 @@ function DraftCreate({
 
                     <button
                         type="button"
+                        className="erp-primary-button"
                         onClick={(e) => handleSubmit(e, "submit")}
                     >
                         결재 요청
@@ -476,14 +487,14 @@ function DraftCreate({
                                 />
                             )}
 
-                            <div className="draft-actions">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (!tempApprover) {
-                                            alert("직원을 선택해주세요.");
-                                            return;
-                                        }
+                <div className="draft-actions">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (!tempApprover) {
+                                alert("직원을 선택해주세요.");
+                                return;
+                            }
 
                                         if (approvers.some(
                                             item =>

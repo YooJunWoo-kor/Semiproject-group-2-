@@ -5,12 +5,6 @@
     box-sizing: border-box;
     width: 100%;
   }
-  .weekly-calendar-main { flex: 1; min-width: 0; }
-  .weekly-calendar-header,
-  .weekly-calendar-navigation { display: flex; align-items: center; gap: 12px; }
-  .weekly-calendar-header { margin-bottom: 20px; flex-wrap: wrap; }
-  .weekly-calendar-navigation { flex: 1; min-width: 0; }
-  .weekly-calendar-navigation h2 { overflow-wrap: anywhere; }
   /* 날짜 목록과 메모 영역을 나란히 배치합니다. */
   .weekly-calendar-body { display: flex; align-items: stretch; gap: 24px; }
   .weekly-calendar h2 { margin: 0; font-size: 18px; }
@@ -23,9 +17,6 @@
     color: inherit;
     cursor: pointer;
   }
-  .weekly-calendar button:hover { background: #f1f5f9; }
-  .weekly-calendar button:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
-  .weekly-calendar-navigation button { font-size: 10px; flex-shrink: 0; }
   .weekly-calendar-list { list-style: none; padding: 0; margin: 16px 0 0; }
   .weekly-calendar-list li { margin-bottom: 8px; }
   .weekly-calendar-list .weekly-calendar-day {
