@@ -33,7 +33,7 @@ function MeetingRoomPage() {
 
         // 시작 시간을 변경하여 종료시간이 유효하지 않으면 (시작시간보다 안 늦으면 초기화)
         if(endTime && endTime <= value){
-            setEndTime()
+            setEndTime("")
         } 
     };
 
@@ -44,11 +44,76 @@ function MeetingRoomPage() {
         }
         setSelectedRoom(room);
     }
+
+    const [reservationForm, setReservationForm] = useState({
+        title: "",
+        content: "",
+        reserverName: "",
+        phone: "",
+        email: ""
+    });
+
+    const handleReservationChange = (e) => {
+        const {name, value} = e.target;
+
+        setReservationForm(prev => ({
+            ...prev,
+            [name]: value
+        }))
+    }
+
     return (
         <div className="border-container">
             <header className="dashboard-header">
                 <span className="subtitle">회의실 예약</span>
             </header>
+
+            <div className="meeting-room-filter">
+
+                <label>
+                    예약 날짜
+                    <input
+                        type="date"
+                        min={getTodayString()}
+                        value={selectedDate}
+                        onChange={(e) => setselectedDate(e.target.value)}
+                    />
+                </label>
+
+                <label>
+                    시작 시간
+                    <select
+                        value={startTime}
+                        onChange={(e) => handleStartTimeChange(e.target.value)}
+                    >
+                        <option value="">시작 시간 선택</option>
+
+                        {timeOptions.map(time => (
+                            <option key={time} value={time}>
+                                {time}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+
+                <label>
+                    종료 시간
+                    <select
+                        value={endTime}
+                        onChange={(e) => setEndTime(e.target.value)}
+                        disabled={!startTime}
+                    >
+                        <option value="">종료 시간 선택</option>
+
+                        {endTimeOptions.map(time => (
+                            <option key={time} value={time}>
+                                {time}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+
+            </div>
 
             <div className="meeting-room-grid">
                 {rooms.map(room => (
@@ -56,7 +121,7 @@ function MeetingRoomPage() {
                         key={room.id}
                         type="button"
                         className="meeting-room-card"
-                        onClick={() => setSelectedRoom(room)}
+                        onClick={() => handleRoomClick(room)}
                     >
                         <h3>{room.name}</h3>
                         <p>예약 정보 조회 준비 중</p>
@@ -70,14 +135,65 @@ function MeetingRoomPage() {
                     onClose={() => setSelectedRoom(null)}
                     layout={
                         <div className="draft-box">
-                            <p>
-                                선택한 회의실:
-                                {" "}{selectedRoom.name}
-                            </p>
-                            <p>
-                                다음 단계에서 날짜, 시간,
-                                예약 내용을 연결합니다.
-                            </p>
+                            <form onSubmit={(e) => e.preventDefault()}>
+                    
+                                <h3>{selectedRoom.name}</h3>
+                    
+                                <p>예약 날짜: {selectedDate}</p>
+                                <p>예약 시간: {startTime} ~ {endTime}</p>
+                    
+                                <div>
+                                    <label>회의 제목</label>
+                                    <input
+                                        type="text"
+                                        name="title"
+                                        value={reservationForm.title}
+                                        onChange={handleReservationChange}
+                                        required
+                                    />
+                                </div>
+                    
+                                <div>
+                                    <label>회의 내용</label>
+                                    <textarea
+                                        name="content"
+                                        value={reservationForm.content}
+                                        onChange={handleReservationChange}
+                                    />
+                                </div>
+                    
+                                <div>
+                                    <label>예약자 이름</label>
+                                    <input
+                                        type="text"
+                                        name="reserverName"
+                                        value={reservationForm.reserverName}
+                                        onChange={handleReservationChange}
+                                        required
+                                    />
+                                </div>
+                    
+                                <div>
+                                    <label>연락처</label>
+                                    <input
+                                        type="tel"
+                                        name="phone"
+                                        value={reservationForm.phone}
+                                        onChange={handleReservationChange}
+                                    />
+                                </div>
+                    
+                                <div>
+                                    <label>이메일</label>
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        value={reservationForm.email}
+                                        onChange={handleReservationChange}
+                                    />
+                                </div>
+                    
+                            </form>
                         </div>
                     }
                 />
