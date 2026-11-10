@@ -108,6 +108,15 @@
     width: 100%;
 }
 
+/* 예약 모달의 입력 그룹 바깥 카드 테두리만 제거 */
+.meeting-room-page .meeting-room-form > label,
+.meeting-room-page .meeting-room-form > .draft-row {
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+}
+
 .meeting-room-form > p {
     margin: 0;
     color: var(--color-muted);
