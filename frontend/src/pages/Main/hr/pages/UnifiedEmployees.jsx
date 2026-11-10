@@ -51,7 +51,7 @@ function currentMonth() {
 }
 
 function money(value) {
-  return value == null || value === ""
+  return value === null || value === undefined || value === ""
     ? "-"
     : `${Number(value).toLocaleString("ko-KR")}원`;
 }
@@ -314,7 +314,7 @@ function calculatePayroll(data) {
 
   const invalid = amounts.some((amount, index) => {
     return (
-      data[names[index]] == null ||
+      (data[names[index]] === null || data[names[index]] === undefined) ||
       data[names[index]] === "" ||
       !Number.isSafeInteger(amount) ||
       amount < 0
@@ -687,6 +687,7 @@ export default function UnifiedEmployees() {
     };
   }, [detailTab, isMaster, payMonth]);
 
+  // 검색·부서·재직·계정 상태를 모두 반영한 직원 목록입니다.
   const filtered = useMemo(
     () =>
       employees.filter((emp) => {
@@ -721,6 +722,7 @@ export default function UnifiedEmployees() {
 
 
   // 직원 목록 페이지네이션
+  // 직원 목록은 기존 HR 페이지 규칙에 따라 7명 단위로 표시합니다.
   const itemsPerPage = 7;
 
   const totalPages = Math.max(
@@ -764,12 +766,20 @@ export default function UnifiedEmployees() {
   // 페이지 변경 또는 필터 변경으로 선택 직원이 사라지면
   // 현재 페이지의 첫 번째 직원 자동 선택
   useEffect(() => {
+    // 필터·페이지 변경 시 현재 페이지의 첫 직원을 상세 대상으로 유지합니다.
     const nextId = selected?.employeeId ?? null;
 
     if (String(selectedId) !== String(nextId)) {
       setSelectedId(nextId);
     }
   }, [selectedId, selected?.employeeId]);
+
+  useEffect(() => {
+    // 직원 삭제·필터 변경으로 페이지 수가 줄어들면 마지막 페이지로 보정합니다.
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const selectedDepartment = departments.find(
     (item) => String(item.departmentId) === selectedDept
@@ -823,6 +833,7 @@ export default function UnifiedEmployees() {
   }
 
   function chooseDept(value) {
+    // 부서 변경 시 직원 선택, 상세 탭, 급여 이력을 함께 초기화합니다.
     clearPayrollHistory();
     setModal("");
     setSelectedDept(value);
@@ -1126,6 +1137,7 @@ export default function UnifiedEmployees() {
   }
 
   async function savePayroll(event) {
+    // 급여 ID가 있으면 수정, 없으면 등록 API를 호출합니다.
     event.preventDefault();
 
     if (!canEditPay || modal !== "payroll" || saving) {
@@ -1157,7 +1169,7 @@ export default function UnifiedEmployees() {
 
     try {
       const response =
-        payroll.payrollId != null
+        payroll.payrollId !== null && payroll.payrollId !== undefined
           ? await updateHrPayroll(
             payroll.payrollId,
             values

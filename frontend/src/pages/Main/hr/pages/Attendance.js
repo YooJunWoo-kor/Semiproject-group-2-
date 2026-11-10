@@ -652,6 +652,7 @@ function AttendanceEditForm({ attendance, onSave, onCancel, saving }) {
 }
 
 export default function Attendance() {
+  // HR 근태 화면의 공통 상태: 조직·근태·휴가 데이터를 한 화면에서 관리합니다.
   // 근태 기록과 휴가 신청·승인 조회를 한 화면의 탭으로 제공합니다.
   const navigate = useNavigate();
   const loginUser = getLoginUser();
@@ -664,6 +665,7 @@ export default function Attendance() {
   const [keyword, setKeyword] = useState("");
   const [activeTab, setActiveTab] = useState("attendance-records");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [leaveData, setLeaveData] = useState([]);
   const [leaveLoading, setLeaveLoading] = useState(false);
   const [leaveError, setLeaveError] = useState("");
@@ -682,6 +684,7 @@ export default function Attendance() {
 
     // 직원·부서·근태 자료를 함께 조회하고 가장 최근 근태월을 기본값으로 설정합니다.
     // 조직 정보와 전체 근태 기록을 함께 조회해 직원 목록을 구성합니다.
+    // 직원·부서 목록과 전체 근태 기록을 초기 조회합니다.
     async function loadAttendancePage() {
       setLoading(true);
       setError("");
@@ -748,6 +751,7 @@ export default function Attendance() {
     let ignore = false;
 
     // 선택한 기준 월의 휴가 신청 데이터를 조회합니다.
+    // 기준 월이 바뀌면 해당 월의 휴가 신청 목록을 다시 조회합니다.
     async function loadLeaves() {
       setLeaveLoading(true);
       setLeaveError("");
@@ -797,6 +801,7 @@ export default function Attendance() {
     let ignore = false;
     const year = selectedMonth.slice(0, 4) || String(new Date().getFullYear());
 
+    // 연차 현황 탭에서만 연도별 휴가 데이터를 조회합니다.
     async function loadLeaveYear() {
       setLeaveYearLoading(true);
       setLeaveYearError("");
@@ -837,27 +842,55 @@ export default function Attendance() {
   }, [activeTab, selectedMonth]);
 
   // 부서와 검색어를 동시에 적용해 왼쪽 직원 목록을 구성합니다.
+  // 필터 결과를 기준으로 페이지 목록과 현재 선택 직원을 계산합니다.
   const departmentList = createDepartmentList(departments);
   const employeeList = createEmployeeList(
     employees,
     selectedDepartment,
     keyword
   );
-  const selectedEmployee = employeeList.find(
-    (employee) => String(employee.employeeId) === String(selectedEmployeeId)
+  const itemsPerPage = 7;
+  const totalPages = Math.max(1, Math.ceil(employeeList.length / itemsPerPage));
+  const effectivePage = Math.min(currentPage, totalPages);
+  const visibleEmployeeList = employeeList.slice(
+    (effectivePage - 1) * itemsPerPage,
+    effectivePage * itemsPerPage
   );
+  const pageNumberCount = Math.min(5, totalPages);
+  const pageStart = Math.max(
+    1,
+    Math.min(effectivePage - 2, totalPages - pageNumberCount + 1)
+  );
+  const pageNumbers = Array.from(
+    { length: pageNumberCount },
+    (_, index) => pageStart + index
+  );
+  const selectedEmployee = visibleEmployeeList.find(
+    (employee) => String(employee.employeeId) === String(selectedEmployeeId)
+  ) || visibleEmployeeList[0] || null;
   const isAttendanceTab = activeTab.startsWith("attendance-");
   const isLeaveTab = activeTab.startsWith("leave-");
   const isAttendanceRecords = activeTab === "attendance-records";
 
   useEffect(() => {
     // 필터 변경으로 기존 선택이 사라지면 첫 번째 직원을 자동 선택합니다.
-    if (!selectedEmployee) {
-      setSelectedEmployeeId(employeeList[0]?.employeeId || null);
+    // 부서·검색·페이지 변경으로 선택 직원이 목록에서 빠지면 첫 직원을 선택합니다.
+    const nextId = selectedEmployee?.employeeId || null;
+
+    if (String(selectedEmployeeId) !== String(nextId)) {
+      setSelectedEmployeeId(nextId);
     }
-  }, [employeeList, selectedEmployee, selectedEmployeeId]);
+  }, [selectedEmployee, selectedEmployeeId, visibleEmployeeList]);
+
+  useEffect(() => {
+    // 필터 결과가 줄어든 경우 존재하는 마지막 페이지로 보정합니다.
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   // 선택 직원의 해당 월 기록만 추려 요약 수치와 일별 표를 계산합니다.
+  // 선택 직원과 기준 월에 해당하는 근태 기록만 상세 패널에 표시합니다.
   const selectedAttendance = attendanceData
     .filter(
       (item) =>
@@ -981,10 +1014,12 @@ export default function Attendance() {
   }
 
   function resetFilters() {
+    // 조회 조건과 직원 페이지를 초기 상태로 되돌립니다.
     setSelectedMonth(getLatestMonth(attendanceData));
     setSelectedDepartment("전체");
     setKeyword("");
     setSelectedEmployeeId(null);
+    setCurrentPage(1);
   }
 
   async function decideLeave(leave, decision) {
@@ -1129,72 +1164,6 @@ export default function Attendance() {
               </button>
             </nav>
 
-            <nav
-              className="attendance-tabs attendance-subtabs"
-              aria-label={isAttendanceTab ? "근태 조회 구분" : "휴가 조회 구분"}
-            >
-              {isAttendanceTab ? (
-                <>
-                  <button
-                    type="button"
-                    role="tab"
-                    className={isAttendanceRecords ? "active" : ""}
-                    aria-selected={isAttendanceRecords}
-                    onClick={() => setActiveTab("attendance-records")}
-                  >
-                    월별 기록
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    className={activeTab === "attendance-anomalies" ? "active" : ""}
-                    aria-selected={activeTab === "attendance-anomalies"}
-                    onClick={() => setActiveTab("attendance-anomalies")}
-                  >
-                    이상 근태
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    className={activeTab === "attendance-statistics" ? "active" : ""}
-                    aria-selected={activeTab === "attendance-statistics"}
-                    onClick={() => setActiveTab("attendance-statistics")}
-                  >
-                    월별 통계
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    role="tab"
-                    className={activeTab === "leave-requests" ? "active" : ""}
-                    aria-selected={activeTab === "leave-requests"}
-                    onClick={() => setActiveTab("leave-requests")}
-                  >
-                    신청 목록
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    className={activeTab === "leave-pending" ? "active" : ""}
-                    aria-selected={activeTab === "leave-pending"}
-                    onClick={() => setActiveTab("leave-pending")}
-                  >
-                    승인 대기
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    className={activeTab === "leave-balance" ? "active" : ""}
-                    aria-selected={activeTab === "leave-balance"}
-                    onClick={() => setActiveTab("leave-balance")}
-                  >
-                    연차 현황
-                  </button>
-                </>
-              )}
-            </nav>
           </div>
 
           <div className="attendance-detail-actions">
@@ -1244,7 +1213,11 @@ export default function Attendance() {
           
           <select
             value={selectedDepartment}
-            onChange={(event) => setSelectedDepartment(event.target.value)}
+            onChange={(event) => {
+              setSelectedDepartment(event.target.value);
+              setSelectedEmployeeId(null);
+              setCurrentPage(1);
+            }}
           >
             <option value="전체">전체</option>
             {departmentList.map((department) => (
@@ -1260,7 +1233,11 @@ export default function Attendance() {
             type="text"
             placeholder="직원명 검색"
             value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
+            onChange={(event) => {
+              setKeyword(event.target.value);
+              setSelectedEmployeeId(null);
+              setCurrentPage(1);
+            }}
           />
           </label>
 
@@ -1285,24 +1262,23 @@ export default function Attendance() {
           {error}
         </p>
       ) : (
-        <div className="attendance-layout attendance-three-column-layout">
+        <div className="attendance-layout hr-organization-grid">
+          {/* 부서 목록 → 직원 목록 → 선택 직원 상세의 HR 3단 레이아웃 */}
           {/* 왼쪽: 부서 목록 */}
-          <aside className="attendance-card attendance-department-panel">
-            <div className="attendance-panel-heading">
-              <div>
-                <h2>부서 목록</h2>
-                <p>전체 부서 및 소속 인원</p>
-              </div>
-              <strong>{departments.length}개</strong>
+          <aside className="hr-panel department-panel">
+            <div className="hr-panel-heading">
+              <h2>부서 목록</h2>
+              <span>{departments.length}개</span>
             </div>
 
-            <div className="attendance-department-list">
+            <div>
               <button
                 type="button"
-                className={`attendance-department-item${selectedDepartment === "전체" ? " active" : ""}`}
+                className={`department-item${selectedDepartment === "전체" ? " selected" : ""}`}
                 onClick={() => {
                   setSelectedDepartment("전체");
                   setSelectedEmployeeId(null);
+                  setCurrentPage(1);
                 }}
               >
                 <strong>전체 부서</strong>
@@ -1313,10 +1289,11 @@ export default function Attendance() {
                 <button
                   key={department.departmentId}
                   type="button"
-                  className={`attendance-department-item${selectedDepartment === department.departmentName ? " active" : ""}`}
+                  className={`department-item${selectedDepartment === department.departmentName ? " selected" : ""}`}
                   onClick={() => {
                     setSelectedDepartment(department.departmentName);
                     setSelectedEmployeeId(null);
+                    setCurrentPage(1);
                   }}
                 >
                   <strong>{department.departmentName}</strong>
@@ -1329,8 +1306,8 @@ export default function Attendance() {
           </aside>
 
           {/* 가운데: 소속 직원 */}
-          <section className="attendance-card employee-list-panel">
-            <div className="employee-list-header">
+          <section className="hr-panel employee-list-panel">
+            <div className="hr-section-heading">
               <div>
                 <h2>소속 직원</h2>
                 <p>
@@ -1339,14 +1316,14 @@ export default function Attendance() {
                   {employeeList.length}명
                 </p>
               </div>
-              <strong>{employeeList.length}명</strong>
+              <span>{employeeList.length}명</span>
             </div>
 
             {employeeList.length === 0 ? (
               <p className="attendance-empty">조건에 맞는 직원이 없습니다.</p>
             ) : (
               <div className="employee-list">
-                {employeeList.map((employee) => {
+                {visibleEmployeeList.map((employee) => {
                   const leaveCountForEmployee = leaveData.filter(
                     (leave) => String(leave.employeeId) === String(employee.employeeId)
                   ).length;
@@ -1395,10 +1372,51 @@ export default function Attendance() {
                 })}
               </div>
             )}
+
+            {totalPages > 1 && (
+              <div
+                className="pagination-container"
+                aria-label="직원 목록 페이지"
+              >
+                <button
+                  type="button"
+                  className="page-btn nav-btn"
+                  onClick={() => setCurrentPage(effectivePage - 1)}
+                  disabled={effectivePage === 1}
+                  aria-label="이전 페이지"
+                >
+                  &lt;
+                </button>
+
+                <div className="page-numbers">
+                  {pageNumbers.map((page) => (
+                    <button
+                      key={page}
+                      type="button"
+                      className={`page-btn number-btn ${effectivePage === page ? "active" : ""}`}
+                      onClick={() => setCurrentPage(page)}
+                      aria-current={effectivePage === page ? "page" : undefined}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className="page-btn nav-btn"
+                  onClick={() => setCurrentPage(effectivePage + 1)}
+                  disabled={effectivePage === totalPages}
+                  aria-label="다음 페이지"
+                >
+                  &gt;
+                </button>
+              </div>
+            )}
           </section>
 
           {/* 선택 직원별 상세 화면 */}
-          <section className="attendance-detail-panel">
+          <section className="attendance-detail-panel employee-detail-panel">
             {selectedEmployee && (
               <>
                 {(isAttendanceTab || activeTab === "leave-requests") && (

@@ -115,6 +115,7 @@ export default function Dashboard() {
         let ignore = false;
 
         // 전체 근태 데이터를 조회해 오늘의 출근·휴가 현황을 계산합니다.
+        // 대시보드는 전체 근태 기록을 받아 오늘 날짜와 부서별 현황을 계산합니다.
         async function loadAttendance() {
             setAttendanceLoading(true);
             setAttendanceError('');
