@@ -33,6 +33,14 @@ function createDepartmentList(data) {
   }, []);
 }
 
+function countDepartmentEmployees(employees, departmentId) {
+  return employees.filter(
+    (employee) =>
+      String(employee.departmentId) === String(departmentId) &&
+      employee.employmentStatus !== "퇴사"
+  ).length;
+}
+
 function createEmployeeList(data, department, searchKeyword) {
   const keyword = searchKeyword.trim().toLowerCase();
 
@@ -247,7 +255,7 @@ function AttendanceProgressBar({ label, percent, value, detail, tone = "brand" }
   );
 }
 
-function AttendanceStatistics({ records, month, employee }) {
+function AttendanceStatistics({ records, month }) {
   const monthRecords = records.filter((attendance) =>
     String(attendance.attendanceDate || "").startsWith(month)
   );
@@ -275,7 +283,7 @@ function AttendanceStatistics({ records, month, employee }) {
     <div className="attendance-subview">
       <div className="attendance-subview-heading">
         <div>
-          <h3>{employee.employeeName} 월별 근태 통계</h3>
+          <h3>월별 근태 통계</h3>
           <p>{month || "기준 월 미선택"} 기준 실제 근태 기록</p>
         </div>
       </div>
@@ -473,6 +481,31 @@ function LeaveBalanceView({ employees, leaves, year }) {
       <p className="attendance-leave-api-notice">
         현재 DB에는 연차 부여량·잔여량 컬럼이 없어 승인 완료 휴가의 실제 사용량만 표시합니다.
       </p>
+    </div>
+  );
+}
+
+function AttendanceEmployeeHeader({
+  employee,
+  isAttendanceTab,
+  attendanceRate,
+  leaveCount
+}) {
+  return (
+    <div className="attendance-detail-header">
+      <div>
+        <span className="attendance-badge">선택 직원</span>
+        <h2>{employee.employeeName}</h2>
+        <p>
+          {employee.employeeNumber || "사번 미지정"} ·{" "}
+          {employee.departmentName || "부서 미지정"} ·{" "}
+          {employee.position || "직급 미지정"}
+        </p>
+      </div>
+      <div className="detail-attendance-rate">
+        <span>{isAttendanceTab ? "출근율" : "휴가 신청"}</span>
+        <strong>{isAttendanceTab ? attendanceRate : `${leaveCount}건`}</strong>
+      </div>
     </div>
   );
 }
@@ -1252,13 +1285,59 @@ export default function Attendance() {
           {error}
         </p>
       ) : (
-        <div className="attendance-layout">
-          {/* 공통 직원 목록 */}
+        <div className="attendance-layout attendance-three-column-layout">
+          {/* 왼쪽: 부서 목록 */}
+          <aside className="attendance-card attendance-department-panel">
+            <div className="attendance-panel-heading">
+              <div>
+                <h2>부서 목록</h2>
+                <p>전체 부서 및 소속 인원</p>
+              </div>
+              <strong>{departments.length}개</strong>
+            </div>
+
+            <div className="attendance-department-list">
+              <button
+                type="button"
+                className={`attendance-department-item${selectedDepartment === "전체" ? " active" : ""}`}
+                onClick={() => {
+                  setSelectedDepartment("전체");
+                  setSelectedEmployeeId(null);
+                }}
+              >
+                <strong>전체 부서</strong>
+                <span>{employees.filter((employee) => employee.employmentStatus !== "퇴사").length}명</span>
+              </button>
+
+              {departments.map((department) => (
+                <button
+                  key={department.departmentId}
+                  type="button"
+                  className={`attendance-department-item${selectedDepartment === department.departmentName ? " active" : ""}`}
+                  onClick={() => {
+                    setSelectedDepartment(department.departmentName);
+                    setSelectedEmployeeId(null);
+                  }}
+                >
+                  <strong>{department.departmentName}</strong>
+                  <span>
+                    {countDepartmentEmployees(employees, department.departmentId)}명
+                  </span>
+                </button>
+              ))}
+            </div>
+          </aside>
+
+          {/* 가운데: 소속 직원 */}
           <section className="attendance-card employee-list-panel">
             <div className="employee-list-header">
               <div>
-                <h2>직원 목록</h2>
-                <p>{selectedMonth || "기준 월 미선택"}</p>
+                <h2>소속 직원</h2>
+                <p>
+                  {selectedDepartment === "전체" ? "전체 부서" : selectedDepartment}
+                  {" · "}
+                  {employeeList.length}명
+                </p>
               </div>
               <strong>{employeeList.length}명</strong>
             </div>
@@ -1283,6 +1362,9 @@ export default function Attendance() {
                     >
                       <span className="employee-item-info">
                         <strong className="emp-name">{employee.employeeName}</strong>
+                        <span>
+                          {employee.employeeNumber || "사번 미지정"}
+                        </span>
                         <span>
                           {employee.departmentName || "부서 미지정"} ·{" "}
                           <span className="emp-position">
@@ -1318,12 +1400,26 @@ export default function Attendance() {
           {/* 선택 직원별 상세 화면 */}
           <section className="attendance-detail-panel">
             {selectedEmployee && (
-              <AttendanceSubTabs
-                activeTab={activeTab}
-                isAttendanceTab={isAttendanceTab}
-                isAttendanceRecords={isAttendanceRecords}
-                setActiveTab={setActiveTab}
-              />
+              <>
+                {(isAttendanceTab || activeTab === "leave-requests") && (
+                  <AttendanceEmployeeHeader
+                    employee={selectedEmployee}
+                    isAttendanceTab={isAttendanceTab}
+                    attendanceRate={calculateAttendanceRate(
+                      attendanceData,
+                      selectedMonth,
+                      selectedEmployee.employeeId
+                    )}
+                    leaveCount={selectedEmployeeLeaves.length}
+                  />
+                )}
+                <AttendanceSubTabs
+                  activeTab={activeTab}
+                  isAttendanceTab={isAttendanceTab}
+                  isAttendanceRecords={isAttendanceRecords}
+                  setActiveTab={setActiveTab}
+                />
+              </>
             )}
 
             {!selectedEmployee ? (
@@ -1333,25 +1429,6 @@ export default function Attendance() {
             ) : isAttendanceTab ? (
               isAttendanceRecords ? (
                 <>
-                <div className="attendance-detail-header">
-                  <div>
-                    <span className="attendance-badge">선택 직원</span>
-                    <h2>{selectedEmployee.employeeName}</h2>
-                    <p>
-                      {selectedEmployee.departmentName || "부서 미지정"} ·{" "}
-                      {selectedEmployee.position || "직급 미지정"}
-                    </p>
-                  </div>
-                  <div className="detail-attendance-rate">
-                    <span>출근율</span>
-                    <strong>
-                      {calculateAttendanceRate(
-                        attendanceData, selectedMonth, selectedEmployee.employeeId
-                      )}
-                    </strong>
-                  </div>
-                </div>
-
                 <div className="attendance-summary">
                   <div className="summary-item">
                     <span>근무일</span><strong>{selectedAttendance.length}</strong>
@@ -1385,7 +1462,6 @@ export default function Attendance() {
                 <AttendanceStatistics
                   records={selectedAttendance}
                   month={selectedMonth}
-                  employee={selectedEmployee}
                 />
               )
             ) :
@@ -1404,21 +1480,6 @@ export default function Attendance() {
               </p>
             ) : activeTab === "leave-requests" ? (
               <>
-                <div className="attendance-detail-header">
-                  <div>
-                    <span className="attendance-badge">선택 직원</span>
-                    <h2>{selectedEmployee.employeeName}</h2>
-                    <p>
-                      {selectedEmployee.departmentName || "부서 미지정"} ·{" "}
-                      {selectedEmployee.position || "직급 미지정"}
-                    </p>
-                  </div>
-                  <div className="detail-attendance-rate">
-                    <span>휴가 신청</span>
-                    <strong>{selectedEmployeeLeaves.length}건</strong>
-                  </div>
-                </div>
-
                 <div className="attendance-summary">
                   <div className="summary-item">
                     <span>전체 신청</span><strong>{selectedEmployeeLeaves.length}</strong>
