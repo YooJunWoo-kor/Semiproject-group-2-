@@ -3,11 +3,26 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../../../../utils/authStorage";
 import "./QualityControl.css";
+import ModalBase from "../../../../components/ModalBase";
 
 function ProductList() {
     const navigate = useNavigate();
     const [search, setSearch] = useState("");
     const [products, setProducts] = useState([]);
+    const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+
+    const [productForm, setProductForm] = useState({
+        productCode: "",
+        productName: "",
+        company: "",
+        price: "",
+        stock: "",
+        variantText: ""
+    });
+
+    const [imageFile, setImageFile] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [refreshKey, setRefreshKey] = useState(0);
 
     useEffect(() => {
         async function loadProducts() {
@@ -41,12 +56,83 @@ function ProductList() {
         }
 
         loadProducts();
-    }, [])
+    }, [refreshKey])
 
     const filteredProducts = products.filter(product =>
         product.name.toLowerCase().includes(search.toLowerCase()) ||
         product.code.toLowerCase().includes(search.toLowerCase())
     );
+
+    const handleInputChange = (e) => {
+        const {name, value} = e.target;
+
+        setProductForm(prev => ({
+            ...prev,
+            [name] : value
+        }));
+    }
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        setImageFile(file || null);
+    }
+
+    
+    const handleProductSubmit = async (e) => {
+        e.preventDefault();
+
+        if (isSaving) return;
+
+        setIsSaving(true);
+
+        try {
+            // 제품 정보를 파일과 함께 전송하기 위한 객체
+            const formData = new FormData();
+
+            Object.entries(productForm).forEach(([key, value]) => {
+                formData.append(key, value); // 데이터 담기
+            });
+
+            // 이미지 파일을 선택했을 때만 추가
+            if (imageFile) {
+                formData.append("image", imageFile);
+            }
+
+            // 백엔드 제품등록 API 요청
+            await axios.post( `${API_BASE_URL}/quality/products`, formData );
+
+            alert("제품등록이 완료되었습니다.");
+
+            // 입력 폼 초기화
+            setProductForm({
+                productCode: "",
+                productName: "",
+                productType: "",
+                company: "",
+                price: "",
+                stock: "",
+                variantText: ""
+            });
+
+            setImageFile(null);
+            setIsRegisterOpen(false);
+
+            // 제품 목록 새로고침
+            setRefreshKey(prev => prev + 1);
+
+        } catch (error) {
+            console.error("제품등록 실패:", error);
+
+            alert(
+                error.response?.data?.message ||
+                "제품등록에 실패했습니다."
+            );
+
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
 
     return (
         <div className="quality-products-page">
@@ -57,6 +143,8 @@ function ProductList() {
                     <p>등록된 제품의 기본정보와 재고 현황을 확인합니다.</p>
                 </div>
                 <div className="quality-header-badge">{filteredProducts.length}개 제품</div>
+
+                <button type="button" onClick={() => setIsRegisterOpen(true)}>제품등록</button>
             </header>
 
             <section className="quality-toolbar">
@@ -125,6 +213,94 @@ function ProductList() {
                         </article>
                     ))}
                 </div>
+            )}
+
+            {isRegisterOpen && (
+                <ModalBase title="제품등록" onClose={() => setIsRegisterOpen(false)}
+                    layout={
+                        <div>
+                            <form onSubmit={handleProductSubmit}>
+
+                                <div>
+                                    <label>제품코드 *</label>
+                                    <input type="text" name="productCode" value={productForm.productCode} onChange={handleInputChange}
+                                    placeholder="COS-004"/>
+                                </div>
+
+                                <div>
+                                    <label>제품명 *</label>
+                                    <input
+                                        type="text"
+                                        name="productName"
+                                        value={productForm.productName}
+                                        onChange={handleInputChange}
+                                        required // 폼 제출 전 필수입력 명령어
+                                    />
+                                </div>
+
+
+                                <div>
+                                    <label>제조사</label>
+                                    <input
+                                        type="text"
+                                        name="company"
+                                        value={productForm.company}
+                                        onChange={handleInputChange}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label>가격 *</label>
+                                    <input
+                                        type="number"
+                                        name="price"
+                                        min="0"
+                                        step="1"
+                                        value={productForm.price}
+                                        onChange={handleInputChange}
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label>재고 *</label>
+                                    <input
+                                        type="number"
+                                        name="stock"
+                                        min="0"
+                                        step="1"
+                                        value={productForm.stock}
+                                        onChange={handleInputChange}
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label>제품 옵션</label>
+                                    <input
+                                        type="text"
+                                        name="variantText"
+                                        value={productForm.variantText}
+                                        onChange={handleInputChange}
+                                        placeholder="2 종류"
+                                    />
+                                </div>
+
+                                <div>
+                                <label>제품 이미지 URL</label>
+
+                                <input type="file" accept="image/*" onChange={handleImageChange}/>
+
+                                </div>
+
+                                <button type="submit">
+                                    제품등록
+                                </button>
+
+                            </form>
+                        </div>
+                    }
+                />
             )}
         </div>
     );

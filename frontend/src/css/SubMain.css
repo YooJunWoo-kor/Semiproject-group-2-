@@ -37,6 +37,7 @@
   display: flex;
   flex-flow: column;
   width: 100%;
+  min-height: 830px;
   padding: 30px 50px;
   border: 1px solid var(--color-line);
   border-radius: var(--layer-radius);

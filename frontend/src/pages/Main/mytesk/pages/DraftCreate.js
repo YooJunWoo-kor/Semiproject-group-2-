@@ -217,7 +217,7 @@ function DraftCreate({
 
                     <p>작성자 : {loginUser.name}</p>
 
-                    <p>부서 : {loginUser.department_id}</p>
+                    <p>부서 : {loginUser.departmentName}</p>
 
                     <p>직책 : {loginUser.position}</p>
 

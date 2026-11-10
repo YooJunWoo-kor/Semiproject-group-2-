@@ -8,6 +8,8 @@ const app = express();
 
 const PORT = process.env.PORT || 4000;
 
+const path = require("path");
+
 // 라우터
 const homSurver = require('./routes/homServer');
 const schedule = require('./routes/schedule');
@@ -16,6 +18,7 @@ const communityRouter = require('./routes/community');
 const financeRouter = require('./routes/financeRouters'); // main 재무 라우터
 const hrRouter = require('./routes/hrRoutes'); // main 인사 라우터
 const Attendance = require('./models/Attendance');
+const project = require('./routes/project');
 
 // 품질관리 라우터 추가
 const qualityRoutes = require('./routes/quality');
@@ -32,6 +35,9 @@ app.use('/api/AD', homSurver);
 app.use('/api/schedule', schedule);
 app.use('/api/community', communityRouter);
 app.use('/api/quality', qualityRoutes);
+app.use('/api/project', project)
+
+app.use("/Images", express.static(path.join(__dirname, "uploads/Images")))
 
 app.post('/api/register', async (req, res) => {
     const { employeeId, name, email, password, department, position, phone } = req.body;
@@ -146,11 +152,13 @@ app.post('/api/login', (req, res) => {
             e.employee_number,
             e.name,
             e.department_id,
+            d.department_name,
             e.position,
             e.email,
             ea.role,
             ea.account_status
         FROM employees e
+        JOIN departments d ON d.department_id = e.department_id
         INNER JOIN employee_accounts ea ON e.employee_id = ea.employee_id 
         WHERE e.email = ? AND ea.password_hash = ?`;
         // employee_accounts와 join하는 이유는 권한,상태 등이    employee_accounts에 있기 때문이다.
@@ -183,6 +191,7 @@ app.post('/api/login', (req, res) => {
                     employee_id: user.employee_id,
                     employee_number: user.employee_number,
                     name: user.name,
+                    department_name: user.department_name,
                     department_id: user.department_id,
                     position: user.position,
                     role: user.role
