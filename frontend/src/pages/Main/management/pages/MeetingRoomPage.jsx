@@ -106,28 +106,6 @@ function MeetingRoomPage() {
                     <input type="date" min={getTodayString()} value={selectedDate}
                         onChange={e => setSelectedDate(e.target.value)} />
                 </label>
-                <label>
-                    시작 시간
-                    <select value={startTime} onChange={e => {
-                        setStartTime(e.target.value);
-                        setEndTime("");
-                    }}>
-                        <option value="">시작 시간 선택</option>
-                        {timeOptions.map(time => (
-                            <option key={time} value={time}>{time}</option>
-                        ))}
-                    </select>
-                </label>
-                <label>
-                    종료 시간
-                    <select value={endTime} disabled={!startTime}
-                        onChange={e => setEndTime(e.target.value)}>
-                        <option value="">종료 시간 선택</option>
-                        {[...timeOptions, "24:00"].filter(time => time > startTime).map(time => (
-                            <option key={time} value={time}>{time}</option>
-                        ))}
-                    </select>
-                </label>
             </div>
 
             <div className="meeting-room-grid">
@@ -155,7 +133,11 @@ function MeetingRoomPage() {
                             </div>
 
                             <button type="button" className="erp-primary-button meeting-room-reserve-button"
-                                onClick={() => setSelectedRoom(room)}>
+                                onClick={() => {
+                                    setStartTime("");
+                                    setEndTime("");
+                                    setSelectedRoom(room);
+                                }}>
                                 예약하기
                             </button>
                         </section>
@@ -169,7 +151,31 @@ function MeetingRoomPage() {
                     layout={
                         <form className="draft-box meeting-room-form" onSubmit={handleReservationSubmit}>
                             <p>예약 날짜: {selectedDate}</p>
-                            <p>예약 시간: {startTime || "미선택"} ~ {endTime || "미선택"}</p>
+
+                            <div className="draft-row">
+                                <label>
+                                    시작 시간
+                                    <select value={startTime} onChange={e => {
+                                        setStartTime(e.target.value);
+                                        setEndTime("");
+                                    }} required>
+                                        <option value="">시작 시간 선택</option>
+                                        {timeOptions.map(time => (
+                                            <option key={time} value={time}>{time}</option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <label>
+                                    종료 시간
+                                    <select value={endTime} disabled={!startTime}
+                                        onChange={e => setEndTime(e.target.value)} required>
+                                        <option value="">종료 시간 선택</option>
+                                        {[...timeOptions, "24:00"].filter(time => time > startTime).map(time => (
+                                            <option key={time} value={time}>{time}</option>
+                                        ))}
+                                    </select>
+                                </label>
+                            </div>
 
                             <label>회의 제목
                                 <input name="title" value={reservationForm.title}
