@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import ProjectModul from './ProjectModul';
 import Nav from '../../../components/Nav';
+import ProjectProgress from '../../../components/ProjectProgress';
+import ColorTeg from '../../../components/ColorTeg';
 
 function ProjectRoutes() {
   const [projectlist, setProjectlist] = useState([
@@ -154,85 +156,6 @@ function ProjectRoutes() {
   );
 }
 
-// 상단 진행현황 컴포넌트
-function ProjectProgress({ start, end }) {
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  const today = new Date();
-
-  startDate.setHours(0, 0, 0, 0);
-  endDate.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
-
-  const totalPeriod = endDate - startDate;
-  const elapsedPeriod = today - startDate;
-
-  let percent = 0;
-  let statusText = "진행 중";
-  let statusBadgeClass = "status-badge";
-
-  if (totalPeriod <= 0) {
-    percent = 100;
-    statusText = "완료";
-    statusBadgeClass = "status-badge status-success";
-  } else if (today < startDate) {
-    percent = 0;
-    const diffDays = Math.ceil((startDate - today) / (1000 * 60 * 60 * 24));
-    statusText = `시작 전 (D-${diffDays})`;
-  } else if (today > endDate) {
-    percent = 100;
-    statusText = "종료(완료)";
-    statusBadgeClass = "status-badge status-success";
-  } else {
-    percent = Math.min(100, Math.max(0, Math.round((elapsedPeriod / totalPeriod) * 100)));
-    const remainDays = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
-    statusText = `진행 중 (D-${remainDays})`;
-  }
-
-  return (
-    <div className="detail-card">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <span style={{ fontSize: "14px", fontWeight: "bold", marginRight: "10px" }}>
-            일정 진행률
-          </span>
-          <span className={statusBadgeClass}>{statusText}</span>
-        </div>
-        <span style={{ fontSize: "18px", fontWeight: "bold", color: "var(--color-brand)" }}>
-          {percent}%
-        </span>
-      </div>
-
-      <div
-        style={{
-          width: "100%",
-          height: "10px",
-          backgroundColor: "#e2e8f0",
-          borderRadius: "999px",
-          overflow: "hidden",
-          margin: "8px 0"
-        }}
-      >
-        <div
-          style={{
-            width: `${percent}%`,
-            height: "100%",
-            backgroundColor: "var(--color-brand)",
-            borderRadius: "999px",
-            transition: "width 0.4s ease-in-out"
-          }}
-        />
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "var(--color-muted)" }}>
-        <span>시작일: {start}</span>
-        <span>기준일: {new Date().toISOString().slice(0, 10)}</span>
-        <span>마감일: {end}</span>
-      </div>
-    </div>
-  );
-}
-
 // 📌 프로젝트 세부 3단 레이아웃 서브페이지
 function ProjectDetail({ project, onUpdateTasks }) {
   const tasks = project.tasks || [];
@@ -287,7 +210,7 @@ function ProjectDetail({ project, onUpdateTasks }) {
     setCommentInput("");
   };
 
-  // 신규 할 일 등록 (모달 연결 전 임시 생성 핸들러)
+  // 신규 할 일 등록
   const handleCreateTask = () => {
     const newTaskTitle = prompt("새로운 할 일 제목을 입력하세요:");
     if (!newTaskTitle || !newTaskTitle.trim()) return;
@@ -306,53 +229,42 @@ function ProjectDetail({ project, onUpdateTasks }) {
     setSelectedTaskId(newTask.id);
   };
 
+  const test = {id:0, name: '담당자명'};
+
   return (
     <div className="border-container">
-      {/* 1. 상단 공통 헤더 */}
+      
       <header className="dashboard-header">
         <span className="subtitle">{project.title}</span>
-        <span className="subtext">프로젝트 세부 일정 및 실시간 업무 현황</span>
+        <div style={{marginRight:'50px'}}>
+          <ColorTeg title={'진행사항'} count={'50'} type={'%'}/>
+        </div>
+        {/* 진행바 모듈 */}
+        <ProjectProgress start={project.start} end={project.end}/>
       </header>
 
-      {/* 2. 상단 일정 진행현황 바 */}
-      <ProjectProgress start={project.start} end={project.end} />
-
-      <hr style={{ margin: "20px 0" }} />
-
-      {/* 3. 3단 패널 레이아웃 */}
-      <div style={{ display: "flex", gap: "20px", minHeight: "480px" }}>
+      <div style={{ display: "flex", flexFlow:'column',gap: "20px", minHeight: "480px" }}>
         
-        {/* [1열] 참여 팀원 목록 (세로 카드 스택) */}
+        {/* 참여인원 */}
         <section
           style={{
-            flex: "0 0 170px",
+            display:'flex',
             borderRight: "1px solid var(--color-line)",
             paddingRight: "16px",
+            backgroundColor: 'blue',
           }}
         >
+          <div style={{display:'flex',fontSize: "15px", backgroundColor:'red', justifyContent:''}}>
+            담당자
+          </div>
+          <MemberLayout member={test}/>
           <h4 style={{ fontSize: "15px", marginBottom: "14px" }}>
-            참여 팀원 ({project.members?.length || 0})
+            참여자 ({project.members?.length || 0})
           </h4>
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div style={{ display: "flex", gap: "10px" }}>
             {project.members &&
               project.members.map((member) => (
-                <div
-                  key={member.id}
-                  className="content-card"
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    width: "100%",
-                    minHeight: "auto",
-                    padding: "10px 12px",
-                  }}
-                >
-                  <strong style={{ fontSize: "14px" }}>{member.name}</strong>
-                  <span className="subtext" style={{ fontSize: "12px", marginTop: "2px" }}>
-                    {member.position}
-                  </span>
-                </div>
+                <MemberLayout member={member}/>
               ))}
           </div>
         </section>
@@ -410,13 +322,6 @@ function ProjectDetail({ project, onUpdateTasks }) {
                       {task.title}
                     </span>
                     <span
-                      className={`status-badge ${
-                        task.status === "완료"
-                          ? "status-success"
-                          : task.status === "진행 중"
-                          ? ""
-                          : "status-danger"
-                      }`}
                       style={{ fontSize: "11px", padding: "2px 8px" }}
                     >
                       {task.status}
@@ -592,6 +497,29 @@ function ProjectDetail({ project, onUpdateTasks }) {
           )}
         </section>
       </div>
+    </div>
+  );
+}
+
+function MemberLayout({member}){
+  return(
+    <div
+      key={member.id}
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        width: "100px",
+        minHeight: "auto",
+        padding: "10px 12px",
+        gap: '5px',
+        backgroundColor:'#fff',
+        borderRadius: '30px',
+      }}
+    >
+      <strong style={{ fontSize: "14px" }}>{member.name}</strong>
+      <span className="subtext" style={{ fontSize: "12px", marginTop: "2px" }}>
+        {member.position}
+      </span>
     </div>
   );
 }

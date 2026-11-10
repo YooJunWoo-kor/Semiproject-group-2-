@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BasicCalendar from '../../../components/calendar/BasicCalendar';
 import { API_BASE_URL, formatDateToYYYYMMDD } from '../../../utils/authStorage'
+import ModalBase from '../../../components/ModalBase'
 import axios from 'axios';
 
 export default function ProjectModul({projectlist}) {
@@ -66,6 +67,7 @@ export default function ProjectModul({projectlist}) {
             <BasicCalendar schedule={projectlist}/>
         </div>
       </div>
+      {isModal ? <ModalBase onClose={clossModal} title={'제목'} layout/> : null}
     </div>
   );
 }
