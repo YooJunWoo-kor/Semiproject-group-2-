@@ -537,30 +537,19 @@ function LeavePendingView({ leaves, loginEmployeeId, onDecide, saving }) {
   );
 }
 
-function LeaveBalanceView({ employees, leaves, year }) {
+function LeaveBalanceView({ employee, leaves, year }) {
   const approved = leaves.filter(isApprovedLeave);
-  const rows = employees.map((employee) => {
-    const employeeLeaves = approved.filter(
-      (leave) => String(leave.employeeId) === String(employee.employeeId)
-    );
-    const usedDays = employeeLeaves.reduce(
-      (total, leave) => total + Number(leave.leaveDays || 0),
-      0
-    );
-
-    return {
-      employee,
-      usedDays,
-      requestCount: employeeLeaves.length
-    };
-  });
+  const usedDays = approved.reduce(
+    (total, leave) => total + Number(leave.leaveDays || 0),
+    0
+  );
 
   return (
     <div className="attendance-subview">
       <div className="attendance-subview-heading">
         <div>
-          <h3>직원별 연차 현황</h3>
-          <p>{year}년 승인 완료된 휴가 사용량입니다.</p>
+          <h3>{employee.employeeName} 연차 현황</h3>
+          <p>{year}년 선택 직원의 승인 완료 휴가 사용량입니다.</p>
         </div>
       </div>
       <div className="table-shell">
@@ -569,24 +558,27 @@ function LeaveBalanceView({ employees, leaves, year }) {
             <tr>
               <th>직원명</th>
               <th>부서</th>
-              <th>승인 신청</th>
-              <th>사용 일수</th>
-              <th>잔여 일수</th>
+              <th>승인 완료 건수</th>
+              <th>부여 연차</th>
+              <th>사용 연차</th>
+              <th>잔여 연차</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr key={row.employee.employeeId}>
-                <td>{row.employee.employeeName}</td>
-                <td>{row.employee.departmentName || "-"}</td>
-                <td>{row.requestCount}건</td>
-                <td>{row.usedDays}일</td>
-                <td>잔여일수 데이터 없음</td>
-              </tr>
-            ))}
+            <tr>
+              <td>{employee.employeeName}</td>
+              <td>{employee.departmentName || "-"}</td>
+              <td>{approved.length}건</td>
+              <td>-</td>
+              <td>{usedDays}일</td>
+              <td>-</td>
+            </tr>
           </tbody>
         </table>
       </div>
+      <p className="attendance-leave-api-notice">
+        부여 연차와 잔여 연차는 현재 DB에 저장된 필드가 없어 표시하지 않습니다.
+      </p>
     </div>
   );
 }
@@ -595,7 +587,6 @@ function AttendanceEmployeeHeader({
   employee,
   isAttendanceTab,
   attendanceRate,
-  leaveCount,
   children
 }) {
   return (
@@ -610,10 +601,12 @@ function AttendanceEmployeeHeader({
         </p>
       </div>
       {children}
-      <div className="detail-attendance-rate">
-        <span>{isAttendanceTab ? "출근율" : "휴가 신청"}</span>
-        <strong>{isAttendanceTab ? attendanceRate : `${leaveCount}건`}</strong>
-      </div>
+      {isAttendanceTab && (
+        <div className="detail-attendance-rate">
+          <span>출근율</span>
+          <strong>{attendanceRate}</strong>
+        </div>
+      )}
     </div>
   );
 }
@@ -1317,12 +1310,19 @@ export default function Attendance() {
     .sort((a, b) =>
       String(b.startDate || "").localeCompare(String(a.startDate || ""))
     );
+  const selectedEmployeeYearLeaves = leaveYearData.filter(
+    (leave) => String(leave.employeeId) === String(selectedEmployeeId)
+  );
 
-  const leavePendingCount = selectedEmployeeLeaves.filter(
+  const leaveSummaryRows =
+    activeTab === "leave-balance"
+      ? selectedEmployeeYearLeaves
+      : selectedEmployeeLeaves;
+  const leaveSummaryPendingCount = leaveSummaryRows.filter(
     (leave) => leave.applicationStatus === "승인대기"
   ).length;
-  const leaveApprovedCount = selectedEmployeeLeaves.filter(isApprovedLeave).length;
-  const leaveUsedDays = selectedEmployeeLeaves
+  const leaveSummaryApprovedCount = leaveSummaryRows.filter(isApprovedLeave).length;
+  const leaveSummaryUsedDays = leaveSummaryRows
     .filter(isApprovedLeave)
     .reduce((total, leave) => total + Number(leave.leaveDays || 0), 0);
 
@@ -1681,7 +1681,6 @@ export default function Attendance() {
                     selectedEmployee.employeeId,
                     selectedEmployee.employmentStatus
                   )}
-                  leaveCount={selectedEmployeeLeaves.length}
                 >
                     {isAttendanceTab ? (
                       <div className="attendance-summary">
@@ -1701,16 +1700,16 @@ export default function Attendance() {
                     ) : !isAttendanceTab ? (
                       <div className="attendance-summary">
                         <div className="summary-item">
-                          <span>전체 신청</span><strong>{selectedEmployeeLeaves.length}</strong>
+                          <span>전체 신청</span><strong>{leaveSummaryRows.length}</strong>
                         </div>
                         <div className="summary-item">
-                          <span>승인 대기</span><strong>{leavePendingCount}</strong>
+                          <span>승인 대기</span><strong>{leaveSummaryPendingCount}</strong>
                         </div>
                         <div className="summary-item">
-                          <span>승인 완료</span><strong>{leaveApprovedCount}</strong>
+                          <span>승인 완료</span><strong>{leaveSummaryApprovedCount}</strong>
                         </div>
                         <div className="summary-item">
-                          <span>사용 일수</span><strong>{leaveUsedDays}</strong>
+                          <span>사용 일수</span><strong>{leaveSummaryUsedDays}</strong>
                         </div>
                       </div>
                     ) : null}
@@ -1784,7 +1783,7 @@ export default function Attendance() {
               </>
             ) : activeTab === "leave-pending" ? (
               <LeavePendingView
-                leaves={leaveData}
+                leaves={selectedEmployeeLeaves}
                 loginEmployeeId={loginUser?.employeeKey}
                 onDecide={decideLeave}
                 saving={saving}
@@ -1799,8 +1798,8 @@ export default function Attendance() {
               </p>
             ) : (
               <LeaveBalanceView
-                employees={employees}
-                leaves={leaveYearData}
+                employee={selectedEmployee}
+                leaves={selectedEmployeeYearLeaves}
                 year={selectedMonth.slice(0, 4) || String(new Date().getFullYear())}
               />
             )}

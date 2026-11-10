@@ -1107,7 +1107,19 @@
   width: 100%;
   max-width: none;
   min-width: 0;
+  min-height: 82px;
+  padding-bottom: 10px;
   box-sizing: border-box;
+}
+
+.hr-employee-management .stats-section > .hr-average-card {
+  min-height: 82px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+}
+
+.hr-employee-management .stats-section > .hr-average-card p {
+  margin: 0 0 4px;
 }
 
 .hr-employee-management .dashboard-top {
