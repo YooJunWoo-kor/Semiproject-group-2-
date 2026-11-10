@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { getLoginUser } from "../../../../utils/authStorage";
+import { API_BASE_URL, getLoginUser } from "../../../../utils/authStorage";
 import { useNavigate } from "react-router-dom";
+import PaginationTable from "../../../../components/PaginationTable";
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api";
 
-function DraftReq({ drafts, loginUser, setEditingDraft, onDraftChanged }) {
+function DraftReq({ drafts, setEditingDraft, onDraftChanged }) {
     const [searchText, setSearchText] = useState("");
     const navigate = useNavigate();
     const employeeId = getLoginUser()?.employeeKey;
@@ -30,33 +30,30 @@ function DraftReq({ drafts, loginUser, setEditingDraft, onDraftChanged }) {
     }
 
     return (
-        <div>
+        <div className="draft-box">
             <h2>요청된 기안서 / 임시저장된 기안서</h2>
-            <input type="text" placeholder="제목 검색" value={searchText}
-                onChange={e => setSearchText(e.target.value)} />
-            {requestedDrafts.length === 0 ? (
-                <p>요청된 기안서가 없습니다.</p>
-            ) : requestedDrafts.map((draft, index) => (
-                <div key={draft.id} className="draft-item">
-                    <h3 className="draft-item-title">기안서 #{index + 1}</h3>
-                    <p>제목 : {draft.title}</p>
-                    <p>문서 종류 : {draft.draftType}</p>
-                    <p>내용 : {draft.content}</p>
-                    <p>작성일 : {draft.createdAt}</p>
-                    <p>상태 : {draft.status}</p>
-                    {draft.status === "임시저장" && (
-                        <div className="draft-actions">
-                            <button type="button" onClick={() => {
-                                setEditingDraft(draft);
-                                navigate("/main/mytesk/draft-create");
-                            }}>이어서 작성</button>
-                            <button type="button" onClick={() => handleDelete(draft.id)}>
-                                삭제
-                            </button>
-                        </div>
-                    )}
-                </div>
-            ))}
+    
+            <input
+                type="text"
+                placeholder="제목 검색"
+                value={searchText}
+                onChange={e => setSearchText(e.target.value)}
+            />
+    
+            <PaginationTable
+                title="내 결재 요청"
+                th={["제목", "문서 종류", "내용", "작성일", "상태", "관리"]}
+                allData={requestedDrafts.map(draft => ({
+                    content: [
+                        draft.title,
+                        draft.draftType,
+                        draft.content,
+                        draft.createdAt,
+                        draft.status
+                    ]
+                }))}
+                itemsPerPage={5}
+            />
         </div>
     );
 }

@@ -1,12 +1,33 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import products from "./product";
+import axios from "axios";
+import "./QualityControl.css";
+
+import { API_BASE_URL } from "../../../../utils/authStorage";
 import defaultQualityChecklist from "./QualityChecklist";
 import { calculateQualityScore } from "../../../../utils/qualityScore";
+
+
 
 function ProductDetail() {
 
     const { id } = useParams();
+    
+    const [product, setProduct] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    const [qualityStatus, setQualityStatus] = useState("미실시");
+    const [inspectionDate, setInspectionDate] = useState("");
+    const [inspector, setInspector] = useState("");
+    const [failReason, setFailReason] = useState("");
+    const [memo, setMemo] = useState("");
+    
+    const [isSaving, setIsSaving] = useState(false);
+    const [inspectionHistory, setInspectionHistory] = useState([]);
+    const [historyRefresh, setHistoryRefresh] = useState(0);
+
+    const [selectedInspectionId, setSelectedInspectionId] = useState(null);
+    const [historyChecklist, setHistoryChecklist] = useState(null);
 
     const [checklist, setChecklist] = useState(
         defaultQualityChecklist.map(item => ({
@@ -51,32 +72,78 @@ function ProductDetail() {
         setNewChecklistName("");
     };
 
+    
+useEffect(() => {
+
+    async function loadProduct() {
+        setLoading(true);
+        setProduct(null);
+
+        try {
+            const response = await axios.get(
+                `${API_BASE_URL}/quality/products/${id}`
+            );
+
+            const data = response.data;
+
+            const productData = {
+                id: data.product_id,
+                code: data.product_code,
+                name: data.product_name,
+                type: data.product_type,
+                company: data.company,
+                inspector: data.inspector || "-",
+                price: Number(data.price ?? 0), // ?? 값이 null이거나 undefined면 0
+                stock: data.stock,
+                image: data.image_url,
+                variantText: data.variant_text,
+                qualityStatus: data.quality_status,
+                inspectionDate: data.inspection_date || "-",
+                memo: data.memo || ""
+            };
+
+            setProduct(productData);
+            setInspector(data.inspector || "");
+
+            setQualityStatus(data.quality_status || "미실시");
+            setInspectionDate(data.inspection_date || "");
+            setMemo(data.memo || "");
+
+        } catch (error) {
+            console.log("상세페이지 에러");
+        }
+    }
+
+    loadProduct();
+
+}, [id]);
 
 
-    const product = products.find(
-        product => product.id === Number(id)
-    );
-    // id가 같은 제품만 상세화면에 나오게하기
+
+useEffect(() => {
+    async function loadHistory() {
+        try {
+            // 1. 제품의 검사 이력 가져오기
+            const response = await axios.get(
+                `${API_BASE_URL}/quality/products/${id}/inspections`
+            );
+
+            const history = response.data;
+            setInspectionHistory(history);
+
+            if (history.length === 0) return;
+
+            
+
+        } catch (error) {
+            console.error("체크리스트 조회 실패:", error);
+        }
+    }
+
+    loadHistory();
+}, [id, historyRefresh]);
 
 
-    const [qualityStatus, setQualityStatus] = useState(
-        product?.qualityStatus || "미실시"
-    );
-    // ?는 존재하면 뒤에 값을 읽고 ||는 없다면 뒤에 값을 넣으라는 명령문
-
-    const [inspectionDate, setInspectionDate] = useState(
-        product?.inspectionDate === "-"
-            ? ""
-            : product?.inspectionDate || ""
-    );
-
-    const [inspector, setInspector] = useState("");
-
-    const [failReason, setFailReason] = useState("");
-
-    const [memo, setMemo] = useState(
-        product?.memo || ""
-    );
 
 
 
@@ -86,21 +153,88 @@ function ProductDetail() {
     }
 
 
-    const handleSave = () => {
+const loadHistoryChecklist = async (inspectionId) => {
 
-        const inspectionData = {
-            productId: product.id,
+    setSelectedInspectionId(inspectionId);
+    setHistoryChecklist(null);
+
+    try {
+        const response = await axios.get(
+            `${API_BASE_URL}/quality/inspections/${inspectionId}/items`
+        );
+
+        setHistoryChecklist(response.data);
+
+    } catch (error) {
+        console.error("체크리스트 조회 실패:", error);
+        alert("체크리스트를 불러오지 못했습니다.");
+        setSelectedInspectionId(null);
+    }
+};
+
+
+    
+const handleSave = async () => {
+
+    if (isSaving || !product) return;
+
+    // 필수 입력값 검사
+    if (!inspectionDate || !inspector.trim()) {
+        alert("검사일과 검사자를 입력해주세요.");
+        return;
+    }
+
+    if (qualityStatus === "불합격" && !failReason.trim()) {
+        alert("불합격 사유를 입력해주세요.");
+        return;
+    }
+
+    const inspectionData = {
+        productId: product.id,
+        inspectionDate,
+        inspector: inspector.trim(),
+        qualityStatus,
+        failReason: qualityStatus === "불합격" ? failReason.trim() : null,
+        memo: memo.trim(),
+        qualityScore: Number(qualityScore),
+        checklist: checklist
+    };
+
+    try {
+        setIsSaving(true);
+
+        const response = await axios.post(
+            `${API_BASE_URL}/quality/inspections`, inspectionData
+        );
+
+        console.log("검사 저장 성공:", response.data);
+
+        // 화면의 최근 검사 정보도 변경
+        setProduct(prev => ({
+            ...prev,
             qualityStatus,
+            inspector: inspector.trim(),
             inspectionDate,
-            inspector,
-            failReason,
-            memo,
-            checklist,
-            qualityScore
-        };
+            memo: memo.trim()
+        }));
 
         alert("검사 결과가 저장되었습니다.");
-    };
+
+    } catch (error) {
+        console.error("검사 저장 실패:", error);
+        alert("검사 결과를 저장하지 못했습니다.");
+
+    } finally {
+        setIsSaving(false);
+    }
+
+    setHistoryRefresh(prev => prev + 1);
+};
+
+    const selectedInspection = inspectionHistory.find(
+        item => item.inspection_id === selectedInspectionId
+    );
+
 
 
     return (
@@ -108,7 +242,7 @@ function ProductDetail() {
         <div className="product-detail-page">
 
 
-            <div className="detail-top">
+            <div className="detail-top quality-page-header">
 
                 <div>
                     <h1>{product.name}</h1>
@@ -119,21 +253,15 @@ function ProductDetail() {
                 </div>
 
                 <span
-                    className={
-                        qualityStatus === "통과"
-                            ? "status pass"
-                            : qualityStatus === "불합격"
-                                ? "status fail"
-                                : "status not-tested"
-                    }
-                >
+                    className={qualityStatus === "통과" ? "quality-status is-pass" : qualityStatus === "불합격" ? "quality-status is-fail" : "quality-status is-wait"}>
+                        
                     {qualityStatus}
                 </span>
 
             </div>
 
 
-            <section className="product-info-card">
+            <section className="product-info-card quality-panel">
 
                 <div className="detail-image-area">
 
@@ -188,7 +316,7 @@ function ProductDetail() {
             </section>
 
 
-            <section className="inspection-card">
+            <section className="inspection-card quality-panel">
 
                 <div className="section-title">
 
@@ -210,9 +338,7 @@ function ProductDetail() {
 
                         <button
                             className={
-                                qualityStatus === "통과"
-                                    ? "selected"
-                                    : ""
+                                qualityStatus === "통과" ? "selected" : ""
                             }
                             onClick={() =>
                                 setQualityStatus("통과")
@@ -223,9 +349,7 @@ function ProductDetail() {
 
                         <button
                             className={
-                                qualityStatus === "불합격"
-                                    ? "selected"
-                                    : ""
+                                qualityStatus === "불합격" ? "selected" : ""
                             }
                             onClick={() =>
                                 setQualityStatus("불합격")
@@ -236,9 +360,7 @@ function ProductDetail() {
 
                         <button
                             className={
-                                qualityStatus === "미실시"
-                                    ? "selected"
-                                    : ""
+                                qualityStatus === "미실시" ? "selected" : ""
                             }
                             onClick={() =>
                                 setQualityStatus("미실시")
@@ -260,8 +382,7 @@ function ProductDetail() {
 
                         <input
                             type="date"
-                            value={inspectionDate}
-                            onChange={(e) =>
+                            value={inspectionDate} onChange={(e) =>
                                 setInspectionDate(e.target.value)
                             }
                         />
@@ -324,7 +445,7 @@ function ProductDetail() {
                 <div className="detail-save-area">
 
                     <button
-                        className="save-button"
+                        className="save-button erp-primary-button"
                         onClick={handleSave}
                     >
                         검사 결과 저장
@@ -335,7 +456,7 @@ function ProductDetail() {
             </section>
 
 
-            <section className="inspection-history-card">
+            <section className="inspection-history-card quality-panel">
 
                 <div className="section-title">
 
@@ -350,7 +471,8 @@ function ProductDetail() {
                 </div>
 
 
-                <table className="quality-table">
+                <div className="quality-table-shell">
+                <table className="quality-table quality-data-table">
 
                     <thead>
 
@@ -359,52 +481,77 @@ function ProductDetail() {
                             <th>검사자</th>
                             <th>검사결과</th>
                             <th>비고</th>
+                            <th>체크리스트</th>
                         </tr>
 
                     </thead>
 
 
+                    
                     <tbody>
+                        {inspectionHistory.length === 0 ? (
+                            <tr>
+                                <td colSpan={5}>
+                                    등록된 검사 이력이 없습니다.
+                                </td>
+                            </tr>
+                        ) : (
+                            inspectionHistory.map(item => (
+                                <tr key={item.inspection_id}>
+                                    <td>{item.inspection_date}</td>
 
-                        <tr>
+                                    <td>{item.inspector || "-"}</td>
 
-                            <td>
-                                {product.inspectionDate}
-                            </td>
+                                    <td>
+                                        <span className={
+                                            item.quality_status === "통과" ? "quality-status is-pass" : item.quality_status === "불합격" ? "quality-status is-fail" : "quality-status is-wait"
+                                        }>
+                                            {item.quality_status}
+                                        </span>
+                                    </td>
 
-                            <td>
-                                -
-                            </td>
+                                    <td>{item.memo || item.fail_reason || "-"}</td>
 
-                            <td>
-
-                                <span
-                                    className={
-                                        product.qualityStatus === "통과"
-                                            ? "status pass"
-                                            : product.qualityStatus === "불합격"
-                                                ? "status fail"
-                                                : "status not-tested"
-                                    }
-                                >
-                                    {product.qualityStatus}
-                                </span>
-
-                            </td>
-
-                            <td>
-                                {product.memo || "-"}
-                            </td>
-
-                        </tr>
-
+                                    <td>
+                                        <button type="button" onClick={() => loadHistoryChecklist(item.inspection_id)}>
+                                            보기
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
                     </tbody>
 
+
                 </table>
+                </div>
+
+                {selectedInspectionId !== null && (
+                        
+                        <div className="quality-panel">
+                            <h3>{selectedInspection?.inspection_date} {selectedInspection?.inspector} 검사자 체크리스트</h3>
+
+                            {historyChecklist === null ? (
+                                <p>불러오는 중...</p>
+                            ) : historyChecklist.length === 0 ? (
+                                <p>저장된 체크리스트가 없습니다.</p>
+                            ) : (
+                                <ul>
+                                    {historyChecklist.map(item => (
+                                        <li key={item.item_id}>
+                                            {item.item_name} : {item.result}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    )}
+
+                    <hr/>
 
             </section>
 
-            <section className="quality-checklist">
+            <section className="quality-checklist quality-panel">
 
                 <h2>품질 검사 체크리스트</h2>
 
@@ -428,6 +575,7 @@ function ProductDetail() {
                         <div>
                             <button
                                 type="button"
+                                className={item.result === "통과" ? "selected" : ""}
                                 onClick={() =>
                                     changeChecklistResult(
                                         item.id,
@@ -440,6 +588,7 @@ function ProductDetail() {
 
                             <button
                                 type="button"
+                                className={item.result === "불합격" ? "selected" : ""}
                                 onClick={() =>
                                     changeChecklistResult(
                                         item.id,
@@ -452,6 +601,7 @@ function ProductDetail() {
 
                             <button
                                 type="button"
+                                className={item.result === "미실시" ? "selected" : ""}
                                 onClick={() =>
                                     changeChecklistResult(
                                         item.id,

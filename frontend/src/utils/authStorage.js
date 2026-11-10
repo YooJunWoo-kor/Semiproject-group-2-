@@ -22,14 +22,17 @@ export const TOGLE_COLORS = [
   ];
 
 // 로그인 사용자 저장
+/* employeeKey,name, email, department,position, role */
 export function saveLoginUser(user) {
     localStorage.setItem(
         LOGIN_USER_KEY,
         JSON.stringify(user)
     );
+    
 }
 
 // 로그인 사용자 조회
+/* employeeKey,name, email, department,position, role */
 export function getLoginUser() {
     const user = localStorage.getItem(LOGIN_USER_KEY);
     if (!user) return null;
@@ -48,7 +51,7 @@ export function getTodayString (){
   };
 
 //출결 데이터 포멧팅 함수
-function formatDateToYYYYMMDD(dateString) {
+export function formatDateToYYYYMMDD(dateString) {
     if (!dateString) return '';
     const date = new Date(dateString);
     const year = date.getFullYear();

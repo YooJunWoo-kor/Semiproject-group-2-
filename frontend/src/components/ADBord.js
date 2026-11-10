@@ -13,7 +13,7 @@ async function setAttendens(){
     } catch (error) {
     }
 }
-
+ 
 //퇴근데이터 생성 및 처리
 async function updateAttendens(){
     const userInfo = localStorage.getItem(LOGIN_USER_KEY);
