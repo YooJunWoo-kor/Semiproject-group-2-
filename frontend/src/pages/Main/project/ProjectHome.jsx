@@ -154,7 +154,7 @@ function ProjectRoutes() {
   );
 }
 
-// 상단 진행현황 컴포넌트
+// 📌 상단 진행현황 컴포넌트
 function ProjectProgress({ start, end }) {
   const startDate = new Date(start);
   const endDate = new Date(end);
@@ -311,7 +311,6 @@ function ProjectDetail({ project, onUpdateTasks }) {
       {/* 1. 상단 공통 헤더 */}
       <header className="dashboard-header">
         <span className="subtitle">{project.title}</span>
-        <span className="subtext">프로젝트 세부 일정 및 실시간 업무 현황</span>
       </header>
 
       {/* 2. 상단 일정 진행현황 바 */}
