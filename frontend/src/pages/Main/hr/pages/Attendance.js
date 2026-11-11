@@ -68,136 +68,19 @@ function createEmployeeList(data, department, searchKeyword) {
   });
 }
 
-function getTodayDate() {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function isDateInRange(value, startDate, endDate) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return false;
-  }
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
-    return false;
-  }
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-    return false;
-  }
-
-  return startDate <= value && value <= endDate;
-}
-
-function formatLeavePeriod(startDate, endDate) {
-  if (
-    !/^\d{4}-\d{2}-\d{2}$/.test(startDate) ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(endDate)
-  ) {
-    return "";
-  }
-
-  return `${startDate.slice(5).replace("-", ".")} ~ ${endDate
-    .slice(5)
-    .replace("-", ".")}`;
-}
-
-function getEmployeeDisplayStatus(employee, leaves, attendanceData) {
-  const employmentStatus = employee.employmentStatus;
-
-  // 고용 상태를 가장 먼저 적용해 휴가·출장 데이터보다 우선합니다.
-  if (employmentStatus === "퇴사") {
-    return { label: "퇴사", className: "retired", detail: "" };
-  }
-
-  if (employmentStatus === "휴직") {
-    return { label: "휴직", className: "on-leave", detail: "" };
-  }
-
-  if (employmentStatus !== "재직") {
-    return null;
-  }
-
-  const today = getTodayDate();
-  const approvedLeave = leaves.find(
-    (leave) =>
-      String(leave.employeeId) === String(employee.employeeId) &&
-      isApprovedLeave(leave) &&
-      isDateInRange(today, leave.startDate, leave.endDate)
-  );
-
-  if (approvedLeave) {
-    return {
-      label: "휴가",
-      className: "vacation",
-      detail: formatLeavePeriod(approvedLeave.startDate, approvedLeave.endDate)
-    };
-  }
-
-  // 출장 여부는 기존 근태 기록에 오늘 날짜와 명시적인 출장 상태가 함께 있는 경우만 표시합니다.
-  const isOnBusinessTrip = attendanceData.some(
-    (attendance) =>
-      String(attendance.employeeId) === String(employee.employeeId) &&
-      attendance.attendanceDate === today &&
-      attendance.status === "출장"
-  );
-
-  if (isOnBusinessTrip) {
-    return { label: "출장", className: "business-trip", detail: "" };
-  }
-
-  return { label: "재직", className: "active", detail: "" };
-}
-
-function summarizeAttendanceRecords(records) {
-  const workdayRecords = records.filter(
-    (record) => !["휴가", "휴직"].includes(record.status)
-  );
-  const recognizedRecords = workdayRecords.filter((record) => {
-    if (["결근", "미출근"].includes(record.status)) {
-      return false;
-    }
-
-    return ["정상", "지각", "출장"].includes(record.status) || Boolean(record.clockIn);
-  });
-
-  return {
-    workdayRecords,
-    recognizedRecords,
-    workdayCount: workdayRecords.length,
-    recognizedCount: recognizedRecords.length,
-    normalCount: records.filter((record) => record.status === "정상").length,
-    lateCount: records.filter((record) => record.status === "지각").length,
-    leaveCount: records.filter((record) => record.status === "휴가").length,
-    businessTripCount: records.filter((record) => record.status === "출장").length,
-    absenceCount: records.filter(
-      (record) => ["결근", "미출근"].includes(record.status)
-    ).length
-  };
-}
-
-function calculateAttendanceRate(data, month, employeeId, employmentStatus) {
-  if (employmentStatus === "퇴사") {
-    return "-";
-  }
-
+function calculateAttendanceRate(data, month, employeeId) {
   const records = data.filter(
     (item) =>
       String(item.employeeId) === String(employeeId) &&
       String(item.attendanceDate || "").startsWith(month)
   );
-  const summary = summarizeAttendanceRecords(records);
 
-  if (summary.workdayCount === 0) {
+  if (records.length === 0) {
     return "-";
   }
 
-  // 출근율 = 정상·지각·출장 등 출근 인정 건수 / 휴가·휴직을 제외한 근무일 기록 수
-  return `${Math.round((summary.recognizedCount / summary.workdayCount) * 100)}%`;
+  const normalCount = records.filter((item) => item.status === "정상").length;
+  return `${Math.round((normalCount / records.length) * 100)}%`;
 }
 
 function getWeekday(value) {
@@ -270,11 +153,17 @@ function formatMinutes(minutes) {
 
 function getAttendanceAnomaly(attendance) {
   if (attendance.status === "지각") return "지각";
-  if (["결근", "미출근"].includes(attendance.status)) return "결근";
-  if (attendance.status === "조퇴") return "조퇴";
+  if (attendance.status === "미출근") return "결근";
+  if (attendance.status === "출장") return "출장";
 
-  // 출장·정상·휴가는 근태 상태가 확정된 기록이므로 이상근태에서 제외합니다.
-  return "";
+  const workMinutes = getWorkMinutes(
+    attendance.clockIn,
+    attendance.clockOut
+  );
+
+  return workMinutes !== null && workMinutes < 8 * 60
+    ? "조기퇴근"
+    : "";
 }
 
 function AttendanceAnomalies({ records }) {
@@ -372,18 +261,22 @@ function AttendanceStatistics({ records, month }) {
   const monthRecords = records.filter((attendance) =>
     String(attendance.attendanceDate || "").startsWith(month)
   );
-  const summary = summarizeAttendanceRecords(monthRecords);
-  const workMinutes = summary.recognizedRecords.reduce((total, attendance) => {
+  const workMinutes = monthRecords.reduce((total, attendance) => {
     const minutes = getWorkMinutes(attendance.clockIn, attendance.clockOut);
     return total + (minutes || 0);
   }, 0);
-  const overtimeMinutes = summary.recognizedRecords.reduce((total, attendance) => {
+  const overtimeMinutes = monthRecords.reduce((total, attendance) => {
     const minutes = getWorkMinutes(attendance.clockIn, attendance.clockOut);
     return total + (minutes && minutes > 8 * 60 ? minutes - 8 * 60 : 0);
   }, 0);
-  const recordCount = summary.workdayCount;
-  const recognizedCount = summary.recognizedCount;
-  const expectedWorkMinutes = recognizedCount * 8 * 60;
+  const recordCount = monthRecords.length;
+  const clockedInCount = monthRecords.filter((item) => item.clockIn).length;
+  const normalCount = monthRecords.filter((item) => item.status === "정상").length;
+  const lateCount = monthRecords.filter((item) => item.status === "지각").length;
+  const leaveCount = monthRecords.filter((item) => item.status === "휴가").length;
+  const businessTripCount = monthRecords.filter((item) => item.status === "출장").length;
+  const absenceCount = monthRecords.filter((item) => item.status === "미출근").length;
+  const expectedWorkMinutes = clockedInCount * 8 * 60;
   const workTimeRate = expectedWorkMinutes
     ? (workMinutes / expectedWorkMinutes) * 100
     : 0;
@@ -412,22 +305,22 @@ function AttendanceStatistics({ records, month }) {
             <div className="attendance-progress-list">
               <AttendanceProgressBar
                 label="정상 출근율"
-                percent={recordCount ? (summary.normalCount / recordCount) * 100 : 0}
-                value={`${summary.normalCount}건`}
+                percent={recordCount ? (normalCount / recordCount) * 100 : 0}
+                value={`${normalCount}건`}
                 detail={`전체 근태 기록 ${recordCount}건`}
                 tone="brand"
               />
               <AttendanceProgressBar
                 label="출근 처리율"
-                percent={recordCount ? (recognizedCount / recordCount) * 100 : 0}
-                value={`${recognizedCount}건`}
+                percent={recordCount ? (clockedInCount / recordCount) * 100 : 0}
+                value={`${clockedInCount}건`}
                 detail="출근 시간이 저장된 실제 기록"
                 tone="success"
               />
               <AttendanceProgressBar
                 label="지각 비율"
-                percent={recordCount ? (summary.lateCount / recordCount) * 100 : 0}
-                value={`${summary.lateCount}건`}
+                percent={recordCount ? (lateCount / recordCount) * 100 : 0}
+                value={`${lateCount}건`}
                 detail="DB 상태값이 지각인 기록"
                 tone="warning"
               />
@@ -435,18 +328,18 @@ function AttendanceStatistics({ records, month }) {
                 label="총 근무시간 달성률"
                 percent={workTimeRate}
                 value={formatMinutes(workMinutes)}
-                detail={`출근 인정 ${recognizedCount}건 × 8시간 기준 · 초과 ${formatMinutes(overtimeMinutes)}`}
+                detail={`출근일 ${clockedInCount}일 × 8시간 기준 · 초과 ${formatMinutes(overtimeMinutes)}`}
                 tone="info"
               />
             </div>
 
             <div className="attendance-progress-statuses">
               {[
-                ["정상", summary.normalCount, "brand"],
-                ["지각", summary.lateCount, "warning"],
-                ["휴가", summary.leaveCount, "info"],
-                ["출장", summary.businessTripCount, "success"],
-                ["결근", summary.absenceCount, "danger"]
+                ["정상", normalCount, "brand"],
+                ["지각", lateCount, "warning"],
+                ["휴가", leaveCount, "info"],
+                ["출장", businessTripCount, "success"],
+                ["결근", absenceCount, "danger"]
               ].map(([label, count, tone]) => (
                 <div className="attendance-progress-status" key={label}>
                   <span>{label}</span>
@@ -538,8 +431,18 @@ function LeavePendingView({ leaves, loginEmployeeId, onDecide, saving }) {
 }
 
 function LeaveBalanceView({ employee, leaves, year }) {
-  const approved = leaves.filter(isApprovedLeave);
-  const usedDays = approved.reduce(
+  const employeeLeaves = leaves.filter(
+    (leave) => String(leave.employeeId) === String(employee.employeeId)
+  );
+  const approvedLeaves = employeeLeaves.filter(isApprovedLeave);
+  const pendingLeaves = employeeLeaves.filter(
+    (leave) => leave.applicationStatus === "승인대기"
+  );
+  const usedDays = approvedLeaves.reduce(
+    (total, leave) => total + Number(leave.leaveDays || 0),
+    0
+  );
+  const pendingDays = pendingLeaves.reduce(
     (total, leave) => total + Number(leave.leaveDays || 0),
     0
   );
@@ -548,37 +451,83 @@ function LeaveBalanceView({ employee, leaves, year }) {
     <div className="attendance-subview">
       <div className="attendance-subview-heading">
         <div>
-          <h3>{employee.employeeName} 연차 현황</h3>
-          <p>{year}년 선택 직원의 승인 완료 휴가 사용량입니다.</p>
+          <h3>{employee.employeeName} {year}년 연차 현황</h3>
+          <p>선택 직원의 연차 부여·사용 현황입니다.</p>
         </div>
       </div>
       <div className="table-shell">
         <table>
           <thead>
             <tr>
-              <th>직원명</th>
-              <th>부서</th>
-              <th>승인 완료 건수</th>
+              <th>기준 연도</th>
               <th>부여 연차</th>
-              <th>사용 연차</th>
+              <th>이월·조정</th>
+              <th>사용 일수</th>
+              <th>승인 대기</th>
               <th>잔여 연차</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>{employee.employeeName}</td>
-              <td>{employee.departmentName || "-"}</td>
-              <td>{approved.length}건</td>
+              <td>{year}년</td>
+              <td>미등록</td>
               <td>-</td>
               <td>{usedDays}일</td>
+              <td>{pendingDays}일</td>
               <td>-</td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p className="attendance-leave-api-notice">
-        부여 연차와 잔여 연차는 현재 DB에 저장된 필드가 없어 표시하지 않습니다.
+
+      <p className="attendance-leave-api-notice" role="note">
+        ⓘ 연차 부여 정보가 등록되지 않아 잔여 연차를 계산할 수 없습니다.
       </p>
+
+      <div className="attendance-subview-heading attendance-leave-history-heading">
+        <div>
+          <h3>연차 사용 내역</h3>
+          <p>승인 완료된 휴가 사용 내역입니다.</p>
+        </div>
+      </div>
+      <div className="table-shell attendance-leave-history-table">
+        <table>
+          <thead>
+            <tr>
+              <th>휴가 유형</th>
+              <th>사용 기간</th>
+              <th>사용 일수</th>
+              <th>신청 상태</th>
+              <th>신청일</th>
+              <th>승인일</th>
+            </tr>
+          </thead>
+          <tbody>
+            {approvedLeaves.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="attendance-leave-history-empty">
+                  승인 완료된 휴가 사용 내역이 없습니다.
+                </td>
+              </tr>
+            ) : (
+              approvedLeaves.map((leave) => (
+                <tr key={leave.leaveId}>
+                  <td>{leave.leaveType || "휴가"}</td>
+                  <td>{leave.startDate} ~ {leave.endDate}</td>
+                  <td>{leave.leaveDays ?? "-"}일</td>
+                  <td>
+                    <span className="status-tag working">
+                      {leave.applicationStatus}
+                    </span>
+                  </td>
+                  <td>{leave.applicationDate || "-"}</td>
+                  <td>{leave.approvalDate || "-"}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -587,10 +536,12 @@ function AttendanceEmployeeHeader({
   employee,
   isAttendanceTab,
   attendanceRate,
+  leaveCount,
+  isLeaveBalance,
   children
 }) {
   return (
-    <div className="attendance-detail-header">
+    <div className={`attendance-detail-header${isLeaveBalance ? " leave-balance-header" : ""}`}>
       <div>
         <span className="attendance-badge">선택 직원</span>
         <h2>{employee.employeeName}</h2>
@@ -601,10 +552,10 @@ function AttendanceEmployeeHeader({
         </p>
       </div>
       {children}
-      {isAttendanceTab && (
+      {!isLeaveBalance && (
         <div className="detail-attendance-rate">
-          <span>출근율</span>
-          <strong>{attendanceRate}</strong>
+          <span>{isAttendanceTab ? "출근율" : "휴가 신청"}</span>
+          <strong>{isAttendanceTab ? attendanceRate : `${leaveCount}건`}</strong>
         </div>
       )}
     </div>
@@ -689,10 +640,10 @@ function AttendanceSubTabs({
 
 function AttendanceEditForm({ attendance, onSave, onCancel, saving }) {
   const [form, setForm] = useState({
-    attendanceDate: attendance.attendanceDate || getTodayDate(),
+    workDate: attendance.attendanceDate || "",
     checkIn: attendance.clockIn || "",
     checkOut: attendance.clockOut || "",
-    status: attendance.status || (attendance.attendanceId ? "정상" : "미출근"),
+    status: attendance.status || "정상",
     memo: attendance.memo || ""
   });
 
@@ -708,9 +659,9 @@ function AttendanceEditForm({ attendance, onSave, onCancel, saving }) {
     onSave({
       attendanceId: attendance.attendanceId,
       employeeId: attendance.employeeId,
-      attendanceDate: form.attendanceDate,
-      checkIn: form.checkIn,
-      checkOut: form.checkOut,
+      workDate: form.workDate,
+      checkIn: form.checkIn || null,
+      checkOut: form.checkOut || null,
       status: form.status,
       memo: form.memo.trim()
     });
@@ -720,20 +671,25 @@ function AttendanceEditForm({ attendance, onSave, onCancel, saving }) {
     <form onSubmit={handleSubmit} className="attendance-edit-form">
       <div className="attendance-edit-summary">
         <div><span>직원</span><strong>{attendance.employeeName}</strong></div>
-        {attendance.attendanceId ? (
-          <div><span>날짜</span><strong>{attendance.attendanceDate}</strong></div>
-        ) : (
-          <label className="attendance-edit-field">
-            <span>근무일</span>
-            <input
-              type="date"
-              name="attendanceDate"
-              value={form.attendanceDate}
-              onChange={changeForm}
-              required
-            />
-          </label>
-        )}
+        <div>
+          <span>구분</span>
+          <strong>{attendance.attendanceId ? "기존 기록 수정" : "신규 기록 입력"}</strong>
+        </div>
+      </div>
+
+      <label className="attendance-edit-field">
+        <span>근무일</span>
+        <input
+          type="date"
+          name="workDate"
+          value={form.workDate}
+          onChange={changeForm}
+          required
+          disabled={Boolean(attendance.attendanceId)}
+        />
+      </label>
+
+      <div className="attendance-edit-time-fields">
         <label className="attendance-edit-field">
           <span>출근 시간</span>
           <input
@@ -743,6 +699,7 @@ function AttendanceEditForm({ attendance, onSave, onCancel, saving }) {
             onChange={changeForm}
           />
         </label>
+
         <label className="attendance-edit-field">
           <span>퇴근 시간</span>
           <input
@@ -768,15 +725,15 @@ function AttendanceEditForm({ attendance, onSave, onCancel, saving }) {
       </label>
 
       <label className="attendance-edit-field">
-        <span>수정 사유</span>
+        <span>메모</span>
         <textarea
           name="memo"
           value={form.memo}
           onChange={changeForm}
           maxLength={255}
           rows={4}
-          placeholder="출퇴근 시간 또는 상태를 수정한 사유를 입력해 주세요."
           required
+          placeholder="근태 관련 메모를 입력해 주세요."
         />
       </label>
 
@@ -796,8 +753,6 @@ export default function Attendance() {
   const navigate = useNavigate();
   const loginUser = getLoginUser();
   const isMaster = String(loginUser?.role || "").trim().toUpperCase() === "MASTER";
-  const isHr = Number(loginUser?.department_id ?? loginUser?.department) === 1;
-  const canEditAttendance = isMaster || isHr;
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [attendanceData, setAttendanceData] = useState([]);
@@ -990,7 +945,7 @@ export default function Attendance() {
     selectedDepartment,
     keyword
   );
-  const itemsPerPage = 5;
+  const itemsPerPage = 7;
   const totalPages = Math.max(1, Math.ceil(employeeList.length / itemsPerPage));
   const effectivePage = Math.min(currentPage, totalPages);
   const visibleEmployeeList = employeeList.slice(
@@ -1043,7 +998,15 @@ export default function Attendance() {
         String(first.attendanceDate || "")
       )
     );
-  const selectedAttendanceSummary = summarizeAttendanceRecords(selectedAttendance);
+  const normalCount = selectedAttendance.filter(
+    (item) => item.status === "정상"
+  ).length;
+  const lateCount = selectedAttendance.filter(
+    (item) => item.status === "지각"
+  ).length;
+  const leaveCount = selectedAttendance.filter(
+    (item) => item.status === "휴가"
+  ).length;
   const tableHeaders = [
     "날짜",
     "요일",
@@ -1072,25 +1035,25 @@ export default function Attendance() {
         {attendance.status || "-"}
       </span>,
       attendance.memo || "-",
-      canEditAttendance ? (
-        <>
+      isMaster ? (
+        <div className="attendance-row-actions">
           <button
             type="button"
             onClick={() => openAttendanceEdit(attendance)}
             className="attendance-row-edit-button"
             disabled={saving}
           >
-            상태 수정
+            수정
           </button>
           <button
             type="button"
-            onClick={() => deleteAttendance(attendance)}
-            className="attendance-row-edit-button"
+            onClick={() => removeAttendance(attendance)}
+            className="attendance-row-delete-button"
             disabled={saving}
           >
             삭제
           </button>
-        </>
+        </div>
       ) : (
         "-"
       )
@@ -1098,52 +1061,98 @@ export default function Attendance() {
   }));
 
   function openAttendanceEdit(attendance) {
-    if (!canEditAttendance) {
+    if (!isMaster) {
       return;
     }
 
-    setSelectedAttendanceRecord(attendance);
+    setSelectedAttendanceRecord(
+      attendance || {
+        employeeId: selectedEmployee?.employeeId || selectedEmployeeId,
+        employeeName: selectedEmployee?.employeeName || "선택 직원",
+        attendanceDate: selectedMonth ? `${selectedMonth}-01` : "",
+        clockIn: "",
+        clockOut: "",
+        status: "정상",
+        memo: ""
+      }
+    );
     setError("");
     setNotice("");
     setIsEditModalOpen(true);
   }
 
-  function openAttendanceCreate() {
-    if (!canEditAttendance || !selectedEmployee) {
+  async function saveAttendanceEdit(formData) {
+    if (!isMaster) {
       return;
     }
 
-    const today = getTodayDate();
-    const attendanceDate =
-      selectedMonth && selectedMonth !== today.slice(0, 7)
-        ? `${selectedMonth}-01`
-        : today;
-
-    setSelectedAttendanceRecord({
-      attendanceId: null,
-      employeeId: selectedEmployee.employeeId,
-      employeeName: selectedEmployee.employeeName,
-      attendanceDate,
-      clockIn: null,
-      clockOut: null,
-      status: "미출근",
-      memo: ""
-    });
+    setSaving(true);
     setError("");
     setNotice("");
-    setIsEditModalOpen(true);
+
+    try {
+      const isNewAttendance = !formData.attendanceId;
+      const response = isNewAttendance
+        ? await createHrAttendance({
+            employeeId: formData.employeeId,
+            workDate: formData.workDate,
+            checkIn: formData.checkIn,
+            checkOut: formData.checkOut,
+            status: formData.status,
+            memo: formData.memo
+          })
+        : await updateHrAttendance(formData.attendanceId, {
+            checkIn: formData.checkIn,
+            checkOut: formData.checkOut,
+            status: formData.status,
+            memo: formData.memo
+          });
+
+      if (!response.data.success) {
+        throw new Error("근태 처리 응답이 올바르지 않습니다.");
+      }
+
+      const attendanceResponse = await getHrAttendance();
+
+      if (
+        !attendanceResponse.data.success ||
+        !Array.isArray(attendanceResponse.data.data)
+      ) {
+        throw new Error("근태 목록 응답 형식이 올바르지 않습니다.");
+      }
+
+      const updatedRows = attendanceResponse.data.data;
+      setAttendanceData(updatedRows);
+      setSelectedAttendanceRecord(
+        updatedRows.find(
+          (attendance) => attendance.attendanceId === response.data.data?.attendanceId
+        ) || null
+      );
+      setIsEditModalOpen(false);
+      setNotice(response.data.message || (isNewAttendance
+        ? "근태 기록이 등록되었습니다."
+        : "근태 정보가 수정되었습니다."));
+    } catch (requestError) {
+      console.error("근태 수정 오류:", requestError);
+      setError(
+        requestError.response?.data?.message ||
+        "근태 정보를 저장하지 못했습니다."
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
-  async function deleteAttendance(attendance) {
-    if (!canEditAttendance || !attendance?.attendanceId || saving) {
+  async function removeAttendance(attendance) {
+    if (!isMaster || saving) {
       return;
     }
 
-    if (
-      !window.confirm(
-        `${attendance.employeeName}님의 ${attendance.attendanceDate} 근태 기록을 삭제할까요?`
-      )
-    ) {
+    const confirmed = window.confirm(
+      `${attendance.attendanceDate} 근태 기록을 삭제할까요?`
+    );
+
+    if (!confirmed) {
       return;
     }
 
@@ -1171,81 +1180,10 @@ export default function Attendance() {
       setSelectedAttendanceRecord(null);
       setNotice(response.data.message || "근태 기록이 삭제되었습니다.");
     } catch (requestError) {
-      console.error("근태 삭제 오류:", requestError);
+      console.error("근태 기록 삭제 오류:", requestError);
       setError(
         requestError.response?.data?.message ||
         "근태 기록을 삭제하지 못했습니다."
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  // 기존 기록은 출퇴근 시간·상태·수정 사유를 수정하고, 신규 기록은 같은 폼으로 등록합니다.
-  async function saveAttendanceEdit(formData) {
-    if (!canEditAttendance) {
-      return;
-    }
-
-    setSaving(true);
-    setError("");
-    setNotice("");
-
-    try {
-      const response = formData.attendanceId
-        ? await updateHrAttendance(formData.attendanceId, {
-          checkIn: formData.checkIn,
-          checkOut: formData.checkOut,
-          status: formData.status,
-          memo: formData.memo
-        })
-        : await createHrAttendance({
-          employeeId: formData.employeeId,
-          workDate: formData.attendanceDate,
-          checkIn: formData.checkIn,
-          checkOut: formData.checkOut,
-          status: formData.status,
-          memo: formData.memo
-        });
-
-      if (!response.data.success) {
-        throw new Error("근태 수정 응답이 올바르지 않습니다.");
-      }
-
-      const attendanceResponse = await getHrAttendance();
-
-      if (
-        !attendanceResponse.data.success ||
-        !Array.isArray(attendanceResponse.data.data)
-      ) {
-        throw new Error("근태 목록 응답 형식이 올바르지 않습니다.");
-      }
-
-      const updatedRows = attendanceResponse.data.data;
-      setAttendanceData(updatedRows);
-      if (!formData.attendanceId) {
-        setSelectedMonth(formData.attendanceDate.slice(0, 7));
-      }
-      setSelectedAttendanceRecord(
-        updatedRows.find((attendance) =>
-          formData.attendanceId
-            ? attendance.attendanceId === formData.attendanceId
-            : String(attendance.employeeId) === String(formData.employeeId) &&
-              attendance.attendanceDate === formData.attendanceDate
-        ) || null
-      );
-      setIsEditModalOpen(false);
-      setNotice(
-        response.data.message ||
-        (formData.attendanceId
-          ? "근태 정보가 수정되었습니다."
-          : "근태 기록이 등록되었습니다.")
-      );
-    } catch (requestError) {
-      console.error("근태 수정 오류:", requestError);
-      setError(
-        requestError.response?.data?.message ||
-        "근태 정보를 수정하지 못했습니다."
       );
     } finally {
       setSaving(false);
@@ -1310,19 +1248,21 @@ export default function Attendance() {
     .sort((a, b) =>
       String(b.startDate || "").localeCompare(String(a.startDate || ""))
     );
+
+  const leavePendingCount = selectedEmployeeLeaves.filter(
+    (leave) => leave.applicationStatus === "승인대기"
+  ).length;
+  const leaveApprovedCount = selectedEmployeeLeaves.filter(isApprovedLeave).length;
+  const leaveUsedDays = selectedEmployeeLeaves
+    .filter(isApprovedLeave)
+    .reduce((total, leave) => total + Number(leave.leaveDays || 0), 0);
   const selectedEmployeeYearLeaves = leaveYearData.filter(
     (leave) => String(leave.employeeId) === String(selectedEmployeeId)
   );
-
-  const leaveSummaryRows =
-    activeTab === "leave-balance"
-      ? selectedEmployeeYearLeaves
-      : selectedEmployeeLeaves;
-  const leaveSummaryPendingCount = leaveSummaryRows.filter(
-    (leave) => leave.applicationStatus === "승인대기"
-  ).length;
-  const leaveSummaryApprovedCount = leaveSummaryRows.filter(isApprovedLeave).length;
-  const leaveSummaryUsedDays = leaveSummaryRows
+  const annualPendingDays = selectedEmployeeYearLeaves
+    .filter((leave) => leave.applicationStatus === "승인대기")
+    .reduce((total, leave) => total + Number(leave.leaveDays || 0), 0);
+  const annualUsedDays = selectedEmployeeYearLeaves
     .filter(isApprovedLeave)
     .reduce((total, leave) => total + Number(leave.leaveDays || 0), 0);
 
@@ -1376,45 +1316,86 @@ export default function Attendance() {
       <header className="dashboard-header">
         <div>
           <span className="subtitle">근태관리</span>
+          <span className="subtext">
+            임직원의 출근 현황과 근태 상태를 조회하고 관리합니다.
+          </span>
         </div>
       </header>
 
       {/* 두 탭에 공통으로 적용되는 조회 조건 */}
-      <section className="hr-filter-card" aria-label="근태·휴가 조회 조건">
-        <nav
-          className="attendance-tabs attendance-main-tabs"
-          aria-label="근태관리 메뉴"
-        >
-          <button
-            type="button"
-            role="tab"
-            className={isAttendanceTab ? "active" : ""}
-            aria-selected={isAttendanceTab}
-            onClick={() => setActiveTab("attendance-records")}
-          >
-            근태 기록
-          </button>
-          <button
-            type="button"
-            role="tab"
-            className={isLeaveTab ? "active" : ""}
-            aria-selected={isLeaveTab}
-            onClick={() => setActiveTab("leave-requests")}
-          >
-            휴가 신청·승인
-          </button>
-        </nav>
+      <section className="attendance-filter" aria-label="근태·휴가 조회 조건">
+        <div className="attendance-detail-navigation">
+          <div className="attendance-navigation">
+            <nav
+              className="attendance-tabs attendance-main-tabs"
+              aria-label="근태관리 메뉴"
+            >
+              <button
+                type="button"
+                role="tab"
+                className={isAttendanceTab ? "active" : ""}
+                aria-selected={isAttendanceTab}
+                onClick={() => setActiveTab("attendance-records")}
+              >
+                근태 기록
+              </button>
+              <button
+                type="button"
+                role="tab"
+                className={isLeaveTab ? "active" : ""}
+                aria-selected={isLeaveTab}
+                onClick={() => setActiveTab("leave-requests")}
+              >
+                휴가 신청·승인
+              </button>
+            </nav>
 
-        <div className="hr-single-filters">
+          </div>
+
+          <div className="attendance-detail-actions">
+            {isLeaveTab && (
+              <button
+                type="button"
+                className="erp-primary-button"
+                onClick={() => navigate("/main/mytesk/draft-create?type=leave")}
+              >
+                휴가신청
+              </button>
+            )}
+
+            {isMaster && isAttendanceTab && (
+              <button
+                type="button"
+                className="erp-primary-button"
+                onClick={() => {
+                  openAttendanceEdit(selectedAttendance[0] || null);
+                }}
+                disabled={!selectedEmployee || saving}
+                title={
+                  selectedAttendance.length === 0
+                    ? "선택 직원의 근태 기록을 새로 입력합니다."
+                    : "선택 직원의 최근 일별 근태 기록을 수정합니다."
+                }
+              >
+                근태 상태 수정
+              </button>
+            )}
+          </div>
+
+        </div>
+
+          <div className="attendance-filter-controls">
+          <label className="attendance-filter-field">
+      
           <input
-            aria-label="기준월"
             type="month"
             value={selectedMonth}
             onChange={(event) => setSelectedMonth(event.target.value)}
           />
-
+          </label>
+          <label className="attendance-filter-field">
+          
           <select
-            aria-label="부서"
             value={selectedDepartment}
             onChange={(event) => {
               setSelectedDepartment(event.target.value);
@@ -1429,9 +1410,10 @@ export default function Attendance() {
               </option>
             ))}
           </select>
-
+          </label>
+          <label className="attendance-filter-field attendance-keyword-field">
+          
           <input
-            aria-label="직원명 검색"
             type="text"
             placeholder="직원명 검색"
             value={keyword}
@@ -1441,45 +1423,16 @@ export default function Attendance() {
               setCurrentPage(1);
             }}
           />
+          </label>
 
           <button
             type="button"
+            className="attendance-reset-button"
             onClick={resetFilters}
           >
             초기화
           </button>
 
-          {isLeaveTab && (
-            <button
-              type="button"
-              className="erp-primary-button"
-              onClick={() => navigate("/main/mytesk/draft-create?type=leave")}
-            >
-              휴가신청
-            </button>
-          )}
-
-          {canEditAttendance && isAttendanceTab && (
-            <button
-              type="button"
-              className="erp-primary-button"
-              onClick={() => {
-                if (selectedAttendance.length > 0) {
-                  openAttendanceEdit(selectedAttendance[0]);
-                } else {
-                  openAttendanceCreate();
-                }
-              }}
-              disabled={!selectedEmployee || saving}
-              title={
-                selectedAttendance.length === 0
-                  ? "선택 직원의 신규 근태 기록을 등록합니다."
-                  : "선택 직원의 최근 일별 근태 기록을 수정합니다."
-              }
-            >
-              근태 상태 수정
-            </button>
-          )}
         </div>
       </section>
 
@@ -1493,7 +1446,7 @@ export default function Attendance() {
           {error}
         </p>
       ) : (
-        <div className="hr-organization-grid">
+        <div className="attendance-layout hr-organization-grid">
           {/* 부서 목록 → 직원 목록 → 선택 직원 상세의 HR 3단 레이아웃 */}
           {/* 왼쪽: 부서 목록 */}
           <aside className="hr-panel department-panel">
@@ -1547,7 +1500,6 @@ export default function Attendance() {
                   {employeeList.length}명
                 </p>
               </div>
-              <span>{employeeList.length}명</span>
             </div>
 
             {employeeList.length === 0 ? (
@@ -1555,14 +1507,11 @@ export default function Attendance() {
             ) : (
               <div className="employee-list">
                 {visibleEmployeeList.map((employee) => {
-                  const leaveCountForEmployee = leaveData.filter(
-                    (leave) => String(leave.employeeId) === String(employee.employeeId)
-                  ).length;
-                  const employeeDisplayStatus = getEmployeeDisplayStatus(
-                    employee,
-                    leaveData,
-                    attendanceData
-                  );
+                  const statusClass = employee.employmentStatus === "재직"
+                    ? "active"
+                    : employee.employmentStatus === "휴직"
+                      ? "on-leave"
+                      : "retired";
 
                   return (
                     <button
@@ -1576,13 +1525,9 @@ export default function Attendance() {
                       <span className="employee-item-info">
                         <span className="employee-name-line">
                           <strong className="emp-name">{employee.employeeName}</strong>
-                          {employeeDisplayStatus && (
-                            <span
-                              className={`employee-status-badge ${employeeDisplayStatus.className}`}
-                            >
-                              {employeeDisplayStatus.label}
-                            </span>
-                          )}
+                          <span className={`employee-status-badge ${statusClass}`}>
+                            {employee.employmentStatus || "-"}
+                          </span>
                         </span>
                         <span>
                           {employee.employeeNumber || "사번 미지정"}
@@ -1593,32 +1538,6 @@ export default function Attendance() {
                             {employee.position || "직급 미지정"}
                           </span>
                         </span>
-                        {employeeDisplayStatus?.detail && (
-                          <small className="employee-status-detail">
-                            {employeeDisplayStatus.detail}
-                          </small>
-                        )}
-                      </span>
-
-                      <span className="employee-attendance-rate">
-                        {isAttendanceTab ? (
-                          <>
-                            <small>출근율</small>
-                            <strong>
-                              {calculateAttendanceRate(
-                                attendanceData,
-                                selectedMonth,
-                                employee.employeeId,
-                                employee.employmentStatus
-                              )}
-                            </strong>
-                          </>
-                        ) : (
-                          <>
-                            <small>휴가 신청</small>
-                            <strong>{leaveCountForEmployee}건</strong>
-                          </>
-                        )}
                       </span>
                     </button>
                   );
@@ -1678,41 +1597,57 @@ export default function Attendance() {
                   attendanceRate={calculateAttendanceRate(
                     attendanceData,
                     selectedMonth,
-                    selectedEmployee.employeeId,
-                    selectedEmployee.employmentStatus
+                    selectedEmployee.employeeId
                   )}
+                  leaveCount={selectedEmployeeLeaves.length}
+                  isLeaveBalance={activeTab === "leave-balance"}
                 >
-                    {isAttendanceTab ? (
-                      <div className="attendance-summary">
-                        <div className="summary-item">
-                          <span>근무일</span><strong>{selectedAttendanceSummary.workdayCount}</strong>
-                        </div>
-                        <div className="summary-item">
-                          <span>정상</span><strong>{selectedAttendanceSummary.normalCount}</strong>
-                        </div>
-                        <div className="summary-item">
-                          <span>지각</span><strong>{selectedAttendanceSummary.lateCount}</strong>
-                        </div>
-                        <div className="summary-item">
-                          <span>휴가</span><strong>{selectedAttendanceSummary.leaveCount}</strong>
-                        </div>
+                  {isAttendanceTab ? (
+                    <div className="attendance-summary">
+                      <div className="summary-item">
+                        <span>근무일</span><strong>{selectedAttendance.length}</strong>
                       </div>
-                    ) : !isAttendanceTab ? (
-                      <div className="attendance-summary">
-                        <div className="summary-item">
-                          <span>전체 신청</span><strong>{leaveSummaryRows.length}</strong>
-                        </div>
-                        <div className="summary-item">
-                          <span>승인 대기</span><strong>{leaveSummaryPendingCount}</strong>
-                        </div>
-                        <div className="summary-item">
-                          <span>승인 완료</span><strong>{leaveSummaryApprovedCount}</strong>
-                        </div>
-                        <div className="summary-item">
-                          <span>사용 일수</span><strong>{leaveSummaryUsedDays}</strong>
-                        </div>
+                      <div className="summary-item">
+                        <span>정상</span><strong>{normalCount}</strong>
                       </div>
-                    ) : null}
+                      <div className="summary-item">
+                        <span>지각</span><strong>{lateCount}</strong>
+                      </div>
+                      <div className="summary-item">
+                        <span>휴가</span><strong>{leaveCount}</strong>
+                      </div>
+                    </div>
+                  ) : activeTab === "leave-balance" ? (
+                    <div className="attendance-summary">
+                      <div className="summary-item">
+                        <span>부여 연차</span><strong>미등록</strong>
+                      </div>
+                      <div className="summary-item">
+                        <span>사용 일수</span><strong>{annualUsedDays}일</strong>
+                      </div>
+                      <div className="summary-item">
+                        <span>승인 대기</span><strong>{annualPendingDays}일</strong>
+                      </div>
+                      <div className="summary-item">
+                        <span>잔여 연차</span><strong>-</strong>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="attendance-summary">
+                      <div className="summary-item">
+                        <span>전체 신청</span><strong>{selectedEmployeeLeaves.length}</strong>
+                      </div>
+                      <div className="summary-item">
+                        <span>승인 대기</span><strong>{leavePendingCount}</strong>
+                      </div>
+                      <div className="summary-item">
+                        <span>승인 완료</span><strong>{leaveApprovedCount}</strong>
+                      </div>
+                      <div className="summary-item">
+                        <span>사용 일수</span><strong>{leaveUsedDays}</strong>
+                      </div>
+                    </div>
+                  )}
                 </AttendanceEmployeeHeader>
                 <AttendanceSubTabs
                   activeTab={activeTab}
@@ -1779,11 +1714,11 @@ export default function Attendance() {
                     선택한 기준 월의 휴가 신청 내역이 없습니다.
                   </p>
                 )}
-
+                
               </>
             ) : activeTab === "leave-pending" ? (
               <LeavePendingView
-                leaves={selectedEmployeeLeaves}
+                leaves={leaveData}
                 loginEmployeeId={loginUser?.employeeKey}
                 onDecide={decideLeave}
                 saving={saving}
@@ -1799,7 +1734,7 @@ export default function Attendance() {
             ) : (
               <LeaveBalanceView
                 employee={selectedEmployee}
-                leaves={selectedEmployeeYearLeaves}
+                leaves={leaveYearData}
                 year={selectedMonth.slice(0, 4) || String(new Date().getFullYear())}
               />
             )}
@@ -1815,11 +1750,7 @@ export default function Attendance() {
 
       {isEditModalOpen && selectedAttendanceRecord && (
         <ModalBase
-          title={
-            selectedAttendanceRecord.attendanceId
-              ? "일별 근태 상태 수정"
-              : "신규 근태 기록 등록"
-          }
+          title={selectedAttendanceRecord.attendanceId ? "일별 근태 기록 수정" : "근태 기록 입력"}
           onClose={() => setIsEditModalOpen(false)}
           layout={
             <AttendanceEditForm

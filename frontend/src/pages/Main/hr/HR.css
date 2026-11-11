@@ -1,12 +1,22 @@
 
-/* ========================================
-   HR 통합 CSS
-   - HR.css + HRUnified.css 통합
-   - 근태/휴가 관리
-   - 인사/조직 통합관리
-   - 급여관리
-   - 모달 및 반응형
-======================================== */
+/*
+ * HR 화면 스타일 가이드
+ * 1) HR 공통 shell / 대시보드
+ * 2) 공통 필터·탭·입력 컨트롤
+ * 3) 공통 직원 목록·상세 패널
+ * 4) 근태 화면
+ * 5) 휴가 신청·연차 현황
+ * 6) 근태 수정 모달
+ * 7) 인사·조직 통합관리
+ * 8) 급여·직원 상세
+ * 9) 화면별 보정
+ * 10) 반응형 override (파일 하단)
+ *
+ * 공통 base는 src/css/{SubMain,Table,PaginationTable,ModalPopup,GroupBord}.css를 사용하고,
+ * 이 파일에는 HR 화면 전용 레이아웃과 variant만 둡니다.
+ * 같은 화면 요소의 기본 스타일은 이 파일의 한 섹션에만 두고,
+ * 반응형 변경은 마지막 섹션에서만 덮어씁니다.
+ */
 
 /* ========================================
    1. HR 공통
@@ -47,18 +57,6 @@
 .hr-attendance-management > .dashboard-header,
 .hr-single-management > .dashboard-header {
   margin-bottom: 14px;
-}
-
-.hr-attendance-view .basic-calendar-schedule {
-  width: 100%;
-  padding: 1px 2px;
-  box-sizing: border-box;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  font-size: 9px;
-  line-height: 1.4;
-  letter-spacing: -0.3px;
 }
 
 .hr-department-attendance .table-shell {
@@ -243,44 +241,61 @@
   border-bottom: 1px solid var(--color-line);
 }
 
-.hr-attendance-management .hr-single-filters input[type="month"] {
+/* 근태 메뉴와 화면 우측 작업 버튼을 같은 기준선에 배치합니다. */
+.attendance-detail-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.attendance-navigation {
+  flex: 0 0 auto;
+}
+
+.attendance-detail-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.attendance-detail-actions .erp-primary-button {
+  min-height: 38px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.attendance-filter-controls {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.attendance-filter-field {
   flex: 0 0 125px;
   width: 125px;
-  min-width: 125px;
+  min-width: 0;
 }
 
-.hr-attendance-management .hr-single-filters select {
-  flex: 0 0 125px;
-  width: 125px;
-  min-width: 125px;
+.attendance-filter-field input,
+.attendance-filter-field select {
+  min-height: 38px;
+  padding: 0 10px;
 }
 
-.hr-attendance-management .hr-single-filters input[type="text"] {
-  flex: 0 0 160px;
-  width: 160px;
-  min-width: 160px;
-}
-
-.hr-attendance-management .hr-single-filters > button:not(.erp-primary-button) {
-  flex-basis: 80px;
-  width: 80px;
+.attendance-keyword-field {
+  width: 180px;
 }
 
 .hr-employee-management .hr-single-filters .erp-primary-button {
   flex-basis: 86px;
   width: 86px;
-}
-
-@media (max-width: 1180px) {
-  .hr-filter-card {
-    flex-wrap: wrap;
-  }
-
-  .hr-single-filters {
-    flex: 1 1 100%;
-    width: 100%;
-    justify-content: flex-start;
-  }
 }
 
 /* ========================================
@@ -396,11 +411,6 @@
   background: #dbeafe;
 }
 
-.employee-status-badge.vacation {
-  color: #92400e;
-  background: #fef3c7;
-}
-
 .employee-status-badge.on-leave {
   color: #6d28d9;
   background: #ede9fe;
@@ -409,37 +419,6 @@
 .employee-status-badge.retired {
   color: #475569;
   background: #f1f5f9;
-}
-
-.employee-status-badge.business-trip {
-  color: #166534;
-  background: #dcfce7;
-}
-
-.employee-status-detail {
-  overflow: hidden;
-  color: var(--color-muted);
-  font-size: 10px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.employee-attendance-rate {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  flex-shrink: 0;
-  gap: 2px;
-}
-
-.employee-attendance-rate small {
-  color: var(--color-muted);
-  font-size: 10px;
-}
-
-.employee-attendance-rate strong {
-  color: var(--color-brand);
-  font-size: 15px;
 }
 
 /* 상세 패널 */
@@ -476,6 +455,10 @@
   align-items: flex-start;
   column-gap: 12px;
   margin-bottom: 16px;
+}
+
+.attendance-detail-header.leave-balance-header {
+  grid-template-columns: 165px minmax(0, 1fr);
 }
 
 .attendance-detail-header > div:first-child {
@@ -517,6 +500,10 @@
   min-width: 0;
   gap: 8px;
   margin: 0;
+}
+
+.attendance-detail-header.leave-balance-header .attendance-summary {
+  grid-column: 2;
 }
 
 .summary-item {
@@ -574,22 +561,6 @@
 
 .attendance-subview table {
   min-width: 720px;
-}
-
-.attendance-stat-table table {
-  min-width: 0;
-}
-
-.attendance-stat-table th {
-  width: 35%;
-  color: var(--color-muted);
-  background: var(--color-canvas);
-  text-align: left;
-}
-
-.attendance-stat-table td {
-  font-weight: 700;
-  text-align: right;
 }
 
 .attendance-statistics-content {
@@ -749,17 +720,6 @@
   color: #dc2626;
 }
 
-@media (max-width: 720px) {
-  .attendance-progress-list {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .attendance-progress-statuses {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-/* 상단 조회 폼은 한 줄로 정리하고, 날짜부터의 조회 조건은 오른쪽에 배치합니다. */
 /* ========================================
    4. 근태관리 - 테이블 / 페이지네이션
 ======================================== */
@@ -807,6 +767,12 @@
   white-space: nowrap;
 }
 
+.attendance-detail-panel th:last-child,
+.attendance-detail-panel td:last-child {
+  width: 136px;
+  text-align: center;
+}
+
 .attendance-detail-panel .status-tag.late {
   color: #b45309;
   background: #fff7ed;
@@ -833,12 +799,14 @@
   color: #047857;
 }
 
-.attendance-row-edit-button {
+.attendance-row-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 50px;
   min-height: 32px;
   padding: 4px 8px;
 
-  color: var(--color-brand);
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: 6px;
@@ -847,103 +815,37 @@
   cursor: pointer;
 }
 
+.attendance-row-edit-button {
+  color: var(--color-brand);
+}
+
 .attendance-row-edit-button:hover {
   color: var(--color-surface);
   background: var(--color-brand);
   border-color: var(--color-brand);
 }
 
+.attendance-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.attendance-row-delete-button {
+  color: #b42318;
+  border: 1px solid #f0b8b4;
+}
+
+.attendance-row-delete-button:hover {
+  color: var(--color-surface);
+  background: #b42318;
+  border-color: #b42318;
+}
+
 /* ========================================
    5. 휴가 신청 / 승인
 ======================================== */
-
-.attendance-leave-empty {
-  display: flex;
-  min-height: 260px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: var(--color-muted);
-  text-align: center;
-}
-
-.attendance-leave-empty strong {
-  color: var(--color-ink);
-  font-size: 15px;
-}
-
-.attendance-leave-empty span {
-  font-size: 12px;
-}
-
-.leave-empty-full {
-  margin-top: 16px;
-  padding: 42px 18px;
-
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-card);
-  box-shadow: var(--card-shadow);
-}
-
-.attendance-leave-summary {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin: 16px 0;
-}
-
-.attendance-leave-summary .summary-item {
-  min-width: 0;
-}
-
-.attendance-leave-summary-empty .summary-item strong {
-  color: var(--color-muted);
-}
-
-.attendance-leave-layout .employee-item {
-  min-height: 82px;
-  align-items: flex-start;
-}
-
-.attendance-leave-layout .employee-attendance-rate {
-  max-width: 112px;
-  line-height: 1.35;
-  text-align: right;
-}
-
-.attendance-leave-layout .employee-attendance-rate small {
-  white-space: normal;
-}
-
-.attendance-leave-detail-list {
-  margin: 0;
-}
-
-.attendance-leave-detail-list > div {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 14px;
-
-  padding: 10px 0;
-  border-bottom: 1px solid #edf2f7;
-}
-
-.attendance-leave-detail-list dt {
-  color: var(--color-muted);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.attendance-leave-detail-list dd {
-  margin: 0;
-  color: var(--color-ink);
-  font-size: 13px;
-  text-align: right;
-  overflow-wrap: anywhere;
-}
 
 .attendance-leave-actions {
   display: flex;
@@ -974,58 +876,15 @@
   border: 1px solid var(--color-line);
 }
 
-.attendance-leave-balance,
-.attendance-leave-balance-empty {
-  margin-top: 16px;
-  padding: 13px 14px;
-
-  background: var(--color-brand-soft);
-  border: 1px solid var(--color-line);
-  border-radius: 9px;
+.attendance-leave-history-heading {
+  margin-top: 30px;
+  margin-bottom: 12px;
 }
 
-.attendance-leave-balance > strong,
-.attendance-leave-balance-empty strong {
-  display: block;
-  color: var(--color-brand);
-  font-size: 13px;
-}
-
-.attendance-leave-balance > div {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.attendance-leave-balance > div span {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+.attendance-leave-history-table .attendance-leave-history-empty {
+  padding: 32px 12px;
   color: var(--color-muted);
-  font-size: 11px;
-}
-
-.attendance-leave-balance b {
-  color: var(--color-ink);
-  font-size: 15px;
-}
-
-.attendance-leave-balance-empty span {
-  display: block;
-  margin-top: 4px;
-  color: var(--color-muted);
-  font-size: 11px;
-}
-
-.attendance-leave-api-notice {
-  margin: 16px 0 0;
-  padding: 10px 12px;
-
-  color: var(--color-muted);
-  background: var(--color-canvas);
-  border-radius: 8px;
-  font-size: 12px;
+  text-align: center;
 }
 
 /* ========================================
@@ -1085,6 +944,12 @@
   resize: vertical;
 }
 
+.attendance-edit-time-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .attendance-edit-actions {
   display: flex;
   justify-content: flex-end;
@@ -1142,6 +1007,10 @@
   gap: 10px;
 }
 
+.department-panel {
+  overflow: hidden;
+}
+
 .hr-panel-heading {
   display: flex;
   align-items: center;
@@ -1197,10 +1066,6 @@
   width: auto;
   min-width: 0;
   max-width: none;
-}
-
-.department-panel {
-  overflow: hidden;
 }
 
 .department-panel > div:not(.hr-panel-heading) {
@@ -1266,20 +1131,6 @@
   overflow-x: hidden;
 }
 
-.employee-list-panel .pagination-table-wrapper,
-.employee-list-panel .attendance-card {
-  min-width: 0;
-  max-width: none;
-}
-
-.employee-list-panel .table-shell {
-  overflow-x: hidden;
-}
-
-.employee-list-panel table {
-  min-width: 0;
-}
-
 .hr-section-heading {
   display: flex;
   align-items: center;
@@ -1301,14 +1152,6 @@
   margin: 4px 0 0;
   color: var(--color-muted);
   font-size: 12px;
-}
-
-.employee-list-panel tbody tr:has(.hr-selected-employee) {
-  background: var(--color-brand-soft);
-}
-
-.employee-list-panel tbody tr:has(.hr-selected-employee) td:first-child {
-  border-left: 3px solid var(--color-brand);
 }
 
 .hr-employee-management .status-tag.leave {
@@ -1619,59 +1462,10 @@
 
 /* 직원 목록 페이지네이션 */
 
+/* PaginationTable.css 공통 규칙을 사용하고, 직원 목록만 하단에 붙입니다. */
 .employee-list-panel .pagination-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-
-  gap: 8px;
   margin-top: auto;
   padding: 12px 0 0;
-}
-
-.employee-list-panel .page-numbers {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-
-.employee-list-panel .page-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  min-width: 32px;
-  height: 32px;
-  padding: 0 6px;
-  box-sizing: border-box;
-
-  color: var(--color-muted);
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: 6px;
-
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.employee-list-panel .page-btn:hover:not(:disabled) {
-  border-color: var(--color-brand);
-  background: var(--color-canvas);
-}
-
-.employee-list-panel .page-btn.active {
-  color: #fff;
-  background: var(--color-brand);
-  border-color: var(--color-brand);
-  font-weight: 700;
-}
-
-.employee-list-panel .page-btn:disabled {
-  color: #cbd5e1;
-  background: var(--color-canvas);
-  cursor: not-allowed;
 }
 
 /* 직원 상세 탭 */
@@ -1724,6 +1518,18 @@
    11. HR 반응형 보정
 ======================================== */
 
+@media (max-width: 1180px) {
+  .hr-filter-card {
+    flex-wrap: wrap;
+  }
+
+  .hr-single-filters {
+    flex: 1 1 100%;
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
 @media (max-width: 760px) {
   .hr-single-filters {
     justify-content: flex-start;
@@ -1747,9 +1553,40 @@
     width: 100%;
   }
 
+  .attendance-detail-navigation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .attendance-navigation,
+  .attendance-detail-actions {
+    width: 100%;
+  }
+
+  .attendance-detail-actions {
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+
+  .attendance-filter-controls {
+    align-items: stretch;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .attendance-filter-field,
+  .attendance-keyword-field {
+    flex: 1 1 130px;
+    width: auto;
+  }
+
   .attendance-detail-header {
     grid-template-columns: minmax(0, 1fr) 52px;
     row-gap: 12px;
+  }
+
+  .attendance-detail-header.leave-balance-header {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .attendance-detail-header > div:first-child {
@@ -1762,6 +1599,11 @@
 
   .attendance-detail-header .attendance-summary {
     grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .attendance-detail-header.leave-balance-header .attendance-summary {
+    grid-column: 1;
     grid-row: 2;
   }
 
@@ -1785,5 +1627,15 @@
   .hr-payroll-statement-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 720px) {
+  .attendance-progress-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .attendance-progress-statuses {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
