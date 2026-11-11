@@ -59,7 +59,7 @@ export default function ProjectModul() {
               <option>완료날짜</option>
             </select>
           </div>
-          <div style={{overflowY:'scroll', display: 'flex', flexFlow: 'column', flex:'1', gap: '10px'}}>
+          <div style={{overflowY:'scroll', maxHeight:'600px', display: 'flex', flexFlow: 'column', flex:'1', gap: '10px'}}>
             {projectData.map((item, index)=>{
               return <ProjectListModule key={index} data={item}/>
             })}
@@ -70,12 +70,13 @@ export default function ProjectModul() {
             <BasicCalendar schedule={projectData}/>
         </div>
       </div>
-      {isModal ? <ModalBase onClose={clossModal} title={'프로젝트 등록'} layout ={<SetNewProjectLayout />}/> : null}
+      {isModal ? <ModalBase onClose={clossModal} title={'프로젝트 등록'}
+        layout ={<SetNewProjectLayout setIsModal={clossModal}/>}/> : null}
     </div>
   );
 }
 
-function SetNewProjectLayout() {
+function SetNewProjectLayout({setIsModal}) {
   const [projectName, setProjectName] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -130,8 +131,19 @@ function SetNewProjectLayout() {
       members: projectMembers,
     };
 
-    const setData = await axios.post(API_BASE_URL + '/project/setProject', data);
-    console.log('전송할 JSON 데이터:', data);
+    try {
+      const setData = await axios.post(API_BASE_URL + '/project/setProject', data);
+      if(setData.data.status === 'succesed')
+      {
+        alert('"'+projectName+'"프로젝트 등록이 성공했습니다');
+        setIsModal();
+      }
+      
+    } catch (error) {
+      
+    }
+
+
   };
 
   return (
