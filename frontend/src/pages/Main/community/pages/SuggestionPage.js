@@ -1,6 +1,7 @@
-// [수정] DB의 게시판별 컬럼명과 employee_id 연결 / 첨부파일 기능 없음
+// [수정] 통합 DB의 post_id, title, content, comment_id 사용 / employee_id 연결
 // [수정] 개선 건의 본문 화면과 글쓰기·수정 모달 연결
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import PaginationTable from '../../../../components/PaginationTable';
 import ModalBase from '../../../../components/ModalBase';
 import { getLoginUser } from '../../../../utils/authStorage';
@@ -11,9 +12,20 @@ export default function SuggestionPage() {
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState('');
     const [message, setMessage] = useState('');
-    // [추가] 선택된 글이 있으면 본문 화면, 없으면 목록
-    const [selectedId, setSelectedId] = useState(null);
-    const selected = items.find(item => item.sg_id === selectedId);
+    // [수정] 선택한 글 번호를 URL에 저장해 새로고침과 뒤로가기 지원
+    const [searchParams, setSearchParams] = useSearchParams();
+    const selectedId = searchParams.get('postId');
+    const selected = items.find(item => String(item.post_id) === selectedId);
+
+    const selectPost = postId => {
+        const nextParams = new URLSearchParams(searchParams);
+        if (postId === null) {
+            nextParams.delete('postId');
+        } else {
+            nextParams.set('postId', String(postId));
+        }
+        setSearchParams(nextParams, { replace: postId === null });
+    };
     const [modal, setModal] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [title, setTitle] = useState('');
@@ -47,7 +59,7 @@ export default function SuggestionPage() {
             setMessage('로그인 직원 정보를 확인해 주세요.');
             return;
         }
-        run(() => addSuggestionComment(selected.sg_id, {
+        run(() => addSuggestionComment(selected.post_id, {
             content: comment.trim(),
             employee_id: Number(employee.employee_id ?? employee.employeeKey)
         }), () => setComment(''), '댓글이 등록되었습니다.');
@@ -89,9 +101,9 @@ export default function SuggestionPage() {
         }
     };
     const openWrite = (item = null) => {
-        setEditingId(item?.sg_id ?? null);
-        setTitle(item?.sg_title || '');
-        setContent(item?.sg_content || '');
+        setEditingId(item?.post_id ?? null);
+        setTitle(item?.title || '');
+        setContent(item?.content || '');
         setCategory(item?.category || '건의');
         setFormError('');
         setMessage('');
@@ -118,8 +130,8 @@ export default function SuggestionPage() {
             return;
         }
         const post = {
-            sg_title: title.trim(),
-            sg_content: content.trim(),
+            title: title.trim(),
+            content: content.trim(),
             category,
             employee_id: Number(employee.employee_id ?? employee.employeeKey)
         };
@@ -130,25 +142,25 @@ export default function SuggestionPage() {
     };
     const remove = item => {
         if (busy || !window.confirm('이 개선 건의을 삭제할까요?')) return;
-        run(() => deleteSuggestionPost(item.sg_id), () => {
-            setItems(previous => previous.filter(post => post.sg_id !== item.sg_id));
-            if (selectedId === item.sg_id) setSelectedId(null);
+        run(() => deleteSuggestionPost(item.post_id), () => {
+            setItems(previous => previous.filter(post => post.post_id !== item.post_id));
+            if (selectedId === String(item.post_id)) selectPost(null);
         }, '개선 건의이 삭제되었습니다.');
     };
     const openDetail = item => {
-        setSelectedId(item.sg_id);
+        selectPost(item.post_id);
         setMessage('');
     };
     const editComment = (event, c) => {
         event.preventDefault();
         if (!editingComment.trim()) return;
-        run(() => updateSuggestionComment(selected.sg_id, c.sg_cmt_id, {
+        run(() => updateSuggestionComment(selected.post_id, c.comment_id, {
             content: editingComment.trim()
         }), () => setEditingCommentId(null), '댓글이 수정되었습니다.');
     };
     const removeComment = c => {
         if (busy || !window.confirm('댓글을 삭제할까요?')) return;
-        run(() => deleteSuggestionComment(selected.sg_id, c.sg_cmt_id), () => setEditingCommentId(null), '댓글이 삭제되었습니다.');
+        run(() => deleteSuggestionComment(selected.post_id, c.comment_id), () => setEditingCommentId(null), '댓글이 삭제되었습니다.');
     };
     const dateTime = value => value ? new Date(value).toLocaleString('ko-KR', {
         timeZone: 'Asia/Seoul'
@@ -159,7 +171,7 @@ export default function SuggestionPage() {
         timeZone: 'Asia/Seoul'
     }) : '-';
     const keyword = query.trim().toLowerCase();
-    const filtered = items.filter(item => `${item.sg_title} ${item.sg_content} ${item.employee_name || '작성자 미확인'}`.toLowerCase().includes(keyword));
+    const filtered = items.filter(item => `${item.title} ${item.content} ${item.employee_name || '작성자 미확인'}`.toLowerCase().includes(keyword));
     const actions = item => <div className="table-actions">
                 <button
                     type="button"
@@ -172,9 +184,9 @@ export default function SuggestionPage() {
                     onClick={() => remove(item)}>삭제</button>
         </div>;
     // [수정] 제목 클릭으로 본문 표시, 목록에 관리 버튼 추가
-    const tableData = filtered.map(item => ({
-        content: [item.sg_id, item.category, <button
-            key={`title-${item.sg_id}`}
+    const tableData = filtered.map((item, index) => ({
+        content: [filtered.length - index, item.category, <button
+            key={`title-${item.post_id}`}
             type="button"
             className="table-link-title"
             style={{
@@ -187,7 +199,7 @@ export default function SuggestionPage() {
             textAlign: 'left'
         }}
             disabled={busy}
-            onClick={() => openDetail(item)}>{item.sg_title}</button>, item.employee_name || '작성자 미확인', date(item.created_at), (item.comments || []).length, <React.Fragment key={`actions-${item.sg_id}`}>{actions(item)}</React.Fragment>]
+            onClick={() => openDetail(item)}>{item.title}</button>, item.employee_name || '작성자 미확인', date(item.created_at), (item.comments || []).length, <React.Fragment key={`actions-${item.post_id}`}>{actions(item)}</React.Fragment>]
     }));
     const inputStyle = {
         display: 'block',
@@ -255,7 +267,7 @@ export default function SuggestionPage() {
                         {selected ? <button
                             type="button"
                             disabled={busy}
-                            onClick={() => setSelectedId(null)}>목록으로</button> : <button
+                            onClick={() => selectPost(null)}>목록으로</button> : <button
                             type="button"
                             className="register-btn"
                             disabled={loading || busy || !!loadError}
@@ -277,14 +289,14 @@ export default function SuggestionPage() {
                             itemsPerPage={10} />
                 </>}
                 {!loading && !loadError && selected && <article className="detail-card">
-                        <h3>{selected.sg_title}</h3>
+                        <h3>{selected.title}</h3>
                         <p className="subtext">작성자: {selected.employee_name || '작성자 미확인'} | 분류: {selected.category} | 작성일: {date(selected.created_at)} | 최근 수정: {date(selected.updated_at)}</p><hr />
                         <div
                             className="detail-body"
                             style={{
                 whiteSpace: 'pre-wrap',
                 overflowWrap: 'anywhere'
-            }}>{selected.sg_content}</div>
+            }}>{selected.content}</div>
                         {actions(selected)}
                         {/* ===== [추가] 개선 건의 댓글 목록·입력창 시작 ===== */}
                         <hr />
@@ -293,9 +305,9 @@ export default function SuggestionPage() {
                                 <div className="comment-list">
                                         {(selected.comments || []).map(c => <div
                                             className="comment-item"
-                                            key={c.sg_cmt_id}>
+                                            key={c.comment_id}>
                                                 <div className="comment-meta"><strong>{c.employee_name || '작성자 미확인'}</strong><span className="subtext"> ({dateTime(c.created_at)}) {c.updated_at && ' | 수정: ' + dateTime(c.updated_at)}</span>
-                                                        {editingCommentId === c.sg_cmt_id ? <form onSubmit={event => editComment(event, c)}>
+                                                        {editingCommentId === c.comment_id ? <form onSubmit={event => editComment(event, c)}>
                                                                 <input
                                                                     aria-label="댓글 수정 내용"
                                                                     required
@@ -322,7 +334,7 @@ export default function SuggestionPage() {
                                                                     type="button"
                                                                     disabled={busy}
                                                                     onClick={() => {
-                                        setEditingCommentId(c.sg_cmt_id);
+                                        setEditingCommentId(c.comment_id);
                                         setEditingComment(c.content);
                                     }}>수정</button><button
                                         type="button"

@@ -142,3 +142,13 @@ export const updateTechLibraryComment = async (postId, commentId, comment) => (a
 export const updateQnAComment = async (postId, commentId, comment) => (await axios.put(API_BASE_URL + '/community/qna/' + postId + '/comments/' + commentId, comment)).data;
 export const updateSuggestionComment = async (postId, commentId, comment) => (await axios.put(API_BASE_URL + '/community/suggestions/' + postId + '/comments/' + commentId, comment)).data;
 export const recordNoticeView = async postId => (await axios.post(API_BASE_URL + '/community/notices/' + postId + '/view')).data;
+
+// ===== [추가] 통합게시판 목록 조회 시작 =====
+export const getCommunityPosts = async () => {
+    const response = await axios.get(
+        `${API_BASE_URL}/community/posts`
+    );
+
+    return response.data;
+};
+// ===== [추가] 통합게시판 목록 조회 끝 =====
