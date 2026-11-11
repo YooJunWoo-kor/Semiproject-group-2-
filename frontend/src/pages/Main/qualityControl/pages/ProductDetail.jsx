@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import "./QualityControl.css";
 
@@ -14,7 +14,6 @@ function ProductDetail() {
     const { id } = useParams();
     
     const [product, setProduct] = useState(null);
-    const [loading, setLoading] = useState(true);
 
     const [qualityStatus, setQualityStatus] = useState("미실시");
     const [inspectionDate, setInspectionDate] = useState("");
@@ -28,6 +27,8 @@ function ProductDetail() {
 
     const [selectedInspectionId, setSelectedInspectionId] = useState(null);
     const [historyChecklist, setHistoryChecklist] = useState(null);
+
+    const navigate = useNavigate();
 
     const [checklist, setChecklist] = useState(
         defaultQualityChecklist.map(item => ({
@@ -72,11 +73,13 @@ function ProductDetail() {
         setNewChecklistName("");
     };
 
+    const undoItem = checklist.filter(
+        item =>  item.result === '미실시' 
+    )
     
 useEffect(() => {
 
     async function loadProduct() {
-        setLoading(true);
         setProduct(null);
 
         try {
@@ -117,6 +120,24 @@ useEffect(() => {
     loadProduct();
 
 }, [id]);
+
+useEffect(() => {
+    function QualityResult() {
+        if(undoItem.length > 0){
+            setQualityStatus("미실시");
+        }
+        else if(qualityScore === 10){
+            setQualityStatus("통과");
+        }
+        else{
+            setQualityStatus("불합격");
+        }
+    }
+
+    QualityResult();
+
+    
+}, [undoItem.length, qualityScore]);
 
 
 
@@ -236,7 +257,34 @@ const handleSave = async () => {
     );
 
 
+    
+    
+ 
+    
+       const DeleteProduct =  async (product_id) => {
+            try {
+                // 1. 제품의 검사 이력 가져오기
+                const response = await axios.delete(
+                    `${API_BASE_URL}/quality/products/${product_id}`
+                );
 
+                console.log(response.data);
+                alert("제품 삭제 완료");
+
+
+                navigate("/main/qa/products");
+                
+    
+            } catch (error) {
+                console.error(error);
+                alert("제품 삭제 실패");
+            }
+       }
+
+       
+    
+        
+    
     return (
 
         <div className="product-detail-page">
@@ -245,17 +293,23 @@ const handleSave = async () => {
             <div className="detail-top quality-page-header">
 
                 <div>
-                    <h1>{product.name}</h1>
+                    <h1>
+                        {product.name}
 
-                    <p>
-                        {product.code} · {product.company}
-                    </p>
+                        <div className={qualityStatus === "통과" ? "quality-status is-pass" : qualityStatus === "불합격" ? "quality-status is-fail" : "quality-status is-wait"}>
+                            {qualityStatus}
+                        </div>
+                    </h1>
+
+                    
+
+                    
                 </div>
 
-                <span
-                    className={qualityStatus === "통과" ? "quality-status is-pass" : qualityStatus === "불합격" ? "quality-status is-fail" : "quality-status is-wait"}>
-                        
-                    {qualityStatus}
+                <span>
+                    <button onClick={() => DeleteProduct(product.id)}>
+                        제품삭제
+                    </button>
                 </span>
 
             </div>
@@ -330,50 +384,6 @@ const handleSave = async () => {
                 </div>
 
 
-                <div className="inspection-form-row">
-
-                    <label>검사 상태</label>
-
-                    <div className="quality-status-buttons">
-
-                        <button
-                            className={
-                                qualityStatus === "통과" ? "selected" : ""
-                            }
-                            onClick={() =>
-                                setQualityStatus("통과")
-                            }
-                        >
-                            통과
-                        </button>
-
-                        <button
-                            className={
-                                qualityStatus === "불합격" ? "selected" : ""
-                            }
-                            onClick={() =>
-                                setQualityStatus("불합격")
-                            }
-                        >
-                            불합격
-                        </button>
-
-                        <button
-                            className={
-                                qualityStatus === "미실시" ? "selected" : ""
-                            }
-                            onClick={() =>
-                                setQualityStatus("미실시")
-                            }
-                        >
-                            미실시
-                        </button>
-
-                    </div>
-
-                </div>
-
-
                 <div className="inspection-form-grid">
 
                     <div>
@@ -438,18 +448,6 @@ const handleSave = async () => {
                         }
                         placeholder="검사 관련 메모를 입력하세요."
                     />
-
-                </div>
-
-
-                <div className="detail-save-area">
-
-                    <button
-                        className="save-button erp-primary-button"
-                        onClick={handleSave}
-                    >
-                        검사 결과 저장
-                    </button>
 
                 </div>
 
@@ -556,7 +554,7 @@ const handleSave = async () => {
                 <h2>품질 검사 체크리스트</h2>
 
                 <div className="quality-score">
-                    품질 점수 : <strong>{qualityScore}점 / 10점</strong>
+                    품질 점수 : <strong>{qualityScore}점 / 10점</strong> <h3>미실시 아이템 개수 : {undoItem.length}</h3>
                 </div>
 
                 {checklist.map(item => (
@@ -642,6 +640,17 @@ const handleSave = async () => {
                 </div>
 
             </section>
+
+            <div className="detail-save-area">
+
+                    <button
+                        className="save-button erp-primary-button"
+                        onClick={handleSave}
+                    >
+                        검사 결과 저장
+                    </button>
+
+            </div>
 
         </div>
 

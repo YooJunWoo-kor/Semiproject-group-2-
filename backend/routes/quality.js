@@ -303,6 +303,27 @@ router.post('/inspections', (req, res) => {
         });
     });
 
+    router.delete('/products/:id', (req,res) => {
+        const productId = Number(req.params.id);
+
+        const sql = `
+            DELETE FROM quality_products
+            WHERE product_id = ?
+        `;
+
+        db.query(sql, [productId], (err, rows) => {
+            if(err){
+                console.error("삭제 실패")
+                return res.status(500).json({
+                    message: "삭제오류"
+                })
+            }
+            return res.json(rows);
+        })
+
+        
+    })
+
 
     router.get('/products/:id/inspections', (req, res) => {
         const productId = Number(req.params.id);
@@ -310,6 +331,8 @@ router.post('/inspections', (req, res) => {
         if (!Number.isSafeInteger(productId) || productId <= 0) {
             return res.status(400).json({
                 message: "올바른 제품 ID가 필요합니다."
+
+                
             });
         }
     

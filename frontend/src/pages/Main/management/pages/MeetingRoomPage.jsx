@@ -192,12 +192,12 @@ function MeetingRoomPage() {
                                 </label>
                                 <label>연락처
                                     <input type="tel" name="phone" value={reservationForm.phone}
-                                        onChange={handleInputChange} />
+                                        onChange={handleInputChange} require />
                                 </label>
                             </div>
                             <label>이메일
                                 <input type="email" name="email" value={reservationForm.email}
-                                    onChange={handleInputChange} />
+                                    onChange={handleInputChange} require />
                             </label>
                             <div className="draft-actions">
                                 <button type="submit" className="erp-primary-button" disabled={isSaving}>
