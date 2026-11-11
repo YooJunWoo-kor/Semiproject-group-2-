@@ -145,9 +145,13 @@ router.post('/getMySchedule', async (req, res) => {
         )`;
         
     db.query(query, employeeID, (err,data)=>{
-        if(err){
-            console.log('내 스케쥴 데이터 DB에러');
-            return res.status(500).json({status: false, massege: '내 스케쥴 데이터 DB에러'});
+        if (err) {
+            console.error("내 스케줄 DB 오류:", err);
+        
+            return res.status(500).json({
+                status: false,
+                message: "내 스케줄 데이터 조회 실패"
+            });
         }
 
         if(data && data.length > 0){
