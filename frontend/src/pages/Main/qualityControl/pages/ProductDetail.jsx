@@ -126,7 +126,7 @@ useEffect(() => {
         if(undoItem.length > 0){
             setQualityStatus("미실시");
         }
-        else if(qualityScore === 10){
+        else if(qualityScore === "10.0"){
             setQualityStatus("통과");
         }
         else{
@@ -496,7 +496,7 @@ const handleSave = async () => {
                         ) : (
                             inspectionHistory.map(item => (
                                 <tr key={item.inspection_id}>
-                                    <td>{item.inspection_date}</td>
+                                    <td>{item.inspection_date} {item.created_at}</td>
 
                                     <td>{item.inspector || "-"}</td>
 

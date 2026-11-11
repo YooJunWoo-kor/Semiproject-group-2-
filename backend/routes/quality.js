@@ -202,8 +202,8 @@ router.post('/inspections', (req, res) => {
     const sql = `
         INSERT INTO quality_inspections
         (product_id, inspection_date, inspector, quality_status,
-         fail_reason, memo, quality_score)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+         fail_reason, memo, quality_score, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, NOW() )
     `;
 
     const values = [
@@ -232,7 +232,9 @@ router.post('/inspections', (req, res) => {
             VALUES ?
         `;
 
-        db.query(itemSql, [items], (err) => {
+        const values = [items];
+
+        db.query(itemSql, values, (err) => {
             if (err) {
                 console.error(err);
                 return res.status(500).json({ message: "체크리스트 저장 실패" });
@@ -268,6 +270,7 @@ router.post('/inspections', (req, res) => {
                 p.variant_text,
                 COALESCE(i.quality_status, '미실시') AS quality_status,
                 DATE_FORMAT(i.inspection_date, '%Y-%m-%d') AS inspection_date,
+                DATE_FORMAT(created_at,'%H:%i:%s') AS created_at,
                 i.inspector,
                 i.memo
             FROM quality_products p
@@ -317,7 +320,7 @@ router.post('/inspections', (req, res) => {
                 return res.status(500).json({
                     message: "삭제오류"
                 })
-            }
+        }
             return res.json(rows);
         })
 
