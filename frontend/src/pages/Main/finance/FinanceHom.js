@@ -31,13 +31,13 @@ function FinanceHome() {
 
     // 모든 부서에 보여줄 메뉴
     const commonMenus = [
-        { name: "대시보드", url: mainUrl },
-        { name: "거래처 관리", url: mainUrl + "/partners" },
-        { name: "매입/매출 품목관리", url: mainUrl + "/items" }
+        { name: "대시보드", url: mainUrl }
     ];
 
     // 재무부에만 보여줄 메뉴
     const financeMenus = [
+        { name: "거래처 관리", url: mainUrl + "/partners" },
+        { name: "매입/매출 품목관리", url: mainUrl + "/items" },
         { name: "법인카드 관리", url: mainUrl + "/corp-card" },
         { name: "회사계좌 관리", url: mainUrl + "/bank-account" },
         { name: "결제(지출)승인", url: mainUrl + "/approval" }
