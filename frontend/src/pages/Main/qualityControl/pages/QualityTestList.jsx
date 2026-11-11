@@ -25,7 +25,7 @@ const [products, setProducts] = useState([]);
                     name: item.product_name,
                     company: item.company,
                     qualityStatus: item.quality_status,
-                    inspectionDate: item.inspection_date || "-"
+                    createdAt: item.created_at || "-"
                 }));
 
                 setProducts(data);
@@ -108,7 +108,7 @@ const [products, setProducts] = useState([]);
                                 <th>제품명</th>
                                 <th>제조회사</th>
                                 <th>검사상태</th>
-                                <th>최근 검사일</th>
+                                <th>최근 검사일시</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -141,7 +141,7 @@ const [products, setProducts] = useState([]);
                                                 {product.qualityStatus}
                                             </span>
                                         </td>
-                                        <td>{product.inspectionDate}</td>
+                                        <td>{product.createdAt}</td>
                                     </tr>
                                 ))
                             )}

@@ -6,7 +6,6 @@ import "./QualityControl.css";
 import { API_BASE_URL } from "../../../../utils/authStorage";
 import defaultQualityChecklist from "./QualityChecklist";
 import { calculateQualityScore } from "../../../../utils/qualityScore";
-import { create } from "../../../../../../backend/models/Draft_function";
 
 
 
@@ -17,7 +16,6 @@ function ProductDetail() {
     const [product, setProduct] = useState(null);
 
     const [qualityStatus, setQualityStatus] = useState("미실시");
-    const [created_at, setCreated_at] = useState("");
     const [inspector, setInspector] = useState("");
     const [failReason, setFailReason] = useState("");
     const [memo, setMemo] = useState("");
@@ -110,7 +108,6 @@ useEffect(() => {
             setInspector(data.inspector || "");
 
             setQualityStatus(data.quality_status || "미실시");
-            setCreated_at(data.created_at || "");
             setMemo(data.memo || "");
 
         } catch (error) {
@@ -201,8 +198,8 @@ const handleSave = async () => {
     if (isSaving || !product) return;
 
     // 필수 입력값 검사
-    if (!inspectionDate || !inspector.trim()) {
-        alert("검사일과 검사자를 입력해주세요.");
+    if (!inspector.trim()) {
+        alert("검사자를 입력해주세요.");
         return;
     }
 
@@ -213,7 +210,6 @@ const handleSave = async () => {
 
     const inspectionData = {
         productId: product.id,
-        inspectionDate,
         inspector: inspector.trim(),
         qualityStatus,
         failReason: qualityStatus === "불합격" ? failReason.trim() : null,
@@ -231,15 +227,24 @@ const handleSave = async () => {
 
         console.log("검사 저장 성공:", response.data);
 
-        // 화면의 최근 검사 정보도 변경
+        // 검사 결과가 정상 저장되면 최신 검사 정보와 DB 저장 시각을 갱신
         setProduct(prev => ({
             ...prev,
             qualityStatus,
             inspector: inspector.trim(),
-            inspectionDate,
             memo: memo.trim()
         }));
 
+        try {
+            const latest = await axios.get(`${API_BASE_URL}/quality/products/${product.id}`);
+            setProduct(prev => prev && prev.id === product.id
+                ? { ...prev, created_at: latest.data.created_at || "-" }
+                : prev);
+        } catch (refreshError) {
+            console.error("최근 검사 저장 시각 갱신 실패:", refreshError);
+        }
+
+        setHistoryRefresh(prev => prev + 1);
         alert("검사 결과가 저장되었습니다.");
 
     } catch (error) {
@@ -250,7 +255,6 @@ const handleSave = async () => {
         setIsSaving(false);
     }
 
-    setHistoryRefresh(prev => prev + 1);
 };
 
     const selectedInspection = inspectionHistory.find(
@@ -360,9 +364,9 @@ const handleSave = async () => {
                     </div>
 
                     <div>
-                        <span>최근 검사일</span>
+                        <span>최근 검사일시</span>
                         <strong>
-                            {product.inspectionDate}
+                            {product.created_at}
                         </strong>
                     </div>
 
@@ -386,20 +390,6 @@ const handleSave = async () => {
 
 
                 <div className="inspection-form-grid">
-
-                    <div>
-
-                        <label>검사일</label>
-
-                        <input
-                            type="date"
-                            value={created_at} onChange={(e) =>
-                                setCreated_at(e.target.value)
-                            }
-                        />
-
-                    </div>
-
 
                     <div>
 
@@ -476,7 +466,7 @@ const handleSave = async () => {
                     <thead>
 
                         <tr>
-                            <th>검사일</th>
+                            <th>검사일시</th>
                             <th>검사자</th>
                             <th>검사결과</th>
                             <th>비고</th>
@@ -528,7 +518,7 @@ const handleSave = async () => {
                 {selectedInspectionId !== null && (
                         
                         <div className="quality-panel">
-                            <h3>{selectedInspection?.created_at} {selectedInspection?.created_at} 검사자 체크리스트</h3>
+                            <h3>{selectedInspection?.created_at} {selectedInspection?.inspector} 검사자 체크리스트</h3>
 
                             {historyChecklist === null ? (
                                 <p>불러오는 중...</p>
