@@ -1,13 +1,18 @@
 import React from "react";
 
 function ProjectListModule({data, buttonClick}){
+    const tageTyp1 = data.visible == 1 ? '공개' : '비공개';
+    const tage1Color = tageTyp1 == "공개" ? 'tag-emerald' : 'tag-red';
+
     return (
       <div className='boder' style={{display:'flex', flexFlow:'column', height: '130px', padding: '20px 30px', marginRight: '30px'}}>
         
         <div style={{display:'flex'}}>
           <div style={{display:'flex', flexFlow:'column', fontSize: '30px', gap:'10px'}}>
             <div style = {{display: 'flex', alignItems: 'center'}}>
-              <div className='attendance-tag tag-emerald'>전체</div>  
+              <div className={`attendance-tag ${tage1Color}`}>
+                {tageTyp1}
+              </div>  
               <div style = {{ display: 'flex', flex:'1', fontSize: '18px', marginLeft:'10px'}}>
                 <strong>{data.project_name}</strong>
               </div>
