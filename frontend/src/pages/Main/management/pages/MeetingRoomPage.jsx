@@ -128,14 +128,6 @@ function MeetingRoomPage() {
                 <span className="subtitle">회의실 예약</span>
             </header>
 
-            <div className="meeting-room-filter form-inputs">
-                <label>
-                    예약 날짜
-                    <input type="date" min={getTodayString()} value={selectedDate}
-                        onChange={e => setSelectedDate(e.target.value)} />
-                </label>
-            </div>
-
             <div className="meeting-room-grid">
                 {rooms.map(room => {
                     const roomReservations = reservations.filter(
@@ -154,11 +146,15 @@ function MeetingRoomPage() {
                                         <button type="button" className="meeting-room-title"
                                             onClick={() => setSelectedReservation(item)}>
                                             {item.title}
+
+                                            <span>{item.start_time} ~ {item.end_time}</span>
                                         </button>
+                                        
+
                                         <button onClick={() => DeleteReservation(item.room_id)}>
                                             예약 취소
                                         </button>
-                                        <span>{item.start_time} ~ {item.end_time}</span>
+                                        
                                     </div>
                                 ))}
                             </div>
@@ -181,7 +177,14 @@ function MeetingRoomPage() {
                     onClose={() => setSelectedRoom(null)}
                     layout={
                         <form className="draft-box meeting-room-form" onSubmit={handleReservationSubmit}>
-                            <p>예약 날짜: {selectedDate}</p>
+                            
+                            <div className="meeting-room-filter form-inputs">
+                                <label>
+                                    예약 날짜
+                                    <input type="date" min={getTodayString()} value={selectedDate}
+                                        onChange={e => setSelectedDate(e.target.value)} />
+                                </label>
+                            </div>
 
                             <div className="draft-row">
                                 <label>
@@ -231,11 +234,21 @@ function MeetingRoomPage() {
             {selectedReservation && (
                 <ModalBase title="예약 상세 정보" onClose={() => setSelectedReservation(null)}
                     layout={
+                        
+
                         <div className="draft-box meeting-room-detail">
+                            <p>예약 날짜: {selectedDate}</p>
+
                             <div className="draft-row">
                                 <strong>회의 제목</strong>
                                 <span>{selectedReservation.title}</span>
                             </div>
+
+                            <div className="draft-row">
+                                <strong>회의 내용</strong> 
+                                <span>{selectedReservation.content}</span>
+                            </div>
+
                             <div className="draft-row">
                                 <strong>예약 날짜</strong>
                                 <span>{selectedDate}</span>
@@ -253,7 +266,7 @@ function MeetingRoomPage() {
                                 <strong>이메일</strong>
                                 <span>{selectedReservation.email || "-"}</span>
                             </div>
-                            
+
                             <div className="draft-actions">
                                 <button type="button" onClick={() => setSelectedReservation(null)}>닫기</button>
                             </div>
