@@ -58,7 +58,7 @@ const sql = `
         p.image_url,
         p.variant_text,
         COALESCE(i.quality_status, '미실시') AS quality_status,
-        DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS created_at,
+        DATE_FORMAT(i.created_at, '%Y-%m-%d %H:%i:%s') AS created_at,
         i.inspector,
         i.memo
     FROM quality_products p
@@ -67,7 +67,7 @@ const sql = `
             SELECT i2.inspection_id
             FROM quality_inspections i2
             WHERE i2.product_id = p.product_id
-            ORDER BY i2.inspection_date DESC, i2.inspection_id DESC
+            ORDER BY i2.created_at DESC, i2.inspection_id DESC
             LIMIT 1
         )
     ORDER BY p.product_id
@@ -189,25 +189,25 @@ router.post("/products", (req, res) => {
 router.post('/inspections', (req, res) => {
 
     const {
-        productId, inspectionDate, inspector,
+        productId, inspector,
         qualityStatus, failReason, memo,
         qualityScore, checklist
     } = req.body;
 
-    if (!productId || !inspectionDate || !inspector || !Array.isArray(checklist) || !checklist.length) {
+    if (!productId || !inspector || !Array.isArray(checklist) || !checklist.length) {
         return res.status(400).json({ message: "필수 정보가 없습니다." });
     }
 
     // 1. 품질검사 정보 저장
     const sql = `
         INSERT INTO quality_inspections
-        (product_id, inspection_date, inspector, quality_status,
+        (product_id, inspector, quality_status,
          fail_reason, memo, quality_score, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, NOW() )
+        VALUES (?, ?, ?, ?, ?, ?, NOW() )
     `;
 
     const values = [
-        productId, inspectionDate, inspector, qualityStatus,
+        productId, inspector, qualityStatus,
         failReason || null, memo || "", qualityScore
     ];
 
@@ -279,7 +279,7 @@ router.post('/inspections', (req, res) => {
                     FROM quality_inspections i2
                     WHERE i2.product_id = p.product_id
                     ORDER BY
-                        i2.inspection_date DESC,
+                        i2.created_at DESC,
                         i2.inspection_id DESC
                     LIMIT 1
                 )
@@ -342,7 +342,7 @@ router.post('/inspections', (req, res) => {
             SELECT
                 inspection_id,
                 product_id,
-                DATE_FORMAT(inspection_date, '%Y-%m-%d') AS inspection_date,
+                DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS created_at,
                 inspector,
                 quality_status,
                 fail_reason,
@@ -350,7 +350,7 @@ router.post('/inspections', (req, res) => {
                 quality_score
             FROM quality_inspections
             WHERE product_id = ?
-            ORDER BY inspection_date DESC, inspection_id DESC
+            ORDER BY created_at DESC, inspection_id DESC
         `;
     
         db.query(sql, [productId], (err, rows) => {

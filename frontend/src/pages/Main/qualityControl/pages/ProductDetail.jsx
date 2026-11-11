@@ -6,6 +6,7 @@ import "./QualityControl.css";
 import { API_BASE_URL } from "../../../../utils/authStorage";
 import defaultQualityChecklist from "./QualityChecklist";
 import { calculateQualityScore } from "../../../../utils/qualityScore";
+import { create } from "../../../../../../backend/models/Draft_function";
 
 
 
@@ -16,7 +17,7 @@ function ProductDetail() {
     const [product, setProduct] = useState(null);
 
     const [qualityStatus, setQualityStatus] = useState("미실시");
-    const [inspectionDate, setInspectionDate] = useState("");
+    const [created_at, setCreated_at] = useState("");
     const [inspector, setInspector] = useState("");
     const [failReason, setFailReason] = useState("");
     const [memo, setMemo] = useState("");
@@ -101,7 +102,7 @@ useEffect(() => {
                 image: data.image_url,
                 variantText: data.variant_text,
                 qualityStatus: data.quality_status,
-                inspectionDate: data.inspection_date || "-",
+                created_at: data.created_at || "-",
                 memo: data.memo || ""
             };
 
@@ -109,7 +110,7 @@ useEffect(() => {
             setInspector(data.inspector || "");
 
             setQualityStatus(data.quality_status || "미실시");
-            setInspectionDate(data.inspection_date || "");
+            setCreated_at(data.created_at || "");
             setMemo(data.memo || "");
 
         } catch (error) {
@@ -392,8 +393,8 @@ const handleSave = async () => {
 
                         <input
                             type="date"
-                            value={inspectionDate} onChange={(e) =>
-                                setInspectionDate(e.target.value)
+                            value={created_at} onChange={(e) =>
+                                setCreated_at(e.target.value)
                             }
                         />
 
@@ -527,7 +528,7 @@ const handleSave = async () => {
                 {selectedInspectionId !== null && (
                         
                         <div className="quality-panel">
-                            <h3>{selectedInspection?.inspection_date} {selectedInspection?.inspector} 검사자 체크리스트</h3>
+                            <h3>{selectedInspection?.created_at} {selectedInspection?.created_at} 검사자 체크리스트</h3>
 
                             {historyChecklist === null ? (
                                 <p>불러오는 중...</p>
