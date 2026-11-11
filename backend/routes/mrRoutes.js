@@ -113,6 +113,7 @@ router.get("/reservations", async (req, res) => {
             SELECT
                 r.room_id,
                 r.room_number,
+                r.employee_id,
                 r.title,
                 r.content,
                 e.name AS reserver_name,
