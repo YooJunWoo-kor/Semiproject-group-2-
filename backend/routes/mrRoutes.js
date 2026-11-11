@@ -157,4 +157,27 @@ router.get("/reservations", async (req, res) => {
     }
 });
 
+router.delete("/reservations/:id", async (req, res) => {
+    const reservation_id = Number(req.params.id);
+
+    try{
+        const sql = `
+            DELETE from meeting_room_reservations
+            WHERE reservation_id = ?
+        `
+
+        const value = reservation_id;
+
+        const [rows] = await db.promise().query(sql,[value]);
+
+        return res.status(200).json(rows);
+    } catch (error) {
+        console.error("예약 삭제 오류");
+
+        return res.status(500).json({
+            message: "예약 삭제에 실패했습니다."
+        })
+    }
+})
+
 module.exports = router;

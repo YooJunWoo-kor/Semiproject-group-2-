@@ -58,7 +58,7 @@ const sql = `
         p.image_url,
         p.variant_text,
         COALESCE(i.quality_status, '미실시') AS quality_status,
-        DATE_FORMAT(i.created_at, '%Y-%m-%d %H:%i:%s') AS created_at,
+        DATE_FORMAT(i.created_at, '%Y-%m-%d / %H:%i:%s') AS created_at,
         i.inspector,
         i.memo
     FROM quality_products p
@@ -269,7 +269,7 @@ router.post('/inspections', (req, res) => {
                 p.image_url,
                 p.variant_text,
                 COALESCE(i.quality_status, '미실시') AS quality_status,
-                DATE_FORMAT(i.created_at, '%Y-%m-%d %H:%i:%s') AS created_at,
+                DATE_FORMAT(i.created_at, '%Y-%m-%d / %H:%i:%s') AS created_at,
                 i.inspector,
                 i.memo
             FROM quality_products p
@@ -326,7 +326,7 @@ router.post('/inspections', (req, res) => {
         
     })
 
-    router.delete('/quality/inspections/:id', (req, res) => {
+    router.delete('/inspections/:id', (req, res) => {
         const inspection_id = Number(req.params.id);
 
         const sql = `
@@ -363,7 +363,7 @@ router.post('/inspections', (req, res) => {
             SELECT
                 inspection_id,
                 product_id,
-                DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS created_at,
+                DATE_FORMAT(created_at, '%Y-%m-%d / %H:%i:%s') AS created_at,
                 inspector,
                 quality_status,
                 fail_reason,

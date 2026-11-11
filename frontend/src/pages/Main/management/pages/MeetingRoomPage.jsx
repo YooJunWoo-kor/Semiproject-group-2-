@@ -94,6 +94,20 @@ function MeetingRoomPage() {
         }
     };
 
+    const DeleteReservation = async (id) => {
+        try{
+            await axios.delete(API_BASE_URL + `/meeting-rooms/reservations/${id}`)
+
+
+            const newRev = reservations.filter(item => item.reservation_id !== id)
+
+            setReservations(newRev);
+        }catch{
+
+        }
+        
+    }
+
     return (
         <div className="meeting-room-page">
             <header className="dashboard-header">
@@ -126,6 +140,9 @@ function MeetingRoomPage() {
                                         <button type="button" className="meeting-room-title"
                                             onClick={() => setSelectedReservation(item)}>
                                             {item.title}
+                                        </button>
+                                        <button onClick={() => DeleteReservation(item.reservation_id)}>
+                                            예약 취소
                                         </button>
                                         <span>{item.start_time} ~ {item.end_time}</span>
                                     </div>
