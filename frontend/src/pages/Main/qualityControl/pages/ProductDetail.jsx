@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import "./QualityControl.css";
 
@@ -14,10 +14,8 @@ function ProductDetail() {
     const { id } = useParams();
     
     const [product, setProduct] = useState(null);
-    const [loading, setLoading] = useState(true);
 
     const [qualityStatus, setQualityStatus] = useState("미실시");
-    const [inspectionDate, setInspectionDate] = useState("");
     const [inspector, setInspector] = useState("");
     const [failReason, setFailReason] = useState("");
     const [memo, setMemo] = useState("");
@@ -28,6 +26,8 @@ function ProductDetail() {
 
     const [selectedInspectionId, setSelectedInspectionId] = useState(null);
     const [historyChecklist, setHistoryChecklist] = useState(null);
+
+    const navigate = useNavigate();
 
     const [checklist, setChecklist] = useState(
         defaultQualityChecklist.map(item => ({
@@ -72,11 +72,13 @@ function ProductDetail() {
         setNewChecklistName("");
     };
 
+    const undoItem = checklist.filter(
+        item =>  item.result === '미실시' 
+    )
     
 useEffect(() => {
 
     async function loadProduct() {
-        setLoading(true);
         setProduct(null);
 
         try {
@@ -98,7 +100,7 @@ useEffect(() => {
                 image: data.image_url,
                 variantText: data.variant_text,
                 qualityStatus: data.quality_status,
-                inspectionDate: data.inspection_date || "-",
+                created_at: data.created_at || "-",
                 memo: data.memo || ""
             };
 
@@ -106,7 +108,6 @@ useEffect(() => {
             setInspector(data.inspector || "");
 
             setQualityStatus(data.quality_status || "미실시");
-            setInspectionDate(data.inspection_date || "");
             setMemo(data.memo || "");
 
         } catch (error) {
@@ -117,6 +118,24 @@ useEffect(() => {
     loadProduct();
 
 }, [id]);
+
+useEffect(() => {
+    function QualityResult() {
+        if(undoItem.length > 0){
+            setQualityStatus("미실시");
+        }
+        else if(qualityScore === "10.0"){
+            setQualityStatus("통과");
+        }
+        else{
+            setQualityStatus("불합격");
+        }
+    }
+
+    QualityResult();
+
+    
+}, [undoItem.length, qualityScore]);
 
 
 
@@ -179,8 +198,8 @@ const handleSave = async () => {
     if (isSaving || !product) return;
 
     // 필수 입력값 검사
-    if (!inspectionDate || !inspector.trim()) {
-        alert("검사일과 검사자를 입력해주세요.");
+    if (!inspector.trim()) {
+        alert("검사자를 입력해주세요.");
         return;
     }
 
@@ -191,7 +210,6 @@ const handleSave = async () => {
 
     const inspectionData = {
         productId: product.id,
-        inspectionDate,
         inspector: inspector.trim(),
         qualityStatus,
         failReason: qualityStatus === "불합격" ? failReason.trim() : null,
@@ -209,15 +227,24 @@ const handleSave = async () => {
 
         console.log("검사 저장 성공:", response.data);
 
-        // 화면의 최근 검사 정보도 변경
+        // 검사 결과가 정상 저장되면 최신 검사 정보와 DB 저장 시각을 갱신
         setProduct(prev => ({
             ...prev,
             qualityStatus,
             inspector: inspector.trim(),
-            inspectionDate,
             memo: memo.trim()
         }));
 
+        try {
+            const latest = await axios.get(`${API_BASE_URL}/quality/products/${product.id}`);
+            setProduct(prev => prev && prev.id === product.id
+                ? { ...prev, created_at: latest.data.created_at || "-" }
+                : prev);
+        } catch (refreshError) {
+            console.error("최근 검사 저장 시각 갱신 실패:", refreshError);
+        }
+
+        setHistoryRefresh(prev => prev + 1);
         alert("검사 결과가 저장되었습니다.");
 
     } catch (error) {
@@ -228,7 +255,6 @@ const handleSave = async () => {
         setIsSaving(false);
     }
 
-    setHistoryRefresh(prev => prev + 1);
 };
 
     const selectedInspection = inspectionHistory.find(
@@ -236,7 +262,51 @@ const handleSave = async () => {
     );
 
 
+    
+    
+ 
+    
+       const DeleteProduct =  async (product_id) => {
+            try {
+                // 1. 제품의 검사 이력 가져오기
+                const response = await axios.delete(
+                    `${API_BASE_URL}/quality/products/${product_id}`
+                );
 
+                console.log(response.data);
+                alert("제품 삭제 완료");
+
+
+                navigate("/main/qa/products");
+                
+    
+            } catch (error) {
+                console.error(error);
+                alert("제품 삭제 실패");
+            }
+       }
+
+       const  DeleteInspectionList =  async (id) => {
+            try{
+                await axios.delete(
+                    `${API_BASE_URL}/quality/inspections/${id}`
+                )
+
+                const newHistory = inspectionHistory.filter(
+                    item => item.inspection_id !== id
+                )
+    
+                setInspectionHistory(newHistory) 
+            }
+            catch(error){
+                console.error("검사 이력 삭제 실패");
+            }
+       }
+
+       
+    
+        
+    
     return (
 
         <div className="product-detail-page">
@@ -245,17 +315,23 @@ const handleSave = async () => {
             <div className="detail-top quality-page-header">
 
                 <div>
-                    <h1>{product.name}</h1>
+                    <h1>
+                        {product.name}
 
-                    <p>
-                        {product.code} · {product.company}
-                    </p>
+                        <span className={qualityStatus === "통과" ? "quality-status is-pass" : qualityStatus === "불합격" ? "quality-status is-fail" : "quality-status is-wait"}>
+                            {qualityStatus}
+                        </span>
+                    </h1>
+
+                    
+
+                    
                 </div>
 
-                <span
-                    className={qualityStatus === "통과" ? "quality-status is-pass" : qualityStatus === "불합격" ? "quality-status is-fail" : "quality-status is-wait"}>
-                        
-                    {qualityStatus}
+                <span>
+                    <button onClick={() => DeleteProduct(product.id)}>
+                        제품삭제
+                    </button>
                 </span>
 
             </div>
@@ -305,9 +381,9 @@ const handleSave = async () => {
                     </div>
 
                     <div>
-                        <span>최근 검사일</span>
+                        <span>최근 검사일시</span>
                         <strong>
-                            {product.inspectionDate}
+                            {product.created_at}
                         </strong>
                     </div>
 
@@ -330,65 +406,7 @@ const handleSave = async () => {
                 </div>
 
 
-                <div className="inspection-form-row">
-
-                    <label>검사 상태</label>
-
-                    <div className="quality-status-buttons">
-
-                        <button
-                            className={
-                                qualityStatus === "통과" ? "selected" : ""
-                            }
-                            onClick={() =>
-                                setQualityStatus("통과")
-                            }
-                        >
-                            통과
-                        </button>
-
-                        <button
-                            className={
-                                qualityStatus === "불합격" ? "selected" : ""
-                            }
-                            onClick={() =>
-                                setQualityStatus("불합격")
-                            }
-                        >
-                            불합격
-                        </button>
-
-                        <button
-                            className={
-                                qualityStatus === "미실시" ? "selected" : ""
-                            }
-                            onClick={() =>
-                                setQualityStatus("미실시")
-                            }
-                        >
-                            미실시
-                        </button>
-
-                    </div>
-
-                </div>
-
-
                 <div className="inspection-form-grid">
-
-                    <div>
-
-                        <label>검사일</label>
-
-                        <input
-                            type="date"
-                            value={inspectionDate} onChange={(e) =>
-                                setInspectionDate(e.target.value)
-                            }
-                        />
-
-                    </div>
-
 
                     <div>
 
@@ -441,18 +459,6 @@ const handleSave = async () => {
 
                 </div>
 
-
-                <div className="detail-save-area">
-
-                    <button
-                        className="save-button erp-primary-button"
-                        onClick={handleSave}
-                    >
-                        검사 결과 저장
-                    </button>
-
-                </div>
-
             </section>
 
 
@@ -477,7 +483,7 @@ const handleSave = async () => {
                     <thead>
 
                         <tr>
-                            <th>검사일</th>
+                            <th>검사일시</th>
                             <th>검사자</th>
                             <th>검사결과</th>
                             <th>비고</th>
@@ -498,7 +504,7 @@ const handleSave = async () => {
                         ) : (
                             inspectionHistory.map(item => (
                                 <tr key={item.inspection_id}>
-                                    <td>{item.inspection_date}</td>
+                                    <td>{item.created_at}</td>
 
                                     <td>{item.inspector || "-"}</td>
 
@@ -516,6 +522,8 @@ const handleSave = async () => {
                                         <button type="button" onClick={() => loadHistoryChecklist(item.inspection_id)}>
                                             보기
                                         </button>
+
+                                        <button type="button" onClick= {() => DeleteInspectionList(item.inspection_id)}>삭제</button>
                                     </td>
                                 </tr>
                             ))
@@ -529,7 +537,7 @@ const handleSave = async () => {
                 {selectedInspectionId !== null && (
                         
                         <div className="quality-panel">
-                            <h3>{selectedInspection?.inspection_date} {selectedInspection?.inspector} 검사자 체크리스트</h3>
+                            <h3>{selectedInspection?.created_at} {selectedInspection?.inspector} 검사자 체크리스트</h3>
 
                             {historyChecklist === null ? (
                                 <p>불러오는 중...</p>
@@ -556,7 +564,7 @@ const handleSave = async () => {
                 <h2>품질 검사 체크리스트</h2>
 
                 <div className="quality-score">
-                    품질 점수 : <strong>{qualityScore}점 / 10점</strong>
+                    품질 점수 : <strong>{qualityScore}점 / 10점</strong> <h3>미실시 아이템 개수 : {undoItem.length}</h3>
                 </div>
 
                 {checklist.map(item => (
@@ -612,9 +620,7 @@ const handleSave = async () => {
                                 미실시
                             </button>
 
-                            <span>
-                                현재 결과 : {item.result}
-                            </span>
+                            
                         </div>
                     </div>
                 ))}
@@ -642,6 +648,17 @@ const handleSave = async () => {
                 </div>
 
             </section>
+
+            <div className="detail-save-area">
+
+                    <button
+                        className="save-button erp-primary-button"
+                        onClick={handleSave}
+                    >
+                        검사 결과 저장
+                    </button>
+
+            </div>
 
         </div>
 

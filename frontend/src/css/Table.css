@@ -10,8 +10,6 @@ table button { min-height: 32px; padding: 6px 10px; font-size: .82rem; }
 .table-shell tbody tr { cursor: pointer; }
 
 /* 상태표시관련 */
-.status-badge.status-danger { color: var(--color-danger); background: #fff0f1; }
-.status-badge.status-pending { color: var(--color-warning); background: #fff6e8; }
 
 /* 데이터가 없을 시 */
 .no-data { padding: 42px 20px; color: var(--color-muted); text-align: center; }
