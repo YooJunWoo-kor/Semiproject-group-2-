@@ -18,7 +18,7 @@ function ProjectProgress({ start, end }) {
       //아직 시작일에 도달하지 않았다면
       percent = 0;
     } else if (today > endDate) {
-      //시작일이 지났다면
+      //마감일이 지났다면
       percent = 100;
     } else {
       //시작일과 종료일 사이라면 (총 프로젝트 기간 / 시작날짜부터 현제날짜)
