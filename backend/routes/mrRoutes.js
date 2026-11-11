@@ -39,7 +39,7 @@ router.post("/reservations", async (req, res) => {
 
         // 기존 예약과 시간 중복 검사
         const checkSql = `
-            SELECT reservation_id
+            SELECT room_id
             FROM meeting_room_reservations
             WHERE room_number = ?
               AND reservation_date = ?
@@ -81,6 +81,7 @@ router.post("/reservations", async (req, res) => {
             startTime,
             endTime,
             title,
+            employeeId,
             content || null,
         ];
 
