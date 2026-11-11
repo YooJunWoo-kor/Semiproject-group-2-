@@ -326,6 +326,27 @@ router.post('/inspections', (req, res) => {
         
     })
 
+    router.delete('/quality/inspections/:id', (req, res) => {
+        const inspection_id = Number(req.params.id);
+
+        const sql = `
+            DELETE from quality_inspections
+            WHERE inspection_id = ?
+        `;
+
+        db.query(sql,[inspection_id], (err, rows) => {
+            if(err){
+                console.error("검사리스트 삭제 실패")
+                return res.status(500).json({
+                    message : "삭제오류"
+                })
+            }
+                    return res.json(rows);
+        })
+    })
+
+    
+
 
     router.get('/products/:id/inspections', (req, res) => {
         const productId = Number(req.params.id);
@@ -364,6 +385,7 @@ router.post('/inspections', (req, res) => {
             return res.json(rows);
         });
     });
+
 
 
     router.get('/inspections/:id/items', (req, res) => {

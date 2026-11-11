@@ -286,6 +286,23 @@ const handleSave = async () => {
             }
        }
 
+       const  DeleteInspectionList =  async (id) => {
+            try{
+                await axios.delete(
+                    `${API_BASE_URL}/quality/inspections/${id}`
+                )
+
+                const newHistory = inspectionHistory.filter(
+                    item => item.inspection_id !== id
+                )
+    
+                setInspectionHistory(newHistory) 
+            }
+            catch(error){
+                console.error("검사 이력 삭제 실패");
+            }
+       }
+
        
     
         
@@ -505,6 +522,8 @@ const handleSave = async () => {
                                         <button type="button" onClick={() => loadHistoryChecklist(item.inspection_id)}>
                                             보기
                                         </button>
+
+                                        <button type="button" onClick= {() => DeleteInspectionList(item.inspection_id)}>삭제</button>
                                     </td>
                                 </tr>
                             ))
@@ -601,9 +620,7 @@ const handleSave = async () => {
                                 미실시
                             </button>
 
-                            <span>
-                                현재 결과 : {item.result}
-                            </span>
+                            
                         </div>
                     </div>
                 ))}
