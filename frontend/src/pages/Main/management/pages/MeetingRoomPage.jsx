@@ -92,7 +92,7 @@ function MeetingRoomPage() {
                 reservationDate: selectedDate,
                 startTime,
                 endTime,
-                employeeId : loginUser.employeeId,
+                employeeId : loginUser.employeeKey,
                 ...reservationForm
             });
 
@@ -218,10 +218,6 @@ function MeetingRoomPage() {
                             </label>
                             
                             
-                            <label>이메일
-                                <input type="email" name="email" value={reservationForm.email}
-                                    onChange={handleInputChange} require />
-                            </label>
                             <div className="draft-actions">
                                 <button type="submit" className="erp-primary-button" disabled={isSaving}>
                                     {isSaving ? "예약 처리 중..." : "예약하기"}

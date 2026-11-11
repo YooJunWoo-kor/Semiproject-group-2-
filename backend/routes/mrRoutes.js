@@ -69,8 +69,7 @@ router.post("/reservations", async (req, res) => {
                 end_time,
                 employee_id,
                 title,
-                content,
-
+                content
             )
             VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
@@ -80,8 +79,8 @@ router.post("/reservations", async (req, res) => {
             reservationDate,
             startTime,
             endTime,
-            title,
             employeeId,
+            title,
             content || null,
         ];
 
