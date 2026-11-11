@@ -686,7 +686,7 @@ function Items() {
   }
 
   return (
-    <div className="sub-container">
+    <div className="border-container">
       {/* 1. 상단 공통 헤더 및 액션 버튼 */}
       <header className="dashboard-header">
         <span className="subtitle">매입/매출 품목관리</span>

@@ -132,7 +132,7 @@ function ProjectRoutes() {
 
   return (
     <div className="sub-main-contain">
-      <Nav urlist={urlList} />
+      <Nav urlist={urlList} title={'프로젝트'}/>
       <div style={{ flex: 1, minWidth: 0 }}>
         <Routes>
           <Route index element={<ProjectModul projectlist={projectlist} />} />
@@ -154,7 +154,7 @@ function ProjectRoutes() {
   );
 }
 
-// 📌 상단 진행현황 컴포넌트
+// 상단 진행현황 컴포넌트
 function ProjectProgress({ start, end }) {
   const startDate = new Date(start);
   const endDate = new Date(end);
@@ -307,7 +307,7 @@ function ProjectDetail({ project, onUpdateTasks }) {
   };
 
   return (
-    <div className="sub-container">
+    <div className="border-container">
       {/* 1. 상단 공통 헤더 */}
       <header className="dashboard-header">
         <span className="subtitle">{project.title}</span>

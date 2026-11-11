@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from "react";
 import ModalBase from "../../../../components/ModalBase";
 import axios from "axios";
-import { getLoginUser,getEmployeeAccounts } from "../../../../utils/authStorage";
+import { API_BASE_URL, getLoginUser } from "../../../../utils/authStorage";
 import DepEmpList from "../../../../components/DepEmpList";
 
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api"
 
 function DraftCreate({
     loginUser,
@@ -41,18 +40,18 @@ function DraftCreate({
     useEffect(() => {
         async function loadDepartments() {
             try {
-                const employees = await getEmployeeAccounts();
-    
-                const departmentList = [
-                    ...new Set(
-                        employees.map(employee => employee.department_name).filter(Boolean)
-                    )
-                ];
-    
+                const response = await axios.get(`${API_BASE_URL}/drafts/departments`);
+
+                const departmentList = response.data.map(department => department.department_name);
+
                 setDepartments(departmentList);
-    
-            } catch (error) {
-                console.error("부서 조회 실패:", error);
+            }
+
+
+            catch(error){
+
+                console.error('부서 조회 실패', error);
+
             }
         }
     
@@ -66,14 +65,15 @@ function DraftCreate({
             setContent(editingDraft.content || "");
             setApprovers(editingDraft.approvers || []);
     
-            setStartDate(editingDraft.startDate || "");
-            setEndDate(editingDraft.endDate || "");
-    
-            setItemName(editingDraft.itemName || "");
-            setQuantity(editingDraft.quantity || "");
-    
-            setUseDate(editingDraft.useDate || "");
-            setAmount(editingDraft.amount || "");
+            const detailData = editingDraft.detailData || {};
+            setStartDate(detailData.startDate || "");
+            setEndDate(detailData.endDate || "");
+
+            setItemName(detailData.itemName || "");
+            setQuantity(detailData.quantity ?? "");
+
+            setUseDate(detailData.useDate || "");
+            setAmount(detailData.amount ?? "");
         }
     }, [editingDraft]);
 
@@ -135,11 +135,22 @@ function DraftCreate({
             return;
         }
 
+        // 문서 종류별 추가 입력값은 JSON으로 함께 전송한다.
+        let detailData = {};
+        if (draftType === "휴가") {
+            detailData = { startDate, endDate };
+        } else if (draftType === "구매") {
+            detailData = { itemName, quantity };
+        } else if (draftType === "비용") {
+            detailData = { useDate, amount };
+        }
+
         const payload = {
             employeeId,
             title,
             documentType: draftType,
-            content
+            content,
+            detailData
         };
 
         try {
@@ -206,7 +217,7 @@ function DraftCreate({
 
                     <p>작성자 : {loginUser.name}</p>
 
-                    <p>부서 : {loginUser.department_id}</p>
+                    <p>부서 : {loginUser.departmentName}</p>
 
                     <p>직책 : {loginUser.position}</p>
 
@@ -420,6 +431,7 @@ function DraftCreate({
 
                     <button
                         type="button"
+                        className="erp-primary-button"
                         onClick={(e) => handleSubmit(e, "submit")}
                     >
                         결재 요청
@@ -468,6 +480,7 @@ function DraftCreate({
                 <div className="draft-actions">
                     <button
                         type="button"
+                        className="erp-primary-button"
                         onClick={() => {
                             if (!tempApprover) {
                                 alert("직원을 선택해주세요.");

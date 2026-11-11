@@ -1,6 +1,7 @@
 import { useEffect, useState, useId } from "react";
 import { getEmployeeAccounts } from "../utils/authStorage";
 
+//선택한 부서 데이터를 불러오면, 부서 원들 출력
 function DepEmpList({ departmentName, onSelect }) {
     const [employees, setEmployees] = useState([]);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -50,7 +51,7 @@ function DepEmpList({ departmentName, onSelect }) {
 
     return (
         <div>
-            <h4>{departmentName} 직원 목록</h4>
+            <h4>{departmentName}</h4>
 
             {employees.map(employee => (
                 <label key={employee.employee_id}>

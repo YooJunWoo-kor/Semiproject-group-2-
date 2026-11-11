@@ -9,7 +9,7 @@
     padding: 20px;
     border: 1px solid #e1e8ed;
     border-radius: 13px;
-    background-color: #ffffff;
+    background-color: var(--color-surface);
     box-shadow: 0 3px 12px rgba(23, 60, 74, 0.06);
   }
   

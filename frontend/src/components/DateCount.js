@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 
+//현제 시각 카운트 모듈.
 function DateCount(){
     //숫자만 리렌더링 할 수 있도록 따로 컴포넌트를 분리했습니다.
     const[time, setTime] = useState(new Date());

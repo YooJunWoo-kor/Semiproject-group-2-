@@ -1,11 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const Draft = require('./Draft_function');
+const Draft = require('../models/Draft_function');
+const db = require('../db');
+
+function isValidDetailData(detailData) {
+    return detailData !== null &&
+        typeof detailData === 'object' &&
+        !Array.isArray(detailData);
+}
 
 
 // 1. 기안서 임시저장
 router.post('/', async (req, res) => {
-    const { employeeId, title, documentType, content } = req.body;
+    const { employeeId, title, documentType, content, detailData = {} } = req.body;
 
     if (
         !Number.isSafeInteger(employeeId) ||
@@ -13,7 +20,8 @@ router.post('/', async (req, res) => {
         typeof title !== 'string' ||
         !title.trim() ||
         typeof documentType !== 'string' ||
-        !documentType.trim()
+        !documentType.trim() ||
+        !isValidDetailData(detailData)
     ) {
         return res.status(400).json({
             message: '올바른 사원번호, 제목, 문서 종류가 필요합니다.'
@@ -25,7 +33,8 @@ router.post('/', async (req, res) => {
             employeeId,
             title,
             documentType,
-            content
+            content,
+            detailData
         );
 
         return res.status(201).json({
@@ -49,7 +58,8 @@ router.post('/submit', async (req, res) => {
         title,
         documentType,
         content,
-        approverIds
+        approverIds,
+        detailData = {}
     } = req.body;
 
     if (
@@ -62,7 +72,8 @@ router.post('/submit', async (req, res) => {
         !Array.isArray(approverIds) ||
         approverIds.length === 0 ||
         !approverIds.every(id => Number.isSafeInteger(id) && id > 0) ||
-        new Set(approverIds).size !== approverIds.length
+        new Set(approverIds).size !== approverIds.length ||
+        !isValidDetailData(detailData)
     ) {
         return res.status(400).json({
             message: '기안서 정보 또는 결재자 목록이 올바르지 않습니다.'
@@ -75,7 +86,8 @@ router.post('/submit', async (req, res) => {
             title,
             documentType,
             content,
-            approverIds
+            approverIds,
+            detailData
         );
 
         return res.status(201).json({
@@ -90,6 +102,8 @@ router.post('/submit', async (req, res) => {
         });
     }
 });
+
+
 
 
 
@@ -138,15 +152,16 @@ router.get('/approved/list', async (req, res) => {
 // 임시저장 수정
 router.patch('/:draftId', async (req, res) => {
     const draftId = Number(req.params.draftId);
-    const { employeeId, title, documentType, content } = req.body;
+    const { employeeId, title, documentType, content, detailData = {} } = req.body;
     if (!Number.isSafeInteger(draftId) || draftId <= 0 ||
         !Number.isSafeInteger(employeeId) || employeeId <= 0 ||
         typeof title !== 'string' || !title.trim() ||
-        typeof documentType !== 'string' || !documentType.trim()) {
+        typeof documentType !== 'string' || !documentType.trim() ||
+        !isValidDetailData(detailData)) {
         return res.status(400).json({ message: '올바른 기안서 정보가 필요합니다.' });
     }
     try {
-        const changed = await Draft.updateDraft(draftId, employeeId, title, documentType, content);
+        const changed = await Draft.updateDraft(draftId, employeeId, title, documentType, content, detailData);
         if (!changed) return res.status(404).json({ message: '수정 가능한 임시저장 문서가 없습니다.' });
         return res.json({ message: '기안서 수정 완료', draftId });
     } catch (error) {
@@ -213,6 +228,28 @@ router.post('/:draftId/decision', async (req, res) => {
     }
 });
 
+//2. 부서 api
+router.get('/departments', (req, res) => {
+    const sql = `
+        SELECT department_id, department_name
+            FROM departments
+            ORDER BY department_id
+    `;
+
+    console.log('부서조회 시작')
+    db.query(sql, (err,data) => {
+        if(err){
+            console.error('부서 조회 실패', err);
+            return res.status(500).json({
+                message: '부서 조회 실패'
+            })
+        }
+
+        console.log('부서조회 성공', data);
+        res.json(data);
+    })
+})
+
 
 // 3. 기안서 상세 조회
 router.get('/:draftId', async (req, res) => {
@@ -236,6 +273,9 @@ router.get('/:draftId', async (req, res) => {
         const draft = {
             draft_id: rows[0].draft_id,
             title: rows[0].title,
+            document_type: rows[0].document_type,
+            content: rows[0].content,
+            detail_data: rows[0].detail_data,
             status: rows[0].draft_status,
 
             approvers: rows

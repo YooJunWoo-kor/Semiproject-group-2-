@@ -1,310 +1,225 @@
-
-import React, { useState } from 'react';
+// [수정] 공지사항 본문 화면과 글쓰기·수정 모달 연결
+import React, { useState, useEffect, useRef } from 'react';
 import PaginationTable from '../../../../components/PaginationTable';
 import ModalBase from '../../../../components/ModalBase';
+import { getLoginUser } from '../../../../utils/authStorage';
+import { getNotices, addNotice, updateNotice, deleteNotice, addNoticeComment } from '../../../../utils/communityApi';
 
-export default function NoticePage({ communityItems }) {
-  const { items, addItem, removeItem } = communityItems;
-
-  // 검색어 관리
-  const [query, setQuery] = useState('');
-
-  // 현재 화면 관리: 목록 또는 상세 보기
-  const [view, setView] = useState('list');
-
-  // 선택한 게시글 관리
-  const [selected, setSelected] = useState(null);
-
-  // 모달 상태 관리
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // 공지사항 입력값 관리
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [category, setCategory] = useState('일반공지');
-
-  // 검색 필터링
-  const filtered = items.filter((item) => {
-    const searchText = `${item.title} ${item.content}`.toLowerCase();
-
-    return searchText.includes(query.trim().toLowerCase());
-  });
-
-  // 공지사항 작성 모달 열기
-  const handleOpenWriteModal = () => {
-    setTitle('');
-    setContent('');
-    setCategory('일반공지');
-    setIsModalOpen(true);
-  };
-
-  // 공지사항 작성 모달 닫기
-  const handleCloseWriteModal = () => {
-    setIsModalOpen(false);
-    setTitle('');
-    setContent('');
-    setCategory('일반공지');
-  };
-
-  // 공지사항 등록
-  const saveNotice = (e) => {
-    e.preventDefault();
-
-    // 제목 확인
-    if (!title.trim()) {
-      alert('제목을 입력해 주세요.');
-      return;
-    }
-
-    // 내용 확인
-    if (!content.trim()) {
-      alert('내용을 입력해 주세요.');
-      return;
-    }
-
-    // 새 공지사항 객체 생성
-    const newNotice = {
-      id: `notice-${Date.now()}`,
-      title: title.trim(),
-      category: category,
-      content: content.trim(),
-      author: '관리자',
-      important: category === '중요공지',
-      createdAt: new Date().toLocaleDateString('sv-SE'),
-      views: 0,
+export default function NoticePage() {
+    const [items, setItems] = useState([]);
+    const [query, setQuery] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
+    const [message, setMessage] = useState('');
+    // [추가] 선택된 글이 있으면 본문 화면, 없으면 목록
+    const [selectedId, setSelectedId] = useState(null);
+    const selected = items.find(item => item.post_id === selectedId);
+    const [modal, setModal] = useState(false);
+    const [editingId, setEditingId] = useState(null);
+    const [title, setTitle] = useState('');
+    const [content, setContent] = useState('');
+    const [category, setCategory] = useState('일반공지');
+    const [formError, setFormError] = useState('');
+    const [busy, setBusy] = useState(false);
+    const lock = useRef(false);
+    // [추가] 공지사항 댓글 입력값
+    const [comment, setComment] = useState('');
+    useEffect(() => { setComment(''); }, [selectedId]);
+    const saveComment = event => {
+        event.preventDefault();
+        if (!comment.trim() || !selected) { setMessage('댓글 내용을 입력해 주세요.'); return; }
+        let employee;
+        try { employee = getLoginUser(); } catch { setMessage('로그인 정보를 확인해 주세요.'); return; }
+        if (!employee?.name) { setMessage('로그인 직원 정보를 확인해 주세요.'); return; }
+        run(() => addNoticeComment(selected.post_id, { content: comment.trim(), author: employee.name }), () => setComment(''), '댓글이 등록되었습니다.');
     };
 
-    // 공지사항 목록에 추가
-    addItem(newNotice);
+    useEffect(() => {
+        let active = true;
+        getNotices().then(rows => { if (active) setItems(rows); })
+            .catch(() => { if (active) setLoadError('공지사항 목록을 불러오지 못했습니다.'); })
+            .finally(() => { if (active) setLoading(false); });
+        return () => { active = false; };
+    }, []);
 
-    // 모달 닫기
-    handleCloseWriteModal();
+    // [추가] DB 저장 성공과 재조회 실패를 구분하여 중복 등록 방지
+    const run = async (operation, afterSuccess, successMessage, form = false) => {
+        if (lock.current) return;
+        lock.current = true; setBusy(true); setFormError(''); setMessage('');
+        let saved = false;
+        try {
+            await operation(); saved = true; afterSuccess();
+            setItems(await getNotices());
+            setMessage(successMessage);
+        } catch (error) {
+            const text = saved ? '변경은 저장되었습니다. 목록을 다시 불러오지 못했으니 새로고침해 주세요.' : error.response?.data?.message || '처리에 실패했습니다.';
+            if (form && !saved) setFormError(text); else setMessage(text);
+        } finally { lock.current = false; setBusy(false); }
+    };
+    const openWrite = (item = null) => {
+        setEditingId(item?.post_id ?? null);
+        setTitle(item?.post_title || ''); setContent(item?.post_content || '');
+        setCategory(item?.category || '일반공지'); setFormError(''); setMessage(''); setModal(true);
+    };
+    const closeModal = () => { if (!lock.current) setModal(false); };
+    const savePost = event => {
+        event.preventDefault();
+        if (![title, content, category].every(value => value.trim())) { setFormError('제목, 내용과 분류를 입력해 주세요.'); return; }
+        let employee;
+        try { employee = getLoginUser(); } catch { setFormError('로그인 정보를 확인해 주세요.'); return; }
+        if (!employee?.name) { setFormError('로그인 직원 정보를 확인해 주세요.'); return; }
+        const post = { post_title: title.trim(), post_content: content.trim(), category, author: employee.name };
+        run(() => editingId == null ? addNotice(post) : updateNotice(editingId, post),
+            () => { setModal(false); setQuery(''); },
+            editingId == null ? '공지사항이 등록되었습니다.' : '공지사항이 수정되었습니다.', true);
+    };
+    const remove = item => {
+        if (busy || !window.confirm('이 공지사항을 삭제할까요?')) return;
+        run(() => deleteNotice(item.post_id), () => {
+            setItems(previous => previous.filter(post => post.post_id !== item.post_id));
+            if (selectedId === item.post_id) setSelectedId(null);
+        }, '공지사항이 삭제되었습니다.');
+    };
+    const date = value => value ? new Date(value).toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' }) : '-';
+    const keyword = query.trim().toLowerCase();
+    const filtered = items.filter(item => `${item.post_title} ${item.post_content} ${item.author}`.toLowerCase().includes(keyword));
+    const actions = item => <div className="table-actions">
+        <button type="button" disabled={busy} onClick={() => openWrite(item)}>수정</button>
+        <button type="button" disabled={busy} className="danger-button" onClick={() => remove(item)}>삭제</button>
+    </div>;
+    // [수정] 제목 클릭으로 본문 표시, 목록에 관리 버튼 추가
+    const tableData = filtered.map(item => ({ content: [
+        item.important ? <span key={`badge-${item.post_id}`} className="status-badge status-danger">공지</span> : '-',
+        item.category,
+        <button key={`title-${item.post_id}`} type="button" className="table-link-title" style={{ border: 0, background: 'transparent', padding: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', textAlign: 'left' }} onClick={() => { setSelectedId(item.post_id); setMessage(''); }}>{item.post_title}</button>,
+        item.author, date(item.created_at), item.views || 0,
+        <React.Fragment key={`actions-${item.post_id}`}>{actions(item)}</React.Fragment>
+    ] }));
+    const inputStyle = { display: 'block', width: '100%', boxSizing: 'border-box', marginTop: 6, padding: '10px 12px', border: '1px solid #ccd6e5', borderRadius: 8, font: 'inherit' };
+    const layout = <form onSubmit={savePost} style={{ width: 'min(520px, calc(100vw - 96px))', maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' }}>
+        <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, display: 'grid', gap: 16, minWidth: 0 }}>
+            <label>제목<input required maxLength={200} style={inputStyle} value={title} onChange={event => setTitle(event.target.value)} /></label>
+            <label>분류<select style={inputStyle} value={category} onChange={event => setCategory(event.target.value)}>
+                {!['일반공지', '중요공지'].includes(category) && <option value={category}>{category}</option>}
+                <option value="일반공지">일반공지</option><option value="중요공지">중요공지</option>
+            </select></label>
+            <label>내용<textarea required rows={8} style={{ ...inputStyle, resize: 'vertical' }} value={content} onChange={event => setContent(event.target.value)} /></label>
+            {formError && <p role="alert">{formError}</p>}
+            <div className="table-actions"><button type="button" onClick={closeModal}>취소</button><button type="submit" className="erp-primary-button">{busy ? '저장 중…' : editingId == null ? '등록하기' : '수정하기'}</button></div>
+        </fieldset>
+    </form>;
 
-    // 목록 화면으로 이동
-    setView('list');
-    setSelected(null);
+    return <div className="border-container">
+        <header className="dashboard-header"><span className="subtitle">공지사항</span><div className="dashboard-top">
+            {selected ? <button type="button" disabled={busy} onClick={() => setSelectedId(null)}>목록으로</button>
+                : <button type="button" className="register-btn" disabled={loading || busy || !!loadError} onClick={() => openWrite()}>+ 글쓰기</button>}
+        </div></header><hr />
+        {loading && <p className="no-data">공지사항을 불러오는 중입니다.</p>}
+        {loadError && <p role="alert">{loadError}</p>}
+        {!modal && message && <p role="status">{message}</p>}
+        {!loading && !loadError && !selected && <>
+            <div className="filter-bar"><label className="search-field">검색:<input placeholder="제목, 내용 또는 작성자 검색" value={query} onChange={event => setQuery(event.target.value)} /></label></div>
+            <PaginationTable key={keyword} title="공지사항 목록" th={['구분', '분류', '제목', '작성자', '작성일', '조회수', '관리']} allData={tableData} itemsPerPage={10} />
+        </>}
+        {!loading && !loadError && selected && <article className="detail-card">
+            <h3>{selected.post_title}</h3>
+            <p className="subtext">작성자: {selected.author} | 분류: {selected.category} | 작성일: {date(selected.created_at)} | 최근 수정: {date(selected.updated_at)}</p><hr />
+            <div className="detail-body" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{selected.post_content}</div>
+            {actions(selected)}
+            {/* ===== [추가] 공지사항 댓글 목록·입력창 시작 ===== */}
+            <hr />
+            <section className="comment-section">
+                <h4>댓글 ({(selected.comments || []).length})</h4>
+                <div className="comment-list">
+                    {(selected.comments || []).map(c => <div className="comment-item" key={c.id}>
+                        <div className="comment-meta"><strong>{c.author}</strong><span className="subtext"> ({date(c.created_at)})</span>
+                            <p className="comment-text" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{c.content}</p>
+                        </div>
+                    </div>)}
+                    {(selected.comments || []).length === 0 && <p className="no-data">등록된 댓글이 없습니다.</p>}
+                </div>
+                <form className="comment-input-wrap" style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }} onSubmit={saveComment}>
+                    <input aria-label="댓글 내용" placeholder="댓글을 입력하세요" maxLength={10000} disabled={busy} value={comment} onChange={event => setComment(event.target.value)} style={{ ...inputStyle, flex: '1 1 240px', width: 'auto' }} />
+                    <button type="submit" className="register-btn" disabled={busy}>댓글 등록</button>
+                </form>
+            </section>
+            {/* ===== [추가] 공지사항 댓글 목록·입력창 끝 ===== */}
+        </article>}
+        {modal && <ModalBase onClose={closeModal} title={editingId == null ? '공지사항 글쓰기' : '공지사항 수정'} layout={layout} />}
+    </div>;
+}
 
-    alert('공지사항이 등록되었습니다.');
-  };
 
-  // 공지사항 삭제
-  const remove = (targetId) => {
-    if (!window.confirm('해당 공지글을 삭제하시겠습니까?')) {
-      return;
-    }
+// ===== 기존 NoticeModule 유지 =====
+// 메인 화면에서 사용하는 별도 공지사항 표시 영역입니다.
+// 이번 단계에서는 이 영역의 DB 연결을 변경하지 않습니다.
 
-    removeItem(targetId);
+export function NoticeModule({ style = 1 }) {
 
-    setSelected(null);
-    setView('list');
+    const tableHeaders = [
+        '구분',
+        '분류',
+        '제목',
+        '작성자',
+        '작성일',
+        '조회수',
+    ];
 
-    alert('공지사항이 삭제되었습니다.');
-  };
+    const items = [];
 
-  // PaginationTable 헤더
-  const tableHeaders = [
-    '구분',
-    '분류',
-    '제목',
-    '작성자',
-    '작성일',
-    '조회수',
-  ];
+    const [query, setQuery] = useState('');
 
-  // PaginationTable 데이터
-  const tableData = filtered.map((item) => ({
-    content: [
-      item.important
-        ? <span className="status-badge status-danger">공지</span>
-        : '-',
+    const filtered = items.filter((item) => {
 
-      item.category,
+        const searchText =
+            `${item.title} ${item.content}`.toLowerCase();
 
-      <span
-        className="table-link-title"
-        onClick={() => {
-          setSelected(item);
-          setView('detail');
-        }}
-      >
-        {item.title}
-      </span>,
+        return searchText.includes(
+            query.trim().toLowerCase()
+        );
 
-      item.author,
+    });
 
-      item.createdAt ? item.createdAt.slice(0, 10) : '-',
+    const tableData = filtered.map((item) => ({
 
-      item.views || 0,
-    ],
-  }));
+        content: [
 
-  // 공지사항 작성 폼
-  const writeModalLayout = (
-    <form onSubmit={saveNotice}>
+            item.important
+                ? (
+                    <span className="status-badge status-danger">
+                        공지
+                    </span>
+                )
+                : '-',
 
-      {/* 제목 입력 */}
-      <div>
-        <label>제목</label>
+            item.category,
 
-        <input
-          type="text"
-          placeholder="제목을 입력해 주세요."
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-      </div>
+            <span className="table-link-title">
+                {item.title}
+            </span>,
 
-      {/* 내용 입력 */}
-      <div>
-        <label>내용</label>
+            item.author,
 
-        <textarea
-          placeholder="내용을 입력해 주세요."
-          rows="8"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-        />
-      </div>
+            item.createdAt
+                ? item.createdAt.slice(0, 10)
+                : '-',
 
-      {/* 공지사항 분류 */}
-      <div>
-        <label>분류</label>
+            item.views || 0,
 
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        >
-          <option value="일반공지">일반공지</option>
-          <option value="중요공지">중요공지</option>
-        </select>
-      </div>
+        ],
 
-      {/* 등록 버튼 */}
-      <div>
-        <button type="submit">
-          등록하기
-        </button>
-      </div>
+    }));
 
-    </form>
-  );
+    return (
 
-  return (
-    <div className="sub-container">
-
-      {/* 상단 공통 헤더 */}
-      <header className="dashboard-header">
-        <span className="subtitle">공지사항</span>
-
-        <div className="dashboard-top">
-
-          {view === 'list' && (
-            <button
-              type="button"
-              className="register-btn"
-              onClick={handleOpenWriteModal}
-            >
-              + 공지글 작성
-            </button>
-          )}
-
-          {view !== 'list' && (
-            <button
-              type="button"
-              onClick={() => setView('list')}
-            >
-              목록으로
-            </button>
-          )}
-
-        </div>
-      </header>
-
-      <hr />
-
-      {/* 목록 화면 */}
-      {view === 'list' && (
-        <>
-          <div className="filter-bar">
-
-            <label className="search-field">
-              검색:
-
-              <input
-                id="search"
-                type="text"
-                placeholder="제목 또는 내용 검색"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-
-            </label>
-
-          </div>
-
-          <PaginationTable
+        <PaginationTable
             title="공지사항 목록"
             th={tableHeaders}
             allData={tableData}
             itemsPerPage={10}
-          />
-        </>
-      )}
-
-      {/* 상세 보기 화면 */}
-      {view === 'detail' && selected && (
-        <article className="detail-card">
-
-          <header>
-            <h3>{selected.title}</h3>
-
-            <span className="subtext">
-              작성자: {selected.author} |
-              분류: {selected.category} |
-              작성일: {selected.createdAt?.slice(0, 10)} |
-              조회수: {selected.views || 0}
-            </span>
-          </header>
-
-          <hr />
-
-          <div className="detail-body">
-            {selected.content}
-          </div>
-
-          <div className="table-actions">
-
-            <button
-              type="button"
-              onClick={() => {
-                alert('공지사항 수정 기능은 아직 구현되지 않았습니다.');
-              }}
-            >
-              수정
-            </button>
-
-            <button
-              type="button"
-              className="danger-button"
-              onClick={() => remove(selected.id)}
-            >
-              삭제
-            </button>
-
-          </div>
-
-        </article>
-      )}
-
-      {/* 공지사항 작성 모달 */}
-      {isModalOpen && (
-        <ModalBase
-          onClose={handleCloseWriteModal}
-          title="공지사항 작성"
-          layout={writeModalLayout}
+            style={style}
         />
-      )}
 
-    </div>
-  );
+    );
+
 }

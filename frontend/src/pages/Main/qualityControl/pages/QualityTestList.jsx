@@ -1,12 +1,44 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import products from "./product";
 import "./QualityControl.css";
+import axios from "axios";
+import { API_BASE_URL } from "../../../../utils/authStorage";
 
 function QualityTestList() {
     const navigate = useNavigate();
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("전체");
+
+
+const [products, setProducts] = useState([]);
+
+    useEffect(() => {
+        async function loadProducts() {
+            try {
+                const response = await axios.get(
+                    `${API_BASE_URL}/quality/products`
+                );
+
+                const data = response.data.map(item => ({
+                    id: item.product_id,
+                    code: item.product_code,
+                    name: item.product_name,
+                    company: item.company,
+                    qualityStatus: item.quality_status,
+                    inspectionDate: item.inspection_date || "-"
+                }));
+
+                setProducts(data);
+
+            } catch (error) {
+                console.error("검사 목록 조회 실패:", error);
+            }
+        }
+
+        loadProducts();
+    }, []);
+
+
 
     const filteredProducts = products.filter(product => {
         const searchMatch =

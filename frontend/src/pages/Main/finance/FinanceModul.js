@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ScheduleBoard from '../../../components/ScheduleBoard';
+import StatisticsCard from '../../../components/StatisticsCard';
 import './FinanceDashboard.css';
 import { API_BASE_URL } from '../../../utils/authStorage';
 
@@ -113,21 +114,25 @@ function FinanceModul() {
         ['partners', '거래처'], ['items', '관리 품목']
     ];
     return (
-        <div className="sub-container finance-dashboard">
-            <header className="fd-header">
-                <h1>대시보드</h1><p>재무 현황과 문서 작성을 한눈에 확인하세요.</p>
-                <button type="button" className="fd-refresh" disabled={loading} onClick={() => setReload(reload + 1)}>
-                    {loading ? '조회 중…' : '새로고침'}
-                </button>
+        <div className="border-container finance-dashboard">
+            <header className="dashboard-header">
+                <span className="subtitle">재무관리 대시보드</span>
+                <div className="dashboard-top">
+                    <button type="button" className="register-btn" disabled={loading} onClick={() => setReload(reload + 1)}>
+                        {loading ? '조회 중…' : '새로고침'}
+                    </button>
+                </div>
             </header>
+            <p className="subtext">재무 현황과 문서 작성을 한눈에 확인하세요.</p>
             {error && <div className="fd-error" role="alert">{error}</div>}
-            <div className="fd-stats" aria-label="재무 현황">
-                {stats.map(([key, label]) => (
-                    <section className="fd-stat fd-panel" key={key}>
-                        <h2>{label}</h2><p>{loading || !data ? '—' : numberText(data.counts[key])}<span> 개</span></p>
-                    </section>
-                ))}
-            </div>
+            {loading && <p role="status" className="subtext">재무 현황을 불러오는 중입니다.</p>}
+            {!loading && data && (
+                <section className="stats-section" aria-label="재무 현황">
+                    {stats.map(([key, label]) => (
+                        <StatisticsCard key={key} title={label} count={data.counts[key]} stiyle={0} />
+                    ))}
+                </section>
+            )}
             <section className="fd-documents fd-panel">
                 <h2>문서 작성</h2>
                 <div className="fd-document-grid">

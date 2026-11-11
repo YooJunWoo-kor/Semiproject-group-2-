@@ -61,7 +61,7 @@ export default function PartnersPage({ data, setData }) {
   }));
 
   return (
-    <div className="sub-container">
+    <div className="border-container">
       {/* 1. 상단 공통 헤더 및 등록 버튼 */}
       <header className="dashboard-header">
         <span className="subtitle">거래처 관리</span>

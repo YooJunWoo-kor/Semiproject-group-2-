@@ -55,7 +55,7 @@ function FinanceHome() {
 
     return (
         <div className='sub-main-contain'>
-            <Nav urlist={urlList}/>
+            <Nav urlist={urlList} title='재무'/>
             <Routes>
                 <Route index element={<FinanceModul />}/>
                 <Route path='corp-card/*' element={<CorpCard />}/>

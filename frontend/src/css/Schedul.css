@@ -5,7 +5,7 @@
 }
 
 .schedule-nav label{
-    color:#fff;
+    color:var(--color-surface);
     font-weight: normal;
 }
 

@@ -11,55 +11,34 @@ function Home() {
 
     const navigate = useNavigate();
 
-    // const handleLogin = (e) => {
-    //     e.preventDefault();
-    //     const account = findLoginAccount(
-    //         loginId,
-    //         password
-    //     );
-
-    //     if (!account) {
-    //         alert(
-    //             "이메일 또는 비밀번호가 일치하지 않습니다."
-    //         );
-    //         return;
-    //     }
-    //     else{
-    //         saveLoginUser({
-    //             employeeKey: account.employeeKey || null,
-    //             name: account.name,
-    //             email: account.email,
-    //             department: account.department,
-    //             position: account.position,
-    //             role: account.role
-    //         });
-
-    //         navigate('/main');
-    //     }
-    // };
-
     const handleLogin = async (e) => {
         e.preventDefault();
-
         try {
-            // 서버의 로그인 응답을 기다립니다.
-            const result = await findLoginAccount(loginId, password);
+            // 1. 서버 통신 대기
+            const responseData = await findLoginAccount(loginId, password);
 
-            // 로그인 성공 여부와 사원 정보 확인
-            if (result?.result !== "success" || !result.user) {
-                alert("이메일 또는 비밀번호가 일치하지 않습니다.");
-                return;
+            // 2. 서버 응답 결과 판별
+            if (responseData && responseData.result === "success") {
+                saveLoginUser({
+                    employeeKey: responseData.user.employee_id || null,
+                    name: responseData.user.name,
+                    email: responseData.user.email,
+                    departmentName : responseData.user.department_name,
+                    department: responseData.user.department_id,
+                    position: responseData.user.position,
+                    role: responseData.user.role
+                });
+                
+                navigate('/main');
+            } else {
+                alert(responseData || "로그인에 실패했습니다.");
             }
-
-            // 서버가 보내준 사원 정보를 저장합니다.
-            // employee_id, department_id, name, role 등이 포함됩니다.
-            saveLoginUser(result.user);
-
-            navigate('/main');
         } catch (error) {
-            alert(error.message || "로그인 중 오류가 발생했습니다.");
+            // 3. 입력값 누락, 401 불일치, DB 조회 오류 등 모든 예외 알림을 '여기서 단 한 번만' 띄웁니다!
+            alert(error.message);
         }
     };
+
 
     const registerHendle = (e) => {
         e.preventDefault();
@@ -68,7 +47,7 @@ function Home() {
 
 
     return (
-        <div className="login-page">
+        <div className="login-page" data-theme='light'>
             <div className="login-border">
                 <header>
                     <h2>ERP 시스템</h2>
@@ -90,7 +69,7 @@ function Home() {
                                         e.target.value
                                     )
                                 }
-                            // required
+                                // required
                             />
                         </div>
                         <div>
@@ -107,7 +86,7 @@ function Home() {
                                         e.target.value
                                     )
                                 }
-                            // required
+                                // required
                             />
                         </div>
                         <div>
@@ -122,7 +101,6 @@ function Home() {
                     </form>
                 </main>
                 <footer>
-                    <button onClick={registerHendle}> 회원가입 </button>
                     <br />
                     <small> 계정 분실 시 전산팀에 문의하세요. </small>
                 </footer>

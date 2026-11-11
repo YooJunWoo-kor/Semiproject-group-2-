@@ -12,7 +12,7 @@
 }
 
 .modal-boder{
-    background-color: #ffffff;
+    background-color: var(--color-surface);
     padding: 24px;
     border-radius: 12px;
     min-width: 360px;
