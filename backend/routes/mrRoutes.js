@@ -9,18 +9,19 @@ router.post("/reservations", async (req, res) => {
         reservationDate,
         startTime,
         endTime,
+        employeeId,
         title,
         content
     } = req.body;
 
     // 필수 입력값 검사
     if (
-        !roomId ||
+        !roomNumber ||
         !reservationDate ||
         !startTime ||
         !endTime ||
         !title?.trim() ||
-        !reserverName?.trim()
+        !employeeId
     ) {
         return res.status(400).json({
             message: "필수 정보를 입력해주세요."
@@ -49,7 +50,7 @@ router.post("/reservations", async (req, res) => {
 
         const [existing] = await db.promise().query(
             checkSql,
-            [room, reservationDate, endTime, startTime]
+            [roomNumber, reservationDate, endTime, startTime]
         );
 
         if (existing.length > 0) {
@@ -66,6 +67,7 @@ router.post("/reservations", async (req, res) => {
                 reservation_date,
                 start_time,
                 end_time,
+                employee_id,
                 title,
                 content,
 
