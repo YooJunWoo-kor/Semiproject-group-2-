@@ -5,15 +5,12 @@ const db = require("../db");
 // 회의실 예약 등록
 router.post("/reservations", async (req, res) => {
     const {
-        roomId,
+        roomNumber,
         reservationDate,
         startTime,
         endTime,
         title,
-        content,
-        reserverName,
-        phone,
-        email
+        content
     } = req.body;
 
     // 필수 입력값 검사
@@ -38,25 +35,12 @@ router.post("/reservations", async (req, res) => {
     }
 
     try {
-        // 실제 존재하고 사용 가능한 회의실인지 확인
-        const [rooms] = await db.promise().query(
-            `SELECT room_id
-             FROM meeting_rooms
-             WHERE room_id = ? AND available = TRUE`,
-            [roomId]
-        );
-
-        if (rooms.length === 0) {
-            return res.status(404).json({
-                message: "사용 가능한 회의실이 없습니다."
-            });
-        }
 
         // 기존 예약과 시간 중복 검사
         const checkSql = `
             SELECT reservation_id
             FROM meeting_room_reservations
-            WHERE room_id = ?
+            WHERE room_number = ?
               AND reservation_date = ?
               AND start_time < ?
               AND end_time > ?
@@ -65,7 +49,7 @@ router.post("/reservations", async (req, res) => {
 
         const [existing] = await db.promise().query(
             checkSql,
-            [roomId, reservationDate, endTime, startTime]
+            [room, reservationDate, endTime, startTime]
         );
 
         if (existing.length > 0) {
@@ -78,29 +62,24 @@ router.post("/reservations", async (req, res) => {
         const insertSql = `
             INSERT INTO meeting_room_reservations
             (
-                room_id,
+                room_number,
                 reservation_date,
                 start_time,
                 end_time,
                 title,
                 content,
-                reserver_name,
-                phone,
-                email
+
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
 
         const values = [
-            roomId,
+            roomNumber,
             reservationDate,
             startTime,
             endTime,
             title,
             content || null,
-            reserverName,
-            phone || null,
-            email || null
         ];
 
         const [result] = await db.promise().query(
@@ -130,18 +109,19 @@ router.get("/reservations", async (req, res) => {
     try {
         const sql = `
             SELECT
-                reservation_id,
-                room_id,
-                title,
-                content,
-                reserver_name,
-                phone,
-                email,
-                TIME_FORMAT(start_time, '%H:%i') AS start_time,
-                TIME_FORMAT(end_time, '%H:%i') AS end_time
-            FROM meeting_room_reservations
-            WHERE reservation_date = ?
-            ORDER BY room_id, start_time
+                r.room_id,
+                r.room_number,
+                r.title,
+                r.content,
+                e.name AS reserver_name,
+                e.email,
+                TIME_FORMAT(r.start_time, '%H:%i') AS start_time,
+                TIME_FORMAT(r.end_time, '%H:%i') AS end_time
+            FROM meeting_room_reservations r
+            JOIN employees e
+            ON r.employee_id = e.employee_id
+            WHERE r.reservation_date = ?
+            ORDER BY r.room_number, r.start_time
         `;
 
         const [rows] = await db.promise().query(sql, [date]);
@@ -158,15 +138,15 @@ router.get("/reservations", async (req, res) => {
 });
 
 router.delete("/reservations/:id", async (req, res) => {
-    const reservation_id = Number(req.params.id);
+    const room_id = Number(req.params.id);
 
     try{
         const sql = `
             DELETE from meeting_room_reservations
-            WHERE reservation_id = ?
+            WHERE room_id = ?
         `
 
-        const value = reservation_id;
+        const value = room_id;
 
         const [rows] = await db.promise().query(sql,[value]);
 

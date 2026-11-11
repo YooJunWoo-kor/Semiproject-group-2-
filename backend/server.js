@@ -191,10 +191,12 @@ app.post('/api/login', (req, res) => {
                     employee_id: user.employee_id,
                     employee_number: user.employee_number,
                     name: user.name,
+                    email: user.email,
                     department_name: user.department_name,
                     department_id: user.department_id,
                     position: user.position,
                     role: user.role
+                    
                 }
             });
         } else {
