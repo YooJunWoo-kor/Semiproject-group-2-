@@ -143,18 +143,19 @@ function MeetingRoomPage() {
                                     <p>예약 없음</p>
                                 ) : roomReservations.map(item => (
                                     <div className="meeting-room-slot" key={item.room_id}>
-                                        <button type="button" className="meeting-room-title"
-                                            onClick={() => setSelectedReservation(item)}>
-                                            {item.title}
-
-                                            <span>{item.start_time} ~ {item.end_time}</span>
-                                        </button>
-                                        
-
-                                        <button onClick={() => DeleteReservation(item.room_id)}>
-                                            예약 취소
-                                        </button>
-                                        
+                                        <div className="meeting-room-slot-heading">
+                                            <button type="button" className="meeting-room-title"
+                                                title={item.title}
+                                                onClick={() => setSelectedReservation(item)}>
+                                                {item.title}
+                                            </button>
+                                            <button type="button" onClick={() => DeleteReservation(item.room_id)}>
+                                                예약 취소
+                                            </button>
+                                        </div>
+                                        <span className="meeting-room-time">
+                                            {item.start_time} ~ {item.end_time}
+                                        </span>
                                     </div>
                                 ))}
                             </div>

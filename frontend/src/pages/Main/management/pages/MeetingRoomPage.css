@@ -67,26 +67,29 @@
     background: #f7fbff;
 }
 
+.meeting-room-slot-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
 .meeting-room-title,
 .meeting-room-title:hover {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
+    display: block;
+    flex: 1 1 auto;
     min-width: 0;
     min-height: 0;
-    width: 100%;
     padding: 0;
     border: none;
     background: transparent;
     color: var(--color-brand);
     text-align: left;
     font-weight: 700;
-    overflow-wrap: anywhere;
-}
-
-.meeting-room-title:hover {
-    text-decoration: underline;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-decoration: none;
 }
 
 .meeting-room-title:focus-visible {
@@ -94,14 +97,14 @@
     outline-offset: 3px;
 }
 
-.meeting-room-title span {
+.meeting-room-time {
     color: var(--color-muted);
     font-size: .86rem;
     font-weight: 500;
 }
 
-.meeting-room-slot > button:last-child {
-    justify-self: end;
+.meeting-room-slot-heading > button:last-child {
+    flex: 0 0 auto;
     min-height: 34px;
     padding: 6px 10px;
     font-size: .85rem;
