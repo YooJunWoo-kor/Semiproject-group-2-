@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import ModalBase from "../../../../components/ModalBase";
-import StatisticsCard from "../../../../components/StatisticsCard";
+import ColorTeg from "../../../../components/ColorTeg";
 import { getLoginUser } from "../../../../utils/authStorage";
 import {
   createHrDepartment,
@@ -798,7 +798,9 @@ export default function UnifiedEmployees() {
   const working = employees.filter(
     (emp) => emp.employmentStatus === "재직"
   ).length;
-
+  const averageDepartmentSize = departments.length
+    ? (working / departments.length).toFixed(1)
+    : "0.0";
 
   const payroll = payrolls.find(
     (row) =>
@@ -1205,6 +1207,30 @@ export default function UnifiedEmployees() {
             인사·조직 통합관리
           </span>
         </div>
+        <ColorTeg
+          title="전체 직원"
+          count={employees.length}
+          type="명"
+          color="green"
+        />
+        <ColorTeg
+          title="재직 직원"
+          count={working}
+          type="명"
+          color="green"
+        />
+        <ColorTeg
+          title="전체 부서"
+          count={departments.length}
+          type="개"
+          color="blue"
+        />
+        <ColorTeg
+          title="평균 부서 인원"
+          count={averageDepartmentSize}
+          type="명"
+          color="blue"
+        />
         {isMaster && (
           <div className="dashboard-top">
             <button
@@ -1228,33 +1254,6 @@ export default function UnifiedEmployees() {
           </div>
         )}
       </header>
-
-      <section className="stats-section">
-        <StatisticsCard
-          title="전체 직원"
-          count={employees.length}
-          stiyle={1}
-        />
-        <StatisticsCard
-          title="재직 직원"
-          count={working}
-          stiyle={1}
-        />
-        <StatisticsCard
-          title="전체 부서"
-          count={departments.length}
-          stiyle={0}
-        />
-        <div className="content-card hr-average-card">
-          <p>평균 부서 인원</p>
-          <span>
-            {departments.length
-              ? (working / departments.length).toFixed(1)
-              : "0.0"}
-          </span>
-          명
-        </div>
-      </section>
 
       <section className="hr-filter-card">
         <div className="hr-filter-result">

@@ -258,21 +258,23 @@
 }
 
 .attendance-filter-field input,
-.attendance-filter-field select {
+.attendance-filter-field select,
+.attendance-filter-controls button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   padding: 0 10px;
+  font-weight: 400;
 }
 
 .attendance-filter-controls button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   flex: 0 0 74px;
   width: 74px;
-  padding: 0 10px;
+}
+
+.attendance-filter-controls .attendance-reset-button {
+  font-weight: 600;
 }
 
 .attendance-keyword-field {
@@ -942,40 +944,6 @@
 /* ========================================
    7. 인사/조직 통합관리 - 공통
 ======================================== */
-
-.hr-employee-management .stats-section {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.hr-employee-management .stats-section > .content-card {
-  width: 100%;
-  max-width: none;
-  min-width: 0;
-  min-height: 82px;
-  padding-bottom: 10px;
-  box-sizing: border-box;
-}
-
-.hr-employee-management .stats-section > .hr-average-card {
-  min-height: 82px;
-  padding: 12px 14px;
-  box-sizing: border-box;
-}
-
-.hr-employee-management .stats-section > .hr-average-card p {
-  margin: 0 0 4px;
-}
-
-.hr-average-card span {
-  display: inline-block;
-  margin-right: 5px;
-  font-size: 30px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
 
 .department-panel,
 .employee-detail-panel {
