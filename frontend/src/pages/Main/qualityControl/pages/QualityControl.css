@@ -186,11 +186,13 @@
 .quality-status {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     min-height: 28px;
     padding: 5px 10px;
     border-radius: 999px;
     font-size: .76rem;
     font-weight: 800;
+    white-space: nowrap;
 }
 
 .quality-status.is-pass {
@@ -285,6 +287,9 @@
 }
 
 .quality-product-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
     overflow: hidden;
     background: var(--color-surface);
     border: 1px solid var(--color-line);
@@ -302,30 +307,37 @@
 
 .quality-product-image {
     position: relative;
-    height: 210px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 250px;
+    padding: 52px 16px 16px;
     overflow: hidden;
-    background: #eef5f5;
+    background: #f7fbfc;
 }
 
 .quality-product-image img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    transition: transform .3s ease;
-}
-
-.quality-product-card:hover .quality-product-image img {
-    transform: scale(1.035);
+    object-fit: contain;
+    object-position: center;
 }
 
 .quality-product-image .quality-status {
     position: absolute;
-    top: 14px;
-    right: 14px;
+    top: 12px;
+    right: 12px;
+    min-height: 32px;
+    padding: 6px 12px;
+    font-size: .85rem;
     box-shadow: 0 4px 14px rgba(23, 32, 51, .1);
 }
 
 .quality-product-info {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
     padding: 18px;
 }
 
@@ -336,8 +348,13 @@
     gap: 12px;
 }
 
+.quality-product-heading > div {
+    min-width: 0;
+}
+
 .quality-product-heading h3 {
     margin: 4px 0 0;
+    overflow-wrap: anywhere;
 }
 
 .quality-product-code {
@@ -346,7 +363,9 @@
 }
 
 .quality-product-variant {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    max-width: 45%;
+    overflow-wrap: anywhere;
     padding: 4px 8px;
     color: #607083;
     background: #f0f5f6;
@@ -365,7 +384,10 @@
 .quality-product-meta {
     display: flex;
     justify-content: space-between;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    margin-bottom: 16px;
+    overflow-wrap: anywhere;
     color: var(--color-muted);
     font-size: .8rem;
 }
@@ -374,7 +396,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: 16px;
+    margin-top: auto;
     padding-top: 14px;
     color: var(--color-brand);
     border-top: 1px solid #e8eeee;
@@ -416,6 +438,10 @@
 }
 
 @media (max-width: 980px) {
+    .quality-product-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .quality-summary-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -469,7 +495,7 @@
     }
 
     .quality-product-image {
-        height: 190px;
+        height: 230px;
     }
 
     .quality-panel {
@@ -489,8 +515,24 @@
 .quality-dashboard-page > .dashboard-header { margin-bottom: 0; }
 .quality-page-header h1, .product-detail-page .detail-top h1 { color: var(--color-brand); }
 .product-detail-page { display: grid; gap: 20px; width: 100%; min-width: 0; }
-.product-detail-page .detail-top { align-items: center; }
-.product-detail-page .detail-top h1 { margin: 0 0 6px; }
+.product-detail-page .detail-top { align-items: center; flex-wrap: wrap; }
+.product-detail-page .detail-top > div { flex: 1; min-width: 0; }
+.product-detail-page .detail-top h1 {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 0 0 6px;
+    overflow-wrap: anywhere;
+}
+.product-detail-page .detail-top .quality-status {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 8px 16px;
+    font-size: 1.05rem;
+    letter-spacing: 0;
+}
+.product-detail-page .detail-top > span { flex-shrink: 0; }
 .product-detail-page .detail-top p { margin: 0; }
 .product-detail-page .product-info-card {
     display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr); gap: 20px;
@@ -543,6 +585,8 @@
     margin-bottom: 12px; background: #f7fbfc; border: 1px solid var(--color-line); border-radius: var(--layer-radius);
 }
 .product-detail-page .quality-score strong { color: var(--color-brand); }
+.product-detail-page .quality-score { align-items: center; flex-wrap: wrap; }
+.product-detail-page .quality-score h3 { margin: 0; font-size: .9rem; color: var(--color-muted); }
 .product-detail-page .checklist-item {
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, auto);
     gap: 14px; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--color-line);

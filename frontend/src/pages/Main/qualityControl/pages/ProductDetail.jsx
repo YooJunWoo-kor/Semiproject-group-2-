@@ -296,9 +296,9 @@ const handleSave = async () => {
                     <h1>
                         {product.name}
 
-                        <div className={qualityStatus === "통과" ? "quality-status is-pass" : qualityStatus === "불합격" ? "quality-status is-fail" : "quality-status is-wait"}>
+                        <span className={qualityStatus === "통과" ? "quality-status is-pass" : qualityStatus === "불합격" ? "quality-status is-fail" : "quality-status is-wait"}>
                             {qualityStatus}
-                        </div>
+                        </span>
                     </h1>
 
                     
