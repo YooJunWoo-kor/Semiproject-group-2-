@@ -58,7 +58,7 @@ const sql = `
         p.image_url,
         p.variant_text,
         COALESCE(i.quality_status, '미실시') AS quality_status,
-        DATE_FORMAT(i.inspection_date, '%Y-%m-%d') AS inspection_date,
+        DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS created_at,
         i.inspector,
         i.memo
     FROM quality_products p
@@ -269,8 +269,7 @@ router.post('/inspections', (req, res) => {
                 p.image_url,
                 p.variant_text,
                 COALESCE(i.quality_status, '미실시') AS quality_status,
-                DATE_FORMAT(i.inspection_date, '%Y-%m-%d') AS inspection_date,
-                DATE_FORMAT(created_at,'%H:%i:%s') AS created_at,
+                DATE_FORMAT(created_at,'%Y-%m-%d %H:%i:%s') AS created_at,
                 i.inspector,
                 i.memo
             FROM quality_products p

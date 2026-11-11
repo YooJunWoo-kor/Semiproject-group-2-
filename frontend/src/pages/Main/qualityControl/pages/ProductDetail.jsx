@@ -496,7 +496,7 @@ const handleSave = async () => {
                         ) : (
                             inspectionHistory.map(item => (
                                 <tr key={item.inspection_id}>
-                                    <td>{item.inspection_date} {item.created_at}</td>
+                                    <td>{item.created_at}</td>
 
                                     <td>{item.inspector || "-"}</td>
 
