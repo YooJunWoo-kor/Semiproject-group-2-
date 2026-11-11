@@ -363,7 +363,7 @@ function PayrollForm({
   const net = calculation?.netPay ?? 0;
 
   return (
-    <form className="hr-unified-form" onSubmit={onSave}>
+    <form className="hr-unified-form hr-payroll-form" onSubmit={onSave}>
       <p className="hr-form-context">
         {employee.name} · {employee.employeeNumber} · {month}
       </p>
@@ -645,7 +645,7 @@ export default function UnifiedEmployees() {
   }, []);
 
   useEffect(() => {
-    if (detailTab !== "payroll" || !isMaster) {
+    if (detailTab !== "payroll") {
       return undefined;
     }
 
@@ -685,7 +685,7 @@ export default function UnifiedEmployees() {
     return () => {
       active = false;
     };
-  }, [detailTab, isMaster, payMonth]);
+  }, [detailTab, payMonth]);
 
   // 검색·부서·재직·계정 상태를 모두 반영한 직원 목록입니다.
   const filtered = useMemo(
@@ -807,7 +807,6 @@ export default function UnifiedEmployees() {
 
   /* 등록·수정 가능 여부 */
   const canEditPay =
-    isMaster &&
     !!selected &&
     selected.employmentStatus !== "퇴사" &&
     !!payroll &&
@@ -817,7 +816,6 @@ export default function UnifiedEmployees() {
   const canRegisterPay = canEditPay && payroll.payrollId === null;
   const canUpdatePay = canEditPay && payroll.payrollId !== null;
   const canViewPay =
-    isMaster &&
     !!selected &&
     selected.employmentStatus !== "퇴사" &&
     !!payroll &&
@@ -1201,12 +1199,34 @@ export default function UnifiedEmployees() {
 
   return (
     <div className="border-container hr-employee-management hr-single-management">
-      <header className="dashboard-header hr-single-header">
+      <header className="dashboard-header">
         <div>
           <span className="subtitle">
             인사·조직 통합관리
           </span>
         </div>
+        {isMaster && (
+          <div className="dashboard-top">
+            <button
+              type="button"
+              className="register-btn"
+              onClick={() => openEmployeeModal(false)}
+              disabled={!departments.length}
+            >
+              직원 등록
+            </button>
+            <button
+              type="button"
+              className="register-btn"
+              onClick={() => {
+                setDepartmentForm(emptyDepartment);
+                setModal("department");
+              }}
+            >
+              부서 등록
+            </button>
+          </div>
+        )}
       </header>
 
       <section className="stats-section">
@@ -1242,16 +1262,6 @@ export default function UnifiedEmployees() {
         </div>
 
         <div className="hr-single-filters">
-          <input
-            aria-label="통합검색"
-            placeholder="사번, 이름, 이메일, 직급 검색"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-
           <select
             aria-label="부서"
             value={selectedDept}
@@ -1297,33 +1307,20 @@ export default function UnifiedEmployees() {
             <option value="SUSPENDED">정지</option>
           </select>
 
+          <input
+            aria-label="통합검색"
+            placeholder="사번, 이름, 이메일, 직급 검색"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+
           <button type="button" onClick={reset}>
             초기화
           </button>
 
-          {isMaster && (
-            <button
-              type="button"
-              className="erp-primary-button"
-              onClick={() => openEmployeeModal(false)}
-              disabled={!departments.length}
-            >
-              직원 등록
-            </button>
-          )}
-
-          {isMaster && (
-            <button
-              type="button"
-              className="erp-primary-button"
-              onClick={() => {
-                setDepartmentForm(emptyDepartment);
-                setModal("department");
-              }}
-            >
-              부서 등록
-            </button>
-          )}
         </div>
       </section>
 
@@ -1454,7 +1451,7 @@ export default function UnifiedEmployees() {
                       : ""
                       }`}
                     onClick={() => chooseEmployee(emp)}
-                    title={`${emp.employeeNumber || "-"} · ${emp.name}`}
+                    title={emp.name}
                   >
                     <span className="employee-item-info">
                       <span className="employee-name-line">
@@ -1470,7 +1467,6 @@ export default function UnifiedEmployees() {
                           {emp.employmentStatus || "-"}
                         </span>
                       </span>
-                      <span>{emp.employeeNumber || "-"}</span>
                       <span>
                         {emp.departmentName || "부서 미지정"} ·{" "}
                         <span className="emp-position">
@@ -1551,19 +1547,17 @@ export default function UnifiedEmployees() {
                 직원 상세정보
               </button>
 
-              {isMaster && (
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={detailTab === "payroll"}
-                  className={
-                    detailTab === "payroll" ? "active" : ""
-                  }
-                  onClick={() => setDetailTab("payroll")}
-                >
-                  급여관리
-                </button>
-              )}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={detailTab === "payroll"}
+                className={
+                  detailTab === "payroll" ? "active" : ""
+                }
+                onClick={() => setDetailTab("payroll")}
+              >
+                급여관리
+              </button>
             </div>
 
             {!selected ? (
@@ -1666,7 +1660,7 @@ export default function UnifiedEmployees() {
                       </Link>
                     </div>
                   </>
-                ) : !isMaster ? null : (
+                ) : (
                   <>
                     <label className="hr-single-month">
                       급여 기준월
@@ -1810,6 +1804,7 @@ export default function UnifiedEmployees() {
                 ? "직원 정보 수정"
                 : "신규 직원 등록"
             }
+            className="hr-form-modal"
             onClose={() => setModal("")}
             layout={
               <EmployeeForm
@@ -1829,6 +1824,7 @@ export default function UnifiedEmployees() {
       {modal === "department" && (
         <ModalBase
           title="신규 부서 등록"
+          className="hr-form-modal"
           onClose={() => setModal("")}
           layout={
             <DepartmentForm
@@ -1849,6 +1845,7 @@ export default function UnifiedEmployees() {
           title={`${selected.name} · ${payMonth} ${
             payroll?.payrollId === null ? "급여 등록" : "급여 수정"
           }`}
+          className="hr-form-modal hr-payroll-edit-modal"
           onClose={() => setModal("")}
           layout={
             <PayrollForm

@@ -480,9 +480,7 @@ function LeaveBalanceView({ employee, leaves, year }) {
         </table>
       </div>
 
-      <p className="attendance-leave-api-notice" role="note">
-        ⓘ 연차 부여 정보가 등록되지 않아 잔여 연차를 계산할 수 없습니다.
-      </p>
+
 
       <div className="attendance-subview-heading attendance-leave-history-heading">
         <div>
@@ -1316,10 +1314,38 @@ export default function Attendance() {
       <header className="dashboard-header">
         <div>
           <span className="subtitle">근태관리</span>
-          <span className="subtext">
-            임직원의 출근 현황과 근태 상태를 조회하고 관리합니다.
-          </span>
+
         </div>
+        {(isAttendanceTab && isMaster) || isLeaveTab ? (
+          <div className="dashboard-top">
+            {isAttendanceTab && isMaster && (
+              <button
+                type="button"
+                className="register-btn erp-primary-button"
+                onClick={() => {
+                  openAttendanceEdit(selectedAttendance[0] || null);
+                }}
+                disabled={!selectedEmployee || saving}
+                title={
+                  selectedAttendance.length === 0
+                    ? "선택 직원의 근태 기록을 새로 입력합니다."
+                    : "선택 직원의 최근 일별 근태 기록을 수정합니다."
+                }
+              >
+                근태 상태 수정
+              </button>
+            )}
+            {isLeaveTab && (
+              <button
+                type="button"
+                className="register-btn erp-primary-button"
+                onClick={() => navigate("/main/mytesk/draft-create?type=leave")}
+              >
+                휴가신청
+              </button>
+            )}
+          </div>
+        ) : null}
       </header>
 
       {/* 두 탭에 공통으로 적용되는 조회 조건 */}
@@ -1351,38 +1377,6 @@ export default function Attendance() {
             </nav>
 
           </div>
-
-          <div className="attendance-detail-actions">
-            {isLeaveTab && (
-              <button
-                type="button"
-                className="erp-primary-button"
-                onClick={() => navigate("/main/mytesk/draft-create?type=leave")}
-              >
-                휴가신청
-              </button>
-            )}
-
-            {isMaster && isAttendanceTab && (
-              <button
-                type="button"
-                className="erp-primary-button"
-                onClick={() => {
-                  openAttendanceEdit(selectedAttendance[0] || null);
-                }}
-                disabled={!selectedEmployee || saving}
-                title={
-                  selectedAttendance.length === 0
-                    ? "선택 직원의 근태 기록을 새로 입력합니다."
-                    : "선택 직원의 최근 일별 근태 기록을 수정합니다."
-                }
-              >
-                근태 상태 수정
-              </button>
-            )}
-          </div>
-
-        </div>
 
           <div className="attendance-filter-controls">
           <label className="attendance-filter-field">
@@ -1433,6 +1427,7 @@ export default function Attendance() {
             초기화
           </button>
 
+          </div>
         </div>
       </section>
 
@@ -1528,9 +1523,6 @@ export default function Attendance() {
                           <span className={`employee-status-badge ${statusClass}`}>
                             {employee.employmentStatus || "-"}
                           </span>
-                        </span>
-                        <span>
-                          {employee.employeeNumber || "사번 미지정"}
                         </span>
                         <span>
                           {employee.departmentName || "부서 미지정"} ·{" "}
