@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 
-function ProjectWorkDetail({onUpdateTasks}){
+//프로젝트의 할일 목록의 상세
+function ProjectWorkDetail(){
     const selectedTask = 1;
     const [commentInput, setCommentInput] = useState("");
 

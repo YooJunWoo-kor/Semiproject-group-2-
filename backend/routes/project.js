@@ -25,4 +25,13 @@ router.get('/getproject', async (req, res) =>{
     })
 })
 
+router.post('/setProject', async(req, res) => {
+    const requst = req.body;
+    const value = [
+        requst.project_name, requst.start_date, requst.end_date, requst.description, requst.is_visible, requst.employee_id
+    ]
+
+    console.log(value);
+})
+
 module.exports = router;

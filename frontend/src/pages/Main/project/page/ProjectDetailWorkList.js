@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 
+//프로젝트의 상세
 function ProjectWorkDetail(project, tasks){
     const [selectedTaskId, setSelectedTaskId] = useState(null);
 
