@@ -14,10 +14,12 @@ import {
   getHrPayrolls,
   retireHrEmployee,
   updateHrEmployee,
-  updateHrPayroll
+  updateHrPayroll,
+  updateHrPayrollStatus
 } from "../../../../components/HrData";
 
-const positions = ["사원", "대리", "과장", "팀장", "부장"];
+const positions = ["사원", "대리", "과장", "차장", "부장"];
+const payrollFinalStatuses = ["확정", "지급완료"];
 
 const emptyEmployee = {
   name: "",
@@ -27,7 +29,8 @@ const emptyEmployee = {
   phone: "",
   password: "",
   hireDate: "",
-  employmentStatus: "재직"
+  employmentStatus: "재직",
+  initialAnnualSalary: ""
 };
 
 const emptyDepartment = {
@@ -37,17 +40,47 @@ const emptyDepartment = {
 };
 
 const emptyPay = {
+  annualSalary: "0",
   baseSalary: "0",
   allowance: "0",
   bonus: "0",
-  deduction: "0",
-  paymentDate: "",
-  paymentStatus: "지급대기"
+  otherPayment: "0"
 };
 
 function currentMonth() {
   const date = new Date();
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthlyBaseSalary(annualSalary) {
+  const amount = Number(annualSalary);
+
+  return Number.isSafeInteger(amount) && amount >= 0
+    ? Math.floor(amount / 12)
+    : 0;
+}
+
+function isVisibleEmployee(employee) {
+  if (
+    employee.employmentStatus !== "퇴사" ||
+    !employee.resignationDate
+  ) {
+    return true;
+  }
+
+  const resignationDate = new Date(
+    `${employee.resignationDate}T00:00:00`
+  );
+
+  if (Number.isNaN(resignationDate.getTime())) {
+    return true;
+  }
+
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setHours(0, 0, 0, 0);
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+  return resignationDate >= oneMonthAgo;
 }
 
 function money(value) {
@@ -58,6 +91,25 @@ function money(value) {
 
 function apiError(error, fallback) {
   return error?.response?.data?.message || error?.message || fallback;
+}
+
+async function fetchOrganization() {
+  const [departmentResponse, employeeResponse] =
+    await getHrOrganization();
+
+  if (
+    !departmentResponse.data.success ||
+    !Array.isArray(departmentResponse.data.data) ||
+    !employeeResponse.data.success ||
+    !Array.isArray(employeeResponse.data.data)
+  ) {
+    throw new Error("직원·부서 응답 형식이 올바르지 않습니다.");
+  }
+
+  return {
+    departments: departmentResponse.data.data,
+    employees: employeeResponse.data.data
+  };
 }
 
 function DetailRow({ title, value, emphasis = false }) {
@@ -140,6 +192,19 @@ function EmployeeForm({
             </option>
           ))}
         </select>
+      </label>
+
+      <label>
+        연봉 (원)
+        <input
+          name="initialAnnualSalary"
+          type="number"
+          min="0"
+          step="1"
+          value={form.initialAnnualSalary}
+          onChange={change}
+          required
+        />
       </label>
 
       <label>
@@ -303,12 +368,7 @@ function DepartmentForm({
 function calculatePayroll(data) {
   if (!data) return null;
 
-  const names = [
-    "baseSalary",
-    "allowance",
-    "bonus",
-    "deduction"
-  ];
+  const names = ["baseSalary", "allowance", "bonus", "otherPayment"];
 
   const amounts = names.map((name) => Number(data[name]));
 
@@ -323,10 +383,11 @@ function calculatePayroll(data) {
 
   if (invalid) return null;
 
-  const grossPay =
-    amounts[0] + amounts[1] + amounts[2];
-
-  const netPay = grossPay - amounts[3];
+  const grossPay = amounts[0] + amounts[1] + amounts[2] + amounts[3];
+  const incomeTax = Math.floor(grossPay * 3 / 100);
+  const localIncomeTax = Math.floor(incomeTax * 10 / 100);
+  const totalDeduction = incomeTax + localIncomeTax;
+  const netPay = grossPay - totalDeduction;
 
   if (
     !Number.isSafeInteger(grossPay) ||
@@ -338,6 +399,9 @@ function calculatePayroll(data) {
 
   return {
     grossPay,
+    incomeTax,
+    localIncomeTax,
+    totalDeduction,
     netPay
   };
 }
@@ -347,6 +411,7 @@ function PayrollForm({
   setForm,
   employee,
   month,
+  payroll,
   saving,
   onSave,
   onClose
@@ -357,9 +422,17 @@ function PayrollForm({
       [event.target.name]: event.target.value
     }));
 
-  const calculation = calculatePayroll(form);
+  const annualSalary = form.annualSalary;
+  const calculatedMonthlySalary = monthlyBaseSalary(annualSalary);
+  const calculation = calculatePayroll({
+    ...form,
+    baseSalary: calculatedMonthlySalary
+  });
 
   const gross = calculation?.grossPay ?? 0;
+  const incomeTax = calculation?.incomeTax ?? 0;
+  const localIncomeTax = calculation?.localIncomeTax ?? 0;
+  const totalDeduction = calculation?.totalDeduction ?? 0;
   const net = calculation?.netPay ?? 0;
 
   return (
@@ -368,11 +441,42 @@ function PayrollForm({
         {employee.name} · {employee.employeeNumber} · {month}
       </p>
 
+      <label>
+        연봉 (원)
+        <input
+          type="number"
+          name="annualSalary"
+          min="0"
+          step="1"
+          value={form.annualSalary}
+          onChange={change}
+          required
+        />
+      </label>
+
+      <div className="hr-employee-detail-fields">
+        <DetailRow
+          title="월 기본급"
+          value={money(calculatedMonthlySalary)}
+        />
+        <DetailRow
+          title="소득세 (3%)"
+          value={money(incomeTax)}
+        />
+        <DetailRow
+          title="지방소득세 (0.3%)"
+          value={money(localIncomeTax)}
+        />
+        <DetailRow
+          title="총공제액 (3.3%)"
+          value={money(totalDeduction)}
+        />
+      </div>
+
       {[
-        ["기본급", "baseSalary"],
         ["수당", "allowance"],
         ["상여금", "bonus"],
-        ["공제액", "deduction"]
+        ["기타 지급액", "otherPayment"],
       ].map(([label, name]) => (
         <label key={name}>
           {label} (원)
@@ -388,31 +492,20 @@ function PayrollForm({
         </label>
       ))}
 
-      <label>
-        지급일
-        <input
-          type="date"
-          name="paymentDate"
-          value={form.paymentDate}
-          onChange={change}
-        />
-      </label>
-
-      <label>
-        지급 상태
-        <select
-          name="paymentStatus"
-          value={form.paymentStatus}
-          onChange={change}
-        >
-          <option value="지급대기">지급대기</option>
-          <option value="지급완료">지급완료</option>
-        </select>
-      </label>
-
       <div className="hr-form-totals">
-        <span>세전 {money(gross)}</span>
+        <span>총지급액 {money(gross)}</span>
         <strong>실지급 {money(net)}</strong>
+      </div>
+
+      <div className="hr-employee-detail-fields">
+        <DetailRow
+          title="지급일"
+          value={payroll?.paymentDate || "-"}
+        />
+        <DetailRow
+          title="지급 상태"
+          value={payroll?.paymentStatus || "지급대기"}
+        />
       </div>
 
       <div className="hr-modal-actions">
@@ -468,7 +561,8 @@ function PayrollHistoryModal({
               <th>기본급</th>
               <th>수당</th>
               <th>상여금</th>
-              <th>공제액</th>
+              <th>기타 지급액</th>
+              <th>총공제액</th>
               <th>실수령액</th>
               <th>지급 상태</th>
             </tr>
@@ -480,7 +574,8 @@ function PayrollHistoryModal({
                 <td>{money(item.baseSalary)}</td>
                 <td>{money(item.allowance)}</td>
                 <td>{money(item.bonus)}</td>
-                <td>{money(item.deduction)}</td>
+                <td>{money(item.otherPayment)}</td>
+                <td>{money(item.totalDeduction ?? item.deduction)}</td>
                 <td>{money(item.netPay)}</td>
                 <td>{item.paymentStatus || "-"}</td>
               </tr>
@@ -531,9 +626,15 @@ function PayrollStatementModal({ employee, payroll, onClose }) {
             <DetailRow title="기본급" value={money(payroll.baseSalary)} />
             <DetailRow title="수당" value={money(payroll.allowance)} />
             <DetailRow title="상여금" value={money(payroll.bonus)} />
+            <DetailRow title="기타 지급액" value={money(payroll.otherPayment)} />
+            <DetailRow title="소득세 (3%)" value={money(payroll.incomeTax)} />
             <DetailRow
-              title="공제 내역(총액)"
-              value={money(payroll.deduction)}
+              title="지방소득세 (0.3%)"
+              value={money(payroll.localIncomeTax)}
+            />
+            <DetailRow
+              title="총공제액 (3.3%)"
+              value={money(payroll.totalDeduction ?? payroll.deduction)}
             />
             <DetailRow title="지급일" value={payroll.paymentDate || "-"} />
             <DetailRow
@@ -569,8 +670,10 @@ export default function UnifiedEmployees() {
   const [employmentStatus, setEmploymentStatus] = useState("전체");
   const [accountStatus, setAccountStatus] = useState("전체");
   const [detailTab, setDetailTab] = useState("info");
-  const [payMonth, setPayMonth] = useState(currentMonth);
+  const initialPayMonthRef = useRef(currentMonth());
+  const [payMonth, setPayMonth] = useState(() => currentMonth());
   const [payrolls, setPayrolls] = useState([]);
+  const payrollRequestRef = useRef(0);
   const [payLoading, setPayLoading] = useState(false);
   const [payError, setPayError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -586,23 +689,36 @@ export default function UnifiedEmployees() {
   const [historyError, setHistoryError] = useState("");
   const historyRequestRef = useRef(0);
 
-  async function refreshOrganization() {
-    const [departmentResponse, employeeResponse] =
-      await getHrOrganization();
+  // 페이지를 오래 열어 둔 상태에서 월이 바뀌면 현재월을 자동 반영합니다.
+  // 사용자가 과거 월을 직접 선택한 경우에는 그 선택을 유지합니다.
+  useEffect(() => {
+    function syncCurrentPayMonth() {
+      const nextMonth = currentMonth();
 
-    if (
-      !departmentResponse.data.success ||
-      !Array.isArray(departmentResponse.data.data) ||
-      !employeeResponse.data.success ||
-      !Array.isArray(employeeResponse.data.data)
-    ) {
-      throw new Error("직원·부서 응답 형식이 올바르지 않습니다.");
+      setPayMonth((previousMonth) =>
+        previousMonth === initialPayMonthRef.current
+          ? nextMonth
+          : previousMonth
+      );
     }
 
-    setDepartments(departmentResponse.data.data);
-    setEmployees(employeeResponse.data.data);
+    syncCurrentPayMonth();
+    window.addEventListener("focus", syncCurrentPayMonth);
+    document.addEventListener("visibilitychange", syncCurrentPayMonth);
 
-    return employeeResponse.data.data;
+    return () => {
+      window.removeEventListener("focus", syncCurrentPayMonth);
+      document.removeEventListener("visibilitychange", syncCurrentPayMonth);
+    };
+  }, []);
+
+  async function refreshOrganization() {
+    const organization = await fetchOrganization();
+
+    setDepartments(organization.departments);
+    setEmployees(organization.employees);
+
+    return organization.employees;
   }
 
   useEffect(() => {
@@ -610,21 +726,11 @@ export default function UnifiedEmployees() {
 
     async function load() {
       try {
-        const [departmentResponse, employeeResponse] =
-          await getHrOrganization();
-
-        if (
-          !departmentResponse.data.success ||
-          !employeeResponse.data.success ||
-          !Array.isArray(departmentResponse.data.data) ||
-          !Array.isArray(employeeResponse.data.data)
-        ) {
-          throw new Error("직원·부서 자료 형식이 올바르지 않습니다.");
-        }
+        const organization = await fetchOrganization();
 
         if (active) {
-          setDepartments(departmentResponse.data.data);
-          setEmployees(employeeResponse.data.data);
+          setDepartments(organization.departments);
+          setEmployees(organization.employees);
         }
       } catch (e) {
         if (active) {
@@ -650,6 +756,7 @@ export default function UnifiedEmployees() {
     }
 
     let active = true;
+    const requestId = ++payrollRequestRef.current;
 
     async function load() {
       setPayLoading(true);
@@ -665,16 +772,16 @@ export default function UnifiedEmployees() {
           throw new Error("급여 목록 응답 형식이 올바르지 않습니다.");
         }
 
-        if (active) {
+        if (active && requestId === payrollRequestRef.current) {
           setPayrolls(response.data.data);
         }
       } catch (e) {
-        if (active) {
+        if (active && requestId === payrollRequestRef.current) {
           setPayrolls([]);
           setPayError(apiError(e, "급여 조회에 실패했습니다."));
         }
       } finally {
-        if (active) {
+        if (active && requestId === payrollRequestRef.current) {
           setPayLoading(false);
         }
       }
@@ -688,9 +795,14 @@ export default function UnifiedEmployees() {
   }, [detailTab, payMonth]);
 
   // 검색·부서·재직·계정 상태를 모두 반영한 직원 목록입니다.
+  const employeeDirectory = useMemo(
+    () => employees.filter(isVisibleEmployee),
+    [employees]
+  );
+
   const filtered = useMemo(
     () =>
-      employees.filter((emp) => {
+      employeeDirectory.filter((emp) => {
         const keyword = search.trim().toLowerCase();
         const text = [
           emp.employeeNumber,
@@ -712,7 +824,7 @@ export default function UnifiedEmployees() {
         );
       }),
     [
-      employees,
+      employeeDirectory,
       search,
       selectedDept,
       employmentStatus,
@@ -795,7 +907,7 @@ export default function UnifiedEmployees() {
         (emp) => String(emp.departmentId) === selectedDept
       );
 
-  const working = employees.filter(
+  const working = employeeDirectory.filter(
     (emp) => emp.employmentStatus === "재직"
   ).length;
   const averageDepartmentSize = departments.length
@@ -809,21 +921,32 @@ export default function UnifiedEmployees() {
 
   /* 등록·수정 가능 여부 */
   const canEditPay =
+    isMaster &&
     !!selected &&
     selected.employmentStatus !== "퇴사" &&
     !!payroll &&
     !payLoading &&
-    !payError;
+    !payError &&
+    !payrollFinalStatuses.includes(payroll.paymentStatus);
 
   const canRegisterPay = canEditPay && payroll.payrollId === null;
   const canUpdatePay = canEditPay && payroll.payrollId !== null;
   const canViewPay =
     !!selected &&
-    selected.employmentStatus !== "퇴사" &&
     !!payroll &&
     !payLoading &&
     !payError;
   const canViewStatement = canViewPay && payroll.payrollId !== null;
+  const canConfirmPay =
+    isMaster &&
+    canViewPay &&
+    payroll.payrollId !== null &&
+    !payrollFinalStatuses.includes(payroll.paymentStatus);
+  const canMarkPayPaid =
+    isMaster &&
+    canViewPay &&
+    payroll.payrollId !== null &&
+    payroll.paymentStatus === "확정";
 
   function clearPayrollHistory() {
     historyRequestRef.current += 1;
@@ -872,6 +995,9 @@ export default function UnifiedEmployees() {
         departmentId: String(selected.departmentId || ""),
         phone: selected.phone || "",
         hireDate: selected.hireDate || "",
+        initialAnnualSalary: String(
+          selected.initialAnnualSalary ?? ""
+        ),
         password: ""
       });
     } else {
@@ -908,7 +1034,10 @@ export default function UnifiedEmployees() {
           email: employeeForm.email,
           phone: employeeForm.phone,
           hireDate: employeeForm.hireDate,
-          employmentStatus: employeeForm.employmentStatus
+          employmentStatus: employeeForm.employmentStatus,
+          initialAnnualSalary: Number(
+            employeeForm.initialAnnualSalary
+          )
         })
         : await createHrEmployee(employeeForm);
 
@@ -1060,17 +1189,19 @@ export default function UnifiedEmployees() {
     setPayForm(
       existed
         ? {
+          annualSalary: String(selected.initialAnnualSalary ?? 0),
           baseSalary: String(payroll.baseSalary ?? 0),
           allowance: String(payroll.allowance ?? 0),
           bonus: String(payroll.bonus ?? 0),
-          deduction: String(payroll.deduction ?? 0),
-          paymentDate: payroll.paymentDate || "",
-          paymentStatus:
-            payroll.paymentStatus === "급여 미등록"
-              ? "지급대기"
-              : payroll.paymentStatus || "지급대기"
+          otherPayment: String(payroll.otherPayment ?? 0)
         }
-        : { ...emptyPay }
+        : {
+          ...emptyPay,
+          annualSalary: String(selected.initialAnnualSalary ?? 0),
+          baseSalary: String(
+            monthlyBaseSalary(selected.initialAnnualSalary)
+          )
+        }
     );
 
      setModal("payroll");
@@ -1122,8 +1253,53 @@ export default function UnifiedEmployees() {
     setModal("payroll-statement");
   }
 
+  async function changePayrollStatus(status) {
+    if (
+      !isMaster ||
+      !payroll ||
+      payroll.payrollId === null ||
+      saving
+    ) {
+      return;
+    }
+
+    const label = status === "확정" ? "급여 확정" : "지급완료";
+
+    if (!window.confirm(`${label} 처리하시겠습니까?`)) {
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await updateHrPayrollStatus(
+        payroll.payrollId,
+        {
+          status,
+          actorEmployeeId: user?.employeeKey,
+          actorRole: user?.role,
+          reason: `${label} 처리`
+        }
+      );
+
+      if (!response.data.success) {
+        throw new Error(`${label} 처리 응답이 올바르지 않습니다.`);
+      }
+
+      await reloadPayrolls();
+      setNotice(response.data.message || `${label} 처리되었습니다.`);
+    } catch (e) {
+      setError(apiError(e, `${label} 처리에 실패했습니다.`));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   // 급여 목록 다시 조회
   async function reloadPayrolls() {
+    const requestId = ++payrollRequestRef.current;
     const response = await getHrPayrolls(payMonth);
 
     if (
@@ -1133,7 +1309,12 @@ export default function UnifiedEmployees() {
       throw new Error("급여 재조회에 실패했습니다.");
     }
 
-    setPayrolls(response.data.data);
+    if (requestId === payrollRequestRef.current) {
+      setPayrolls(response.data.data);
+      setPayError("");
+    }
+
+    return response.data.data;
   }
 
   async function savePayroll(event) {
@@ -1144,23 +1325,28 @@ export default function UnifiedEmployees() {
       return;
     }
 
-    const calculation = calculatePayroll(payForm);
+    const annualSalary = Number(payForm.annualSalary);
+    const calculation = calculatePayroll({
+      ...payForm,
+      baseSalary: monthlyBaseSalary(payForm.annualSalary)
+    });
 
-    if (!calculation) {
+    if (
+      !Number.isSafeInteger(annualSalary) ||
+      annualSalary < 0 ||
+      !calculation
+    ) {
       setError(
-        "급여는 0 이상의 정수로 입력해야 하며, " +
-        "공제액은 세전 총액을 초과할 수 없습니다."
+        "연봉·지급 항목은 0 이상의 정수로 입력해야 합니다."
       );
       return;
     }
 
     const values = {
-      baseSalary: Number(payForm.baseSalary),
+      annualSalary,
       allowance: Number(payForm.allowance),
       bonus: Number(payForm.bonus),
-      deduction: Number(payForm.deduction),
-      paymentDate: payForm.paymentDate,
-      paymentStatus: payForm.paymentStatus
+      otherPayment: Number(payForm.otherPayment)
     };
 
     setSaving(true);
@@ -1209,7 +1395,7 @@ export default function UnifiedEmployees() {
         </div>
         <ColorTeg
           title="전체 직원"
-          count={employees.length}
+          count={employeeDirectory.length}
           type="명"
           color="green"
         />
@@ -1361,7 +1547,7 @@ export default function UnifiedEmployees() {
               onClick={() => chooseDept("전체")}
             >
               <strong>전체 부서</strong>
-              <span>{employees.length}명</span>
+              <span>{employeeDirectory.length}명</span>
             </button>
 
             {departments.map((dept) => {
@@ -1672,11 +1858,7 @@ export default function UnifiedEmployees() {
                       />
                     </label>
 
-                    {selected.employmentStatus === "퇴사" ? (
-                      <p className="hr-empty-state">
-                        현재 급여 API는 재직·휴직 직원만 조회할 수 있습니다.
-                      </p>
-                    ) : payLoading ? (
+                    {payLoading ? (
                       <p role="status">
                         급여 정보를 불러오는 중입니다.
                       </p>
@@ -1719,11 +1901,35 @@ export default function UnifiedEmployees() {
                             }
                           />
                           <DetailRow
-                            title="공제액"
+                            title="기타 지급액"
                             value={
                               payroll.payrollId === null
                                 ? "-"
-                                : money(payroll.deduction)
+                                : money(payroll.otherPayment)
+                            }
+                          />
+                          <DetailRow
+                            title="소득세 (3%)"
+                            value={
+                              payroll.payrollId === null
+                                ? "-"
+                                : money(payroll.incomeTax)
+                            }
+                          />
+                          <DetailRow
+                            title="지방소득세 (0.3%)"
+                            value={
+                              payroll.payrollId === null
+                                ? "-"
+                                : money(payroll.localIncomeTax)
+                            }
+                          />
+                          <DetailRow
+                            title="총공제액 (3.3%)"
+                            value={
+                              payroll.payrollId === null
+                                ? "-"
+                                : money(payroll.totalDeduction ?? payroll.deduction)
                             }
                           />
                           <DetailRow
@@ -1771,6 +1977,21 @@ export default function UnifiedEmployees() {
                             disabled={!canViewPay || saving}
                           >
                             급여 내역 조회
+                          </button>
+                          <button
+                            type="button"
+                            className="erp-primary-button"
+                            onClick={() => changePayrollStatus("확정")}
+                            disabled={!canConfirmPay || saving}
+                          >
+                            급여 확정
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => changePayrollStatus("지급완료")}
+                            disabled={!canMarkPayPaid || saving}
+                          >
+                            지급완료
                           </button>
                           <button
                             type="button"
@@ -1852,6 +2073,7 @@ export default function UnifiedEmployees() {
               setForm={setPayForm}
               employee={selected}
               month={payMonth}
+              payroll={payroll}
               saving={saving}
               onSave={savePayroll}
               onClose={() => setModal("")}

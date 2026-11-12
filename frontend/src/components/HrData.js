@@ -119,3 +119,11 @@ export function updateHrPayroll(payrollId, data) {
   return axios.put(API_BASE_URL + '/hr/payrolls/' + payrollId, data);
 }
 
+// 급여 확정·지급완료 상태를 변경합니다.
+export function updateHrPayrollStatus(payrollId, data) {
+  return axios.patch(
+    API_BASE_URL + '/hr/payrolls/' + payrollId + '/status',
+    data
+  );
+}
+
