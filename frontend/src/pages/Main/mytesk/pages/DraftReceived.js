@@ -22,7 +22,7 @@ function DraftReceived({ drafts, onDraftChanged }) {
     }
 
     return (
-        <div className="draft-box">
+        <div className="draft-box draft-list-view" data-page="draft-received">
             <h2>요청이 온 기안서</h2>
             
 {drafts.length === 0 ? (
