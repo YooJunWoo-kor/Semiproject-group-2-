@@ -60,6 +60,7 @@ export default function ScheduleHome() {
       <Routes>
         <Route path='/' element={<ScheduleModul dataType={dataType}/>} />
         <Route path="*" element={<Navigate to="/main/schedule" replace />} />
+        <Route path='/cabinet' element={<MeetingRoomPage/>}/>
       </Routes>
     </div>
   );
