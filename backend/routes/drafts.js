@@ -244,6 +244,8 @@ router.get('/departments', (req, res) => {
             })
         }
 
+        console.log('부서 조회 결과:', data);
+
         res.json(data);
     })
 })
