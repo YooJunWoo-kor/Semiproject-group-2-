@@ -321,7 +321,6 @@ router.delete('/cancel/:draftId/:employeeId', (req, res) => {
 
         return res.json(rows);
     })
-
 })
 
 
