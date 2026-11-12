@@ -18,6 +18,7 @@ const communityRouter = require('./routes/community');
 const financeRouter = require('./routes/financeRouters'); // main 재무 라우터
 const hrRouter = require('./routes/hrRoutes'); // main 인사 라우터
 const Attendance = require('./models/Attendance');
+const project = require('./routes/project');
 const mrRoutes = require('./routes/mrRoutes');
 
 // 품질관리 라우터 추가
@@ -35,6 +36,7 @@ app.use('/api/AD', homSurver);
 app.use('/api/schedule', schedule);
 app.use('/api/community', communityRouter);
 app.use('/api/quality', qualityRoutes);
+app.use('/api/project', project)
 app.use('/api/meeting-rooms',mrRoutes);
 
 app.use("/Images", express.static(path.join(__dirname, "uploads/Images")))

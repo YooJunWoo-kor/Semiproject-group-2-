@@ -4,10 +4,10 @@ import WeeklyCalendar from '../../../components/weeklycalendar/WeeklyCalendar';
 import ModalBase from '../../../components/ModalBase'
 import ScheduleModalPopup from './ScheduleModalPopup';
 import axios from 'axios';
-import { formatDateToYYYYMMDD, API_BASE_URL, getLoginUser } from '../../../utils/authStorage';
+import { formatDateToYYYYMMDD, API_BASE_URL, getLoginUser, getTodayString } from '../../../utils/authStorage';
 import ColorTeg from '../../../components/ColorTeg';
 
-function ScheduleModul() {
+function ScheduleModul({dataType = 1}) {
     //로그인 유저 정보 get
     const user = getLoginUser();
     //모달팝업용
@@ -74,24 +74,53 @@ function ScheduleModul() {
         getMySchduleData();
     },[])
 
-    const filterMySchaduleData = mySchduleData.filter(
-        (item)=>{
-            const isFind = allScheduleData.find((allItem)=>{
-                return allItem.scheduleID === item.scheduleID;
-            })
-            return !isFind;
-        }
-    );
+    let finalSchadulData = [];
 
-    const finalSchadulData = [...allScheduleData, ...filterMySchaduleData];
+    //전체보기 선택시
+    if(dataType == 1){
+        let filterMySchaduleData = mySchduleData.filter(
+            (item)=>{
+                const isFind = allScheduleData.find((allItem)=>{
+                    return allItem.scheduleID === item.scheduleID;
+                })
+                return !isFind;
+            }
+        );
+        finalSchadulData = [...allScheduleData, ...filterMySchaduleData];
+    }
+    //내 일정 선택 시
+    else if(dataType == 2){
+        finalSchadulData = [...mySchduleData];
+    }
+    //마감 임박 선택 시
+    else if(dataType == 3){
+        let filterMySchaduleData = mySchduleData.filter(
+            (item)=>{
+                const isFind = allScheduleData.find((allItem)=>{
+                    return allItem.scheduleID === item.scheduleID;
+                })
+                return !isFind;
+            }
+        );
+        const sumData = [...allScheduleData, ...filterMySchaduleData];
+        const today = new Date(getTodayString());
+        finalSchadulData = sumData.filter((item)=>{
+            const endDay = new Date(item.end);
+            return ((endDay - today)/(1000* 60 * 60 * 34)) < 2;
+        });
+    }
 
-    console.log(finalSchadulData);
+    //토글에전달할 데이터
+    const toglData = {
+        title: dataType == 1 ? "전체보기" : dataType == 2 ? "내일정" : "마감인박"
+        , count: finalSchadulData.length
+    };
 
     return (
         <div className="border-container">
             <header className="dashboard-header">
                 <span className="subtitle">일정관리</span>
-                <ColorTeg title={'마감임박'} count={5} type={'개'}/>
+                <ColorTeg title={toglData.title} count={toglData.count} type={'개'}/>
                 <div className="dashboard-top">
                     <button
                         type="button"
