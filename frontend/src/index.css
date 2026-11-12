@@ -171,5 +171,5 @@ form.draft-box > label { display: flex; flex-direction: column; gap: 10px; color
 @media (max-width: 680px) {
   form.draft-box > label, form.draft-box > .draft-row, form.draft-box > .draft-box, .draft-item { padding: 16px; }
   .draft-row > p, .draft-row > label { flex-basis: 100%; }
-  .draft-actions > button { flex: 1 1 auto; }
+  .draft-actions > button { flex: 1 1 auto;  }
 }

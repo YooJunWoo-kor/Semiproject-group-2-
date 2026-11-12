@@ -98,7 +98,7 @@ function DraftReq({ drafts, setEditingDraft, onDraftChanged }) {
                                     삭제
                                 </button>
                             </div>
-                        ) : <button onClick={() => CancelReq()}>요청취소</button>
+                        ) : draft.status === "결재대기" ? (<button onClick={() => CancelReq(draft.id)}>요청취소</button>) : null
                     ]
                 }))}
 
