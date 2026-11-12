@@ -1,15 +1,8 @@
-import React, { useState } from 'react';
+import React, { Component, useState } from 'react';
 import "./MyPage.css";
-
-const initialEmployee = {
-    id: 'EMP001',
-    name: '홍길동',
-    department: '재무·회계팀',
-    position: '사원',
-    joinDate: '2024-03-04',
-    email: 'hong@example.com',
-    phone: '010-1234-5678',
-};
+import { getLoginUser } from '../../../utils/authStorage';
+import  { getHrEmployees } from '../../../components/HrData'
+import { useEffect } from 'react';
 
 const tasks = [
     { id: 1, title: '10월 매출 보고서 작성', module: '재무관리', dueDate: '2026-10-27', status: '진행 중' },
@@ -20,16 +13,66 @@ const tasks = [
 
 
 function MyPage() {
-    const [employee, setEmployee] = useState(initialEmployee);
-    const [form, setForm] = useState({
-        email: initialEmployee.email,
-        phone: initialEmployee.phone,
+    const [employee, setEmployee] = useState({
+        id: "",
+        name: "",
+        department: "",
+        position: "",
+        hireDate: "",
+        email : "",
+        phone: "",
     });
+
+    const [form, setForm] = useState({
+        email: "",
+        phone: ""
+    });
+
     const [isEditing, setIsEditing] = useState(false);
     const [message, setMessage] = useState('');
     const [profileImage, setProfileImage] = useState(null);
 
+    useEffect(() => {
+        const loadEmployee = async () => {
+            try{
+                const loginUser = getLoginUser();
 
+                const response = await getHrEmployees();
+
+                const employees = response.data.data;
+
+                const myInfo = employees.find(
+                    item => (item.employeeId) === Number(loginUser.employeeKey)
+                );
+
+                console.log(response.data.data);
+            
+
+                if(!myInfo){
+                    console.error("직원 정보를 찾을 수 없습니다");
+                    return;
+                }
+                
+                const employeeData = {
+                    id : myInfo.employeeNumber,
+                    name : myInfo.name,
+                    department : myInfo.departmentName,
+                    position : myInfo.position,
+                    hireDate : myInfo.hireDate,
+                    email : myInfo.email,
+                    phone : myInfo.phone || ""
+                }
+
+                setEmployee(employeeData);
+            }
+
+            catch(error){
+                console.error("마이페이지 직원 조회 오류", error);
+            }
+
+            loadEmployee();
+        }
+    },[])
 
     function handleChange(event) {
         const { name, value } = event.target;

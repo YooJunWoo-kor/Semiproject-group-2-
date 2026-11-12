@@ -19,8 +19,8 @@ export default function ProjectModul() {
           data.data.data[i].end = formatDateToYYYYMMDD(data.data.data[i].end);
         }
         setProjectData(data.data.data);
-    }catch(err){
-        alert('데이터 조회 실패', err.data.massage);
+    }catch(err){ 
+        alert('데이터 조회 실패', err.response?.data?.massage);
     }
   }
 
