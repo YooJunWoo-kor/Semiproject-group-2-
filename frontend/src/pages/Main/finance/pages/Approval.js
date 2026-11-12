@@ -1,22 +1,26 @@
 import React, { useEffect, useRef, useState } from "react";
 import PaginationTable from "../../../../components/PaginationTable";
 import { getApprovals, getApprovalSteps, getFinanceEmployees, createApproval, decideApproval, uploadApprovalAttachment, getApprovalAttachments, downloadApprovalAttachment } from "../../../../utils/financeService";
-
 import { getLoginUser } from "../../../../utils/authStorage";
 import ModalBase from "../../../../components/ModalBase";
-import "../FinanceRegistration.css";
+import '../components/Finance.css';
 import ApprovalPayments from "../components/ApprovalPayments";
+import { ENABLE_DRAFT_MOCK, getApprovedMockDrafts, isMockDraftId } from "../mock/approvedDrafts";
 
 // DB 응답을 화면에 표시할 이름으로 변환합니다.
 function toApproval(item) {
   return {
     id: item.document_id,
+    isMockDraft: item.is_mock_draft === true,
+    isSourceDraft: item.source_type === "draft",
+    isLinkedTrade: Boolean(item.linked_transaction_id),
+    sourceDraftId: item.source_draft_id ?? null,
     employeeId: item.employee_id,
     department: item.department_name || "미지정",
     requester: item.requester_name || "미지정",
     title: item.title,
     content: item.content || "",
-    amount: Number(item.amount ?? 0),
+    amount: item.amount == null ? null : Number(item.amount),
     paymentMethod: item.payment_methods || "미등록",
     deadline: item.due_date || "-",
     attachmentCount: Number(item.attachment_count ?? 0),
@@ -27,7 +31,7 @@ function toApproval(item) {
   };
 }
 
-function Approval() {
+function Approval({ embedded = false, allowCreate = true, initialDocumentId = null, initialDraftOpen = false, expenseGroups = [], onBusyChange }) {
   const loginUser = getLoginUser();
   const [paymentBusy, setPaymentBusy] = useState(false);
   const paymentBusyRef = useRef(false);
@@ -58,7 +62,9 @@ function Approval() {
   const downloadLock = useRef(false);
 
   // DB에서 불러온 결재 문서
-  const [approvalList, setApprovalList] = useState([]);
+  const [storedApprovalList, setApprovalList] = useState([]);
+  // 실제 목록을 다시 조회해도 더미는 원본 기안서 ID별로 한 번만 표시합니다.
+  const approvalList = [...getApprovedMockDrafts().map(toApproval), ...storedApprovalList];
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -73,7 +79,7 @@ function Approval() {
   });
 
   // 상세보기에서 선택한 문서 ID
-  const [selectedApprovalId, setSelectedApprovalId] = useState(null);
+  const [selectedApprovalId, setSelectedApprovalId] = useState(initialDocumentId);
 
   // 선택한 문서의 결재 처리 이력
   const [approvalSteps, setApprovalSteps] = useState([]);
@@ -81,7 +87,7 @@ function Approval() {
   const [stepsError, setStepsError] = useState("");
 
   // 기안 등록폼
-  const [draftOpen, setDraftOpen] = useState(false);
+  const [draftOpen, setDraftOpen] = useState(initialDraftOpen);
   const [draftSaving, setDraftSaving] = useState(false);
   const [draftError, setDraftError] = useState("");
 
@@ -92,13 +98,19 @@ function Approval() {
     content: "",
     amount: "",
     due_date: "",
-    document_type: "비용"
+    document_type: "비용",
+    category_code: ""
   });
 
   // 작성자와 결재자로 선택할 사원 목록
   const [draftEmployees, setDraftEmployees] = useState([]);
   const [employeesLoading, setEmployeesLoading] = useState(false);
   const [employeesError, setEmployeesError] = useState("");
+
+  useEffect(() => {
+    onBusyChange?.(draftSaving || decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy || (embedded && (draftOpen || selectedApprovalId !== null)));
+  }, [draftSaving, decisionSaving, attachmentSaving, downloadingFileId, paymentBusy, embedded, draftOpen, selectedApprovalId, onBusyChange]);
+  useEffect(() => () => onBusyChange?.(false), [onBusyChange]);
 
   // 화면이 처음 열릴 때 결재 문서를 조회합니다.
   useEffect(() => {
@@ -176,7 +188,7 @@ function Approval() {
     setApprovalSteps([]);
     setStepsError("");
 
-    if (selectedApprovalId === null) {
+    if (selectedApprovalId === null || isMockDraftId(selectedApprovalId) || String(selectedApprovalId).startsWith("draft-")) {
       setStepsLoading(false);
       return;
     }
@@ -232,7 +244,8 @@ function Approval() {
     let cancelled = false;
     setAttachmentList([]);
     setAttachmentListError("");
-    if (selectedApprovalId === null) {
+    if (selectedApprovalId === null || isMockDraftId(selectedApprovalId) || String(selectedApprovalId).startsWith("draft-")) {
+      if (String(selectedApprovalId).startsWith("draft-")) setAttachmentListError("기안서의 증빙파일은 내업무 관리에서 확인해주세요.");
       setAttachmentListLoading(false);
       return;
     }
@@ -286,7 +299,7 @@ function Approval() {
 
   const approvedAmount = approvalList
     .filter((item) => item.status === "승인")
-    .reduce((sum, item) => sum + item.amount, 0);
+    .reduce((sum, item) => sum + (item.amount ?? 0), 0);
 
   const rejectedCount = approvalList.filter(
     (item) => item.status === "반려"
@@ -323,7 +336,7 @@ function Approval() {
         item.department,
         item.requester,
         <strong>{item.title}</strong>,
-        `${item.amount.toLocaleString()}원`,
+        item.amount == null ? "미등록" : `${item.amount.toLocaleString()}원`,
         item.paymentMethod,
         item.attachmentCount > 0
           ? `${item.attachmentCount}건`
@@ -542,7 +555,8 @@ function Approval() {
       content: "",
       amount: "",
       due_date: "",
-      document_type: "비용"
+      document_type: "비용",
+    category_code: ""
     });
 
     setDraftError("");
@@ -620,9 +634,9 @@ function Approval() {
   return (
     <div className="border-container">
       <header className="dashboard-header">
-        <span className="subtitle">결제(지출) 관리</span>
+        <span className="subtitle">{embedded ? "기존 결재·이력" : "결제(지출) 관리"}</span>
 
-        <div className="dashboard-top">
+        {allowCreate && <div className="dashboard-top">
           <button
             type="button"
             className="register-btn"
@@ -631,137 +645,155 @@ function Approval() {
           >
             + 지출 결재 기안
           </button>
-        </div>
+        </div>}
       </header>
+
+      {ENABLE_DRAFT_MOCK && (
+        <p role="status">기안서 연동 미리보기: 승인된 더미 1건이 포함되어 있습니다. 아래 승인 금액 합계에도 더미 금액이 포함됩니다.</p>
+      )}
 
       {draftOpen && (
         <div className="finance-registration-modal">
           <ModalBase title="지출 결재 기안" onClose={closeDraftForm} layout={(
             <form onSubmit={handleDraftSubmit}>
-            <fieldset disabled={draftSaving}>
-              {/* 작성자와 결재자는 같은 사원 목록을 사용합니다. */}
-              {[
-                { name: "employee_id", label: "작성자" },
-                { name: "approver_id", label: "결재자" }
-              ].map((field) => (
-                <div key={field.name}>
-                  <label htmlFor={`draft-${field.name}`}>
-                    {field.label} *
-                  </label>
+              <fieldset disabled={draftSaving}>
+                {/* 작성자와 결재자는 같은 사원 목록을 사용합니다. */}
+                {[
+                  { name: "employee_id", label: "작성자" },
+                  { name: "approver_id", label: "결재자" }
+                ].map((field) => (
+                  <div key={field.name}>
+                    <label htmlFor={`draft-${field.name}`}>
+                      {field.label} *
+                    </label>
 
-                  <select
-                    id={`draft-${field.name}`}
-                    name={field.name}
-                    value={draftForm[field.name]}
+                    <select
+                      id={`draft-${field.name}`}
+                      name={field.name}
+                      value={draftForm[field.name]}
+                      onChange={handleDraftChange}
+                      disabled={employeesLoading || Boolean(employeesError)}
+                      required
+                    >
+                      <option value="">선택해 주세요</option>
+
+                      {draftEmployees.filter((employee) =>
+                        field.name !== "approver_id" || Number(employee.can_approve) === 1
+                      ).map((employee) => (
+                        <option
+                          key={employee.employee_id}
+                          value={employee.employee_id}
+                        >
+                          {employee.name} / {employee.department_name || "부서 미지정"}
+                          {" / "}{employee.employee_number}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+
+                <div>
+                  <label htmlFor="draft-title">제목 *</label>
+                  <input
+                    id="draft-title"
+                    name="title"
+                    type="text"
+                    value={draftForm.title}
                     onChange={handleDraftChange}
-                    disabled={employeesLoading || Boolean(employeesError)}
+                    maxLength={150}
+                    required
+                  />
+                </div>
+
+                {expenseGroups.length > 0 && <div>
+                  <label htmlFor="draft-category">지출 분류 / 세부 항목 *</label>
+                  <select id="draft-category" name="category_code" value={draftForm.category_code}
+                    onChange={handleDraftChange} required>
+                    <option value="">선택해 주세요</option>
+                    {expenseGroups.map(group => <optgroup key={group.id} label={group.label}>
+                      {group.items.map(item => <option key={item.code} value={item.code}>{item.label}</option>)}
+                    </optgroup>)}
+                  </select>
+                </div>}
+
+                <div>
+                  <label htmlFor="draft-type">문서 유형 *</label>
+                  <select
+                    id="draft-type"
+                    name="document_type"
+                    value={draftForm.document_type}
+                    onChange={handleDraftChange}
                     required
                   >
-                    <option value="">선택해 주세요</option>
-
-                    {draftEmployees.map((employee) => (
-                      <option
-                        key={employee.employee_id}
-                        value={employee.employee_id}
-                      >
-                        {employee.name} / {employee.department_name || "부서 미지정"}
-                        {" / "}{employee.employee_number}
-                      </option>
-                    ))}
+                    <option value="일반">일반</option>
+                    <option value="비용">비용</option>
+                    <option value="구매">구매</option>
+                    <option value="급여">급여</option>
                   </select>
                 </div>
-              ))}
 
-              <div>
-                <label htmlFor="draft-title">제목 *</label>
-                <input
-                  id="draft-title"
-                  name="title"
-                  type="text"
-                  value={draftForm.title}
-                  onChange={handleDraftChange}
-                  maxLength={150}
-                  required
-                />
-              </div>
+                <div>
+                  <label htmlFor="draft-amount">신청 금액 *</label>
+                  <input
+                    id="draft-amount"
+                    name="amount"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={draftForm.amount}
+                    onChange={handleDraftChange}
+                    required
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="draft-type">문서 유형 *</label>
-                <select
-                  id="draft-type"
-                  name="document_type"
-                  value={draftForm.document_type}
-                  onChange={handleDraftChange}
-                  required
+                <div>
+                  <label htmlFor="draft-due-date">처리 마감일</label>
+                  <input
+                    id="draft-due-date"
+                    name="due_date"
+                    type="date"
+                    value={draftForm.due_date}
+                    onChange={handleDraftChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="draft-content">내용</label>
+                  <textarea
+                    id="draft-content"
+                    name="content"
+                    rows={5}
+                    value={draftForm.content}
+                    onChange={handleDraftChange}
+                  />
+                </div>
+
+                <p>기안은 대기 상태로 등록됩니다.</p>
+
+                {employeesLoading && <p>사원 목록을 불러오는 중입니다.</p>}
+                {employeesError && <p role="alert">{employeesError}</p>}
+                {draftError && <p role="alert">{draftError}</p>}
+
+                <button
+                  type="submit"
+                  disabled={employeesLoading || Boolean(employeesError)}
                 >
-                  <option value="일반">일반</option>
-                  <option value="비용">비용</option>
-                  <option value="구매">구매</option>
-                  <option value="급여">급여</option>
-                </select>
-              </div>
+                  {draftSaving ? "저장 중..." : "저장"}
+                </button>
 
-              <div>
-                <label htmlFor="draft-amount">신청 금액 *</label>
-                <input
-                  id="draft-amount"
-                  name="amount"
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={draftForm.amount}
-                  onChange={handleDraftChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="draft-due-date">처리 마감일</label>
-                <input
-                  id="draft-due-date"
-                  name="due_date"
-                  type="date"
-                  value={draftForm.due_date}
-                  onChange={handleDraftChange}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="draft-content">내용</label>
-                <textarea
-                  id="draft-content"
-                  name="content"
-                  rows={5}
-                  value={draftForm.content}
-                  onChange={handleDraftChange}
-                />
-              </div>
-
-              <p>기안은 대기 상태로 등록됩니다.</p>
-
-              {employeesLoading && <p>사원 목록을 불러오는 중입니다.</p>}
-              {employeesError && <p role="alert">{employeesError}</p>}
-              {draftError && <p role="alert">{draftError}</p>}
-
-              <button
-                type="submit"
-                disabled={employeesLoading || Boolean(employeesError)}
-              >
-                {draftSaving ? "저장 중..." : "저장"}
-              </button>
-
-              <button
-                type="button"
-                onClick={closeDraftForm}
-              >
-                취소
-              </button>
-            </fieldset>
-          </form>
+                <button
+                  type="button"
+                  onClick={closeDraftForm}
+                >
+                  취소
+                </button>
+              </fieldset>
+            </form>
           )} />
         </div>
       )}
 
+      <p>내업무 승인 기안서는 조회용으로 함께 표시됩니다. 금액이 미등록인 문서는 승인 금액 합계에서 제외됩니다.</p>
       <div>
         <strong>승인 대기:</strong> {pendingCount}건
         {" | "}
@@ -774,7 +806,10 @@ function Approval() {
       <hr />
 
       <section>
-        <form onSubmit={handleSearch}>
+        <form
+          className="finance-card-search"
+          onSubmit={handleSearch}
+        >
           <label htmlFor="approval-status">결재 상태: </label>
           <select
             id="approval-status"
@@ -802,7 +837,7 @@ function Approval() {
             ))}
           </select>
 
-          <button type="submit">검색</button>
+          <button type="submit">조회</button>
         </form>
       </section>
 
@@ -829,203 +864,205 @@ function Approval() {
                 <div hidden={paymentFormOpen}>
 
 
-          <div className="table-shell">
-          <table className="finance-approval-fields">
-            <tbody>
-              {[
-                ["문서 ID", selectedApproval.id],
-                ["제목", selectedApproval.title],
-                ["문서 유형", selectedApproval.documentType],
-                ["상신 부서", selectedApproval.department],
-                ["작성자", selectedApproval.requester],
-                [
-                  "신청 금액",
-                  `${selectedApproval.amount.toLocaleString()}원`
-                ],
-                ["등록된 결제수단", selectedApproval.paymentMethod],
-                ["처리 마감일", selectedApproval.deadline],
-                ["진행 상태", selectedApproval.status],
-                ["작성일시", selectedApproval.createdAt],
-                ["첨부파일 수", `${selectedApproval.attachmentCount}건`]
-              ].map(([label, value]) => (
-                <tr key={label}>
-                  <th scope="row">{label}</th>
-                  <td>{value}</td>
-                </tr>
-              ))}
+                  <div className="table-shell">
+                    <table className="finance-approval-fields">
+                      <tbody>
+                        {[
+                          ["문서 ID", selectedApproval.id],
+                          ["제목", selectedApproval.title],
+                          ["문서 유형", selectedApproval.documentType],
+                          ["상신 부서", selectedApproval.department],
+                          ["작성자", selectedApproval.requester],
+                          [
+                            "신청 금액",
+                            selectedApproval.amount == null ? "미등록" : `${selectedApproval.amount.toLocaleString()}원`
+                          ],
+                          ["등록된 결제수단", selectedApproval.paymentMethod],
+                          ["처리 마감일", selectedApproval.deadline],
+                          ["진행 상태", selectedApproval.status],
+                          ["작성일시", selectedApproval.createdAt],
+                          ["첨부파일 수", `${selectedApproval.attachmentCount}건`]
+                        ].map(([label, value]) => (
+                          <tr key={label}>
+                            <th scope="row">{label}</th>
+                            <td>{value}</td>
+                          </tr>
+                        ))}
 
-              <tr>
-                <th scope="row">내용</th>
-                <td style={{ whiteSpace: "pre-wrap" }}>
-                  {selectedApproval.content || "작성된 내용이 없습니다."}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          </div>
+                        <tr>
+                          <th scope="row">내용</th>
+                          <td style={{ whiteSpace: "pre-wrap" }}>
+                            {selectedApproval.content || "작성된 내용이 없습니다."}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-          <ApprovalPayments
-            key={selectedApproval.id}
-            embedded
-            paymentFormOpen={paymentFormOpen}
-            onFormOpenChange={setPaymentFormOpen}
-            approval={selectedApproval}
-            loginUser={loginUser}
-            blocked={decisionSaving || attachmentSaving || downloadingFileId !== null}
-            onBusyChange={handlePaymentBusyChange}
-            onPaid={handlePaymentSaved}
-          />                <div hidden={paymentFormOpen}>
+                {selectedApproval.isMockDraft || selectedApproval.isSourceDraft || selectedApproval.isLinkedTrade ? (
+                  <p role="status">{selectedApproval.isLinkedTrade ? "거래로 연결된 문서입니다. 거래·정산 탭의 전표에서 지급해주세요." : selectedApproval.isSourceDraft ? "내업무 관리에서 최종 승인된 기안서입니다. 품목관리에서 거래정보를 등록한 뒤 지급할 수 있습니다." : "더미 기안서 표시 예시입니다. 실제 지급 등록과 첨부파일 기능은 사용할 수 없습니다."}</p>
+                ) : <ApprovalPayments
+                  key={selectedApproval.id}
+                  embedded
+                  paymentFormOpen={paymentFormOpen}
+                  onFormOpenChange={setPaymentFormOpen}
+                  approval={selectedApproval}
+                  loginUser={loginUser}
+                  blocked={decisionSaving || attachmentSaving || downloadingFileId !== null}
+                  onBusyChange={handlePaymentBusyChange}
+                  onPaid={handlePaymentSaved}
+                />}                <div hidden={paymentFormOpen}>
 
 
-          <section className="finance-registration-modal" aria-label="증빙파일 첨부">
-            <h3>증빙파일</h3>
-            <button type="button"
-              disabled={attachmentListLoading || attachmentSaving || downloadingFileId !== null}
-              onClick={() => setAttachmentListRefresh((previous) => previous + 1)}>
-              목록 새로고침
-            </button>
-            {attachmentListLoading ? <p>첨부파일 목록을 불러오는 중입니다.</p> :
-              attachmentListError ? <p role="alert">{attachmentListError}</p> :
-              attachmentList.length === 0 ? <p>등록된 첨부파일이 없습니다.</p> : (
-                <div className="table-shell finance-approval-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th scope="col">파일명</th>
-                      <th scope="col">크기</th>
-                      <th scope="col">첨부일시</th>
-                      <th scope="col">다운로드</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {attachmentList.map((file) => (
-                      <tr key={file.file_id}>
-                        <td>{file.original_name}</td>
-                        <td>{(Number(file.file_size || 0) / 1024).toLocaleString(
-                          "ko-KR", { maximumFractionDigits: 1 }
-                        )} KB</td>
-                        <td>{file.created_at || "-"}</td>
-                        <td>
-                          <button type="button"
-                            aria-label={`${file.original_name} 다운로드`}
-                            disabled={downloadingFileId !== null || attachmentSaving || decisionSaving || paymentBusy}
-                            onClick={() => handleAttachmentDownload(file)}>
-                            {downloadingFileId === file.file_id ? "다운로드 중..." : "다운로드"}
+                  <section className="finance-registration-modal" aria-label="증빙파일 첨부">
+                    <h3>증빙파일</h3>
+                    <button type="button"
+                      disabled={selectedApproval.isSourceDraft || selectedApproval.isMockDraft || attachmentListLoading || attachmentSaving || downloadingFileId !== null}
+                      onClick={() => setAttachmentListRefresh((previous) => previous + 1)}>
+                      목록 새로고침
+                    </button>
+                    {attachmentListLoading ? <p>첨부파일 목록을 불러오는 중입니다.</p> :
+                      attachmentListError ? <p role="alert">{attachmentListError}</p> :
+                        attachmentList.length === 0 ? <p>등록된 첨부파일이 없습니다.</p> : (
+                          <div className="table-shell finance-approval-scroll">
+                            <table>
+                              <thead>
+                                <tr>
+                                  <th scope="col">파일명</th>
+                                  <th scope="col">크기</th>
+                                  <th scope="col">첨부일시</th>
+                                  <th scope="col">다운로드</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {attachmentList.map((file) => (
+                                  <tr key={file.file_id}>
+                                    <td>{file.original_name}</td>
+                                    <td>{(Number(file.file_size || 0) / 1024).toLocaleString(
+                                      "ko-KR", { maximumFractionDigits: 1 }
+                                    )} KB</td>
+                                    <td>{file.created_at || "-"}</td>
+                                    <td>
+                                      <button type="button"
+                                        aria-label={`${file.original_name} 다운로드`}
+                                        disabled={downloadingFileId !== null || attachmentSaving || decisionSaving || paymentBusy}
+                                        onClick={() => handleAttachmentDownload(file)}>
+                                        {downloadingFileId === file.file_id ? "다운로드 중..." : "다운로드"}
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                    {downloadError && <p role="alert">{downloadError}</p>}
+                    {canAttach ? (
+                      <form onSubmit={handleAttachmentSubmit}>
+                        <fieldset disabled={attachmentSaving || decisionSaving || downloadingFileId !== null || paymentBusy}>
+                          <div>
+                            <label htmlFor="approval-attachment-file">증빙파일</label>
+                            <input
+                              ref={attachmentInputRef}
+                              id="approval-attachment-file"
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              onChange={(event) => {
+                                setAttachmentFile(event.target.files?.[0] || null);
+                                setAttachmentError("");
+                                setAttachmentMessage("");
+                              }}
+                            />
+                            <p>PDF, JPG, JPEG, PNG / 최대 10MB / 한 번에 1개</p>
+                          </div>
+                          <div>
+                            <label htmlFor="approval-attachment-password">작성자 로그인 비밀번호 확인</label>
+                            <input
+                              id="approval-attachment-password"
+                              type="password"
+                              autoComplete="current-password"
+                              value={attachmentPassword}
+                              onChange={(event) => setAttachmentPassword(event.target.value)}
+                            />
+                          </div>
+                          <button type="submit">
+                            {attachmentSaving ? "첨부 중..." : "증빙파일 첨부"}
                           </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </fieldset>
+                      </form>
+                    ) : (
+                      <p>기안 작성자가 대기 상태의 문서에 증빙파일을 첨부할 수 있습니다.</p>
+                    )}
+                    {attachmentError && <p role="alert">{attachmentError}</p>}
+                    {attachmentMessage && <p role="status">{attachmentMessage}</p>}
+                  </section>
+
+                  <h3>결재자 및 처리 이력</h3>
+
+                  {stepsLoading ? (
+                    <p>결재 처리 이력을 불러오는 중입니다.</p>
+                  ) : stepsError ? (
+                    <p role="alert">{stepsError}</p>
+                  ) : approvalSteps.length === 0 ? (
+                    <p>{selectedApproval.isSourceDraft ? "기안서의 결재 이력은 내업무 관리에서 확인해주세요." : "등록된 결재 단계가 없습니다."}</p>
+                  ) : (
+                    <div className="table-shell finance-approval-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th scope="col">결재 순서</th>
+                            <th scope="col">결재자</th>
+                            <th scope="col">부서</th>
+                            <th scope="col">처리 상태</th>
+                            <th scope="col">처리일시</th>
+                            <th scope="col">의견</th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {approvalSteps.map((step) => (
+                            <tr key={step.step_id}>
+                              <td>{step.step_order}</td>
+                              <td>{step.approver_name || "미지정"}</td>
+                              <td>{step.department_name || "미지정"}</td>
+                              <td>{step.step_status || "-"}</td>
+                              <td>{step.action_at || "-"}</td>
+                              <td style={{ whiteSpace: "pre-wrap" }}>
+                                {step.opinion || "-"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {selectedApproval.status === "대기" && !stepsLoading && !stepsError && (
+                    canDecide ? (
+                      <section aria-label="결재 처리">
+                        <h3>결재 처리</h3>
+                        <fieldset disabled={decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy}>
+                          <div>
+                            <label htmlFor="decision-opinion">결재 의견 (반려 시 필수, 최대 500자)</label>
+                            <textarea id="decision-opinion" maxLength={500}
+                              value={decisionOpinion} onChange={(e) => setDecisionOpinion(e.target.value)} />
+                          </div>
+                          <div>
+                            <label htmlFor="decision-password">로그인 비밀번호 확인</label>
+                            <input id="decision-password" type="password" autoComplete="current-password"
+                              value={decisionPassword} onChange={(e) => setDecisionPassword(e.target.value)} />
+                          </div>
+                          <p>지정된 결재자만 처리할 수 있습니다. 승인은 실제 지급과 별도로 처리됩니다.</p>
+                          <button type="button" className="erp-primary-button"
+                            onClick={() => handleDecision("승인")}>승인</button>
+                          <button type="button" onClick={() => handleDecision("반려")}>반려</button>
+                        </fieldset>
+                      </section>
+                    ) : <p>현재 순서의 지정 결재자만 승인·반려할 수 있습니다. 결재자와 로그인 계정을 확인해 주세요.</p>
+                  )}
+                  {decisionSaving && <p role="status">결재를 저장하는 중입니다.</p>}
+                  {decisionError && <p role="alert">{decisionError}</p>}
+                  {decisionMessage && <p role="status">{decisionMessage}</p>}
                 </div>
-              )}
-            {downloadError && <p role="alert">{downloadError}</p>}
-            {canAttach ? (
-              <form onSubmit={handleAttachmentSubmit}>
-                <fieldset disabled={attachmentSaving || decisionSaving || downloadingFileId !== null || paymentBusy}>
-                  <div>
-                    <label htmlFor="approval-attachment-file">증빙파일</label>
-                    <input
-                      ref={attachmentInputRef}
-                      id="approval-attachment-file"
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={(event) => {
-                        setAttachmentFile(event.target.files?.[0] || null);
-                        setAttachmentError("");
-                        setAttachmentMessage("");
-                      }}
-                    />
-                    <p>PDF, JPG, JPEG, PNG / 최대 10MB / 한 번에 1개</p>
-                  </div>
-                  <div>
-                    <label htmlFor="approval-attachment-password">작성자 로그인 비밀번호 확인</label>
-                    <input
-                      id="approval-attachment-password"
-                      type="password"
-                      autoComplete="current-password"
-                      value={attachmentPassword}
-                      onChange={(event) => setAttachmentPassword(event.target.value)}
-                    />
-                  </div>
-                  <button type="submit">
-                    {attachmentSaving ? "첨부 중..." : "증빙파일 첨부"}
-                  </button>
-                </fieldset>
-              </form>
-            ) : (
-              <p>기안 작성자가 대기 상태의 문서에 증빙파일을 첨부할 수 있습니다.</p>
-            )}
-            {attachmentError && <p role="alert">{attachmentError}</p>}
-            {attachmentMessage && <p role="status">{attachmentMessage}</p>}
-          </section>
-
-          <h3>결재자 및 처리 이력</h3>
-
-          {stepsLoading ? (
-            <p>결재 처리 이력을 불러오는 중입니다.</p>
-          ) : stepsError ? (
-            <p role="alert">{stepsError}</p>
-          ) : approvalSteps.length === 0 ? (
-            <p>등록된 결재 단계가 없습니다.</p>
-          ) : (
-            <div className="table-shell finance-approval-scroll">
-                <table>
-              <thead>
-                <tr>
-                  <th scope="col">결재 순서</th>
-                  <th scope="col">결재자</th>
-                  <th scope="col">부서</th>
-                  <th scope="col">처리 상태</th>
-                  <th scope="col">처리일시</th>
-                  <th scope="col">의견</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {approvalSteps.map((step) => (
-                  <tr key={step.step_id}>
-                    <td>{step.step_order}</td>
-                    <td>{step.approver_name || "미지정"}</td>
-                    <td>{step.department_name || "미지정"}</td>
-                    <td>{step.step_status || "-"}</td>
-                    <td>{step.action_at || "-"}</td>
-                    <td style={{ whiteSpace: "pre-wrap" }}>
-                      {step.opinion || "-"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-                </div>
-          )}
-          {selectedApproval.status === "대기" && !stepsLoading && !stepsError && (
-            canDecide ? (
-              <section aria-label="결재 처리">
-                <h3>결재 처리</h3>
-                <fieldset disabled={decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy}>
-                  <div>
-                    <label htmlFor="decision-opinion">결재 의견 (반려 시 필수, 최대 500자)</label>
-                    <textarea id="decision-opinion" maxLength={500}
-                      value={decisionOpinion} onChange={(e) => setDecisionOpinion(e.target.value)} />
-                  </div>
-                  <div>
-                    <label htmlFor="decision-password">로그인 비밀번호 확인</label>
-                    <input id="decision-password" type="password" autoComplete="current-password"
-                      value={decisionPassword} onChange={(e) => setDecisionPassword(e.target.value)} />
-                  </div>
-                  <p>지정된 결재자만 처리할 수 있습니다. 승인은 실제 지급과 별도로 처리됩니다.</p>
-                  <button type="button" className="erp-primary-button"
-                    onClick={() => handleDecision("승인")}>승인</button>
-                  <button type="button" onClick={() => handleDecision("반려")}>반려</button>
-                </fieldset>
-              </section>
-            ) : <p>현재 순서의 지정 결재자만 승인·반려할 수 있습니다. 결재자와 로그인 계정을 확인해 주세요.</p>
-          )}
-          {decisionSaving && <p role="status">결재를 저장하는 중입니다.</p>}
-          {decisionError && <p role="alert">{decisionError}</p>}
-          {decisionMessage && <p role="status">{decisionMessage}</p>}
-                        </div>
 
               </section>
             )}

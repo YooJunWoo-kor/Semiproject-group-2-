@@ -1,12 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { getItems, getPartners, createItem, updateItem, deleteItem, createPayment, getTransactionPayments, getBankAccounts, getCorporateCards } from "../../../../utils/financeService";
+import React, { useEffect, useRef, useState } from 'react';
+import { getItems, getApprovals, getPartners, createItem, updateItem, deleteItem, createPayment, getTransactionPayments, getBankAccounts, getCorporateCards } from "../../../../utils/financeService";
 import ModalBase from '../../../../components/ModalBase';
-import '../FinanceRegistration.css';
+import '../components/Finance.css';
 import PaginationTable from '../../../../components/PaginationTable';
 import WeeklyCalendar from '../../../../components/weeklycalendar/WeeklyCalendar';
 import BasicCalendar from '../../../../components/calendar/BasicCalendar';
+import { ENABLE_DRAFT_MOCK, getApprovedMockTradeItems, isMockDraftId } from '../mock/approvedDrafts';
+import { toApprovedTradeRows } from '../components/approvedTradeRows';
+import { toPayrollPurchaseRows } from '../components/payrollPurchaseRows';
+import { API_BASE_URL } from '../../../../utils/authStorage';
 
-function Items() {
+function Items({ embedded = false, initialCreate = false, initialTradeType = '매입', initialTransactionId = null, onBusyChange, compact = false, scope = null, tradeRequest = null, onDataChange, onClassify }) {
   // 1. 매입 / 매출 탭 필터 ('ALL' | 'SALES' | 'PURCHASE')
   const [activeTab, setActiveTab] = useState('ALL');
 
@@ -20,12 +24,19 @@ function Items() {
   const [selectedItemId, setSelectedItemId] = useState(null);
 
   // DB에서 가져온 거래 품목 목록
-  const [itemList, setItemList] = useState([]);
+  const [storedItemList, setItemList] = useState([]);
+  const [approvedDocuments, setApprovedDocuments] = useState([]);
+  const [approvalsLoading, setApprovalsLoading] = useState(true);
+  const [approvalsError, setApprovalsError] = useState('');
+  const [payrollSummaries, setPayrollSummaries] = useState([]);
+  const [payrollLoading, setPayrollLoading] = useState(true);
+  const [payrollError, setPayrollError] = useState('');
+  const itemList = [...toPayrollPurchaseRows(payrollSummaries), ...toApprovedTradeRows(approvedDocuments), ...getApprovedMockTradeItems(), ...storedItemList];
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   // 등록폼 표시 여부
-  const [formOpen, setFormOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(initialCreate);
 
   // 저장 진행 여부와 오류 메시지
   const [saving, setSaving] = useState(false);
@@ -37,7 +48,7 @@ function Items() {
   // 신규 거래 입력값
   const [itemForm, setItemForm] = useState({
     partner_id: "",
-    trade_type: "매입",
+    trade_type: initialTradeType === "매출" ? "매출" : "매입",
     trade_date: "",
     due_date: "", // 정산 마감일
     item_name: "",
@@ -49,6 +60,7 @@ function Items() {
 
   // null이면 신규 등록, ID가 있으면 해당 품목 수정
   const [editingItemId, setEditingItemId] = useState(null);
+  const [linkingApproval, setLinkingApproval] = useState(null);
 
   // 입금·출금 처리 대상 거래
   const [paymentTarget, setPaymentTarget] = useState(null);
@@ -81,6 +93,32 @@ function Items() {
   const [accountsLoading, setAccountsLoading] = useState(true);
   const [accountsError, setAccountsError] = useState("");
 
+  useEffect(() => { setActiveTab('ALL'); }, [scope?.direction]);
+  const handledRequest = useRef(null);
+  useEffect(() => {
+    if (!tradeRequest || handledRequest.current === tradeRequest.requestId) return;
+    if (tradeRequest.create) {
+      handledRequest.current = tradeRequest.requestId;
+      openItemForm(tradeRequest.tradeType);
+    } else if (tradeRequest.transactionId != null && !loading) {
+      const item = storedItemList.find(row => Number(row.transactionId) === Number(tradeRequest.transactionId));
+      if (item) { handledRequest.current = tradeRequest.requestId; setSelectedItemId(item.id); }
+    }
+  }, [tradeRequest, loading, storedItemList]);
+  const initialTransactionOpened = useRef(false);
+  useEffect(() => {
+    onBusyChange?.(saving || paymentSaving || formOpen || paymentTarget !== null || selectedItemId !== null);
+  }, [saving, paymentSaving, formOpen, paymentTarget, selectedItemId, onBusyChange]);
+  useEffect(() => () => onBusyChange?.(false), [onBusyChange]);
+  useEffect(() => {
+    if (loading || initialTransactionOpened.current || initialTransactionId == null) return;
+    const item = storedItemList.find(row => Number(row.transactionId) === Number(initialTransactionId));
+    if (item) {
+      initialTransactionOpened.current = true;
+      setSelectedItemId(item.id);
+    }
+  }, [loading, storedItemList, initialTransactionId]);
+
   useEffect(() => {
     async function loadItems() {
       try {
@@ -90,6 +128,8 @@ function Items() {
         const items = data.map((item) => ({
           id: item.item_id,
           transactionId: item.transaction_id,
+          linkedSourceType: item.linked_source_type || null,
+          linkedSourceId: item.linked_source_id || null,
           partnerId: item.partner_id,
           type:
             item.trade_type === "매출"
@@ -121,6 +161,46 @@ function Items() {
     loadItems();
   }, []);
 
+  // 최종 승인된 기안서에 연결된 월 급여만 조회합니다.
+  useEffect(() => {
+    const controller = new AbortController();
+    async function loadPayrollSummaries() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/finance/payrolls/summary`, {
+          signal: controller.signal
+        });
+        if (!response.ok) throw new Error('월 급여 합계를 불러오지 못했습니다.');
+        const data = await response.json();
+        if (!Array.isArray(data)) throw new Error('월 급여 조회 응답을 확인해 주세요.');
+        if (!controller.signal.aborted) setPayrollSummaries(data);
+      } catch (err) {
+        if (!controller.signal.aborted) setPayrollError(err.message || '월 급여 조회 오류');
+      } finally {
+        if (!controller.signal.aborted) setPayrollLoading(false);
+      }
+    }
+    loadPayrollSummaries();
+    return () => controller.abort();
+  }, []);
+
+  // 기존 결재 목록 API를 조회합니다. 실제 거래/품목 테이블에는 복사하지 않습니다.
+  useEffect(() => {
+    let cancelled = false;
+    async function loadApprovedDocuments() {
+      try {
+        const data = await getApprovals();
+        if (!Array.isArray(data)) throw new Error('잘못된 결재 목록 응답');
+        if (!cancelled) setApprovedDocuments(data);
+      } catch (err) {
+        if (!cancelled) setApprovalsError(err.response?.data?.message || '승인 지출 목록을 불러오지 못했습니다.');
+      } finally {
+        if (!cancelled) setApprovalsLoading(false);
+      }
+    }
+    loadApprovedDocuments();
+    return () => { cancelled = true; };
+  }, []);
+
   // 등록폼에서 선택할 거래처 목록 조회
   useEffect(() => {
     async function loadPartnerOptions() {
@@ -146,7 +226,24 @@ function Items() {
   ].join("-");
 
   // 거래 구분, 검색어, 정산 상태를 함께 확인합니다.
-  const filteredList = itemList.filter((item) => {
+  function matchingRecords(item, rows) {
+    return rows.filter(row =>
+      (row.source_type === 'transaction' && item.transactionId != null && String(row.source_id) === String(item.transactionId)) ||
+      (item.isApprovalDocument && row.source_type === item.originType && String(row.source_id) === String(item.originId)) ||
+      (item.linkedSourceType && row.source_type === item.linkedSourceType && String(row.source_id) === String(item.linkedSourceId))
+    );
+  }
+  const scopedList = !scope ? itemList : itemList.filter(item => {
+    if ((scope.direction === '입금') !== (item.type === 'SALES')) return false;
+    const rows = matchingRecords(item, scope.view === 'completed' ? scope.entries : scope.scheduled);
+    if (rows.length) return rows.some(row => row.group_id === scope.groupId && scope.selectedCodes.includes(row.category_code));
+    // No payment/classification record: include only outstanding transactions in Unclassified.
+    // Completed amounts always come from payment records, never from the transaction total.
+    if (scope.view === 'completed' || item.status.includes('완료')) return false;
+    const date = item.dueDate || (item.date !== '미등록' ? item.date : item.createdAt);
+    return String(date || '').slice(0, 7) === scope.month && scope.groupId === 'unclassified' && scope.selectedCodes.includes('unclassified');
+  });
+  const filteredList = scopedList.filter((item) => {
     const matchesTab =
       activeTab === "ALL" || item.type === activeTab;
 
@@ -265,7 +362,7 @@ function Items() {
       content: [
         // 1. 구분 뱃지
         <span className={`status-badge ${isSales ? 'status-success' : 'status-danger'}`}>
-          {isSales ? '매출' : '매입'}
+          {item.isApprovalDocument ? '승인 지출' : isSales ? '매출' : '매입'}
         </span>,
 
         // 2. 거래일 + 마감일 (세로 2줄 결합)
@@ -273,10 +370,10 @@ function Items() {
           <div>{item.date}</div>
           {/* 이번 거래의 실제 정산 마감일 */}
           <div>
-            정산 마감: {item.dueDate || "미등록"}
+            {item.isPayroll ? "급여 대상 월" : item.isApprovalDocument ? "처리 마감" : "정산 마감"}: {item.isPayroll ? item.date : item.dueDate || "미등록"}
           </div>
-          <small style={{ color: "#64748b" }}>
-            {item.closingDay
+          <small className="subtext">
+            {item.isPayroll ? "(인건비 · 세전 급여 합계)" : item.closingDay
               ? Number(item.closingDay) === 31
                 ? "(정기 마감: 매월 말일)"
                 : `(정기 마감: 매월 ${item.closingDay}일)`
@@ -290,13 +387,13 @@ function Items() {
         // 4. 품목명 + 규격/수량 (세로 2줄 결합)
         <div>
           <strong>{item.itemName}</strong>
-          <div style={{ fontSize: '12px', color: '#64748b' }}>
-            {item.spec} · {item.quantity}개
+          <div className="subtext">
+            {item.isPayroll ? item.spec : item.isApprovalDocument ? "품목·수량 미등록" : `${item.spec} · ${item.quantity}개`}
           </div>
         </div>,
 
         // 5. 총 합계금액 (공급가/부가세는 덜어내고 최종 금액만 강조)
-        <strong>{item.totalAmount.toLocaleString()}원</strong>,
+        <strong>{item.totalAmount == null ? "미등록" : `${item.totalAmount.toLocaleString()}원`}</strong>,
 
         // 6. 상태
         <span className={`status-badge ${item.status.includes('완료') ? 'status-success' : 'status-pending'}`}>
@@ -306,10 +403,11 @@ function Items() {
         // 7. 관리 버튼
         <button
           type="button"
-          disabled={saving || paymentSaving}
+          disabled={saving || paymentSaving || item.isPayroll}
+          title={item.isPayroll ? "급여 상세는 추후 연결 예정입니다." : undefined}
           onClick={() => openVoucher(item.id)}
         >
-          전표
+          {item.isPayroll ? "조회용" : item.isApprovalDocument ? "상세" : "전표"}
         </button>
       ]
     };
@@ -327,14 +425,15 @@ function Items() {
     }));
 
   // 신규 등록폼 열기
-  function openItemForm() {
+  function openItemForm(tradeType) {
     if (saving || paymentSaving) return;
+    setLinkingApproval(null);
     setPaymentTarget(null); // 입금·출금 입력폼 닫기
     setEditingItemId(null); // 신규 등록 모드
 
     setItemForm({
       partner_id: "",
-      trade_type: "매입",
+      trade_type: tradeType === "매출" ? "매출" : "매입",
       trade_date: "",
       due_date: "", // 새 등록폼을 열면 마감일 초기화
       item_name: "",
@@ -347,6 +446,21 @@ function Items() {
 
     setFormError("");
     setSelectedItemId(null);
+    setFormOpen(true);
+  }
+
+  function openApprovedTradeForm(item) {
+    if (saving || paymentSaving || !item.isApprovalDocument) return;
+    if (!Number.isSafeInteger(item.totalAmount) || item.totalAmount <= 0) {
+      alert('원본 승인 금액이 미등록입니다. 금액이 있는 기안서부터 등록해주세요.');
+      return;
+    }
+    setLinkingApproval(item);
+    setEditingItemId(null);
+    setPaymentTarget(null);
+    setFormError('');
+    setItemForm({ partner_id: '', trade_type: '매입', trade_date: today,
+      due_date: item.dueDate || '', item_name: '', standard: '', quantity: '1', unit_price: '', vat: '0' });
     setFormOpen(true);
   }
 
@@ -366,6 +480,13 @@ function Items() {
     if (saving) return;
 
     const isEditing = editingItemId !== null;
+    if (linkingApproval) {
+      const total = Number(itemForm.quantity) * Number(itemForm.unit_price) + Number(itemForm.vat);
+      if (itemForm.trade_type !== '매입' || total !== linkingApproval.totalAmount) {
+        setFormError('수량 × 단가 + 부가세 합계가 원본 승인 금액과 같아야 합니다.');
+        return;
+      }
+    }
 
     setSaving(true);
     setFormError("");
@@ -374,7 +495,9 @@ function Items() {
       // 수정과 신규 등록을 구분합니다.
       const result = isEditing
         ? await updateItem(editingItemId, itemForm)
-        : await createItem(itemForm);
+        : await createItem(linkingApproval ? {
+            ...itemForm, source_type: linkingApproval.originType, source_id: linkingApproval.originId
+          } : itemForm);
 
       const partner = partnerOptions.find(
         (item) =>
@@ -393,6 +516,8 @@ function Items() {
       const savedItem = {
         id: isEditing ? editingItemId : result.item_id,
         transactionId: result.transaction_id,
+        linkedSourceType: result.linked_source_type || existingItem?.linkedSourceType || null,
+        linkedSourceId: result.linked_source_id || existingItem?.linkedSourceId || null,
         partnerId: Number(itemForm.partner_id),
         type: itemForm.trade_type === "매출" ? "SALES" : "PURCHASE",
         date: itemForm.trade_date,
@@ -426,12 +551,19 @@ function Items() {
           : [savedItem, ...prev]
       );
 
+      if (linkingApproval) {
+        setApprovedDocuments((previous) => previous.map((document) =>
+          String(document.document_id) === String(linkingApproval.sourceDocumentId)
+            ? { ...document, linked_transaction_id: result.transaction_id } : document));
+      }
+      setLinkingApproval(null);
       setActiveTab("ALL");
       setSearchTerm("");
       setSettlementFilter("ALL");
       setSelectedItemId(savedItem.id);
 
-      setPaymentRefresh((prev) => prev + 1); // 이 줄 추가
+      setPaymentRefresh((prev) => prev + 1);
+      onDataChange?.();
 
       setFormOpen(false);
       setEditingItemId(null);
@@ -455,7 +587,7 @@ function Items() {
 
   // 선택한 거래 품목 삭제
   async function handleItemDelete() {
-    if (!selectedItem || saving || paymentSaving) return;
+    if (!selectedItem || selectedItem.isApprovalDocument || selectedItem.isMockDraft || saving || paymentSaving) return;
 
     const confirmed = window.confirm(
       `"${selectedItem.itemName}" 품목을 삭제하시겠습니까?\n` +
@@ -471,6 +603,7 @@ function Items() {
     try {
       // 서버에서 삭제에 성공한 뒤 화면 목록도 변경합니다.
       await deleteItem(itemId);
+      onDataChange?.();
 
       setItemList((prev) =>
         prev.filter((item) => item.id !== itemId)
@@ -482,6 +615,8 @@ function Items() {
       setEditingItemId(null);
       setFormError("");
 
+      try { setApprovedDocuments(await getApprovals()); }
+      catch { setApprovalsError('거래는 삭제되었지만 원본 목록 재조회에 실패했습니다. 새로고침해주세요.'); }
       alert("거래 품목이 삭제되었습니다.");
     } catch (err) {
       alert(
@@ -508,7 +643,7 @@ function Items() {
     setPaymentSummary(null);
     setPaymentHistoryError("");
 
-    if (selectedTransactionId == null) {
+    if (selectedTransactionId == null || isMockDraftId(selectedTransactionId)) {
       setPaymentLoading(false);
       return;
     }
@@ -548,7 +683,8 @@ function Items() {
 
   // 선택한 품목의 기존 내용을 입력폼에 채웁니다.
   function openEditItemForm(item) {
-    if (saving || paymentSaving) return;
+    if (item.isApprovalDocument || item.isMockDraft || saving || paymentSaving) return;
+    setLinkingApproval(null);
     setPaymentTarget(null);
     setEditingItemId(item.id);
 
@@ -570,7 +706,7 @@ function Items() {
 
   // 입금·출금 입력폼 열기
   function openPaymentForm(item) {
-    if (saving || paymentSaving) return;
+    if (item.isApprovalDocument || item.isMockDraft || saving || paymentSaving) return;
     // 처리 대상을 따로 보관합니다.
     // 다른 품목을 선택해도 정산할 거래가 바뀌지 않습니다.
     setPaymentTarget({
@@ -643,6 +779,7 @@ function Items() {
       );
       // 저장 후 정산 이력과 남은 금액을 다시 조회합니다.
       setPaymentRefresh((prev) => prev + 1);
+      onDataChange?.();
       setPaymentTarget(null);
 
       alert(
@@ -663,7 +800,7 @@ function Items() {
 
   // 전표 상세와 입력 폼은 한 번에 하나씩 표시합니다.
   function openVoucher(itemId) {
-    if (saving || paymentSaving) return;
+    if (saving || paymentSaving || itemList.find(item => item.id === itemId)?.isPayroll) return;
     setFormOpen(false);
     setPaymentTarget(null);
     setSelectedItemId(itemId);
@@ -686,10 +823,10 @@ function Items() {
   }
 
   return (
-    <div className="border-container">
+    <div className={`border-container finance-items${compact ? ' finance-items-compact' : ''}`}>
       {/* 1. 상단 공통 헤더 및 액션 버튼 */}
-      <header className="dashboard-header">
-        <span className="subtitle">매입/매출 품목관리</span>
+      {!compact && <header className="dashboard-header">
+        <span className="subtitle">{embedded ? "거래·정산" : "매입/매출 품목관리"}</span>
         <div className="dashboard-top">
           <button
             type="button"
@@ -700,12 +837,19 @@ function Items() {
             + 품목 거래내역 신규 등록
           </button>
         </div>
-      </header>
+      </header>}
 
-      <hr />
+      {!compact && ENABLE_DRAFT_MOCK && (
+        <p role="status">기안서 연동 미리보기: 승인된 사무용품 구매 더미 1건(50,000원)이 포함됩니다. 거래처·품목·세액은 예시이며, 총 매입과 마감 일정에도 반영됩니다.</p>
+      )}
+
+      {!compact && <p>승인 지출의 상세에서 거래정보를 등록할 수 있습니다. 월 급여는 연결된 기안서가 최종 승인된 경우에만 매입(인건비)에 표시합니다. 금액은 승인된 급여의 세전 합계이며, 급여 상세와 지급 처리는 추후 연결됩니다.</p>}
+
+      {payrollLoading && <p role="status">월 급여 조회 중…</p>}
+      {payrollError && <p role="alert">{payrollError} 급여 합계가 누락되어 있으니 백엔드 재시작 후 새로고침해 주세요.</p>}
 
       {/* 2. 상단 누적 손익 요약 카드 */}
-      <section>
+      {!compact && <section className="finance-trade-summary">
         <h3>전체 거래 총액 요약</h3>
         <p>
           <span>총 매출: <strong>{totalSalesAmount.toLocaleString()}원</strong></span>
@@ -713,45 +857,50 @@ function Items() {
           <span>총 매입: <strong>{totalPurchaseAmount.toLocaleString()}원</strong></span>
           {' '}|{' '}
           <span>
-            매출·매입 차액(부가세 포함): <strong style={{ color: operatingProfit >= 0 ? '#2563eb' : '#dc2626' }}>
+            매출·매입 차액(부가세 포함): <strong className={operatingProfit >= 0 ? "finance-positive" : "finance-negative"}>
               {operatingProfit.toLocaleString()}원
             </strong>
           </span>
         </p>
-      </section>
+      </section>}
 
-      <hr />
+      {!compact && <hr />}
 
       {/* 3. 좌우 2단 분할 레이아웃 컨테이너 */}
       <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', marginTop: '16px' }}>
 
         {/* [좌측 영역] 탭 + 검색 필터 + PaginationTable (약 62% 너비) */}
-        <div style={{ flex: '1 1 62%', minWidth: 0 }}>
+        <div style={{ flex: compact ? '1 1 100%' : '1 1 62%', minWidth: 0 }}>
           {/* 탭 전환 및 검색 필터 */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px' }}>
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <button
+          <div className="finance-item-toolbar">
+            <ul className="grouplist finance-item-tabs">
+              <li><button
                 type="button"
-                className={`finance-tab ${activeTab === 'ALL' ? 'is-active' : ''}`}
+                className={activeTab === 'ALL' ? 'active' : ''}
                 onClick={() => setActiveTab('ALL')}
               >
-                전체 ({itemList.length})
-              </button>
-              <button
+                전체 ({scopedList.length})
+              </button></li>
+              <li><button
                 type="button"
-                className={`finance-tab ${activeTab === 'SALES' ? 'is-active' : ''}`}
-                onClick={() => setActiveTab('SALES')}
+                className={activeTab === 'SALES' ? 'active' : ''}
+                onClick={() => { scope?.onDirectionChange?.('입금'); setActiveTab('SALES'); }}
               >
                 매출(판매)
-              </button>
-              <button
+              </button></li>
+              <li><button
                 type="button"
-                className={`finance-tab ${activeTab === 'PURCHASE' ? 'is-active' : ''}`}
-                onClick={() => setActiveTab('PURCHASE')}
+                className={activeTab === 'PURCHASE' ? 'active' : ''}
+                onClick={() => { scope?.onDirectionChange?.('출금'); setActiveTab('PURCHASE'); }}
               >
                 매입(구매)
-              </button>
-            </div>
+              </button></li>
+              <li><button
+                type="button"
+                className={activeTab === 'APPROVAL' ? 'active' : ''}
+                onClick={() => { scope?.onDirectionChange?.('출금'); setActiveTab('APPROVAL'); }}
+              >승인 지출 ({scopedList.filter(item => item.isApprovalDocument).length})</button></li>
+            </ul>
 
             <div style={{ display: 'flex', gap: '6px', flex: 1, maxWidth: '280px' }}>
               <select
@@ -762,6 +911,10 @@ function Items() {
                 <option value="ALL">전체 상태</option>
                 <option value="미정산">미정산</option>
                 <option value="완료">완료</option>
+                <option value="미등록">미등록</option>
+                <option value="지급대기">지급대기</option>
+                <option value="일부 지급">일부 지급</option>
+                <option value="지급완료">지급완료</option>
                 <option value="OVERDUE">마감 초과</option>
               </select>
               <input
@@ -774,22 +927,25 @@ function Items() {
             </div>
           </div>
 
+          {approvalsLoading && <p>승인 지출을 불러오는 중입니다.</p>}
+          {approvalsError && <p role="alert">{approvalsError}</p>}
           {loading && <p>거래 품목을 불러오는 중입니다.</p>}
           {error && <p role="alert">{error}</p>}
-          {!loading && !error && filteredList.length === 0 && (
+          {!loading && !approvalsLoading && !error && !approvalsError && filteredList.length === 0 && (
             <p>표시할 거래 품목이 없습니다.</p>
           )}
 
           {formOpen && (
             <div className="finance-registration-modal">
               <ModalBase
-                title={editingItemId === null ? "신규 매입·매출 거래 등록" : "거래 품목 수정"}
+                title={linkingApproval ? "승인 지출 거래정보 등록" : editingItemId === null ? "신규 매입·매출 거래 등록" : "거래 품목 수정"}
                 onClose={closeRegistrationModal}
   
                 layout={(
                   <form onSubmit={handleItemSubmit}>
                   
                     <fieldset disabled={saving}>
+                      {linkingApproval && <p>원본: {linkingApproval.itemName}<br />승인 금액: {linkingApproval.totalAmount.toLocaleString()}원 · 입력 합계가 이 금액과 같아야 합니다.</p>}
                       <div>
                         <label htmlFor="item-partner">거래처 *</label>
                         <select
@@ -816,6 +972,7 @@ function Items() {
                         <label htmlFor="item-trade-type">거래 구분 *</label>
                         <select
                           id="item-trade-type"
+                          disabled={Boolean(linkingApproval)}
                           name="trade_type"
                           value={itemForm.trade_type}
                           onChange={handleItemChange}
@@ -1075,16 +1232,17 @@ function Items() {
           )}
 
           <PaginationTable
-            key={`${activeTab}-${searchTerm}-${settlementFilter}`}
+            key={`${activeTab}-${searchTerm}-${settlementFilter}-${scope?.month}-${scope?.direction}-${scope?.view}-${scope?.groupId}-${scope?.selectedCodes.join(',')}-${tItemData.length}`}
             title={itemTableTitle}
             th={itemHeaders}
             allData={tItemData}
             itemsPerPage={5}
           />
+          {compact && <p className="finance-workspace-note">{scope?.view === 'completed' ? '조회 기간에 입출금한 거래입니다. 합계 금액은 품목의 전체 거래금액입니다.' : '조회 월 마감의 미정산 거래입니다. 분류가 없는 거래는 미분류에서 확인하세요.'}</p>}
           {selectedItem && !formOpen && !paymentTarget && (
             <div className="finance-registration-modal finance-voucher-detail">
               <ModalBase
-                title="매입·매출 전표"
+                title={selectedItem.isApprovalDocument ? "승인 지출 상세" : "매입·매출 전표"}
                 onClose={closeVoucher}
                 layout={(
                   <section aria-label="거래 전표 상세정보">
@@ -1094,19 +1252,20 @@ function Items() {
               <table className="finance-voucher-fields">
                 <tbody>
                   {[
-                    ["거래 ID", selectedItem.transactionId],
-                    ["품목 ID", selectedItem.id],
-                    ["거래 구분", selectedItem.type === "SALES" ? "매출" : "매입"],
+                    [selectedItem.isApprovalDocument ? "원본 결재 번호" : "거래 ID", selectedItem.isApprovalDocument ? selectedItem.sourceDocumentId : selectedItem.transactionId],
+                    ["품목 ID", selectedItem.isApprovalDocument ? "미등록" : selectedItem.id],
+                    ["거래 구분", selectedItem.isApprovalDocument ? "승인 지출" : selectedItem.type === "SALES" ? "매출" : "매입"],
                     ["거래일", selectedItem.date],
                     ["정산 마감일", selectedItem.dueDate || "미등록"],
                     ["거래처", selectedItem.customer],
-                    ["품목명", selectedItem.itemName],
+                    ["제목", selectedItem.itemName],
+                    ["품목명", selectedItem.isApprovalDocument ? "미등록" : selectedItem.itemName],
                     ["규격", selectedItem.spec],
-                    ["수량", selectedItem.quantity.toLocaleString()],
-                    ["단가", `${selectedItem.unitPrice.toLocaleString()}원`],
-                    ["공급가액", `${selectedItem.supplyAmount.toLocaleString()}원`],
-                    ["부가세", `${selectedItem.vat.toLocaleString()}원`],
-                    ["합계 금액", `${selectedItem.totalAmount.toLocaleString()}원`],
+                    ["수량", selectedItem.quantity == null ? "미등록" : selectedItem.quantity.toLocaleString()],
+                    ["단가", selectedItem.unitPrice == null ? "미등록" : `${selectedItem.unitPrice.toLocaleString()}원`],
+                    ["공급가액", selectedItem.supplyAmount == null ? "미등록" : `${selectedItem.supplyAmount.toLocaleString()}원`],
+                    ["부가세", selectedItem.vat == null ? "미등록" : `${selectedItem.vat.toLocaleString()}원`],
+                    [selectedItem.isApprovalDocument ? "신청 금액" : "합계 금액", selectedItem.totalAmount == null ? "미등록" : `${selectedItem.totalAmount.toLocaleString()}원`],
                     ["정산 상태", selectedItem.status]
                   ].map(([label, value]) => (
                     <tr key={label}>
@@ -1118,8 +1277,14 @@ function Items() {
               </table>
               </div>
 
+              {selectedItem.isApprovalDocument && (
+                <p role="status">결재 상태: 승인 · 작성자: {selectedItem.requester} · 작성일: {selectedItem.createdAt}<br />{selectedItem.content}<br />{selectedItem.isSourceDraft ? "거래정보를 등록한 뒤 이 화면의 전표에서 지급·정산할 수 있습니다." : "거래정보 등록 버튼으로 거래처·품목을 입력하면 이 화면에서 지급·정산할 수 있습니다."}</p>
+              )}
               <h3>거래 전체 정산 정보</h3>
 
+              {selectedItem.isMockDraft && (
+                <p role="status">원본 기안서 #{selectedItem.sourceDraftId} · 결재 승인 / 미정산. 더미 전표는 조회만 가능하며 실제 지급·수정·삭제는 할 수 없습니다.</p>
+              )}
               {paymentLoading ? (
                 <p>정산 정보를 불러오는 중입니다.</p>
               ) : paymentHistoryError ? (
@@ -1181,10 +1346,20 @@ function Items() {
                 )
               )}
 
+              {selectedItem.linkedSourceType && <p>승인 문서에 연결된 거래입니다. 승인 금액을 유지하며 이 전표에서 지급·정산할 수 있습니다.</p>}
               <div className="finance-detail-actions">
+              {compact && onClassify && matchingRecords(selectedItem, (scope?.view === 'completed' ? scope.entries : scope.scheduled))[0] &&
+                <button type="button" disabled={saving || paymentSaving} onClick={() => {
+                  const row = matchingRecords(selectedItem, (scope.view === 'completed' ? scope.entries : scope.scheduled))[0];
+                  setSelectedItemId(null); onClassify(row);
+                }}>분류 변경</button>}
+
+              {selectedItem.isApprovalDocument && <button type="button" className="erp-primary-button"
+                disabled={saving || paymentSaving || selectedItem.totalAmount == null}
+                onClick={() => openApprovedTradeForm(selectedItem)}>거래정보 등록</button>}
               <button
                 type="button"
-                disabled={saving || paymentSaving}
+                disabled={selectedItem.isApprovalDocument || selectedItem.isMockDraft || saving || paymentSaving}
                 onClick={() => openPaymentForm(selectedItem)}
               >
                 {selectedItem.type === "SALES" ? "입금 등록" : "출금 등록"}
@@ -1192,7 +1367,7 @@ function Items() {
 
               <button
                 type="button"
-                disabled={saving || paymentSaving}
+                disabled={selectedItem.isApprovalDocument || selectedItem.isMockDraft || saving || paymentSaving}
                 className="erp-primary-button"
                 onClick={() => openEditItemForm(selectedItem)}
               >
@@ -1201,7 +1376,7 @@ function Items() {
 
               <button
                 type="button"
-                disabled={saving || paymentSaving}
+                disabled={selectedItem.isApprovalDocument || selectedItem.isMockDraft || saving || paymentSaving}
                 className="finance-detail-delete"
                 onClick={handleItemDelete}
               >
@@ -1219,25 +1394,25 @@ function Items() {
         </div>
 
         {/* [우측 영역] 상시 노출 정산 마감 달력 (약 38% 너비) */}
-        <div style={{ flex: '0 0 38%', minWidth: '340px', borderLeft: '1px solid #e2e8f0', paddingLeft: '20px' }}>
+        {!compact && <div style={{ flex: '0 0 38%', minWidth: '340px', borderLeft: '1px solid var(--color-line)', paddingLeft: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <h4 style={{ margin: 0, fontSize: '15px', color: '#1e293b' }}>품목 정산 마감 일정</h4>
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <button
+            <h4 className="board-title finance-calendar-title">품목 정산 마감 일정</h4>
+            <ul className="grouplist">
+              <li><button
                 type="button"
-                className={calendarType === 'week' ? 'is-active' : ''}
+                className={calendarType === 'week' ? 'active' : ''}
                 onClick={() => setCalendarType('week')}
               >
                 주간
-              </button>
-              <button
+              </button></li>
+              <li><button
                 type="button"
-                className={calendarType === 'month' ? 'is-active' : ''}
+                className={calendarType === 'month' ? 'active' : ''}
                 onClick={() => setCalendarType('month')}
               >
                 월간
-              </button>
-            </div>
+              </button></li>
+            </ul>
           </div>
 
 
@@ -1248,7 +1423,7 @@ function Items() {
               <BasicCalendar schedule={calendarEvents} />
             )}
           </div>
-        </div>
+        </div>}
 
       </div>
     </div>

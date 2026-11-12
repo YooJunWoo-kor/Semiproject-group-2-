@@ -3,11 +3,11 @@ import { Navigate, Routes, Route } from 'react-router-dom';
 import FinanceModul from './FinanceModul';
 import CorpCard from './pages/CorpCard';
 import BankAccount from './pages/BankAccount';
-import Approval from './pages/Approval';
+import FinanceWorkspace from './pages/FinanceWorkspace';
 import Partners from './pages/Partners';
-import Items from './pages/Items';
 import Nav from '../../../components/Nav';
 import { getLoginUser } from "../../../utils/authStorage";
+
 
 // function FinanceHome() {
 //     let mainUrl = "/main/finance/"
@@ -31,16 +31,16 @@ function FinanceHome() {
 
     // 모든 부서에 보여줄 메뉴
     const commonMenus = [
-        { name: "대시보드", url: mainUrl }
+        { name: "대시보드", url: mainUrl },
     ];
 
     // 재무부에만 보여줄 메뉴
     const financeMenus = [
         { name: "거래처 관리", url: mainUrl + "/partners" },
-        { name: "매입/매출 품목관리", url: mainUrl + "/items" },
+        { name: "지출·거래 관리", url: mainUrl + "/items" },
         { name: "법인카드 관리", url: mainUrl + "/corp-card" },
         { name: "회사계좌 관리", url: mainUrl + "/bank-account" },
-        { name: "결제(지출)승인", url: mainUrl + "/approval" }
+        
     ];
 
     // 기본적으로 공통 메뉴만 보여줍니다.
@@ -54,15 +54,15 @@ function FinanceHome() {
 
 
     return (
-        <div className='sub-main-contain'>
+        <div className="sub-main-contain finance-module">
             <Nav urlist={urlList} title='재무'/>
             <Routes>
                 <Route index element={<FinanceModul />}/>
                 <Route path='corp-card/*' element={<CorpCard />}/>
                 <Route path='bank-account/*' element={<BankAccount />}/>
-                <Route path='approval/*' element={<Approval />}/>
+                <Route path='approval/*' element={<Navigate to="/main/finance/items?view=analysis" replace />}/>
                 <Route path='partners/*' element={<Partners />}/>
-                <Route path='items/*' element={<Items />}/>
+                <Route path='items/*' element={<FinanceWorkspace />}/>
                 <Route path='*' element={<Navigate to="/main/finance" replace />}/>
             </Routes>
         </div>
