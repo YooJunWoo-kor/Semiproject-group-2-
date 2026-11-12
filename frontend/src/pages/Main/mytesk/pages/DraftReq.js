@@ -51,7 +51,7 @@ function DraftReq({ drafts, setEditingDraft, onDraftChanged }) {
     }
 
     return (
-        <div className="draft-box" data-page="draft-request">
+        <div className="draft-box draft-list-view" data-page="draft-request">
             <h2>요청된 기안서 / 임시저장된 기안서</h2>
     
             <input
