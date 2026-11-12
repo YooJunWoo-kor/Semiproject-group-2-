@@ -4,14 +4,13 @@ import ProjectProgress from '../../../../components/ProjectProgress';
 import ProjectWorkDetail from './ProjectWorkDetail';
 import ProjectDetailWorkList from './ProjectDetailWorkList';
 import ColorTeg from '../../../../components/ColorTeg';
+import ProjectStatusTage from "../../../../components/ProjectStatusTage";
 
 // 프로젝트 세부
 function ProjectDetail({ project }) {
     const tasks = project.tasks || [];
   
     // 프로젝트 전환 시 선택된 할 일 초기화 (해당 프로젝트의 첫 할 일이 있으면 선택, 없으면 null)
-    
-  
     // 신규 할 일 등록
     const handleCreateTask = () => {
       
@@ -20,30 +19,28 @@ function ProjectDetail({ project }) {
     const test = {id:0, name: '담당자명'};
   
     return (
-      <div className="border-container">
-        
-        <header className="dashboard-header">
-          <div style={{display: 'flex'}}>
-            <span className="subtitle">{project.title}</span>
-            <div>
-              <ColorTeg title={'진행사항'} count={'50'} type={'%'}/>
-            </div>
+      <div>
+        <hr/>
+        <header style={{display: 'flex', gap:'20px', marginBottom:'50px', marginTop:'20px'}}>
+          <div>
+            {/* 스케쥴 상태 스테이터스 */}
+            <ProjectStatusTage start={project.start} end={project.end}/>
           </div>
           {/* 진행바 모듈 */}
-          <div style={{display:'flex', flex: '1', margin:'0 30px'}}>
+          <div style={{display:'flex', flex: '1'}}>
             <ProjectProgress start={project.start} end={project.end}/>
           </div>
           <button
-                type="button"
-                className="register-btn"
-                style={{ fontSize: "12px", marginLeft:'auto'}}
-                onClick={handleCreateTask}
-              >
-                + 할 일 추가
-              </button>
+            type="button"
+            className="register-btn"
+            style={{ fontSize: "12px", marginLeft:'auto'}}
+            onClick={handleCreateTask}
+          >
+            + 할 일 추가
+          </button>
         </header>
   
-        <div style={{ display: "flex", flexFlow:'column',gap: "20px", minHeight: "480px" }}>
+        <div style={{ display: "flex", flexFlow:'column',gap: "20px" }}>
           
           {/* 참여인원 */}
           <section

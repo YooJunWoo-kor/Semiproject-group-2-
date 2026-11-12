@@ -29,8 +29,6 @@ function ProjectHome() {
     });
   });
 
- 
-
   return (
     <div className="sub-main-contain">
       <Nav urlist={urlList} title={'프로젝트'}/>
@@ -44,7 +42,6 @@ function ProjectHome() {
               element={
                 <ProjectDetail
                   project={item}
-                  
                 />
               }
             />

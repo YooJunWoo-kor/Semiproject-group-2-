@@ -4,9 +4,10 @@ const db = require('../db');
 
 router.get('/getproject', async (req, res) =>{
     const query = `
-        select project_id, project_name, start_date as 'start', end_date as 'end', employee_id, description, visible
+        select project_id, project_name, start_date as 'start', end_date as 'end', employee_id, description, visible, typeId
         from project
         where visible = 1
+        order by start_date
     `
     db.query(query, (err, data) => {
         if(err){
@@ -28,12 +29,12 @@ router.get('/getproject', async (req, res) =>{
 router.post('/setProject', async(req, res) => {
     const requst = req.body;
     const value = [
-        requst.project_name, requst.start_date, requst.end_date, requst.description, requst.is_visible, requst.employee_id
+        requst.project_name, requst.start_date, requst.end_date, requst.description, requst.is_visible, requst.employee_id, requst.typeId
     ]
 
     const query = `
-        insert into project (project_name, start_date, end_date, description, visible, employee_id)
-            values ( ?, ?, ?, ?, ?, ? )`
+        insert into project (project_name, start_date, end_date, description, visible, employee_id, typeId)
+            values ( ?, ?, ?, ?, ?, ?, ?)`
 
     db.query(query, value, (err,data)=>{
         if(err){
