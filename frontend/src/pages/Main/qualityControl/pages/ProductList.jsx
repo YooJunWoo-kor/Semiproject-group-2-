@@ -76,10 +76,12 @@ function ProductList() {
             <header className="dashboard-header quality-page-header">
                 <div>
                     <span className="quality-eyebrow">PRODUCTS</span>
-                    <h1>제품 목록</h1>
+                    <div className="quality-title-row">
+                        <h1>제품 목록</h1>
+                        <span className="quality-header-badge">{filteredProducts.length}개 제품</span>
+                    </div>
                     <p>등록된 제품의 기본정보와 재고 현황을 확인합니다.</p>
                 </div>
-                <div className="quality-header-badge">{filteredProducts.length}개 제품</div>
                 <div className="dashboard-top">
                     <button type="button" className="register-btn" onClick={() => setIsRegisterOpen(true)}>
                         + 제품등록
