@@ -4,7 +4,7 @@ import {
   getApprovalPayments, createApprovalPayment,
   getBankAccounts, getCorporateCards
 } from "../../../../utils/financeService";
-import "../FinanceRegistration.css";
+import './Finance.css';
 
 // 백엔드와 동일하게 한국 날짜를 사용합니다.
 function todayInKorea() {

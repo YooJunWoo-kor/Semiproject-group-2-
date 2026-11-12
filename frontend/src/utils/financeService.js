@@ -315,3 +315,14 @@ export async function createApprovalPayment(documentId, paymentData) {
     const response = await axios.post(`${FINANCE_API_URL}/approvals/${documentId}/payments`, paymentData);
     return response.data;
 }
+
+// 결제 관리의 기간별 입출금, 미정산 잔액, 분류 목록
+export async function getPaymentManagement(params) {
+    const response = await axios.get(`${FINANCE_API_URL}/payment-management`, { params });
+    return response.data;
+}
+
+export async function savePaymentClassification(data) {
+    const response = await axios.put(`${FINANCE_API_URL}/payment-management/classification`, data);
+    return response.data;
+}
