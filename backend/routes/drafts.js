@@ -299,5 +299,29 @@ router.get('/:draftId', async (req, res) => {
     }
 });
 
+router.delete('/cancel/:draftId/:employeeId', (req, res) => {
+    const draftId = Number(req.params.draftId);
+    const employeeId = Number(req.params.employeeId);
+
+
+    const sql = `
+        DELETE FROM my_draft
+        WHERE draft_id = ? AND employee_id = ? AND status = 'PENDING'
+    `
+
+    const values = [draftId, employeeId];
+
+    db.query(sql, values, (err, rows) => {
+        if(err){
+            console.log("기안서 삭제 실패");
+            return res.status(500).json({
+                message: "삭제 오류"
+            })
+        }
+
+        return res.json(rows);
+    })
+})
+
 
 module.exports = router;

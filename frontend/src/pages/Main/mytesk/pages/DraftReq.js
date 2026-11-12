@@ -33,6 +33,23 @@ function DraftReq({ drafts, setEditingDraft, onDraftChanged }) {
         }
     }
 
+    const CancelReq = async (draftId) => {
+        if(!window.confirm("결재 요청을 취소하시겠습니까?")){
+            return;
+        }
+
+        try{
+            await axios.delete(`${API_BASE_URL}/drafts/cancel/${draftId}/${employeeId}`
+            );
+
+            await onDraftChanged();
+            
+        }
+        catch (error){
+            console.error("요청 취소 오류:", error);
+        }
+    }
+
     return (
         <div className="draft-box" data-page="draft-request">
             <h2>요청된 기안서 / 임시저장된 기안서</h2>
@@ -81,7 +98,7 @@ function DraftReq({ drafts, setEditingDraft, onDraftChanged }) {
                                     삭제
                                 </button>
                             </div>
-                        ) : null
+                        ) : <button onClick={() => CancelReq()}>요청취소</button>
                     ]
                 }))}
 

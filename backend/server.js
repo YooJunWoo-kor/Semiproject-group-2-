@@ -28,6 +28,18 @@ const qualityRoutes = require('./routes/quality');
 app.use(cors());
 app.use(express.json());
 
+// 모든 HTTP 요청 확인
+app.use((req, res, next) => {
+    console.log("요청 도착:", req.method, req.url);
+    next();
+});
+
+// 서버 응답 테스트
+app.get('/api/health', (req, res) => {
+    console.log("health API 실행");
+    res.json({ success: true, message: "서버 정상" });
+});
+
 // API 연결
 app.use('/api/hr', hrRouter);
 app.use('/api/finance', financeRouter);
@@ -193,10 +205,12 @@ app.post('/api/login', (req, res) => {
                     employee_id: user.employee_id,
                     employee_number: user.employee_number,
                     name: user.name,
+                    email: user.email,
                     department_name: user.department_name,
                     department_id: user.department_id,
                     position: user.position,
                     role: user.role
+                    
                 }
             });
         } else {
