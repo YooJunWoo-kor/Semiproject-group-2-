@@ -299,7 +299,7 @@ router.get('/:draftId', async (req, res) => {
     }
 });
 
-router.delete('/cancel/:draftId/:employeeId'), (req, res) => {
+router.delete('/cancel/:draftId/:employeeId', (req, res) => {
     const draftId = Number(req.params.draftId);
     const employeeId = Number(req.params.employeeId);
 
@@ -322,8 +322,7 @@ router.delete('/cancel/:draftId/:employeeId'), (req, res) => {
         return res.json(rows);
     })
 
-    
-}
+})
 
 
 module.exports = router;
