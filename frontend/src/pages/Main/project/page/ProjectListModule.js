@@ -1,6 +1,5 @@
 import React from "react";
 import ProjectProgress from "../../../../components/ProjectProgress";
-
 import ProjectStatusTage from "../../../../components/ProjectStatusTage";
 
 //데시보드 프로젝트 리스트
@@ -9,7 +8,7 @@ function ProjectListModule({data, buttonClick}){
     const tage1Color = tageTyp1 == "공개" ? 'tag-emerald' : 'tag-red';
 
     return (
-      <div className='boder' style={{display:'flex', flexFlow:'column', height: '130px', padding: '20px 30px', marginRight: '30px'}}>
+      <div className='boder' style={{display:'flex', flexFlow:'column', height: '130px', padding: '20px 30px', paddingBottom: '130px', marginRight: '30px'}}>
         
         <div style={{display:'flex'}}>
           <div style={{display:'flex', flexFlow:'column', fontSize: '30px', gap:'10px'}}>

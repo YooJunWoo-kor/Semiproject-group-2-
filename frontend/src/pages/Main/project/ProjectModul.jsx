@@ -43,6 +43,8 @@ export default function ProjectModul() {
     setIsProjectDetail(true);
     setCurrontProjectIndex(projectID);
   }
+  //프로젝트 상세 닫기
+  const clossProjectDetail=()=>{setIsProjectDetail(false)};
 
   let selectData;
   let selectProjectTitle;
@@ -96,8 +98,13 @@ export default function ProjectModul() {
         <ModalBase onClose={clossModal} title={'프로젝트 등록'}
         layout ={<SetNewProjectLayout setIsModal={clossModal}/>}/> : null}
       { isProjectDetail ?
-        <ModalBase title={selectProjectTitle}
-          layout={<ProjectDetail project = {selectData[0]}/>}
+        <ModalBase title={selectProjectTitle} onClose={clossProjectDetail}
+          layout={
+            <ProjectDetail
+              project = {selectData[0]}
+              onClose={clossProjectDetail}
+            />
+          }
         /> : null}
     </div>
   );

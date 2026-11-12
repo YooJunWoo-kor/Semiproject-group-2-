@@ -1,27 +1,40 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 import ProjectProgress from '../../../../components/ProjectProgress';
 import ProjectWorkDetail from './ProjectWorkDetail';
 import ProjectDetailWorkList from './ProjectDetailWorkList';
-import ColorTeg from '../../../../components/ColorTeg';
 import ProjectStatusTage from "../../../../components/ProjectStatusTage";
+import axios from "axios";
+import { API_BASE_URL } from "../../../../utils/authStorage";
 
 // 프로젝트 세부
-function ProjectDetail({ project }) {
+function ProjectDetail({ project, onClose }) {
     const tasks = project.tasks || [];
+    const [bodyStyle, setBodyStyle] = useState(0);
   
     // 프로젝트 전환 시 선택된 할 일 초기화 (해당 프로젝트의 첫 할 일이 있으면 선택, 없으면 null)
     // 신규 할 일 등록
     const handleCreateTask = () => {
-      
     };
+
+    const [leader, setleader] = useState('');
   
-    const test = {id:0, name: '담당자명'};
-  
+    const getLeader = async()=>{
+      let data = await axios.post(
+        API_BASE_URL+'/project/get_employee',
+        {employee_id : project.employee_id}
+      );
+      setleader(data.data.data[0]);
+    }
+
+    useEffect(()=>{
+      getLeader()
+    },[]);
+
     return (
       <div>
         <hr/>
-        <header style={{display: 'flex', gap:'20px', marginBottom:'50px', marginTop:'20px'}}>
+        <header style={{display: 'flex', gap:'20px', marginBottom:'20px', marginTop:'20px'}}>
           <div>
             {/* 스케쥴 상태 스테이터스 */}
             <ProjectStatusTage start={project.start} end={project.end}/>
@@ -50,10 +63,8 @@ function ProjectDetail({ project }) {
               gap: "10px"
             }}
           >
-            <div style={{display:'flex',fontSize: "15px", fontWeight:'500px'}}>
-              <strong>담당자</strong>
-            </div>
-            <MemberLayout member={test}/>
+            <strong> 담당자 </strong>
+            <MemberLayout member={leader}/>
             <div style={{display:'flex',fontSize: "15px", fontWeight:'500px'}}>
               <strong>참여자 ({project.members?.length || 0})</strong>
             </div>
@@ -69,15 +80,37 @@ function ProjectDetail({ project }) {
           <section
             style={{
               display: 'flex',
+              flexFlow: 'column',
               paddingRight: "16px",
               minWidth: 0,
             }}
           >
-            <ProjectDetailWorkList tasks={tasks} project = {project}/>
-            <ProjectWorkDetail tasks={tasks}/>
+            <div style={{display:'flex', gap:'5px', marginBottom:"30px"}}>
+              <button
+                style={{ fontSize: "13px"}}
+                onClick={()=>{
+                  setBodyStyle(0);
+                }}
+              >할 일 리스트</button>
+              <button
+                style={{ fontSize: "13px"}}
+                onClick={()=>{
+                  setBodyStyle(1);
+                }}
+              >할 일 상세</button>
+            </div>
+              {bodyStyle == 0 ?
+                <ProjectDetailWorkList tasks={tasks} project = {project}/>
+                :<ProjectWorkDetail tasks={tasks}/>}
           </section>
   
-          
+          <div style={{display: 'flex'}}>
+            <button
+              style={{
+                marginLeft:'auto'
+              }}
+            > 닫기</button>
+          </div>
         </div>
       </div>
     );
