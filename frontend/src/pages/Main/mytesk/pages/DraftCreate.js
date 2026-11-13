@@ -20,6 +20,16 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
     const [selectedDepartment, setSelectedDepartment] = useState("");
     const [tempApprover, setTempApprover] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [receiptFile, setReceiptFile] = useState(null);
+
+    const [expenseItems, setExpenseItems] = useState([
+        {
+            useDate: "",
+            merchant: "",
+            amount: "",
+            memo: ""
+        }
+    ]);
 
     const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount } = form;
 
@@ -102,10 +112,19 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 alert("물품명과 올바른 수량을 입력해주세요.");
                 return;
             }
-            if (draftType === "비용" && (!useDate || amount === "" || Number(amount) < 0)) {
-                alert("사용일과 올바른 금액을 입력해주세요.");
-                return;
+
+
+            if (draftType === "비용") {
+                const invalidExpense = expenseItems.some(item => !item.useDate || !item.merchant.trim() || item.amount === ""
+                    || !Number.isSafeInteger(Number(item.amount)) || Number(item.amount) <= 0);
+
+
+                if (expenseItems.length === 0 || invalidExpense) {
+                    alert("모든 비용 항목의 사용일, 사용처, 올바른 금액을 입력해주세요.");
+                    return;
+                }
             }
+
         }
 
         const employeeId = Number(getLoginUser()?.employeeKey);
@@ -116,7 +135,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
 
         const detailData = draftType === "휴가" ? { startDate, endDate } :
             draftType === "구매" ? { itemName, quantity } :
-            draftType === "비용" ? { useDate, amount } : {};
+                draftType === "비용" ? { expenseItems, totalAmount } : {};
 
         const payload = {
             employeeId, title: title.trim(), documentType: draftType,
@@ -153,6 +172,34 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             setIsSaving(false);
         }
     };
+
+    const handleExpenseChange = (index, name, value) => {
+        setExpenseItems(prev => {
+            return prev.map((item, i) => (
+                i === index ? { ...item, [name]: value } : item
+            ));
+        });
+    };
+
+    const handleAddExpense = () => {
+        setExpenseItems(prev => [
+            ...prev,
+            {
+                useDate: "",
+                merchant: "",
+                amount: "",
+                memo: "",
+            }
+        ])
+    }
+
+    const handleDeleteExpense = (index) => {
+        setExpenseItems(prev => prev.filter((_, i) => i !== index))
+    }
+
+    const totalAmount = expenseItems.reduce((sum, item) => {
+        return sum + (Number(item.amount) || 0);
+    }, 0);
 
     return (
         <div className="draft-box">
@@ -203,15 +250,59 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                     </div>
                 )}
                 {draftType === "비용" && (
-                    <div className="draft-row">
-                        <label>사용일
-                            <input type="date" name="useDate" value={useDate} onChange={handleInputChange} />
+                    <>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>사용일</th>
+                                    <th>사용처</th>
+                                    <th>금액</th>
+                                    <th>비고</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {expenseItems.map((item, index) => (
+                                    <tr key={index}>
+                                        <td>
+                                            <input type="date" value={item.useDate} onChange={(e) => handleExpenseChange(index, "useDate", e.target.value)} />
+                                        </td>
+
+                                        <td>
+                                            <input type="text" value={item.merchant} onChange={(e) => handleExpenseChange(index, "merchant", e.target.value)} />
+                                        </td>
+
+                                        <td>
+                                            <input type="number" min="0" value={item.amount} onChange={(e) => handleExpenseChange(index, "amount", e.target.value)} />
+                                        </td>
+
+                                        <td>
+                                            <input type="text" value={item.memo} onChange={(e) => handleExpenseChange(index, "memo", e.target.value)} />
+                                        </td>
+
+                                        <td>
+                                            <button type="button" onClick={() => handleDeleteExpense(index)} disabled={expenseItems.length === 1}>삭제</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+
+                        <p>
+                            총 합계 : {totalAmount.toLocaleString("ko-KR")}원
+                        </p>
+
+                        <label>
+                            영수증 첨부
+                            <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={(e) => setReceiptFile(e.target.files[0] || null)}
+                            />
                         </label>
-                        <label>금액
-                            <input type="number" min="0" step="1" name="amount"
-                                value={amount} onChange={handleInputChange} />
-                        </label>
-                    </div>
+                        
+                        <button type="button" onClick={handleAddExpense}>행 추가</button>
+                    </>
                 )}
 
                 <label>내용
