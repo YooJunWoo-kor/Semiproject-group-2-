@@ -7,6 +7,26 @@ const financeMysql = require("mysql2/promise");
 
 const router = express.Router();
 
+// 기존 payments의 급여 지급 당시 금액을 읽습니다. 별도 연결 테이블은 사용하지 않습니다.
+const payrollPaymentRowsSql = `
+    SELECT payment_id, payroll_id,
+    JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.pay_month')) AS pay_month,
+    CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.employee_id')) AS UNSIGNED) AS employee_id,
+    CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.draft_id')) AS UNSIGNED) AS draft_id,
+    CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.base_amount')) AS UNSIGNED) AS base_amount,
+    CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.allowance_amount')) AS UNSIGNED) AS allowance_amount,
+    CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.bonus_amount')) AS UNSIGNED) AS bonus_amount,
+    CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.gross_amount')) AS UNSIGNED) AS gross_amount,
+    CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.deduction_amount')) AS UNSIGNED) AS deduction_amount,
+    CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.net_amount')) AS UNSIGNED) AS net_amount,
+    CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.registered_by')) AS UNSIGNED) AS registered_by,
+    JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.deduction_status')) AS deduction_status
+    FROM payments
+    WHERE payroll_id IS NOT NULL AND payment_status = '완료' AND payment_direction = '출금'
+`;
+
+
+
 // 승인 기안서를 조회용 재무 목록 형식으로 변환합니다. DB에 복제하지 않습니다.
 function readDetailData(value) {
     if (Buffer.isBuffer(value)) value = value.toString('utf8');
@@ -29,11 +49,19 @@ function readDueDate(value) {
     return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value ? value : null;
 }
 
-function toApprovedDraftView(rows) {
+function financeApprovalStatus(value) {
+    const status = String(value || '').trim().toUpperCase();
+    if (['APPROVED', '승인'].includes(status)) return '승인';
+    if (['PENDING', 'WAITING', 'IN_PROGRESS', '대기', '승인대기', '결재대기', '진행중'].includes(status)) return '대기';
+    if (['REJECTED', '반려'].includes(status)) return '반려';
+    return null;
+}
+
+function toApprovedDraftView(rows, includeUnapproved = false) {
     const seen = new Set();
     return rows.filter((row) => {
         const id = String(row.draft_id ?? '');
-        if (row.status !== 'APPROVED' || !/^[1-9]\d*$/.test(id) || seen.has(id)) return false;
+        if (!financeApprovalStatus(row.status) || (!includeUnapproved && financeApprovalStatus(row.status) !== '승인') || !/^[1-9]\d*$/.test(id) || seen.has(id)) return false;
         seen.add(id);
         return true;
     }).map((row) => {
@@ -42,14 +70,15 @@ function toApprovedDraftView(rows) {
             document_id: `draft-${row.draft_id}`,
             source_type: 'draft', source_draft_id: row.draft_id,
             is_payroll_draft: Number(row.is_payroll_draft) === 1,
+            payroll_months: String(row.payroll_months || '').split(',').filter(Boolean),
             linked_transaction_id: row.linked_transaction_id ?? null,
             employee_id: row.employee_id,
             requester_name: row.requester_name,
             department_name: row.department_name,
             title: row.title, content: row.content || '',
-            amount: readAmount(row.expense_amount ?? detail.amount),
+            amount: readAmount(row.expense_amount ?? row.payroll_amount ?? detail.amount),
             due_date: readDueDate(detail.due_date),
-            approval_status: '승인', document_type: row.document_type,
+            approval_status: financeApprovalStatus(row.status), original_approval_status: row.status, document_type: row.document_type,
             created_at: row.created_at,
             payment_methods: '', attachment_count: 0
         };
@@ -72,8 +101,7 @@ const expenseGroups = [
     ['production', '제품 생산 및 매입 비용', ['원재료비', '부자재비', '완제품 매입비', '외주가공비', '물류 및 보관비']],
     ['research', '연구개발 및 인증 비용', ['제품 연구개발비', '샘플 제작비', '시험·검사비', '인증·등록비']],
     ['marketing', '마케팅 및 유통 판매비', ['광고비', '콘텐츠 제작비', '인플루언서 협찬비', '판매 수수료', '배송비', '프로모션비']],
-    ['administration', '일반 관리 및 인건비', ['급여', '복리후생비', '임차료', '공과금', '사무용품비', '시스템 이용료']],
-    ['other', '기타', ['기타 지출']]
+    ['administration', '일반 관리 및 인건비', ['급여', '복리후생비', '임차료', '공과금', '사무용품비', '시스템 이용료']]
 ];
 // 수입 분류는 기본안이며 회사 기준에 맞게 이 목록에서 변경할 수 있습니다.
 const incomeGroups = [
@@ -154,6 +182,20 @@ function parsePartnerCalendarTypeId(value) {
     return Number.isInteger(typeId) && typeId >= 0 && typeId <= 255 ? typeId : undefined;
 }
 
+// DB 구조 오류는 화면에서도 필요한 조치를 확인할 수 있게 안내합니다.
+function partnerDatabaseError(err, fallback) {
+    if (err.code === "ER_BAD_FIELD_ERROR") {
+        const column = /Unknown column '([^']+)'/.exec(err.sqlMessage || "")?.[1];
+        return column === "calendar_type_id"
+            ? "일정 색상 저장 컬럼이 없습니다. 동봉된 01_partner_calendar_column.sql을 실행해 주세요."
+            : `DB 컬럼을 확인해 주세요${column ? `: ${column}` : ""}. 백엔드 터미널의 오류 내용을 확인해 주세요.`;
+    }
+    if (err.code === "ER_NO_SUCH_TABLE") {
+        return "조회에 필요한 DB 테이블이 없습니다. 백엔드 터미널의 오류 내용을 확인해 주세요.";
+    }
+    return fallback;
+}
+
 // [재무관리] 거래처 목록 조회
 router.get("/partners", (req, res) => {
     const query = `
@@ -205,6 +247,41 @@ ORDER BY p.partner_id DESC
             });
         }
 
+        res.json(rows);
+    });
+});
+
+// 목록과 동일한 계산 기준으로 거래별 미정산 금액을 조회합니다.
+router.get("/partners/:id/balance-details", (req, res) => {
+    const partnerId = Number(req.params.id);
+    const tradeType = req.query.trade_type;
+    if (!Number.isSafeInteger(partnerId) || partnerId <= 0 || !["매입", "매출"].includes(tradeType)) {
+        return res.status(400).json({ message: "거래처와 거래 구분을 확인해 주세요." });
+    }
+    const direction = tradeType === "매출" ? "입금" : "출금";
+    const query = `
+SELECT t.transaction_id,
+DATE_FORMAT(t.trade_date, '%Y-%m-%d') AS trade_date,
+DATE_FORMAT(t.due_date, '%Y-%m-%d') AS due_date,
+i.total_amount, COALESCE(pay.paid_amount, 0) AS paid_amount,
+i.total_amount - COALESCE(pay.paid_amount, 0) AS remaining_amount
+FROM trade_transactions t
+LEFT JOIN (
+  SELECT transaction_id, SUM(supply_price + vat) AS total_amount
+  FROM trade_items GROUP BY transaction_id
+) i ON i.transaction_id = t.transaction_id
+LEFT JOIN (
+  SELECT transaction_id, SUM(amount) AS paid_amount
+  FROM payments WHERE payment_status = '완료' AND payment_direction = ?
+  GROUP BY transaction_id
+) pay ON pay.transaction_id = t.transaction_id
+WHERE t.partner_id = ? AND t.trade_type = ?
+ORDER BY t.trade_date DESC, t.transaction_id DESC`;
+    db.query(query, [direction, partnerId, tradeType], (err, rows) => {
+        if (err) {
+            console.error("거래처 금액 상세 조회 오류:", err);
+            return res.status(500).json({ message: partnerDatabaseError(err, "금액 상세정보를 불러오지 못했습니다.") });
+        }
         res.json(rows);
     });
 });
@@ -307,7 +384,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             }
 
             return res.status(500).json({
-                message: "거래처 등록에 실패했습니다."
+                message: partnerDatabaseError(err, "거래처 등록에 실패했습니다.")
             });
         }
 
@@ -443,7 +520,7 @@ WHERE partner_id=?
                     }
 
                     return res.status(500).json({
-                        message: "거래처 수정에 실패했습니다."
+                        message: partnerDatabaseError(err, "거래처 수정에 실패했습니다.")
                     });
                 }
 
@@ -499,6 +576,11 @@ router.delete("/partners/:id", (req, res) => {
     });
 });
 
+// 등록창과 요약 화면이 같은 분류 정의를 사용합니다.
+router.get("/item-categories", (req, res) => {
+    res.json({ purchase: groups("출금"), sales: groups("입금") });
+});
+
 // [재무관리] 매입·매출 거래 품목 목록 조회
 router.get("/items", (req, res) => {
     const query = `
@@ -520,12 +602,16 @@ i.vat,
 (i.supply_price + i.vat) AS total_amount,
 p.closing_day,
 t.source_type AS linked_source_type,
-t.source_id AS linked_source_id
+t.source_id AS linked_source_id,
+CASE WHEN c.category_code = 'expense_other_1' THEN 'unclassified'
+     ELSE COALESCE(c.category_code, 'unclassified') END AS category_code
 FROM trade_items i
 INNER JOIN trade_transactions t
 ON i.transaction_id=t.transaction_id
 INNER JOIN partners p
 ON t.partner_id=p.partner_id
+LEFT JOIN finance_payment_classifications c
+ON c.source_type = 'transaction' AND c.source_id = t.transaction_id
 ORDER BY t.trade_date DESC, t.transaction_id DESC, i.item_id DESC
 `;
     db.query(query, (err, rows) => {
@@ -563,6 +649,11 @@ router.post("/items", async (req, res) => {
     }
 
     // 입력값을 숫자와 문자열로 정리합니다.
+    const categoryCode = req.body.category_code;
+    if (categoryCode != null && categoryCode !== "" && !category(categoryCode, trade_type === "매출" ? "입금" : "출금")) {
+        return res.status(400).json({ message: "거래 구분에 맞는 분류를 선택해 주세요." });
+    }
+
     const partnerId = Number(partner_id);
     const itemName = typeof item_name === "string"
         ? item_name.trim()
@@ -773,6 +864,19 @@ router.post("/items", async (req, res) => {
                  WHERE source_type = 'approval' AND source_id = ?`, [transactionId, sourceId]);
         }
 
+        if (categoryCode) {
+            await connection.execute(
+                `INSERT INTO finance_payment_classifications (source_type, source_id, category_code)
+                 VALUES ('transaction', ?, ?) ON DUPLICATE KEY UPDATE category_code = VALUES(category_code)`,
+                [transactionId, categoryCode]);
+        }
+
+        const [savedCategories] = await connection.execute(
+            "SELECT category_code FROM finance_payment_classifications WHERE source_type = 'transaction' AND source_id = ?",
+            [transactionId]);
+        const storedCategoryCode = savedCategories[0]?.category_code;
+        const savedCategoryCode = storedCategoryCode === 'expense_other_1' ? 'unclassified' : (storedCategoryCode || 'unclassified');
+
         // 거래·품목·원본 연결이 모두 저장돼야 확정합니다.
         await connection.commit();
 
@@ -780,6 +884,7 @@ router.post("/items", async (req, res) => {
             message: "거래 품목이 등록되었습니다.",
             transaction_id: transactionId,
             item_id: itemResult.insertId,
+            category_code: savedCategoryCode,
             linked_source_type: sourceType, linked_source_id: sourceId
         });
     } catch (err) {
@@ -824,6 +929,11 @@ router.put("/items/:itemId", async (req, res) => {
         unit_price,
         vat
     } = req.body;
+
+    const categoryCode = req.body.category_code;
+    if (categoryCode != null && categoryCode !== "" && !category(categoryCode, trade_type === "매출" ? "입금" : "출금")) {
+        return res.status(400).json({ message: "거래 구분에 맞는 분류를 선택해 주세요." });
+    }
 
     const partnerId = Number(partner_id);
     const itemName =
@@ -1068,6 +1178,13 @@ router.put("/items/:itemId", async (req, res) => {
                 itemId
             ]
         );
+
+        if (categoryCode != null) {
+            await connection.execute(
+                `INSERT INTO finance_payment_classifications (source_type, source_id, category_code)
+                 VALUES ('transaction', ?, ?) ON DUPLICATE KEY UPDATE category_code = VALUES(category_code)`,
+                [transactionId, categoryCode || 'unclassified']);
+        }
 
         await connection.commit();
 
@@ -1869,10 +1986,11 @@ router.get("/bank-accounts/:accountId/payments", (req, res) => {
                     p.payment_method,
                     p.payment_direction,
                     p.payment_status,
-                    t.company_name
+                    COALESCE(t.company_name, CONCAT(payroll_link.pay_month, ' 급여'), CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'payroll_deduction' THEN CONCAT(JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.pay_month')), ' 급여 공제액 납부') END) AS company_name
                 FROM payments p
                 LEFT JOIN trade_transactions t
                     ON p.transaction_id = t.transaction_id
+                LEFT JOIN (${payrollPaymentRowsSql}) payroll_link ON payroll_link.payment_id = p.payment_id
                 WHERE p.account_id = ?
                 ORDER BY p.payment_date DESC, p.payment_id DESC
             `;
@@ -2661,15 +2779,16 @@ router.get('/payrolls/summary', (req, res) => {
                'APPROVED' AS approval_status,
                COUNT(DISTINCT p.employee_id) AS employee_count,
                COUNT(*) AS payroll_count,
-               SUM(p.base_salary) AS base_salary,
-               SUM(p.allowance) AS allowance,
-               SUM(p.bonus) AS bonus,
-               SUM(p.gross_pay) AS gross_pay,
-               SUM(p.deduction) AS deduction,
-               SUM(p.net_pay) AS net_pay,
+               SUM(COALESCE(link.base_amount, p.base_salary)) AS base_salary,
+               SUM(COALESCE(link.allowance_amount, p.allowance)) AS allowance,
+               SUM(COALESCE(link.bonus_amount, p.bonus)) AS bonus,
+               SUM(COALESCE(link.gross_amount, p.gross_pay)) AS gross_pay,
+               SUM(COALESCE(link.deduction_amount, p.deduction)) AS deduction,
+               SUM(COALESCE(link.net_amount, p.net_pay)) AS net_pay,
                SUM(CASE WHEN p.payment_status = '지급완료' THEN 1 ELSE 0 END) AS paid_count
         FROM payrolls p
         INNER JOIN my_draft d ON d.draft_id = p.draft_id
+        LEFT JOIN (${payrollPaymentRowsSql}) link ON link.payroll_id = p.payroll_id
         WHERE d.status = 'APPROVED'
           AND p.pay_month REGEXP '^[0-9]{4}-(0[1-9]|1[0-2])$'
           AND NOT EXISTS (
@@ -2691,6 +2810,306 @@ router.get('/payrolls/summary', (req, res) => {
                 ? '지급완료' : Number(row.paid_count) > 0 ? '일부 지급' : '지급대기'
         })));
     });
+});
+
+// 승인된 월 급여의 직원별 상세 (조회 전용)
+router.get('/payrolls/:month/details', (req, res) => {
+    const { month } = req.params;
+    if (!/^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(month)) {
+        return res.status(400).json({ message: '급여월을 확인해 주세요.' });
+    }
+    db.query(`
+        SELECT p.payroll_id, p.employee_id, e.name,
+               COALESCE(link.base_amount, p.base_salary) AS base_salary,
+               COALESCE(link.allowance_amount, p.allowance) AS allowance,
+               COALESCE(link.bonus_amount, p.bonus) AS bonus,
+               COALESCE(link.deduction_amount, p.deduction) AS deduction,
+               COALESCE(link.gross_amount, p.gross_pay) AS gross_pay,
+               COALESCE(link.net_amount, p.net_pay) AS net_pay,
+               p.payment_status, p.draft_id,
+               d.title AS draft_title,
+               link.payment_id, link.deduction_status,
+               DATE_FORMAT(paid.payment_date, '%Y-%m-%d') AS registered_payment_date,
+               paid.amount AS registered_payment_amount,
+               account.bank_name AS payment_bank_name,
+               account.account_name AS payment_account_name
+        FROM payrolls p
+        INNER JOIN employees e ON e.employee_id = p.employee_id
+        INNER JOIN my_draft d ON d.draft_id = p.draft_id
+        LEFT JOIN (${payrollPaymentRowsSql}) link ON link.payroll_id = p.payroll_id
+        LEFT JOIN payments paid ON paid.payment_id = link.payment_id
+        LEFT JOIN bank_accounts account ON account.account_id = paid.account_id
+        WHERE p.pay_month = ? AND d.status = 'APPROVED'
+          AND NOT EXISTS (
+              SELECT 1 FROM trade_transactions t
+              WHERE t.source_type = 'draft' AND t.source_id = d.draft_id
+          )
+        ORDER BY p.employee_id, p.payroll_id
+    `, [month], (error, rows) => {
+        if (error) {
+            console.error('급여 상세 조회 오류:', error);
+            return res.status(500).json({ message: '급여 상세를 불러오지 못했습니다.' });
+        }
+        return res.json(rows);
+    });
+});
+
+// 승인된 월 급여의 미지급 직원 전원을 지급 등록합니다. 실제 은행 송금은 실행하지 않습니다.
+router.post('/payrolls/:month/payments', async (req, res) => {
+    const { month } = req.params;
+    const { account_id, payment_date, expected_amount, expected_payroll_ids, password } = req.body || {};
+    const employeeId = Number(req.user?.employee_id ?? req.body?.employee_id);
+    const accountId = Number(account_id);
+    const expected = Number(expected_amount);
+    const fail = (status, message) => { const error = new Error(message); error.status = status; throw error; };
+    let connection;
+    let transactionOpen = false;
+    const integer = (value, label) => {
+        const number = Number(value);
+        if (value == null || !Number.isSafeInteger(number) || number < 0) fail(409, `${label}을 확인해 주세요.`);
+        return number;
+    };
+    try {
+        if (!/^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(month) ||
+            !Number.isSafeInteger(employeeId) || employeeId <= 0 ||
+            !Number.isSafeInteger(accountId) || accountId <= 0 ||
+            !Number.isSafeInteger(expected) || expected <= 0 ||
+            typeof password !== 'string' || !password) fail(400, '로그인 정보, 회사계좌, 지급 금액과 비밀번호를 확인해 주세요.');
+        if (!Array.isArray(expected_payroll_ids) || expected_payroll_ids.length === 0 ||
+            expected_payroll_ids.some(id => !Number.isSafeInteger(id) || id <= 0) ||
+            new Set(expected_payroll_ids).size !== expected_payroll_ids.length) fail(400, '지급 대상 급여를 다시 조회해 주세요.');
+        if (!readDueDate(payment_date) || payment_date > seoulToday()) fail(400, '지급일은 오늘 또는 이전 날짜로 입력해 주세요.');
+        connection = await financeMysql.createConnection({
+            host: process.env.DB_HOST, port: Number(process.env.DB_PORT || 3306),
+            user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME
+        });
+        // 기존 로그인/분류 변경과 동일한 계정 확인 방식입니다.
+        const [users] = await connection.execute(`SELECT e.department_id, ea.role
+            FROM employees e INNER JOIN employee_accounts ea ON ea.employee_id = e.employee_id
+            WHERE e.employee_id = ? AND ea.password_hash = ? AND ea.account_status = 'ACTIVE'`, [employeeId, password]);
+        if (!users.length) fail(401, '비밀번호 또는 계정 상태를 확인해 주세요.');
+        if (Number(users[0].department_id) !== 1 && users[0].role !== 'MASTER') fail(403, '재무부 또는 MASTER만 급여를 지급 등록할 수 있습니다.');
+        await connection.beginTransaction();
+        transactionOpen = true;
+        const [rows] = await connection.execute(`SELECT p.*, d.status AS approval_status
+            FROM payrolls p INNER JOIN my_draft d ON d.draft_id = p.draft_id
+            WHERE p.pay_month = ? AND d.status = 'APPROVED'
+            ORDER BY p.payroll_id FOR UPDATE`, [month]);
+        const unpaid = rows.filter(row => row.payment_status !== '지급완료');
+        if (!unpaid.length) fail(409, '지급할 승인 급여가 없거나 이미 모두 지급 등록되었습니다. 새로고침해 주세요.');
+        const currentIds = unpaid.map(row => Number(row.payroll_id)).sort((a, b) => a - b);
+        const expectedIds = [...expected_payroll_ids].sort((a, b) => a - b);
+        if (JSON.stringify(currentIds) !== JSON.stringify(expectedIds)) fail(409, '지급 대상 직원이 변경되었습니다. 새로고침 후 다시 확인해 주세요.');
+        const seenEmployees = new Set();
+        let netTotal = 0;
+        let deductionTotal = 0;
+        for (const row of rows) {
+            if (seenEmployees.has(Number(row.employee_id))) fail(409, '같은 직원의 월 급여가 중복되어 있습니다. 급여 데이터를 먼저 확인해 주세요.');
+            seenEmployees.add(Number(row.employee_id));
+        }
+        for (const row of unpaid) {
+            if (row.payment_status !== '지급대기') fail(409, '지급대기 상태의 급여만 일괄 지급할 수 있습니다.');
+            const base = integer(row.base_salary, '기본급');
+            const allowance = integer(row.allowance, '수당');
+            const bonus = integer(row.bonus, '상여금');
+            const gross = integer(row.gross_pay, '세전 급여');
+            const deduction = integer(row.deduction, '공제액');
+            const net = integer(row.net_pay, '실지급액');
+            if (base + allowance + bonus !== gross || gross - deduction !== net || net <= 0) fail(409, '급여 계산이 일치하지 않거나 실지급액이 0원입니다. 급여를 확인해 주세요.');
+            netTotal += net;
+            deductionTotal += deduction;
+            if (!Number.isSafeInteger(netTotal) || !Number.isSafeInteger(deductionTotal)) fail(409, '급여 합계가 처리 범위를 초과했습니다.');
+            const [links] = await connection.execute('SELECT payroll_id FROM payments WHERE payroll_id = ? FOR UPDATE', [row.payroll_id]);
+            if (links.length) fail(409, '이미 지급 이력이 있는 급여입니다. 다시 지급할 수 없습니다.');
+            const [trades] = await connection.execute("SELECT transaction_id FROM trade_transactions WHERE source_type = 'draft' AND source_id = ? FOR UPDATE", [row.draft_id]);
+            if (trades.length) fail(409, '이미 일반 거래로 연결된 기안서입니다. 기존 거래의 지급 이력을 확인해 주세요.');
+        }
+        if (netTotal !== expected) fail(409, '조회 후 급여 금액이나 지급 상태가 변경되었습니다. 새로고침 후 다시 확인해 주세요.');
+        const [accounts] = await connection.execute('SELECT balance, currency, account_status FROM bank_accounts WHERE account_id = ? FOR UPDATE', [accountId]);
+        if (!accounts.length) fail(404, '회사계좌를 찾을 수 없습니다.');
+        const account = accounts[0];
+        if (account.currency !== 'KRW' || !['사용', 'ACTIVE'].includes(account.account_status)) fail(409, '사용 가능한 원화 회사계좌를 선택해 주세요.');
+        const balance = integer(account.balance, '계좌 잔액');
+        if (balance < netTotal) fail(409, '회사계좌 잔액이 부족합니다.');
+        await connection.execute(`UPDATE bank_accounts SET balance = ?,
+            last_transaction = GREATEST(COALESCE(last_transaction, ?), ?) WHERE account_id = ?`,
+            [balance - netTotal, payment_date, payment_date, accountId]);
+        for (const row of unpaid) {
+            const snapshot = {
+                pay_month: month, employee_id: Number(row.employee_id), draft_id: Number(row.draft_id),
+                base_amount: Number(row.base_salary), allowance_amount: Number(row.allowance), bonus_amount: Number(row.bonus),
+                gross_amount: Number(row.gross_pay), deduction_amount: Number(row.deduction), net_amount: Number(row.net_pay),
+                deduction_status: '납부대기', registered_by: employeeId
+            };
+            await connection.execute(`INSERT INTO payments
+                (document_id, transaction_id, payment_date, amount, payment_method,
+                 payment_direction, payment_status, account_id, card_id, payroll_id, payroll_snapshot)
+                VALUES (NULL, NULL, ?, ?, '계좌이체', '출금', '완료', ?, NULL, ?, ?)`,
+                [payment_date, Number(row.net_pay), accountId, row.payroll_id, JSON.stringify(snapshot)]);
+            const [updated] = await connection.execute(`UPDATE payrolls
+                SET payment_status = '지급완료', payment_date = ?
+                WHERE payroll_id = ? AND payment_status = '지급대기'`, [payment_date, row.payroll_id]);
+            if (updated.affectedRows !== 1) fail(409, '급여 상태가 변경되었습니다. 다시 확인해 주세요.');
+        }
+        await connection.commit();
+        transactionOpen = false;
+        return res.status(201).json({
+            message: `${unpaid.length}명의 급여 지급 내역이 등록되었습니다.`,
+            employee_count: unpaid.length, amount: netTotal, deduction_pending: deductionTotal,
+            account_balance: balance - netTotal, payment_date
+        });
+    } catch (error) {
+        if (transactionOpen) { try { await connection.rollback(); } catch { console.error('급여 지급 롤백 실패'); } }
+        if (!error.status) console.error('급여 지급 등록 실패:', error.code || error.message);
+        return res.status(error.status || (error.code === 'ER_DUP_ENTRY' ? 409 : 500)).json({
+            message: error.status ? error.message : error.code === 'ER_DUP_ENTRY'
+                ? '이미 지급 등록된 급여입니다. 새로고침해 주세요.'
+                : '급여 지급 등록에 실패했습니다. 지급 이력 테이블 SQL과 서버 로그를 확인해 주세요.'
+        });
+    } finally {
+        if (connection) { try { await connection.end(); } catch { console.error('급여 지급 DB 연결 종료 실패'); } }
+    }
+});
+
+// 공제액은 이미 지급한 급여의 스냅샷을 기준으로 처리합니다.
+function payrollDeductionSource(row) {
+    const snapshot = readDetailData(row.payroll_snapshot);
+    const gross = Number(snapshot.gross_amount);
+    const net = Number(snapshot.net_amount);
+    const deduction = Number(snapshot.deduction_amount);
+    if (![gross, net, deduction].every(value => Number.isSafeInteger(value) && value >= 0) ||
+        snapshot.gross_amount == null || snapshot.net_amount == null || snapshot.deduction_amount == null ||
+        gross - net !== deduction || Number(row.amount) !== net ||
+        !['납부대기', '납부완료'].includes(snapshot.deduction_status)) {
+        const error = new Error('급여 지급 당시 공제액 정보를 확인해 주세요.'); error.status = 409; throw error;
+    }
+    return {
+        salary_payment_id: Number(row.payment_id), payroll_id: Number(row.payroll_id),
+        employee_id: Number(snapshot.employee_id), name: row.employee_name || `사원 #${snapshot.employee_id}`,
+        amount: deduction, status: snapshot.deduction_status,
+        deduction_payment_id: snapshot.deduction_payment_id == null ? null : Number(snapshot.deduction_payment_id),
+        source_payment_date: row.source_payment_date,
+        deduction_payment_date: row.deduction_payment_date || null,
+        deduction_payment_amount: row.deduction_payment_amount == null ? null : Number(row.deduction_payment_amount),
+        bank_name: row.bank_name || '', account_name: row.account_name || ''
+    };
+}
+
+router.get('/payroll-deductions/:month', (req, res) => {
+    const { month } = req.params;
+    if (!/^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(month)) return res.status(400).json({ message: '급여월을 확인해 주세요.' });
+    db.query(`SELECT salary.payment_id, salary.payroll_id, salary.amount, salary.payroll_snapshot,
+        DATE_FORMAT(salary.payment_date, '%Y-%m-%d') AS source_payment_date,
+        e.name AS employee_name,
+        DATE_FORMAT(receipt.payment_date, '%Y-%m-%d') AS deduction_payment_date,
+        receipt.amount AS deduction_payment_amount, account.bank_name, account.account_name
+        FROM payments salary
+        LEFT JOIN payrolls payroll ON payroll.payroll_id = salary.payroll_id
+        LEFT JOIN employees e ON e.employee_id = payroll.employee_id
+        LEFT JOIN payments receipt ON receipt.payment_id =
+            CAST(JSON_UNQUOTE(JSON_EXTRACT(salary.payroll_snapshot, '$.deduction_payment_id')) AS UNSIGNED)
+        LEFT JOIN bank_accounts account ON account.account_id = receipt.account_id
+        WHERE salary.payroll_id IS NOT NULL AND salary.payment_direction = '출금' AND salary.payment_status = '완료'
+          AND JSON_UNQUOTE(JSON_EXTRACT(salary.payroll_snapshot, '$.pay_month')) = ?
+        ORDER BY salary.payment_id`, [month], (error, rows) => {
+        if (error) {
+            console.error('급여 공제액 조회 실패:', error.code || error.message);
+            return res.status(500).json({ message: '급여 공제액을 불러오지 못했습니다.' });
+        }
+        try {
+            const items = rows.map(payrollDeductionSource).filter(row => row.amount > 0);
+            const pending = items.filter(row => row.status === '납부대기');
+            const paid = items.filter(row => row.status === '납부완료');
+            const history = [...new Map(paid.filter(row => row.deduction_payment_id).map(row => [row.deduction_payment_id, {
+                payment_id: row.deduction_payment_id, payment_date: row.deduction_payment_date,
+                amount: row.deduction_payment_amount, bank_name: row.bank_name, account_name: row.account_name
+            }])).values()];
+            return res.json({ pay_month: month, items, pending_total: sum(pending), paid_total: sum(paid), history });
+        } catch (error) {
+            return res.status(error.status || 500).json({ message: error.message });
+        }
+    });
+});
+
+// 월 공제액 미납분을 전액 등록합니다. 외부 은행 송금이나 기관 납부는 실행하지 않습니다.
+router.post('/payroll-deductions/:month/payments', async (req, res) => {
+    const { month } = req.params;
+    const { account_id, payment_date, expected_amount, expected_salary_payment_ids, password } = req.body || {};
+    const employeeId = Number(req.user?.employee_id ?? req.body?.employee_id);
+    const accountId = Number(account_id);
+    const expected = Number(expected_amount);
+    const fail = (status, message) => { const error = new Error(message); error.status = status; throw error; };
+    let connection;
+    let transactionOpen = false;
+    try {
+        if (!/^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(month) ||
+            !Number.isSafeInteger(employeeId) || employeeId <= 0 ||
+            !Number.isSafeInteger(accountId) || accountId <= 0 ||
+            !Number.isSafeInteger(expected) || expected <= 0 || typeof password !== 'string' || !password) fail(400, '로그인 정보, 계좌, 공제액과 비밀번호를 확인해 주세요.');
+        if (!readDueDate(payment_date) || payment_date > seoulToday()) fail(400, '납부일은 오늘 또는 이전 날짜로 입력해 주세요.');
+        if (!Array.isArray(expected_salary_payment_ids) || expected_salary_payment_ids.length === 0 ||
+            expected_salary_payment_ids.some(id => !Number.isSafeInteger(id) || id <= 0) ||
+            new Set(expected_salary_payment_ids).size !== expected_salary_payment_ids.length) fail(400, '납부 대상 급여를 다시 조회해 주세요.');
+        connection = await financeMysql.createConnection({
+            host: process.env.DB_HOST, port: Number(process.env.DB_PORT || 3306),
+            user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME
+        });
+        const [users] = await connection.execute(`SELECT e.department_id, ea.role
+            FROM employees e INNER JOIN employee_accounts ea ON ea.employee_id = e.employee_id
+            WHERE e.employee_id = ? AND ea.password_hash = ? AND ea.account_status = 'ACTIVE'`, [employeeId, password]);
+        if (!users.length) fail(401, '비밀번호 또는 계정 상태를 확인해 주세요.');
+        if (Number(users[0].department_id) !== 1 && users[0].role !== 'MASTER') fail(403, '재무부 또는 MASTER만 공제액 납부를 등록할 수 있습니다.');
+        await connection.beginTransaction();
+        transactionOpen = true;
+        const [sources] = await connection.execute(`SELECT payment_id, payroll_id, amount, payroll_snapshot,
+            DATE_FORMAT(payment_date, '%Y-%m-%d') AS source_payment_date
+            FROM payments
+            WHERE payroll_id IS NOT NULL AND payment_direction = '출금' AND payment_status = '완료'
+              AND JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.pay_month')) = ?
+            ORDER BY payment_id FOR UPDATE`, [month]);
+        const pending = sources.map(payrollDeductionSource).filter(row => row.amount > 0 && row.status === '납부대기');
+        if (!pending.length) fail(409, '납부할 공제액이 없거나 이미 납부 등록되었습니다. 새로고침해 주세요.');
+        const ids = pending.map(row => row.salary_payment_id).sort((a, b) => a - b);
+        const expectedIds = [...expected_salary_payment_ids].sort((a, b) => a - b);
+        if (JSON.stringify(ids) !== JSON.stringify(expectedIds)) fail(409, '납부 대상이 변경되었습니다. 새로고침 후 확인해 주세요.');
+        if (pending.some(row => row.source_payment_date > payment_date)) fail(400, '납부일은 대상 급여의 지급일 이후로 입력해 주세요.');
+        const total = pending.reduce((value, row) => value + row.amount, 0);
+        if (!Number.isSafeInteger(total) || total !== expected) fail(409, '공제액이 변경되었습니다. 새로고침 후 확인해 주세요.');
+        const [accounts] = await connection.execute('SELECT balance, currency, account_status FROM bank_accounts WHERE account_id = ? FOR UPDATE', [accountId]);
+        if (!accounts.length) fail(404, '회사계좌를 찾을 수 없습니다.');
+        const account = accounts[0];
+        const balance = Number(account.balance);
+        if (account.currency !== 'KRW' || !['사용', 'ACTIVE'].includes(account.account_status)) fail(409, '사용 가능한 원화 회사계좌를 선택해 주세요.');
+        if (account.balance == null || !Number.isSafeInteger(balance) || balance < 0) fail(409, '계좌 잔액을 확인해 주세요.');
+        if (balance < total) fail(409, '회사계좌 잔액이 부족합니다.');
+        const snapshot = { entry_type: 'payroll_deduction', pay_month: month, source_payment_ids: ids, paid_amount: total, registered_by: employeeId };
+        const [receipt] = await connection.execute(`INSERT INTO payments
+            (document_id, transaction_id, payment_date, amount, payment_method, payment_direction,
+             payment_status, account_id, card_id, payroll_id, payroll_snapshot)
+            VALUES (NULL, NULL, ?, ?, '계좌이체', '출금', '완료', ?, NULL, NULL, ?)`,
+            [payment_date, total, accountId, JSON.stringify(snapshot)]);
+        await connection.execute(`UPDATE bank_accounts SET balance = ?,
+            last_transaction = GREATEST(COALESCE(last_transaction, ?), ?) WHERE account_id = ?`,
+            [balance - total, payment_date, payment_date, accountId]);
+        for (const row of pending) {
+            const [updated] = await connection.execute(`UPDATE payments SET payroll_snapshot = JSON_SET(payroll_snapshot,
+                '$.deduction_status', '납부완료', '$.deduction_payment_id', ?,
+                '$.deduction_payment_date', ?, '$.deduction_registered_by', ?)
+                WHERE payment_id = ? AND JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.deduction_status')) = '납부대기'`,
+                [receipt.insertId, payment_date, employeeId, row.salary_payment_id]);
+            if (updated.affectedRows !== 1) fail(409, '공제액 납부 상태가 변경되었습니다. 다시 확인해 주세요.');
+        }
+        await connection.commit();
+        transactionOpen = false;
+        return res.status(201).json({ message: '공제액 납부 내역이 등록되었습니다.', payment_id: receipt.insertId,
+            amount: total, account_balance: balance - total, payment_date });
+    } catch (error) {
+        if (transactionOpen) { try { await connection.rollback(); } catch { console.error('공제액 납부 롤백 실패'); } }
+        if (!error.status) console.error('공제액 납부 실패:', error.code || error.message);
+        return res.status(error.status || 500).json({ message: error.status ? error.message : '공제액 납부 등록에 실패했습니다. 서버 로그를 확인해 주세요.' });
+    } finally {
+        if (connection) { try { await connection.end(); } catch { console.error('공제액 납부 DB 연결 종료 실패'); } }
+    }
 });
 
 // 결재 문서 목록 조회
@@ -2748,7 +3167,7 @@ router.get("/approvals", (req, res) => {
             });
         }
 
-        // 최종 승인된 내업무 기안서는 원본을 읽어 함께 표시합니다.
+        // 구매·비용 및 급여 기안서의 승인·대기·반려를 원본 그대로 읽습니다.
         // 문서 ID에 draft- 접두사를 붙여 기존 재무 문서 번호와 구분합니다.
         // detail_data는 아직 없는 DB도 있으므로 선택 목록에 직접 참조하지 않습니다.
         // 원본에 존재하면 변환 함수가 사용하고, 없으면 금액/마감일을 미등록으로 처리합니다.
@@ -2756,7 +3175,10 @@ router.get("/approvals", (req, res) => {
           SELECT m.*,
                  DATE_FORMAT(m.created_at, '%Y-%m-%d %H:%i') AS created_at,
                  e.name AS requester_name, d.department_name, expense.expense_amount, source_link.transaction_id AS linked_transaction_id,
-                 EXISTS (SELECT 1 FROM payrolls payroll WHERE payroll.draft_id = m.draft_id) AS is_payroll_draft
+                 EXISTS (SELECT 1 FROM payrolls payroll WHERE payroll.draft_id = m.draft_id) AS is_payroll_draft,
+                 (SELECT SUM(payroll.gross_pay) FROM payrolls payroll WHERE payroll.draft_id = m.draft_id) AS payroll_amount,
+                 (SELECT GROUP_CONCAT(DISTINCT payroll.pay_month ORDER BY payroll.pay_month)
+                    FROM payrolls payroll WHERE payroll.draft_id = m.draft_id) AS payroll_months
           FROM my_draft m
           LEFT JOIN employees e ON m.employee_id = e.employee_id
           LEFT JOIN departments d ON e.department_id = d.department_id
@@ -2766,17 +3188,19 @@ router.get("/approvals", (req, res) => {
             GROUP BY draft_id
           ) expense ON expense.draft_id = m.draft_id
           LEFT JOIN trade_transactions source_link ON source_link.source_type = 'draft' AND source_link.source_id = m.draft_id
-          WHERE m.status = 'APPROVED'
+          WHERE m.status IN ('APPROVED', 'PENDING', 'WAITING', 'IN_PROGRESS', 'REJECTED', '승인', '대기', '승인대기', '결재대기', '진행중', '반려')
+            AND (m.document_type LIKE '%구매%' OR m.document_type LIKE '%비용%'
+                 OR expense.draft_id IS NOT NULL
+                 OR EXISTS (SELECT 1 FROM payrolls payroll WHERE payroll.draft_id = m.draft_id))
           ORDER BY m.created_at DESC, m.draft_id DESC
         `;
         db.query(draftQuery, (draftError, drafts) => {
             if (draftError) {
                 console.error("승인 기안서 조회 오류:", draftError);
-                // 기안서 연동 오류가 기존 재무 결재 목록까지 가리지 않도록 합니다.
-                // 실제 오류 원인은 위 서버 로그로 확인합니다.
-                return res.json(rows);
+                // 일부 자료만 정상 목록처럼 반환하면 미승인을 누락한 사실을 알 수 없습니다.
+                return res.status(500).json({ message: '구매·비용·급여 기안서를 불러오지 못했습니다. 서버 로그를 확인해주세요.' });
             }
-            const combined = [...rows, ...toApprovedDraftView(drafts)];
+            const combined = [...rows, ...toApprovedDraftView(drafts, true)];
             combined.sort((left, right) => String(right.created_at || '').localeCompare(String(left.created_at || '')));
             return res.json(combined);
         });
@@ -3815,12 +4239,18 @@ router.get('/payment-management', async (req, res) => {
         const [rows] = await connection.execute(`SELECT p.payment_id, p.document_id, p.transaction_id,
             DATE_FORMAT(p.payment_date, '%Y-%m-%d') AS payment_date,
             p.amount, p.payment_method, p.payment_status,
-            COALESCE(a.title, t.company_name, '연결 문서 없는 입출금') AS title,
-            CASE WHEN p.document_id IS NOT NULL THEN 'approval'
+            COALESCE(a.title, t.company_name, CONCAT(payroll_link.pay_month, ' 월급 (인건비)'), CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'payroll_deduction' THEN CONCAT(JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.pay_month')), ' 급여 공제액 납부') END, '연결 문서 없는 입출금') AS title,
+            CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'payroll_deduction' THEN 'payroll_deduction'
+                 WHEN payroll_link.payroll_id IS NOT NULL THEN 'payroll'
+                 WHEN p.document_id IS NOT NULL THEN 'approval'
                  WHEN p.transaction_id IS NOT NULL THEN 'transaction' ELSE 'payment' END AS source_type,
-            COALESCE(p.document_id, p.transaction_id, p.payment_id) AS source_id,
-            c.category_code
+            CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'payroll_deduction' THEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.pay_month'))
+                 WHEN payroll_link.payroll_id IS NOT NULL THEN payroll_link.pay_month
+                 ELSE COALESCE(p.document_id, p.transaction_id, p.payment_id) END AS source_id,
+            CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'payroll_deduction' OR payroll_link.payroll_id IS NOT NULL THEN 'expense_administration_1'
+                 ELSE c.category_code END AS category_code
             FROM payments p
+            LEFT JOIN (${payrollPaymentRowsSql}) payroll_link ON payroll_link.payment_id = p.payment_id
             LEFT JOIN approval_documents a ON a.document_id = p.document_id
             LEFT JOIN trade_transactions t ON t.transaction_id = p.transaction_id
             LEFT JOIN finance_payment_classifications c ON c.source_type =
@@ -3869,6 +4299,41 @@ router.get('/payment-management', async (req, res) => {
                 AND COALESCE(t.due_date, t.trade_date) < ? HAVING amount > 0`,
             [direction, direction === '출금' ? '매입' : '매출', range.start, range.monthEndExclusive]);
         scheduled.push(...trades);
+        // 최종 승인된 미지급 급여는 일반 관리 및 인건비 > 급여로 집계합니다.
+        if (direction === '출금') {
+            const [payrolls] = await connection.execute(`
+                SELECT p.pay_month AS source_id, 'payroll' AS source_type,
+                    CONCAT(p.pay_month, ' 월급 (인건비)') AS title,
+                    CONCAT(p.pay_month, '-01') AS payment_date,
+                    SUM(p.gross_pay) AS amount,
+                    'expense_administration_1' AS category_code
+                FROM payrolls p
+                INNER JOIN my_draft d ON d.draft_id = p.draft_id
+                WHERE d.status = 'APPROVED'
+                  AND p.pay_month = ?
+                  AND COALESCE(p.payment_status, '') <> '지급완료'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM trade_transactions t
+                      WHERE t.source_type = 'draft' AND t.source_id = d.draft_id
+                  )
+                GROUP BY p.pay_month
+                HAVING SUM(p.gross_pay) > 0
+            `, [range.start.slice(0, 7)]);
+            scheduled.push(...payrolls);
+        }
+        // 지급한 급여의 공제액은 별도 납부대기로 남깁니다. 아직 납부 등록은 지원하지 않습니다.
+        if (direction === '출금') {
+            const [deductions] = await connection.execute(`SELECT pay_month AS source_id,
+                'payroll_deduction' AS source_type,
+                CONCAT(pay_month, ' 급여 공제액 (별도 납부)') AS title,
+                CONCAT(pay_month, '-01') AS payment_date,
+                SUM(deduction_amount) AS amount,
+                'expense_administration_1' AS category_code
+                FROM (${payrollPaymentRowsSql}) payroll_history
+                WHERE pay_month = ? AND deduction_status = '납부대기'
+                GROUP BY pay_month HAVING SUM(deduction_amount) > 0`, [range.start.slice(0, 7)]);
+            scheduled.push(...deductions);
+        }
         scheduled = scheduled.map(decorate);
         const totals = summary(entries, previousEntries, scheduled);
         await connection.commit();
