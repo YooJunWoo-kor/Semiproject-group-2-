@@ -240,7 +240,7 @@ ORDER BY p.partner_id DESC
 
     db.query(query, (err, rows) => {
         if (err) {
-            console.error("거래처 목록 조회 오류:", err);
+            console.error("거래처 목록 조회 오류:", err.sqlMessage);
 
             return res.status(500).json({
                 message: "거래처 목록을 불러오지 못했습니다."
@@ -4340,7 +4340,7 @@ router.get('/payment-management', async (req, res) => {
         return res.json({ range, groups: groups(direction), entries, scheduled, summary: totals });
     } catch (error) {
         if (connection) { try { await connection.rollback(); } catch (rollbackError) { console.error(rollbackError.code); } }
-        console.error('결제 관리 조회 실패:', error.code || error.message);
+        console.error('결제 관리 조회 실패:', error.sqlMessage || error.message);
         return res.status(error.status || 500).json({
             message: error.status ? error.message :
                 '결제 관리 조회에 실패했습니다. 분류 테이블 SQL 적용 여부와 DB 연결을 확인해 주세요.'
