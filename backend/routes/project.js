@@ -119,4 +119,30 @@ router.post('/get_employee', async(req, res)=>{
     })
 });
 
+router.post('/get_project_member', async(req, res)=>{
+    const projectID = req.body.projectID;
+    const query = `
+        SELECT 
+            pm.project_id,
+            e.*
+        FROM project_members pm
+        JOIN employees e 
+            ON pm.employee_id = e.employee_id
+        WHERE pm.project_id = ?
+    `;
+
+    db.query(query, [projectID], (err, data) => {
+        if (err) {
+            console.log('프로젝트 멤버 조회 DB에러', err);
+            return res.status(500).json({ status: false, message: err });
+        }
+
+        console.log('조회 성공', data);
+        return res.status(200).json({
+            status: true,
+            data: data
+        });
+    });
+});
+
 module.exports = router;

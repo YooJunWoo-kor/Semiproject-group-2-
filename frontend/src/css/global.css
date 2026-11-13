@@ -18,3 +18,31 @@
     border-radius: 12px;
     box-shadow: var(--card-shadow),
 }
+
+.vertical-box{
+    display: flex;
+    flex-flow: column;
+    gap:10px;
+}
+
+.vertical-box > * {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    margin: 0;
+}
+
+.horizontal-box{
+    display: flex;
+    flex-flow: low;
+    gap:10px;
+}
+
+.horizontal-box > * {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    margin: 0;
+  }
+
+.size-fill{
+    flex: 1;
+}
