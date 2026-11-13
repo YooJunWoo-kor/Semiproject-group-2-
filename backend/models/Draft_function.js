@@ -199,7 +199,7 @@ class Draft {
                                     
                                             const draft = rows[0];
                                             
-                                            if(draft.document_type === '비용'){
+                                            if(draft.document_type !== '비용'){
                                                 return approveDraft();
                                             }
 
@@ -227,7 +227,6 @@ class Draft {
                                                     approveDraft();
                                                 }
                                             )
-
                                         
                                     }
                                     );

@@ -117,6 +117,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             if (draftType === "비용") {
                 const invalidExpense = expenseItems.some(item => !item.useDate || !item.merchant.trim() || item.amount === ""
                     || !Number.isSafeInteger(Number(item.amount)) || Number(item.amount) <= 0);
+                
 
 
                 if (expenseItems.length === 0 || invalidExpense) {
@@ -146,6 +147,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
         setIsSaving(true);
 
         try {
+            let response;
             if (editingDraft) {
                 await axios.patch(API_BASE_URL + "/drafts/" + editingDraft.id, payload);
 
@@ -157,7 +159,22 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             } else if (saveType === "temporary") {
                 await axios.post(API_BASE_URL + "/drafts", payload);
             } else {
-                await axios.post(API_BASE_URL + "/drafts/submit", { ...payload, approverIds });
+               response = await axios.post(API_BASE_URL + "/drafts/submit", { ...payload, approverIds });
+            }
+            
+
+            const draftId = editingDraft ? editingDraft.id : response.data.draftId;
+
+            if(draftType === "비용" && receiptFile){
+                const formData = new FormData();
+
+                formData.append("receipt", receiptFile);
+                formData.append("employeeId", employeeId);
+
+                await axios.post(
+                    `${API_BASE_URL}/drafts/${draftId}/receipt`,
+                    formData
+                )
             }
 
             if (onDraftChanged) await onDraftChanged();
@@ -300,7 +317,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                                 onChange={(e) => setReceiptFile(e.target.files[0] || null)}
                             />
                         </label>
-                        
+
                         <button type="button" onClick={handleAddExpense}>행 추가</button>
                     </>
                 )}

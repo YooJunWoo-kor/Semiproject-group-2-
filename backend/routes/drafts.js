@@ -3,6 +3,9 @@ const router = express.Router();
 const Draft = require('../models/Draft_function');
 const db = require('../db');
 
+const createImageUpload = require("../middleware/imageUpload");
+const receiptUpload = createImageUpload("Receipts");
+
 function isValidDetailData(detailData) {
     return detailData !== null &&
         typeof detailData === 'object' &&
@@ -248,6 +251,33 @@ router.get('/departments', (req, res) => {
         console.log('부서조회 성공', data);
         res.json(data);
     })
+})
+
+router.post("/:draftId/receipt", receiptUpload.single("receipt"), (req, res) => {
+    const draftId = Number(req.params.draftId);
+    const employeeId = Number(req.params.employeeId);
+
+    if(!req.file || !employeeId){
+        return res.status(400).json({ message : "영수증 정보가 없습니다"});
+    }
+
+    const imageUrl = `/api/drafts/receipts/${req.file.filename}`
+
+    db.query(
+        `UPDATE my_draft
+         WHERE draft_id = ? AND employee_id = ?
+         AND document_type = '비용'
+         AND status IN ('DRAFT','PENDING')`,
+         [imageUrl, draftId, employeeId],
+         (err, result) => {
+            if(err) return res.status(500).json({message: "저장 실패"});
+
+         
+
+         res.json({imageUrl});
+         }
+         
+    )
 })
 
 
