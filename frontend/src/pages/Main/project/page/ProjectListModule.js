@@ -17,7 +17,7 @@ function ProjectListModule({data, buttonClick}){
                 {tageTyp1}
               </div>  
               <div style = {{ display: 'flex', flex:'1', fontSize: '18px', marginLeft:'10px'}}>
-                <strong>{data.project_name}</strong>
+                <strong>{data.schedule_name}</strong>
               </div>
             </div>
             <div style={{display:'flex', gap: '15px'}}>

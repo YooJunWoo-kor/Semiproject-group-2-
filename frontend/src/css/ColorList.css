@@ -10,6 +10,7 @@
     --color-success: #064d7c;
     --color-warning: #ad6b13;
     --color-danger: #c0394b;
+    --font-color1: #555;
 }
 
 :root, [data-theme='dark'] {
@@ -24,4 +25,5 @@
     --color-success: #064d7c;
     --color-warning: #ad6b13;
     --color-danger: #c0394b;
+    --font-color1: #fff;
 }

@@ -10,8 +10,8 @@ import NewWorkList from "./NewWorkList";
 
 // 프로젝트 세부
 function ProjectDetail({ project, onClose }) {
-    const tasks = project.tasks || [];
     const [bodyStyle, setBodyStyle] = useState(0);
+    const [selectTask, setSelectTask] = useState(0);
   
     // 프로젝트 전환 시 선택된 할 일 초기화 (해당 프로젝트의 첫 할 일이 있으면 선택, 없으면 null)
     // 신규 할 일 등록
@@ -39,8 +39,7 @@ function ProjectDetail({ project, onClose }) {
 
     return (
       <div>
-        <hr/>
-        <header style={{display: 'flex', gap:'20px', marginBottom:'20px', marginTop:'20px'}}>
+        <header className="horizontal-box" style={{marginBottom:'20px', marginTop:'10px'}}>
           <div>
             {/* 스케쥴 상태 스테이터스 */}
             <ProjectStatusTage start={project.start} end={project.end}/>
@@ -49,38 +48,25 @@ function ProjectDetail({ project, onClose }) {
           <div style={{display:'flex', flex: '1'}}>
             <ProjectProgress start={project.start} end={project.end}/>
           </div>
-          <button
-            type="button"
-            className="register-btn"
-            style={{ fontSize: "12px", marginLeft:'auto'}}
-            onClick={()=>{
-              setBodyStyle(2);
-            }}
-          >
-            + 할 일 추가
-          </button>
+          
         </header>
   
         <div style={{ display: "flex", flexFlow:'column',gap: "20px" }}>
           
           {/* 참여인원 */}
-          <section
-            style={{
-              display:'flex',
-              alignItems: "center",
-              gap: "10px"
-            }}
-          >
-            <strong> 담당자 </strong>
-            <MemberLayout member={leader}/>
-            <div style={{display:'flex',fontSize: "15px", fontWeight:'500px'}}>
-              <strong>참여자 ({member?.length || 0})</strong>
+          <section className="vertical-box boder" style={{padding:"20px"}}>
+            <div className="horizontal-box">
+              <strong style={{width:'70px'}}> 담당자 </strong>
+              <MemberLayout member={leader}/>
             </div>
-            <div style={{ display: "flex", gap: "5px" }}>
-              {member &&
-                member.map((member, index) => (
-                  <MemberLayout key={index} member={member}/>
-                ))}
+            <div className="horizontal-box">
+              <strong style={{width:'70px'}}>참여자 ({member?.length || 0})</strong>
+              <div style={{ display: "flex", gap: "5px" }}>
+                {member &&
+                  member.map((member, index) => (
+                    <MemberLayout key={index} member={member}/>
+                  ))}
+              </div>
             </div>
           </section>
           <section
@@ -88,30 +74,45 @@ function ProjectDetail({ project, onClose }) {
               display: 'flex',
               flexFlow: 'column',
               minWidth: 0,
+              height:'500px'
             }}
           >
             <div style={{display:'flex', gap:'5px', marginBottom:"30px"}}>
               <button
-                style={{ fontSize: "13px"}}
+                style={{ fontSize: "13px",  marginLeft:'auto'}}
                 onClick={()=>{
                   setBodyStyle(0);
                 }}
               >할 일 리스트</button>
+              
               <button
+                type="button"
+                className="register-btn"
                 style={{ fontSize: "13px"}}
                 onClick={()=>{
-                  setBodyStyle(1);
+                  setBodyStyle(2);
                 }}
-              >할 일 상세</button>
+              >
+                + 할 일 추가
+              </button>
             </div>
-            {/* 바디 */}
-            {
-              bodyStyle == 0 ?
-              <ProjectDetailWorkList tasks={tasks} project = {project}/>:
-              bodyStyle == 1 ?
-              <ProjectWorkDetail tasks={tasks}/>:
-              <NewWorkList />
-            }
+            <div>
+              {
+                bodyStyle == 0 ?
+                <ProjectDetailWorkList
+                  projectID = {project.project_id}
+                  click = {(index)=>{
+                    setBodyStyle(1);
+                    setSelectTask(index);
+                  }}
+                />:
+                bodyStyle == 1 ?
+                <ProjectWorkDetail
+                  projectID={selectTask}
+                />:
+                <NewWorkList />
+              }
+            </div>
           </section>
   
           <div style={{display: 'flex'}}>

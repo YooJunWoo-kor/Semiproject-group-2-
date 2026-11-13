@@ -5,5 +5,8 @@
 }
 
 .formText{
-    
+    font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--font-color1);
 }
