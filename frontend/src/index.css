@@ -175,6 +175,122 @@ form.draft-box > label { display: flex; flex-direction: column; gap: 10px; color
 }
 
 
+
+/* 비용 기안서: 기존 draft-box, table-shell, 버튼 스타일 재사용 */
+form.draft-box > .table-shell {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card, 12px);
+  box-shadow: var(--card-shadow);
+}
+
+form.draft-box > .table-shell table {
+  width: 100%;
+  min-width: 790px;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+form.draft-box > .table-shell th,
+form.draft-box > .table-shell td {
+  padding: 12px 10px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--color-line);
+}
+
+form.draft-box > .table-shell th {
+  color: var(--color-ink);
+  background: #f2f8ff;
+  font-size: .88rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+form.draft-box > .table-shell th:nth-child(1) { width: 21%; }
+form.draft-box > .table-shell th:nth-child(2) { width: 22%; }
+form.draft-box > .table-shell th:nth-child(3) { width: 18%; }
+form.draft-box > .table-shell th:nth-child(4) { width: 27%; }
+form.draft-box > .table-shell th:nth-child(5) { width: 12%; }
+
+form.draft-box > .table-shell tbody tr { cursor: default; }
+form.draft-box > .table-shell tbody tr:hover { background: #f8fbff; }
+form.draft-box > .table-shell tbody tr:last-child td { border-bottom: 0; }
+
+form.draft-box > .table-shell td input {
+  min-width: 0;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+}
+
+form.draft-box > .table-shell td:nth-child(3) input {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+form.draft-box > .table-shell td:last-child { text-align: center; }
+form.draft-box > .table-shell td:last-child button {
+  min-height: 38px;
+  padding: 7px 12px;
+  color: var(--color-danger);
+  border-color: var(--color-line);
+  white-space: nowrap;
+}
+
+form.draft-box > p {
+  padding: 14px 18px;
+  text-align: right;
+  color: var(--color-ink);
+  font-size: 1.05rem;
+  font-weight: 700;
+  background: #f2f8ff;
+  border: 1px solid var(--color-line);
+  border-radius: var(--layer-radius, 10px);
+  font-variant-numeric: tabular-nums;
+}
+
+form.draft-box > label > input[type='file'] {
+  min-height: 48px;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+
+form.draft-box > label > input[type='file']::file-selector-button {
+  margin-right: 12px;
+  padding: 7px 12px;
+  color: var(--color-brand);
+  background: #f2f8ff;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+form.draft-box > button[type='button'] {
+  width: max-content;
+  justify-self: end;
+  color: var(--color-brand);
+  border-color: var(--color-line);
+  background: var(--color-surface);
+}
+
+form.draft-box > button[type='button']:hover {
+  background: #f2f8ff;
+  border-color: var(--color-brand);
+}
+
+@media (max-width: 680px) {
+  form.draft-box > .table-shell th,
+  form.draft-box > .table-shell td { padding: 10px 8px; }
+  form.draft-box > button[type='button'] { width: 100%; justify-self: stretch; }
+}
+
 /* 전자결재 목록 3종에만 적용: 공용 BasicTable/다른 화면의 테이블은 변경하지 않음 */
 .draft-list-view,
 .draft-list-view .pagination-table-wrapper,
