@@ -1,0 +1,50 @@
+/* 공통 필터 컴포넌트용 스타일. 기존 공통 파일은 수정하지 않습니다.
+   erp-controls 영역에만 적용하고 기존 폰트·색상·모서리 변수를 참조합니다. */
+.erp-controls {
+    --control-font-size: var(--subFont-size-2, 12px);
+    --control-height: 38px;
+    --control-gap: 8px;
+    --control-padding-y: 8px;
+    --control-padding-x: 12px;
+}
+.erp-controls { font-size: var(--control-font-size); }
+.erp-controls :is(button, input, select, textarea, label, table, th, td, .subtext, .status-badge) {
+    font-family: inherit;
+    font-size: var(--control-font-size);
+}
+.erp-controls :is(button, select, input:not([type='radio']):not([type='checkbox'])) {
+    min-height: var(--control-height);
+    border-radius: var(--button-radius);
+    border-color: var(--color-line);
+}
+.erp-controls :is(select, input:not([type='radio']):not([type='checkbox'])) {
+    padding: var(--control-padding-y) var(--control-padding-x);
+    color: var(--color-ink);
+    background: var(--color-surface);
+}
+.erp-controls .grouplist { flex-wrap: wrap; overflow: visible; }
+.erp-controls .grouplist li button {
+    font-size: var(--control-font-size);
+    border-radius: var(--button-radius);
+    color: var(--color-muted);
+    background: var(--color-canvas);
+}
+.erp-controls .grouplist li button:hover { background: var(--color-brand-soft); color: var(--color-ink); }
+.erp-controls .grouplist li button.active { color: var(--color-surface); background: var(--color-brand); }
+.erp-choice-group {
+    display: flex; flex-wrap: wrap; align-items: center; gap: var(--control-gap);
+    min-width: 0; padding: 0; margin: 0; border: 0;
+}
+.erp-choice-group > legend {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+}
+.erp-controls .erp-choice {
+    display: inline-flex; flex-direction: row; align-items: center; gap: var(--control-gap);
+    margin: 0; color: var(--color-ink); font-size: var(--control-font-size);
+    white-space: nowrap; cursor: pointer;
+}
+.erp-controls .erp-choice input {
+    flex: 0 0 auto; width: auto; min-height: 0; margin: 0; accent-color: var(--color-brand);
+}
+.erp-controls :is(button, input, select):focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
