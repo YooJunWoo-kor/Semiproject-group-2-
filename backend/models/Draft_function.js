@@ -153,7 +153,7 @@ class Draft {
                             if (decision === 'reject') {
                                 return db.query(
                                     "UPDATE my_draft SET status = 'REJECTED' WHERE draft_id = ? AND status = 'PENDING'",
-                                    [draftId], err => err ? db.rollback(() => reject(err)) :
+                                        [draftId], err => err ? db.rollback(() => reject(err)) :
                                         db.commit(err => err ? db.rollback(() => reject(err)) : resolve(true))
                                 );
                             }
@@ -166,10 +166,63 @@ class Draft {
                                         return db.commit(err => err ? db.rollback(() => reject(err)) : resolve(true));
                                     }
                                     db.query(
-                                        "UPDATE my_draft SET status = 'APPROVED' WHERE draft_id = ? AND status = 'PENDING'",
+                                        `SELECT document_type, detail_data
+                                         FROM my_draft
+                                         WHERE draft_id = ? AND status = 'PENDING'
+                                         FOR UPDATE`,
                                         [draftId],
-                                        err => err ? db.rollback(() => reject(err)) :
-                                            db.commit(err => err ? db.rollback(() => reject(err)) : resolve(true))
+                                        (err, rows) => {
+                                            if (err) {
+                                                return db.rollback(() => reject(err));
+                                            }
+                                    
+                                            if (rows.length === 0) {
+                                                return db.rollback(() => resolve(false));
+                                            }
+                                    
+                                            const draft = rows[0];
+                                            
+                                            if(draft.document_type === '비용'){
+                                                let detailData;
+
+                                                try {
+                                                    detailData = typeof draft.detail_data === "string" ? JSON.parse(draft.detail_data) : draft.detail_data;
+                                                    // detailData를 받아와서 javascript 객체로 변환하기
+                                                } catch (error) {
+                                                    return db.rollback(() => reject(error));
+                                            }
+
+                                            const expenseRows = expenseItems.map(item => [
+                                                item.useDate,
+                                                item.merchant,
+                                                item.amount,
+                                                item.memo,
+                                            ])
+
+                                            const expenseSql = `INSERT INTO expense_items (draft_id, use_date, merchant, amount, memo)
+                                                VALUES ?
+                                            `
+
+                                            approveDraft();
+                                        }
+
+                                        const approveDraft = () => {
+                                            db.query(
+                                                "UPDATE my_draft SET status = 'APPROVED' WHERE draft_id = ? AND status = 'PENDING'",
+                                                [draftId],
+                                                (err, result) => {
+                                                    if (err) return db.rollback(() => reject(err));
+                                                    if (result.affectedRows !== 1) {
+                                                        return db.rollback(() => resolve(false));
+                                                    }
+                                        
+                                                    db.commit(err =>
+                                                        err ? db.rollback(() => reject(err)) : resolve(true)
+                                                    );
+                                                }
+                                            );
+                                        };
+                                    }
                                     );
                                 }
                             );
@@ -179,6 +232,8 @@ class Draft {
             });
         });
     }
+
+    
 
     static create(employeeId, title, documentType, content, detailData = {}) {
         return new Promise((resolve, reject) => {
