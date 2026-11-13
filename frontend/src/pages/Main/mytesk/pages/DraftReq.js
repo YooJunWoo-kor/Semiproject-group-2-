@@ -47,6 +47,7 @@ function DraftReq({ drafts, setEditingDraft, onDraftChanged }) {
         }
         catch (error){
             console.error("요청 취소 오류:", error);
+            alert(error.response?.data?.message || "결재 요청 취소에 실패했습니다.");
         }
     }
 
