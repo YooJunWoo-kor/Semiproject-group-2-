@@ -268,13 +268,15 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 )}
                 {draftType === "비용" && (
                     <>
-                        <table>
-                            <thead>
+                        <div className="table-shell">
+                            <table>
+                                <thead>
                                 <tr>
                                     <th>사용일</th>
                                     <th>사용처</th>
                                     <th>금액</th>
                                     <th>비고</th>
+                                    <th>관리</th>
                                 </tr>
                             </thead>
 
@@ -302,8 +304,9 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                                         </td>
                                     </tr>
                                 ))}
-                            </tbody>
-                        </table>
+                                </tbody>
+                            </table>
+                        </div>
 
                         <p>
                             총 합계 : {totalAmount.toLocaleString("ko-KR")}원
