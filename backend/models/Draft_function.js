@@ -176,52 +176,59 @@ class Draft {
                                                 return db.rollback(() => reject(err));
                                             }
                                     
-                                            if (rows.length === 0) {
+                                            if (rows.length !== 1) {
                                                 return db.rollback(() => resolve(false));
                                             }
+
+                                            const approveDraft = () => {
+                                                db.query(
+                                                    "UPDATE my_draft SET status = 'APPROVED' WHERE draft_id = ? AND status = 'PENDING'",
+                                                    [draftId],
+                                                    (err, result) => {
+                                                        if (err) return db.rollback(() => reject(err));
+                                                        if (result.affectedRows !== 1) {
+                                                            return db.rollback(() => resolve(false));
+                                                        }
+                                            
+                                                        db.commit(err =>
+                                                            err ? db.rollback(() => reject(err)) : resolve(true)
+                                                        );
+                                                    }
+                                                );
+                                            };
                                     
                                             const draft = rows[0];
                                             
                                             if(draft.document_type === '비용'){
-                                                let detailData;
-
-                                                try {
-                                                    detailData = typeof draft.detail_data === "string" ? JSON.parse(draft.detail_data) : draft.detail_data;
-                                                    // detailData를 받아와서 javascript 객체로 변환하기
-                                                } catch (error) {
-                                                    return db.rollback(() => reject(error));
+                                                return approveDraft();
                                             }
 
-                                            const expenseRows = expenseItems.map(item => [
+                                            const detailData = typeof draft.detail_data === "string"? JSON.parse(draft.detail_data) : draft.detail_data;
+
+                                            const expenseRows = (detailData?.expenseItems || []).map(item => [
+                                                draftId,
                                                 item.useDate,
                                                 item.merchant,
-                                                item.amount,
-                                                item.memo,
+                                                Number(item.amount),
+                                                item.memo || null
                                             ])
 
-                                            const expenseSql = `INSERT INTO expense_items (draft_id, use_date, merchant, amount, memo)
-                                                VALUES ?
-                                            `
+                                            if(!expenseRows.length) {
+                                                return db.rollback(() => reject(new Error("비용 내역 없음")));
+                                            }
 
-                                            approveDraft();
-                                        }
-
-                                        const approveDraft = () => {
                                             db.query(
-                                                "UPDATE my_draft SET status = 'APPROVED' WHERE draft_id = ? AND status = 'PENDING'",
-                                                [draftId],
-                                                (err, result) => {
-                                                    if (err) return db.rollback(() => reject(err));
-                                                    if (result.affectedRows !== 1) {
-                                                        return db.rollback(() => resolve(false));
-                                                    }
-                                        
-                                                    db.commit(err =>
-                                                        err ? db.rollback(() => reject(err)) : resolve(true)
-                                                    );
+                                                `INSERT INTO expense_items
+                                                (draft_id, use_date, merchant, amount, memo)
+                                                VALUES ?`,
+                                                [expenseRows],
+                                                err => {
+                                                    if(err) return db.rollback(() => reject(err));
+                                                    approveDraft();
                                                 }
-                                            );
-                                        };
+                                            )
+
+                                        
                                     }
                                     );
                                 }
