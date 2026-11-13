@@ -6,7 +6,7 @@ import PaginationTable from "../../../../components/PaginationTable";
 
 function DraftReceived({ drafts, onDraftChanged }) {
     async function handleDecision(id, decision) {
-        const employeeId = getLoginUser()?.employeeKey;
+        const employeeId = Number(getLoginUser()?.employeeKey);
         if (decision === "reject" && !window.confirm("이 기안서를 반려하시겠습니까?")) return; // !window.confirm == "확인", "취소" 반대됨
         try {
             await axios.post(`${API_BASE_URL}/drafts/${id}/decision`, {
