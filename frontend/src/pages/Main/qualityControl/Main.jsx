@@ -18,7 +18,7 @@ function Main() {
                     code: item.product_code,
                     name: item.product_name,
                     qualityStatus: item.quality_status,
-                    inspectionDate: item.inspection_date || "-",
+                    createdAt: item.created_at || "-",
                     memo: item.memo || ""
                 }));
                 setProducts(data);
@@ -43,8 +43,8 @@ function Main() {
     ).length;
 
     const recentProducts = products
-        .filter(product => product.inspectionDate !== "-")
-        .sort((a, b) => b.inspectionDate.localeCompare(a.inspectionDate))
+        .filter(product => product.createdAt !== "-")
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
         .slice(0, 5);
 
     const failedProducts = products.filter(
@@ -84,7 +84,7 @@ function Main() {
                                 <tr>
                                     <th>제품코드</th>
                                     <th>제품명</th>
-                                    <th>검사일</th>
+                                    <th>검사일시</th>
                                     <th>상태</th>
                                 </tr>
                             </thead>
@@ -99,7 +99,7 @@ function Main() {
                                     <tr key={product.id}>
                                         <td>{product.code}</td>
                                         <td><strong>{product.name}</strong></td>
-                                        <td>{product.inspectionDate}</td>
+                                        <td>{product.createdAt}</td>
                                         <td>
                                             <span className={
                                                 "attendance-tag " +

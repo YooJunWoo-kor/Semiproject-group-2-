@@ -1,55 +1,171 @@
-/* 회의실 예약: 기본 3열 카드 배치 */
+/* 회의실 페이지: 공통 헤더, 입력, 모달, 버튼 스타일 재사용 */
+.meeting-room-page {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    padding: 30px 40px;
+}
+
+.meeting-room-filter {
+    align-items: flex-end;
+    margin-bottom: 24px;
+}
+
+.meeting-room-filter > label {
+    flex: 0 0 190px;
+    min-width: 0;
+    max-width: 100%;
+}
+
 .meeting-room-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px;
-    width: 100%;
-    min-width: 0;
-    margin-top: 24px;
+    gap: 18px;
 }
 
 .meeting-room-card {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    width: 100%;
+    gap: 14px;
     min-width: 0;
-    min-height: 160px;
-    padding: 20px;
-    text-align: center;
-    color: var(--color-ink);
+    min-height: 260px;
+    padding: 22px 18px;
     background: var(--color-surface);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-card, 12px);
     box-shadow: var(--card-shadow);
 }
 
-.meeting-room-card:hover {
-    border-color: var(--color-brand);
-}
-
-.meeting-room-card:focus-visible {
-    outline: 2px solid var(--color-brand);
-    outline-offset: 2px;
-}
-
-.meeting-room-card h3,
-.meeting-room-card p {
+.meeting-room-card h3 {
     margin: 0;
+    text-align: center;
+    color: var(--color-ink);
+}
+
+.meeting-room-slots {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 9px;
+    min-width: 0;
+    max-height: 270px;
+    overflow-y: auto;
+}
+
+.meeting-room-slots > p {
+    margin: 15px 0;
+    color: var(--color-muted);
+    text-align: center;
+}
+
+.meeting-room-slot {
+    display: grid;
+    gap: 6px;
+    padding: 12px 14px;
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    background: #f7fbff;
+}
+
+.meeting-room-slot-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.meeting-room-title,
+.meeting-room-title:hover {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--color-brand);
+    text-align: left;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-decoration: none;
+}
+
+.meeting-room-title:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 3px;
+}
+
+.meeting-room-time {
+    color: var(--color-muted);
+    font-size: .86rem;
+    font-weight: 500;
+}
+
+.meeting-room-slot-heading > button:last-child {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 6px 10px;
+    font-size: .85rem;
+}
+
+.meeting-room-reserve-button {
+    width: 100%;
+    margin-top: auto;
+}
+
+/* ModalBase 내부는 기존 draft-box, draft-row, draft-actions 사용 */
+.meeting-room-page .modal-boder {
+    width: min(580px, 100%);
+}
+
+.meeting-room-form,
+.meeting-room-detail {
+    width: 100%;
+}
+
+.meeting-room-form .meeting-room-filter {
+    margin-bottom: 0;
+}
+
+/* 예약 모달의 입력 그룹 바깥 카드 테두리만 제거 */
+.meeting-room-page .meeting-room-form > label,
+.meeting-room-page .meeting-room-form > .draft-row {
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+.meeting-room-form > p {
+    margin: 0;
+    color: var(--color-muted);
+}
+
+.meeting-room-detail .draft-row {
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--color-line);
+}
+
+.meeting-room-detail .draft-row > strong {
+    flex: 0 0 90px;
+    color: var(--color-ink);
+}
+
+.meeting-room-detail .draft-row > span {
+    white-space: pre-wrap;
     overflow-wrap: anywhere;
 }
 
-@media (max-width: 700px) {
-    .meeting-room-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 14px;
-    }
+@media (max-width: 900px) {
+    .meeting-room-page { padding: 24px; }
+    .meeting-room-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (max-width: 480px) {
-    .meeting-room-grid {
-        grid-template-columns: minmax(0, 1fr);
-    }
+@media (max-width: 560px) {
+    .meeting-room-page { padding: 16px; }
+    .meeting-room-grid { grid-template-columns: minmax(0, 1fr); }
+    .meeting-room-filter > label { flex-basis: 190px; }
 }

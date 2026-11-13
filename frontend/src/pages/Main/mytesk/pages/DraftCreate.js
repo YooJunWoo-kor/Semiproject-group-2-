@@ -1,131 +1,110 @@
 import React, { useEffect, useState } from "react";
-import ModalBase from "../../../../components/ModalBase";
 import axios from "axios";
-import { API_BASE_URL, getLoginUser } from "../../../../utils/authStorage";
+import ModalBase from "../../../../components/ModalBase";
 import DepEmpList from "../../../../components/DepEmpList";
 
+import { API_BASE_URL, getLoginUser } from "../../../../utils/authStorage";
 
+const emptyForm = {
+    title: "", draftType: "일반", content: "",
+    startDate: "", endDate: "",
+    itemName: "", quantity: "",
+    useDate: "", amount: ""
+};
 
-function DraftCreate({
-    loginUser,
-    editingDraft,
-    setEditingDraft,
-    onDraftChanged
-}) {
-
-    const [selectedDepartment, setSelectedDepartment] = useState("");
-    const [departments, setDepartments ] = useState([]); 
-
-
-    const [title, setTitle] = useState("");
-    const [draftType, setDraftType] = useState("일반");
-    const [content, setContent] = useState("");
-
+function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftChanged }) {
+    const [form, setForm] = useState(emptyForm);
+    const [departments, setDepartments] = useState([]);
     const [approvers, setApprovers] = useState([]);
-
     const [showApproverModal, setShowApproverModal] = useState(false);
+    const [selectedDepartment, setSelectedDepartment] = useState("");
     const [tempApprover, setTempApprover] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
 
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
+    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount } = form;
 
-    const [itemName, setItemName] = useState("");
-    const [quantity, setQuantity] = useState("");
-
-    const [amount, setAmount] = useState("");
-    const [useDate, setUseDate] = useState("");
-
-
-    // 임시저장 문서를 이어서 작성할 때 기존 데이터 불러오기
     useEffect(() => {
-        async function loadDepartments() {
+        const loadDepartments = async () => {
             try {
-                const response = await axios.get(`${API_BASE_URL}/drafts/departments`);
-
-                const departmentList = response.data.map(department => department.department_name);
-
-                setDepartments(departmentList);
+                const response = await axios.get(API_BASE_URL + "/drafts/departments");
+                setDepartments(response.data.map(item => item.department_name));
+            } catch (error) {
+                console.error("부서 조회 실패:", error);
             }
+        };
 
-
-            catch(error){
-
-                console.error('부서 조회 실패', error);
-
-            }
-        }
-    
         loadDepartments();
     }, []);
 
     useEffect(() => {
-        if (editingDraft) {
-            setTitle(editingDraft.title || "");
-            setDraftType(editingDraft.draftType || "일반");
-            setContent(editingDraft.content || "");
-            setApprovers(editingDraft.approvers || []);
-    
-            const detailData = editingDraft.detailData || {};
-            setStartDate(detailData.startDate || "");
-            setEndDate(detailData.endDate || "");
+        if (!editingDraft) return;
 
-            setItemName(detailData.itemName || "");
-            setQuantity(detailData.quantity ?? "");
-
-            setUseDate(detailData.useDate || "");
-            setAmount(detailData.amount ?? "");
-        }
+        const detail = editingDraft.detailData || {};
+        setForm({
+            ...emptyForm,
+            title: editingDraft.title || "",
+            draftType: editingDraft.draftType || "일반",
+            content: editingDraft.content || "",
+            startDate: detail.startDate || "",
+            endDate: detail.endDate || "",
+            itemName: detail.itemName || "",
+            quantity: detail.quantity ?? "",
+            useDate: detail.useDate || "",
+            amount: detail.amount ?? ""
+        });
+        setApprovers(editingDraft.approvers || []);
     }, [editingDraft]);
 
-    async function handleSubmit(e, saveType) {
-        e.preventDefault();
-        // 임시저장 유효성 검사
-        if (saveType === "temporary") {
-            if (title.trim() === "") {
-                alert("임시저장하려면 제목을 입력해주세요");
-                return;
-            }
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setForm(prev => ({ ...prev, [name]: value }));
+    };
+
+    const closeApproverModal = () => {
+        setShowApproverModal(false);
+        setSelectedDepartment("");
+        setTempApprover(null);
+    };
+
+    const addApprover = () => {
+        if (!tempApprover) {
+            alert("직원을 선택해주세요.");
+            return;
         }
 
+        if (approvers.some(item => item.employee_id === tempApprover.employee_id)) {
+            alert("이미 추가된 결재자입니다.");
+            return;
+        }
 
-        // 결재요청 유효성 검사
+        setApprovers(prev => [...prev, tempApprover]);
+        closeApproverModal();
+    };
+
+    const handleSubmit = async (saveType) => {
+        if (isSaving) return;
+
+        if (!title.trim()) {
+            alert("제목을 입력해주세요.");
+            return;
+        }
+
         if (saveType === "submit") {
-
-            if (title.trim() === "" || content.trim() === "") {
-                alert("제목과 내용을 입력해주세요");
+            if (!content.trim() || approvers.length === 0) {
+                alert("내용을 입력하고 결재자를 한 명 이상 선택해주세요.");
                 return;
             }
-
-            if (approvers.length === 0) {
-                alert("결재자를 한 명 이상 추가해주세요");
+            if (draftType === "휴가" && (!startDate || !endDate || startDate > endDate)) {
+                alert("올바른 휴가 기간을 선택해주세요.");
                 return;
             }
-
-
-            if (draftType === "휴가") {
-
-                if (startDate === "" || endDate === "") {
-                    alert("휴가 기간을 선택해주세요.");
-                    return;
-                }
+            if (draftType === "구매" && (!itemName.trim() || !quantity || Number(quantity) <= 0)) {
+                alert("물품명과 올바른 수량을 입력해주세요.");
+                return;
             }
-
-
-            if (draftType === "구매") {
-
-                if (itemName.trim() === "" || quantity === "") {
-                    alert("물품명과 수량을 입력해주세요.");
-                    return;
-                }
-            }
-
-
-            if (draftType === "비용") {
-
-                if (useDate === "" || amount === "") {
-                    alert("사용일과 금액을 입력해주세요.");
-                    return;
-                }
+            if (draftType === "비용" && (!useDate || amount === "" || Number(amount) < 0)) {
+                alert("사용일과 올바른 금액을 입력해주세요.");
+                return;
             }
         }
 
@@ -135,388 +114,166 @@ function DraftCreate({
             return;
         }
 
-        // 문서 종류별 추가 입력값은 JSON으로 함께 전송한다.
-        let detailData = {};
-        if (draftType === "휴가") {
-            detailData = { startDate, endDate };
-        } else if (draftType === "구매") {
-            detailData = { itemName, quantity };
-        } else if (draftType === "비용") {
-            detailData = { useDate, amount };
-        }
+        const detailData = draftType === "휴가" ? { startDate, endDate } :
+            draftType === "구매" ? { itemName, quantity } :
+            draftType === "비용" ? { useDate, amount } : {};
 
         const payload = {
-            employeeId,
-            title,
-            documentType: draftType,
-            content,
-            detailData
+            employeeId, title: title.trim(), documentType: draftType,
+            content: content.trim(), detailData
         };
+        const approverIds = approvers.map(item => item.employee_id);
+
+        setIsSaving(true);
 
         try {
             if (editingDraft) {
-                // 기존 임시저장 문서의 수정 내용을 먼저 DB에 반영한다.
-                await axios.patch(`${API_BASE_URL}/drafts/${editingDraft.id}`, payload);
+                await axios.patch(API_BASE_URL + "/drafts/" + editingDraft.id, payload);
+
                 if (saveType === "submit") {
-                    const approverIds = approvers.map(approver => approver.employee_id);
-                    await axios.post(`${API_BASE_URL}/drafts/${editingDraft.id}/submit`, {
-                        employeeId,
-                        approverIds
+                    await axios.post(API_BASE_URL + "/drafts/" + editingDraft.id + "/submit", {
+                        employeeId, approverIds
                     });
                 }
             } else if (saveType === "temporary") {
-                await axios.post(`${API_BASE_URL}/drafts`, payload);
+                await axios.post(API_BASE_URL + "/drafts", payload);
             } else {
-                const approverIds = approvers.map(approver => approver.employee_id);
-                await axios.post(`${API_BASE_URL}/drafts/submit`, {
-                    ...payload,
-                    approverIds
-                });
+                await axios.post(API_BASE_URL + "/drafts/submit", { ...payload, approverIds });
             }
-            await onDraftChanged();
+
+            if (onDraftChanged) await onDraftChanged();
             alert(saveType === "temporary" ? "기안서 임시저장 완료" : "기안서 상신 완료");
+            setForm(emptyForm);
+            setApprovers([]);
+            if (setEditingDraft) setEditingDraft(null);
         } catch (error) {
-            console.error("기안서 DB 저장 오류:", error);
-            alert(error.response?.data?.message ||
-                (saveType === "temporary" ? "기안서 임시저장 실패" : "기안서 상신 실패"));
-            return;
+            console.error("기안서 저장 오류:", error);
+            alert(error.response?.data?.message || "기안서 저장에 실패했습니다.");
+        } finally {
+            setIsSaving(false);
         }
-
-        // 입력값 초기화
-        setTitle("");
-        setDraftType("일반");
-        setContent("");
-
-        setApprovers([]);
-
-        setStartDate("");
-        setEndDate("");
-
-        setItemName("");
-        setQuantity("");
-
-        setUseDate("");
-        setAmount("");
-
-        setEditingDraft(null);
-    }
-
+    };
 
     return (
-
         <div className="draft-box">
+            <header className="dashboard-header">
+                <span className="subtitle">기안서 작성</span>
+            </header>
 
-            <h2>기안서 작성</h2>
-
-
-            <form className="draft-box">
-
-
-                {/* 작성자 정보 */}
+            <form className="draft-box" onSubmit={e => e.preventDefault()}>
                 <div className="draft-row">
-
-                    <p>작성자 : {loginUser.name}</p>
-
-                    <p>부서 : {loginUser.departmentName}</p>
-
-                    <p>직책 : {loginUser.position}</p>
-
+                    <p>작성자: {loginUser.name}</p>
+                    <p>부서: {loginUser.departmentName}</p>
+                    <p>직책: {loginUser.position}</p>
                 </div>
 
+                <div className="draft-row">
+                    <label>제목
+                        <input name="title" value={title} onChange={handleInputChange} />
+                    </label>
+                    <label>문서 종류
+                        <select name="draftType" value={draftType} onChange={handleInputChange}>
+                            <option>일반</option>
+                            <option>휴가</option>
+                            <option>구매</option>
+                            <option>비용</option>
+                        </select>
+                    </label>
+                </div>
 
-                {/* 제목 */}
-                <label>
-                    제목
-
-                    <input
-                        type="text"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                    />
-                </label>
-
-
-                {/* 문서 종류 */}
-                <label>
-                    문서 종류
-
-                    <select
-                        value={draftType}
-                        onChange={(e) => setDraftType(e.target.value)}
-                    >
-                        <option>일반</option>
-                        <option>휴가</option>
-                        <option>구매</option>
-                        <option>비용</option>
-                    </select>
-                </label>
-
-
-                {/* 휴가 */}
                 {draftType === "휴가" && (
-
                     <div className="draft-row">
-
-                        <label>
-                            휴가 시작일
-
-                            <input
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                            />
+                        <label>휴가 시작일
+                            <input type="date" name="startDate" value={startDate} onChange={handleInputChange} />
                         </label>
-
-
-                        <label>
-                            휴가 종료일
-
-                            <input
-                                type="date"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                            />
+                        <label>휴가 종료일
+                            <input type="date" name="endDate" value={endDate} onChange={handleInputChange} />
                         </label>
-
                     </div>
                 )}
-
-
-                {/* 구매 */}
                 {draftType === "구매" && (
-
                     <div className="draft-row">
-
-                        <label>
-                            물품명
-
-                            <input
-                                type="text"
-                                value={itemName}
-                                onChange={(e) => setItemName(e.target.value)}
-                            />
+                        <label>물품명
+                            <input name="itemName" value={itemName} onChange={handleInputChange} />
                         </label>
-
-
-                        <label>
-                            수량
-
-                            <input
-                                type="number"
-                                value={quantity}
-                                onChange={(e) => setQuantity(e.target.value)}
-                            />
+                        <label>수량
+                            <input type="number" min="1" step="1" name="quantity"
+                                value={quantity} onChange={handleInputChange} />
                         </label>
-
                     </div>
                 )}
-
-
-                {/* 비용 */}
                 {draftType === "비용" && (
-
                     <div className="draft-row">
-
-                        <label>
-                            사용일
-
-                            <input
-                                type="date"
-                                value={useDate}
-                                onChange={(e) => setUseDate(e.target.value)}
-                            />
+                        <label>사용일
+                            <input type="date" name="useDate" value={useDate} onChange={handleInputChange} />
                         </label>
-
-
-                        <label>
-                            금액
-
-                            <input
-                                type="number"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                            />
+                        <label>금액
+                            <input type="number" min="0" step="1" name="amount"
+                                value={amount} onChange={handleInputChange} />
                         </label>
-
                     </div>
                 )}
 
-
-                {/* 내용 */}
-                <label>
-                    내용
-
-                    <textarea
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                    />
+                <label>내용
+                    <textarea name="content" value={content} onChange={handleInputChange} />
                 </label>
 
-
-                {/* 결재선 */}
                 <div className="draft-box">
-
                     <div className="draft-row">
-
                         <h4>결재선</h4>
-
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setShowApproverModal(true);
-                            }}
-                        >
-                            결재자 추가
-                        </button>
-
+                        <button type="button" onClick={() => setShowApproverModal(true)}>결재자 추가</button>
                     </div>
-
-
                     {approvers.length === 0 ? (
-
                         <p>등록된 결재자가 없습니다.</p>
-
-                    ) : (
-
-                        approvers.map((approver, index) => (
-
-                            <div
-                                key={approver.employee_id}
-                                className="draft-row"
-                            >
-
-                                <span>
-                                    {index + 1}단계 결재자 :
-                                    {" "}
-                                    {approver.position} {approver.name}
-                                </span>
-
-
-                                <button
-                                    type="button"
-                                    onClick={() => {
-
-                                        setApprovers(
-
-                                            approvers.filter((item) => {
-                                                return (
-                                                    item.employee_id !==
-                                                    approver.employee_id
-                                                );
-                                            })
-
-                                        );
-                                    }}
-                                >
-                                    삭제
-                                </button>
-
-                            </div>
-                        ))
-                    )}
-
-                </div>
-
-
-                {/* 저장 버튼 */}
-                <div className="draft-actions">
-
-                    <button
-                        type="button"
-                        onClick={(e) => handleSubmit(e, "temporary")}
-                    >
-                        임시저장
-                    </button>
-
-
-                    <button
-                        type="button"
-                        className="erp-primary-button"
-                        onClick={(e) => handleSubmit(e, "submit")}
-                    >
-                        결재 요청
-                    </button>
-
-                </div>
-
-            </form>
-
-
-            {/* 결재자 선택 */}
-            {showApproverModal && (
-    <ModalBase
-        title="결재자 추가"
-        onClose={() => {
-            setShowApproverModal(false);
-            setTempApprover(null);
-            setSelectedDepartment("");
-        }}
-        layout={
-            <div className="draft-box">
-                <h4>부서 선택</h4>
-
-                <div className="draft-row">
-                    {departments.map(department => (
-                        <button
-                            type="button"
-                            key={department}
-                            onClick={() => {
-                                setSelectedDepartment(department);
-                                setTempApprover(null);
-                            }}
-                        >
-                            {department}
-                        </button>
+                    ) : approvers.map((approver, index) => (
+                        <div key={approver.employee_id} className="draft-row">
+                            <span>{index + 1}단계 결재자: {approver.position} {approver.name}</span>
+                            <button type="button" onClick={() =>
+                                setApprovers(prev => prev.filter(item => item.employee_id !== approver.employee_id))
+                            }>삭제</button>
+                        </div>
                     ))}
                 </div>
 
-                {selectedDepartment && (
-                    <DepEmpList
-                        departmentName={selectedDepartment}
-                        onSelect={setTempApprover}
-                    />
-                )}
-
                 <div className="draft-actions">
-                    <button
-                        type="button"
-                        className="erp-primary-button"
-                        onClick={() => {
-                            if (!tempApprover) {
-                                alert("직원을 선택해주세요.");
-                                return;
-                            }
-
-                            if (approvers.some(
-                                item =>
-                                    item.employee_id ===
-                                    tempApprover.employee_id
-                            )) {
-                                alert("이미 추가된 결재자입니다.");
-                                return;
-                            }
-
-                            setApprovers(prev => [
-                                ...prev,
-                                tempApprover
-                            ]);
-
-                            setShowApproverModal(false);
-                            setSelectedDepartment("");
-                            setTempApprover(null);
-                        }}
-                    >
-                        결재자 추가
+                    <button type="button" disabled={isSaving}
+                        onClick={() => handleSubmit("temporary")}>임시저장</button>
+                    <button type="button" className="erp-primary-button" disabled={isSaving}
+                        onClick={() => handleSubmit("submit")}>
+                        {isSaving ? "저장 중..." : "결재 요청"}
                     </button>
                 </div>
-            </div>
-        }
-    />
-)}
-</div>
+            </form>
+
+            {showApproverModal && (
+                <ModalBase title="결재자 추가" onClose={closeApproverModal}
+                    layout={
+                        <div className="draft-box">
+                            <h4>부서 선택</h4>
+                            <div className="draft-row">
+                                {departments.map(department => (
+                                    <button key={department} type="button"
+                                        onClick={() => {
+                                            setSelectedDepartment(department);
+                                            setTempApprover(null);
+                                        }}>
+                                        {department}
+                                    </button>
+                                ))}
+                            </div>
+                            {selectedDepartment && (
+                                <DepEmpList departmentName={selectedDepartment} onSelect={setTempApprover} />
+                            )}
+                            <div className="draft-actions">
+                                <button type="button" className="erp-primary-button"
+                                    onClick={addApprover}>결재자 추가</button>
+                            </div>
+                        </div>
+                    }
+                />
+            )}
+        </div>
     );
 }
-
-
 
 export default DraftCreate;

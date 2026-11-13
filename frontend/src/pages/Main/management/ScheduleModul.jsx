@@ -57,7 +57,7 @@ function ScheduleModul({dataType = 1}) {
 
                 return {
                     scheduleID: item.schedule_id
-                    ,title: item.description
+                    ,title: item.schedule_name
                     ,start: start
                     ,end: end
                     ,typeId: item.type_id
@@ -65,7 +65,7 @@ function ScheduleModul({dataType = 1}) {
             });
             setMySchduleData(dataSet);
         } catch (error) {
-            alert('내 스케쥴 데이터에러',error.data);
+            console.error(error.response?.data);
         }
     };
 

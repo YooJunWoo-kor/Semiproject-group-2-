@@ -11,6 +11,11 @@ export function createHrDepartment(data) {
   return axios.post(API_BASE_URL + '/hr/departments', data);
 }
 
+// 소속 직원이 없는 선택 부서를 삭제합니다.
+export function deleteHrDepartment(departmentId) {
+  return axios.delete(API_BASE_URL + '/hr/departments/' + departmentId);
+}
+
 // HR 직원 목록을 DB에서 조회합니다.
 export function getHrEmployees() {
   return axios.get(API_BASE_URL + '/hr/employees');
@@ -28,9 +33,34 @@ export function getHrLeaves(month) {
   });
 }
 
-// 출근·퇴근은 유지하고 근태 상태와 메모만 수정합니다.
+// 연차 사용량 집계에 필요한 해당 연도의 휴가 신청 데이터를 조회합니다.
+export function getHrLeavesByYear(year) {
+  return axios.get(API_BASE_URL + '/hr/leaves', {
+    params: { year }
+  });
+}
+
+// 기존 전자결재 API로 휴가 기안의 승인·반려를 처리합니다.
+export function decideHrLeave(draftId, employeeId, decision) {
+  return axios.post(API_BASE_URL + '/drafts/' + draftId + '/decision', {
+    employeeId,
+    decision
+  });
+}
+
+// 출퇴근 시간·근태 상태·수정 사유를 수정합니다.
 export function updateHrAttendance(attendanceId, data) {
   return axios.put(API_BASE_URL + '/hr/attendance/' + attendanceId, data);
+}
+
+// 관리자가 선택한 직원의 신규 근태 기록을 등록합니다.
+export function createHrAttendance(data) {
+  return axios.post(API_BASE_URL + '/hr/attendance', data);
+}
+
+// 관리자가 선택한 근태 기록을 삭제합니다.
+export function deleteHrAttendance(attendanceId) {
+  return axios.delete(API_BASE_URL + '/hr/attendance/' + attendanceId);
 }
 
 // 선택한 날짜와 부서의 직원별 출결 현황을 조회합니다.
@@ -46,13 +76,6 @@ export function getHrDepartmentAttendance(date, departmentId) {
 // 직원관리·부서관리·대시보드에서 함께 사용하는 부서와 직원 데이터입니다.
 export function getHrOrganization() {
   return Promise.all([getHrDepartments(), getHrEmployees()]);
-}
-
-// 이미 조회한 직원 배열을 departmentId 기준으로 필터링합니다.
-export function filterHrEmployeesByDepartment(employees, departmentId) {
-  return employees.filter(
-    (employee) => String(employee.departmentId) === String(departmentId)
-  );
 }
 
 // 직원 등록 API를 호출합니다.
@@ -77,6 +100,13 @@ export function getHrPayrolls(payMonth) {
       payMonth
     }
   });
+}
+
+// 선택한 직원의 월별 급여 이력을 조회합니다.
+export function getHrPayrollHistory(employeeId) {
+  return axios.get(
+    API_BASE_URL + '/hr/payrolls/employee/' + employeeId + '/history'
+  );
 }
 
 // 급여 미등록 직원의 급여를 등록합니다.
