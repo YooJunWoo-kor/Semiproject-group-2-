@@ -12,12 +12,12 @@ function DraftReq({ drafts, setEditingDraft, onDraftChanged }) {
     const [selectedDraft, setSelectedDraft] = useState(null);
 
     const navigate = useNavigate();
-    const employeeId = getLoginUser()?.employeeKey;
+    const employeeId = Number(getLoginUser()?.employeeKey);
 
     const requestedDrafts = drafts.filter(draft =>
-        draft.writerEmployeeKey === employeeId &&
+        Number(draft.writerEmployeeKey) === employeeId &&
         draft.status !== "최종승인" &&
-        draft.title.includes(searchText)
+        (draft.title || "").includes(searchText)
     );
 
     async function handleDelete(id) {
