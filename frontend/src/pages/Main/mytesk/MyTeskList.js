@@ -9,16 +9,25 @@ import DraftReq from "./pages/DraftReq";
 import DraftComp from "./pages/DraftComp";
 import DraftReceived from "./pages/DraftReceived";
 import DraftApproved from "./pages/DraftApproved";
-import { API_BASE_URL, getEmployeeAccounts, getLoginUser } from "../../../utils/authStorage";
+import { API_BASE_URL, getLoginUser } from "../../../utils/authStorage";
 import DraftDashboard from "./pages/DraftDashboard";
 
 
 
 function toDraft(draft, loginUser) {
     // MySQL의 JSON 필드는 문자열이나 객체로 전달될 수 있다.
-    const detailData = typeof draft.detail_data === "string"
-        ? JSON.parse(draft.detail_data)
-        : (draft.detail_data || {});
+    let detailData = draft.detail_data || {};
+    if (typeof detailData === "string") {
+        try {
+            detailData = JSON.parse(detailData);
+        } catch (error) {
+            console.warn("기안서 상세 데이터 파싱 실패:", draft.draft_id, error);
+            detailData = {};
+        }
+    }
+    if (!detailData || typeof detailData !== "object" || Array.isArray(detailData)) {
+        detailData = {};
+    }
     const statuses = {
         DRAFT: "임시저장",
         PENDING: "결재대기",
@@ -34,33 +43,21 @@ function toDraft(draft, loginUser) {
         status: statuses[draft.status] || draft.status,
         createdAt: draft.created_at ? new Date(draft.created_at).toLocaleString("ko-KR") : "",
         writerEmployeeKey: draft.employee_id,
-        writerName: draft.writer_name || (draft.employee_id === loginUser?.employeeKey ? loginUser.name : ""),
+        writerName: draft.writer_name || (Number(draft.employee_id) === Number(loginUser?.employeeKey) ? loginUser?.name : ""),
         approvers: [],
         currentApprovalStep: 0
     };
 }
 
 function MyTeskList() {
-    const [employees, setEmployees] = useState([]);
-    const [editingDraft, setEditingDraft] = useState(null);
+     const [editingDraft, setEditingDraft] = useState(null);
     const [drafts, setDrafts] = useState([]);
     const [receivedDrafts, setReceivedDrafts] = useState([]);
     const [approvedDrafts, setApprovedDrafts] = useState([]);
     const [draftError, setDraftError] = useState("");
     const loginUser = getLoginUser();
-    const employeeId = getLoginUser()?.employeeKey;
+    const employeeId = Number(loginUser?.employeeKey);
     const mainUrl = "/main/mytesk";
-
-    useEffect(() => {
-        async function loadEmployees() {
-            try {
-                setEmployees(await getEmployeeAccounts());
-            } catch (error) {
-                console.error("직원 목록 조회 오류:", error);
-            }
-        }
-        loadEmployees();
-    }, []);
 
     const loadDrafts = useCallback(async () => {
         if (!Number.isSafeInteger(employeeId) || employeeId <= 0) return;
@@ -108,9 +105,7 @@ function MyTeskList() {
                     } />
                     <Route path="draft-create" element={
                         <DraftCreate
-                            employees={employees}
                             loginUser={loginUser}
-                            setDrafts={setDrafts}
                             editingDraft={editingDraft}
                             setEditingDraft={setEditingDraft}
                             onDraftChanged={loadDrafts}
@@ -124,7 +119,7 @@ function MyTeskList() {
                         <DraftReceived drafts={receivedDrafts} onDraftChanged={loadDrafts} />
                     } />
                     <Route path="draft-approved" element={
-                        <DraftApproved drafts={approvedDrafts} loginUser={loginUser} />
+                        <DraftApproved drafts={approvedDrafts} />
                     } />
 
                     <Route path="draft-dashboard" element = { <DraftDashboard drafts={drafts} receivedDrafts={receivedDrafts} approvedDrafts={approvedDrafts}/>}/>
