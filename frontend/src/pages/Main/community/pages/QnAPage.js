@@ -39,6 +39,8 @@ export default function QnAPage() {
     const lock = useRef(false);
 
     const [comment, setComment] = useState('');
+    const [replyToId, setReplyToId] = useState(null);
+    const [replyContent, setReplyContent] = useState('');
     const [editingCommentId, setEditingCommentId] = useState(null);
     const [editingComment, setEditingComment] = useState('');
 
@@ -58,6 +60,8 @@ export default function QnAPage() {
     useEffect(() => {
         setComment('');
         setEditingCommentId(null);
+        setReplyToId(null);
+        setReplyContent('');
     }, [selectedId]);
 
     useEffect(() => {
@@ -199,16 +203,23 @@ export default function QnAPage() {
         setMessage('');
     };
 
-    const saveComment = event => {
-        event.preventDefault();
+    const closeReply = () => {
+        setReplyToId(null);
+        setReplyContent('');
+    };
 
-        if (!comment.trim() || !selected) {
-            setMessage('댓글 내용을 입력해 주세요.');
+    // [수정] 일반 댓글과 답글을 같은 API로 등록합니다.
+    const saveComment = (event, parentId = null) => {
+        event.preventDefault();
+        const isReply = parentId !== null;
+        const text = (isReply ? replyContent : comment).trim();
+
+        if (!text || !selected) {
+            setMessage(isReply ? '답글 내용을 입력해 주세요.' : '댓글 내용을 입력해 주세요.');
             return;
         }
 
         let employee;
-
         try {
             employee = getLoginUser();
         } catch {
@@ -217,7 +228,6 @@ export default function QnAPage() {
         }
 
         const employeeId = Number(employee?.employee_id ?? employee?.employeeKey);
-
         if (!Number.isInteger(employeeId) || employeeId <= 0) {
             setMessage('로그인 직원 정보를 확인해 주세요.');
             return;
@@ -225,11 +235,15 @@ export default function QnAPage() {
 
         run(
             () => addQnAComment(selected.post_id, {
-                content: comment.trim(),
-                employee_id: employeeId
+                content: text,
+                employee_id: employeeId,
+                parent_comment_id: parentId
             }),
-            () => setComment(''),
-            '댓글이 등록되었습니다.'
+            () => {
+                if (isReply) closeReply();
+                else setComment('');
+            },
+            isReply ? '답글이 등록되었습니다.' : '댓글이 등록되었습니다.'
         );
     };
 
@@ -253,7 +267,10 @@ export default function QnAPage() {
 
         run(
             () => deleteQnAComment(selected.post_id, c.comment_id),
-            () => setEditingCommentId(null),
+            () => {
+                setEditingCommentId(null);
+                if (replyToId === c.comment_id) closeReply();
+            },
             '댓글이 삭제되었습니다.'
         );
     };
@@ -306,6 +323,89 @@ export default function QnAPage() {
         </div>
     );
 
+    // [추가] 삭제 안내 줄은 댓글 수에서 제외합니다.
+    const countComments = comments =>
+        (comments || []).filter(c => c.deleted_at == null).length;
+
+    const comments = selected?.comments || [];
+    const rootComments = comments.filter(c => c.parent_comment_id == null);
+    const repliesByParent = new Map();
+
+    for (const c of comments) {
+        if (c.parent_comment_id == null || c.deleted_at != null) continue;
+        const replies = repliesByParent.get(c.parent_comment_id) || [];
+        replies.push(c);
+        repliesByParent.set(c.parent_comment_id, replies);
+    }
+
+    const renderComment = c => {
+        const isReply = c.parent_comment_id != null;
+        const editing = editingCommentId === c.comment_id;
+
+        if (c.deleted_at != null) {
+            return (
+                <div className="comment-item" key={c.comment_id}>
+                    <p className="subtext">삭제된 댓글입니다</p>
+                </div>
+            );
+        }
+
+        return (
+            <div className="comment-item" key={c.comment_id}
+                style={isReply ? { marginLeft: 24 } : undefined}>
+                <div className="comment-meta">
+                    {isReply && <span aria-hidden="true">↳ </span>}
+                    <strong>{c.employee_name || '작성자 미확인'}</strong>
+                    <span className="subtext">
+                        {' ('}{dateTime(c.created_at)}{')'}
+                        {c.updated_at && ' | 수정: ' + dateTime(c.updated_at)}
+                    </span>
+                </div>
+                {editing ? (
+                    <form onSubmit={event => editComment(event, c)}>
+                        <input
+                            aria-label="댓글 수정 내용"
+                            required
+                            onInput={validateText}
+                            maxLength={10000}
+                            style={inputStyle}
+                            value={editingComment}
+                            onChange={event => setEditingComment(event.target.value)}
+                            disabled={busy}
+                        />
+                        <div className="table-actions">
+                            <button type="submit" disabled={busy}>저장</button>
+                            <button type="button" disabled={busy}
+                                onClick={() => setEditingCommentId(null)}>취소</button>
+                        </div>
+                    </form>
+                ) : (
+                    <>
+                        <p className="comment-text"
+                            style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                            {c.content}
+                        </p>
+                        <div className="table-actions">
+                            {!isReply && (
+                                <button type="button" disabled={busy} onClick={() => {
+                                    if (replyToId === c.comment_id) return;
+                                    setReplyToId(c.comment_id);
+                                    setReplyContent('');
+                                }}>답글</button>
+                            )}
+                            <button type="button" disabled={busy} onClick={() => {
+                                setEditingCommentId(c.comment_id);
+                                setEditingComment(c.content);
+                            }}>수정</button>
+                            <button type="button" disabled={busy} className="danger-button"
+                                onClick={() => removeComment(c)}>삭제</button>
+                        </div>
+                    </>
+                )}
+            </div>
+        );
+    };
+
     const tableData = filtered.map((item, index) => ({
         content: [
             filtered.length - index,
@@ -330,7 +430,7 @@ export default function QnAPage() {
             </button>,
             item.employee_name || '작성자 미확인',
             date(item.created_at),
-            (item.comments || []).length,
+            countComments(item.comments),
             <React.Fragment key={`actions-${item.post_id}`}>
                 {actions(item)}
             </React.Fragment>
@@ -501,107 +601,51 @@ export default function QnAPage() {
                     <hr />
 
                     <section className="comment-section">
-                        <h4>댓글 ({(selected.comments || []).length})</h4>
-
+                        <h4>댓글 ({countComments(comments)})</h4>
                         <div className="comment-list">
-                            {(selected.comments || []).map(c => (
-                                <div className="comment-item" key={c.comment_id}>
-                                    <div className="comment-meta">
-                                        <strong>
-                                            {c.employee_name || '작성자 미확인'}
-                                        </strong>
-
-                                        <span className="subtext">
-                                            {' ('}{dateTime(c.created_at)}{')'}
-                                            {c.updated_at && ' | 수정: ' + dateTime(c.updated_at)}
-                                        </span>
-
-                                        {editingCommentId === c.comment_id ? (
-                                            <form onSubmit={event => editComment(event, c)}>
-                                                <input
-                                                    aria-label="댓글 수정 내용"
-                                                    required
-                                                    onInput={validateText}
-                                                    maxLength={10000}
-                                                    style={inputStyle}
-                                                    value={editingComment}
-                                                    onChange={event =>
-                                                        setEditingComment(event.target.value)
-                                                    }
-                                                    disabled={busy}
-                                                />
-                                                <button type="submit" disabled={busy}>
-                                                    저장
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    disabled={busy}
-                                                    onClick={() => setEditingCommentId(null)}
-                                                >
-                                                    취소
-                                                </button>
-                                            </form>
-                                        ) : (
-                                            <>
-                                                <p
-                                                    className="comment-text"
-                                                    style={{
-                                                        whiteSpace: 'pre-wrap',
-                                                        overflowWrap: 'anywhere'
-                                                    }}
-                                                >
-                                                    {c.content}
-                                                </p>
-
-                                                <div className="table-actions">
-                                                    <button
-                                                        type="button"
-                                                        disabled={busy}
-                                                        onClick={() => {
-                                                            setEditingCommentId(c.comment_id);
-                                                            setEditingComment(c.content);
-                                                        }}
-                                                    >
-                                                        수정
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        disabled={busy}
-                                                        onClick={() => removeComment(c)}
-                                                    >
-                                                        삭제
-                                                    </button>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
+                            {rootComments.map(root => (
+                                <div key={root.comment_id}>
+                                    {renderComment(root)}
+                                    {(repliesByParent.get(root.comment_id) || []).map(renderComment)}
+                                    {replyToId === root.comment_id && root.deleted_at == null && (
+                                        <form className="comment-input-wrap"
+                                            style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', marginLeft: 24 }}
+                                            onSubmit={event => saveComment(event, root.comment_id)}>
+                                            <input
+                                                aria-label="답글 내용"
+                                                placeholder="답글을 입력하세요"
+                                                required
+                                                onInput={validateText}
+                                                maxLength={10000}
+                                                value={replyContent}
+                                                onChange={event => setReplyContent(event.target.value)}
+                                                disabled={busy}
+                                                style={{ ...inputStyle, flex: '1 1 240px', width: 'auto' }}
+                                            />
+                                            <button type="button" disabled={busy} onClick={closeReply}>취소</button>
+                                            <button type="submit" className="register-btn" disabled={busy}>
+                                                답글 등록
+                                            </button>
+                                        </form>
+                                    )}
                                 </div>
                             ))}
-
-                            {(selected.comments || []).length === 0 && (
+                            {rootComments.length === 0 && (
                                 <p className="no-data">등록된 댓글이 없습니다.</p>
                             )}
                         </div>
-
-                        <form
-                            className="comment-input-wrap"
-                            style={{
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                gap: 10,
-                                alignItems: 'center'
-                            }}
-                            onSubmit={saveComment}
-                        >
+                        <form className="comment-input-wrap"
+                            style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}
+                            onSubmit={saveComment}>
                             <input
-                                required
-                                onInput={validateText}
                                 aria-label="댓글 내용"
                                 placeholder="댓글을 입력하세요"
+                                required
+                                onInput={validateText}
                                 maxLength={10000}
-                                disabled={busy}
                                 value={comment}
                                 onChange={event => setComment(event.target.value)}
+                                disabled={busy}
                                 style={{ ...inputStyle, flex: '1 1 240px', width: 'auto' }}
                             />
                             <button type="submit" className="register-btn" disabled={busy}>

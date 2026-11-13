@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 
 import PaginationTable from '../../../../components/PaginationTable';
@@ -27,7 +27,6 @@ function FreeBoardPage() {
     const [items, setItems] = useState([]);
     const [query, setQuery] = useState('');
 
-    // [수정] 주소에서 글 번호를 읽어 상세 글을 찾습니다.
     const selectedId = searchParams.get('postId');
     const selected = items.find(item => String(item.post_id) === selectedId);
 
@@ -36,13 +35,18 @@ function FreeBoardPage() {
     const [editingCommentId, setEditingCommentId] = useState(null);
     const [editingCommentContent, setEditingCommentContent] = useState('');
 
+    // [추가] 답글 대상과 입력 내용
+    const [replyToId, setReplyToId] = useState(null);
+    const [replyContent, setReplyContent] = useState('');
+    const [savingComment, setSavingComment] = useState(false);
+    const commentSaveLock = useRef(false);
+
     // 글쓰기·수정 모달
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
 
-    // [추가] 제목을 누르면 상세 주소를 방문 기록에 추가합니다.
     const selectPost = postId => {
         const nextParams = new URLSearchParams(searchParams);
 
@@ -102,6 +106,9 @@ function FreeBoardPage() {
         setComment('');
         setEditingCommentId(null);
         setEditingCommentContent('');
+        // [추가] 다른 글로 이동하면 이전 글의 답글 입력을 닫습니다.
+        setReplyToId(null);
+        setReplyContent('');
     }, [selectedId]);
 
     const refreshPosts = async () => {
@@ -123,7 +130,6 @@ function FreeBoardPage() {
             })
             : '-';
 
-    // [수정] 새 API 응답의 title로 검색합니다.
     const filtered = items.filter(item =>
         `${item.title} ${item.employee_name || '작성자 미확인'}`
             .toLowerCase()
@@ -164,7 +170,6 @@ function FreeBoardPage() {
             return;
         }
 
-        // [수정] 등록과 수정 모두 title, content를 전달합니다.
         const post = {
             title: title.trim(),
             content: content.trim()
@@ -224,9 +229,29 @@ function FreeBoardPage() {
         alert('게시글이 삭제되었습니다.');
     };
 
-    const saveComment = async () => {
-        if (!comment.trim()) {
-            alert('댓글 내용을 입력해 주세요.');
+    // [추가] 원댓글 아래의 답글 입력창을 엽니다.
+    const openReply = commentId => {
+        if (replyToId === commentId) return;
+
+        setReplyToId(commentId);
+        setReplyContent('');
+    };
+
+    const closeReply = () => {
+        setReplyToId(null);
+        setReplyContent('');
+    };
+
+    // [수정] 일반 댓글과 답글을 같은 함수로 등록합니다.
+    const saveComment = async (parentId = null) => {
+        if (commentSaveLock.current) return;
+
+        const isReply = parentId !== null;
+        const text = (isReply ? replyContent : comment).trim();
+        const label = isReply ? '답글' : '댓글';
+
+        if (!text) {
+            alert(`${label} 내용을 입력해 주세요.`);
             return;
         }
 
@@ -240,31 +265,46 @@ function FreeBoardPage() {
             return;
         }
 
-        try {
-            await addFreeComment(selected.post_id, {
-                content: comment.trim(),
-                employee_id: Number(
-                    employee.employee_id ?? employee.employeeKey
-                )
-            });
-        } catch (error) {
-            console.error('댓글 등록 실패:', error);
-            alert('댓글 등록에 실패했습니다.');
-            return;
-        }
-
-        setComment('');
+        commentSaveLock.current = true;
+        setSavingComment(true);
 
         try {
-            await refreshPosts();
-            alert('댓글이 등록되었습니다.');
-        } catch (error) {
-            console.error('댓글 등록 후 재조회 실패:', error);
-            alert('댓글은 등록되었습니다. 확인하려면 새로고침해 주세요.');
+            try {
+                await addFreeComment(selected.post_id, {
+                    content: text,
+                    employee_id: Number(
+                        employee.employee_id ?? employee.employeeKey
+                    ),
+                    parent_comment_id: parentId
+                });
+            } catch (error) {
+                console.error(`${label} 등록 실패:`, error);
+                alert(
+                    error.response?.data?.message ||
+                    `${label} 등록에 실패했습니다.`
+                );
+                return;
+            }
+
+            if (isReply) {
+                closeReply();
+            } else {
+                setComment('');
+            }
+
+            try {
+                await refreshPosts();
+                alert(`${label}이 등록되었습니다.`);
+            } catch (error) {
+                console.error(`${label} 등록 후 재조회 실패:`, error);
+                alert(`${label}은 등록되었습니다. 확인하려면 새로고침해 주세요.`);
+            }
+        } finally {
+            commentSaveLock.current = false;
+            setSavingComment(false);
         }
     };
 
-    // [수정] 댓글 번호는 comment_id를 사용합니다.
     const handleEditComment = c => {
         setEditingCommentId(c.comment_id);
         setEditingCommentContent(c.content);
@@ -302,6 +342,7 @@ function FreeBoardPage() {
         }
     };
 
+    // [수정] 삭제 후 서버에서 안내 문구와 남은 답글을 다시 받습니다.
     const removeComment = async commentId => {
         if (!window.confirm('댓글을 삭제할까요?')) return;
 
@@ -313,20 +354,122 @@ function FreeBoardPage() {
             return;
         }
 
-        setItems(previous =>
-            previous.map(post =>
-                post.post_id === selected?.post_id
-                    ? {
-                        ...post,
-                        comments: (post.comments || []).filter(
-                            c => c.comment_id !== commentId
-                        )
-                    }
-                    : post
-            )
-        );
+        if (replyToId === commentId) {
+            closeReply();
+        }
 
-        alert('댓글이 삭제되었습니다.');
+        try {
+            await refreshPosts();
+            alert('댓글이 삭제되었습니다.');
+        } catch (error) {
+            console.error('댓글 삭제 후 재조회 실패:', error);
+            alert('댓글은 삭제되었습니다. 확인하려면 새로고침해 주세요.');
+        }
+    };
+
+    // [추가] 삭제 안내 줄은 댓글 수에 포함하지 않습니다.
+    const countComments = comments =>
+        (comments || []).filter(c => c.deleted_at == null).length;
+
+    // [추가] 원댓글과 답글을 나누고, 답글은 원댓글 번호로 묶습니다.
+    const comments = selected?.comments || [];
+    const rootComments = [];
+    const repliesByParent = new Map();
+
+    for (const c of comments) {
+        if (c.parent_comment_id == null) {
+            rootComments.push(c);
+        } else if (c.deleted_at == null) {
+            const parentId = c.parent_comment_id;
+            const replies = repliesByParent.get(parentId) || [];
+
+            replies.push(c);
+            repliesByParent.set(parentId, replies);
+        }
+    }
+
+    // [추가] 원댓글과 답글에 같은 작성 시각·수정·삭제 UI를 씁니다.
+    const renderComment = c => {
+        const isReply = c.parent_comment_id != null;
+        const editing = editingCommentId === c.comment_id;
+
+        if (c.deleted_at != null) {
+            return (
+                <div className="comment-item" key={c.comment_id}>
+                    <p className="subtext">삭제된 댓글입니다</p>
+                </div>
+            );
+        }
+
+        return (
+            <div
+                className="comment-item"
+                key={c.comment_id}
+                style={isReply ? { marginLeft: 24 } : undefined}
+            >
+                <div className="comment-meta">
+                    {isReply && <span aria-hidden="true">↳ </span>}
+                    <strong>{c.employee_name || '작성자 미확인'}</strong>
+
+                    <span className="subtext">
+                        {' ('}{dateTime(c.created_at)}{')'}
+                        {c.updated_at && ' | 수정: ' + dateTime(c.updated_at)}
+                    </span>
+
+                    {editing ? (
+                        <div>
+                            <input
+                                type="text"
+                                aria-label="수정할 댓글 내용"
+                                maxLength={10000}
+                                value={editingCommentContent}
+                                onChange={e =>
+                                    setEditingCommentContent(e.target.value)
+                                }
+                            />
+                            <button
+                                type="button"
+                                onClick={() => saveEditComment(c.comment_id)}
+                            >
+                                저장
+                            </button>
+                            <button type="button" onClick={cancelEditComment}>
+                                취소
+                            </button>
+                        </div>
+                    ) : (
+                        <p className="comment-text">{c.content}</p>
+                    )}
+                </div>
+
+                {!editing && (
+                    <div className="table-actions">
+                        {!isReply && (
+                            <button
+                                type="button"
+                                disabled={savingComment}
+                                onClick={() => openReply(c.comment_id)}
+                            >
+                                답글
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => handleEditComment(c)}
+                        >
+                            수정
+                        </button>
+                        <button
+                            type="button"
+                            className="danger-button"
+                            onClick={() => removeComment(c.comment_id)}
+                        >
+                            삭제
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
     };
 
     const writeModalLayout = (
@@ -403,7 +546,7 @@ function FreeBoardPage() {
             </button>,
             item.employee_name || '작성자 미확인',
             date(item.created_at),
-            (item.comments || []).length,
+            countComments(item.comments),
             <React.Fragment key={`actions-${item.post_id}`}>
                 {actions(item)}
             </React.Fragment>
@@ -482,99 +625,85 @@ function FreeBoardPage() {
                     <hr />
 
                     <section className="comment-section">
-                        <h4>댓글 ({(selected.comments || []).length})</h4>
+                        <h4>댓글 ({countComments(comments)})</h4>
 
+                        {/* [수정] 원댓글 바로 아래에 연결된 답글을 표시합니다. */}
                         <div className="comment-list">
-                            {(selected.comments || []).map(c => {
-                                const editing = editingCommentId === c.comment_id;
+                            {rootComments.map(root => (
+                                <div key={root.comment_id}>
+                                    {renderComment(root)}
+                                    {(repliesByParent.get(root.comment_id) || [])
+                                        .map(renderComment)}
 
-                                return (
-                                    <div className="comment-item" key={c.comment_id}>
-                                        <div className="comment-meta">
-                                            <strong>
-                                                {c.employee_name || '작성자 미확인'}
-                                            </strong>
+                                    {replyToId === root.comment_id &&
+                                        root.deleted_at == null && (
+                                        <form
+                                            className="comment-input-wrap"
+                                            style={{ marginLeft: 24 }}
+                                            onSubmit={event => {
+                                                event.preventDefault();
+                                                saveComment(root.comment_id);
+                                            }}
+                                        >
+                                            <input
+                                                type="text"
+                                                aria-label="답글 내용"
+                                                placeholder="답글을 입력하세요"
+                                                maxLength={10000}
+                                                value={replyContent}
+                                                disabled={savingComment}
+                                                onChange={e =>
+                                                    setReplyContent(e.target.value)
+                                                }
+                                            />
+                                            <button
+                                                type="button"
+                                                disabled={savingComment}
+                                                onClick={closeReply}
+                                            >
+                                                취소
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                className="register-btn"
+                                                disabled={savingComment}
+                                            >
+                                                답글 등록
+                                            </button>
+                                        </form>
+                                    )}
+                                </div>
+                            ))}
 
-                                            <span className="subtext">
-                                                {' ('}{dateTime(c.created_at)}{')'}
-                                                {c.updated_at &&
-                                                    ' | 수정: ' + dateTime(c.updated_at)}
-                                            </span>
-
-                                            {editing ? (
-                                                <div>
-                                                    <input
-                                                        type="text"
-                                                        value={editingCommentContent}
-                                                        onChange={e =>
-                                                            setEditingCommentContent(
-                                                                e.target.value
-                                                            )
-                                                        }
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            saveEditComment(c.comment_id)
-                                                        }
-                                                    >
-                                                        저장
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={cancelEditComment}
-                                                    >
-                                                        취소
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <p className="comment-text">{c.content}</p>
-                                            )}
-                                        </div>
-
-                                        {!editing && (
-                                            <div className="table-actions">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleEditComment(c)}
-                                                >
-                                                    수정
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="danger-button"
-                                                    onClick={() =>
-                                                        removeComment(c.comment_id)
-                                                    }
-                                                >
-                                                    삭제
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-
-                            {(selected.comments || []).length === 0 && (
+                            {rootComments.length === 0 && (
                                 <p className="no-data">등록된 댓글이 없습니다.</p>
                             )}
                         </div>
 
-                        <div className="comment-input-wrap">
+                        <form
+                            className="comment-input-wrap"
+                            onSubmit={event => {
+                                event.preventDefault();
+                                saveComment();
+                            }}
+                        >
                             <input
                                 type="text"
+                                aria-label="댓글 내용"
                                 value={comment}
                                 onChange={e => setComment(e.target.value)}
                                 placeholder="댓글을 입력하세요"
+                                maxLength={10000}
+                                disabled={savingComment}
                             />
                             <button
-                                type="button"
+                                type="submit"
                                 className="register-btn"
-                                onClick={saveComment}
+                                disabled={savingComment}
                             >
                                 댓글 등록
                             </button>
-                        </div>
+                        </form>
                     </section>
                 </article>
             )}
