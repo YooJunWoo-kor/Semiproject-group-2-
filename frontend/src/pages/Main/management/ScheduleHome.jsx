@@ -27,39 +27,52 @@ export default function ScheduleHome() {
           }}/>
 
           {/* 버튼 클릭하면, 들어온 데이터들 필터링 */}
-          <form
-            onChange={(e)=>{
-              setDataType(e.target.value);
-            }}
-            className='schedule-nav'
-          >
+          <form className="schedule-nav">
             <label>
-              <input 
+              <input
                 type="radio"
                 value="1"
                 name="scheduleFilter"
                 checked={Number(dataType) === 1}
+                onChange={(e) => setDataType(Number(e.target.value))}
               />
               전체보기
             </label>
             <label>
-              <input type='radio' value="2" name="scheduleFilter"/>
+              <input
+                type="radio"
+                value="2"
+                name="scheduleFilter"
+                checked={Number(dataType) === 2}
+                onChange={(e) => setDataType(Number(e.target.value))}
+              />
               내 일정
             </label>
             <label>
-              <input type='radio' value="3" name="scheduleFilter"/>
+              <input
+                type="radio"
+                value="3"
+                name="scheduleFilter"
+                checked={Number(dataType) === 3}
+                onChange={(e) => setDataType(Number(e.target.value))}
+              />
               마감임박
             </label>
             <label>
-              <input type='radio' value="4" name="scheduleFilter"/>
+              <input
+                type="radio"
+                value="4"
+                name="scheduleFilter"
+                checked={Number(dataType) === 4}
+                onChange={(e) => setDataType(Number(e.target.value))}
+              />
               주요일정
             </label>
-            
           </form>
       </div>
       <Routes>
         <Route path='/' element={<ScheduleModul dataType={dataType}/>} />
-        <Route path="*" element={<Navigate to="/main/schedule" replace />} />
+        <Route path='/cabinet' element={<MeetingRoomPage/>} />
       </Routes>
     </div>
   );

@@ -3,3 +3,10 @@
     --subFont-size-1: 15px;
     --subFont-size-2: 13px;
 }
+
+.formText{
+    font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--font-color1);
+}

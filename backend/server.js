@@ -2,12 +2,13 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-
 const db = require('./db');
 const app = express();
+// 미들웨어
+app.use(cors());
+app.use(express.json());
 
 const PORT = process.env.PORT || 4000;
-
 const path = require("path");
 
 // 라우터
@@ -24,9 +25,13 @@ const mrRoutes = require('./routes/mrRoutes');
 // 품질관리 라우터 추가
 const qualityRoutes = require('./routes/quality');
 
-// 미들웨어
-app.use(cors());
-app.use(express.json());
+
+
+// 모든 HTTP 요청 확인
+app.use((req, res, next) => {
+    console.log("요청 도착:", req.method, req.url);
+    next();
+});
 
 // API 연결
 app.use('/api/hr', hrRouter);
@@ -193,10 +198,12 @@ app.post('/api/login', (req, res) => {
                     employee_id: user.employee_id,
                     employee_number: user.employee_number,
                     name: user.name,
+                    email: user.email,
                     department_name: user.department_name,
                     department_id: user.department_id,
                     position: user.position,
                     role: user.role
+                    
                 }
             });
         } else {

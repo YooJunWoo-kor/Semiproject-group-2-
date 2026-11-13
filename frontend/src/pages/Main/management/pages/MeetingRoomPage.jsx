@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import ModalBase from "../../../../components/ModalBase";
-import { API_BASE_URL, getTodayString } from "../../../../utils/authStorage";
+import { API_BASE_URL, getTodayString, getLoginUser } from "../../../../utils/authStorage";
 import "./MeetingRoomPage.css";
+import { useNavigate } from "react-router-dom";
 
 const rooms = Array.from({ length: 9 }, (_, i) => ({
     id: i + 1,
@@ -13,7 +14,7 @@ const timeOptions = Array.from({ length: 48 }, (_, i) =>
     String(Math.floor(i / 2)).padStart(2, "0") + ":" + (i % 2 === 0 ? "00" : "30")
 );
 
-const emptyForm = { title: "", content: "", reserverName: "", phone: "", email: "" };
+const emptyForm = { title: "", content: "" };
 
 function MeetingRoomPage() {
     const [selectedDate, setSelectedDate] = useState(getTodayString());
@@ -25,6 +26,10 @@ function MeetingRoomPage() {
     const [reservationForm, setReservationForm] = useState(emptyForm);
     const [isSaving, setIsSaving] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
+
+    const loginUser = getLoginUser();
+
+    const navigate = useNavigate();
 
     useEffect(() => {
         const loadReservations = async () => {
@@ -62,7 +67,7 @@ function MeetingRoomPage() {
         }
 
         const isReserved = reservations.some(item =>
-            Number(item.room_id) === selectedRoom.id &&
+            Number(item.room_number) === selectedRoom.id &&
             item.start_time < endTime &&
             item.end_time > startTime
         );
@@ -72,14 +77,22 @@ function MeetingRoomPage() {
             return;
         }
 
+        if (!loginUser?.employeeKey) {
+            alert("로그인 정보가 없습니다. 다시 로그인해주세요");
+            navigate('/login');
+            return;
+        }
+
+
         setIsSaving(true);
 
         try {
             await axios.post(API_BASE_URL + "/meeting-rooms/reservations", {
-                roomId: selectedRoom.id,
+                roomNumber: selectedRoom.id,
                 reservationDate: selectedDate,
                 startTime,
                 endTime,
+                employeeId: loginUser.employeeKey,
                 ...reservationForm
             });
 
@@ -95,25 +108,22 @@ function MeetingRoomPage() {
     };
 
     const DeleteReservation = async (id) => {
-        try{
+        try {
             await axios.delete(API_BASE_URL + `/meeting-rooms/reservations/${id}`)
 
 
-            const newRev = reservations.filter(item => item.reservation_id !== id)
+            const newRev = reservations.filter(item => item.room_id !== id)
 
             setReservations(newRev);
-        }catch{
+        } catch {
 
         }
-        
+
     }
 
     return (
-        <div className="meeting-room-page">
-            <header className="dashboard-header">
-                <span className="subtitle">회의실 예약</span>
-            </header>
 
+        <div className="meeting-room-page">
             <div className="meeting-room-filter form-inputs">
                 <label>
                     예약 날짜
@@ -122,29 +132,47 @@ function MeetingRoomPage() {
                 </label>
             </div>
 
+            <header className="dashboard-header">
+                <span className="subtitle">회의실 예약</span>
+            </header>
+
             <div className="meeting-room-grid">
                 {rooms.map(room => {
                     const roomReservations = reservations.filter(
-                        item => Number(item.room_id) === room.id
+                        item => Number(item.room_number) === room.id
                     );
 
                     return (
                         <section className="meeting-room-card" key={room.id}>
+
                             <h3>{room.name}</h3>
 
                             <div className="meeting-room-slots">
                                 {roomReservations.length === 0 ? (
                                     <p>예약 없음</p>
                                 ) : roomReservations.map(item => (
-                                    <div className="meeting-room-slot" key={item.reservation_id}>
-                                        <button type="button" className="meeting-room-title"
-                                            onClick={() => setSelectedReservation(item)}>
-                                            {item.title}
-                                        </button>
-                                        <button onClick={() => DeleteReservation(item.reservation_id)}>
-                                            예약 취소
-                                        </button>
-                                        <span>{item.start_time} ~ {item.end_time}</span>
+                                    <div className="meeting-room-slot" key={item.room_id}>
+                                        <div className="meeting-room-slot-heading">
+                                            <button type="button" className="meeting-room-title"
+                                                title={item.title}
+                                                onClick={() => setSelectedReservation(item)}>
+                                                {item.title}
+                                            </button>
+                                            {Number(loginUser?.employeeKey) === Number(item.employee_id) && (
+                                            <button type="button" onClick={() => DeleteReservation(item.room_id)}>
+                                                예약 취소
+                                            </button>
+                                            )}
+                                        </div>
+                                        <span className="meeting-room-time">
+                                            {item.start_time} ~ {item.end_time}
+                                            <strong style={{marginLeft:'140px'}}>
+                                                {item.reserver_name}
+                                            </strong>
+                                        </span>
+                                            
+
+                                       
                                     </div>
                                 ))}
                             </div>
@@ -167,7 +195,14 @@ function MeetingRoomPage() {
                     onClose={() => setSelectedRoom(null)}
                     layout={
                         <form className="draft-box meeting-room-form" onSubmit={handleReservationSubmit}>
-                            <p>예약 날짜: {selectedDate}</p>
+
+                            <div className="meeting-room-filter form-inputs">
+                                <label>
+                                    예약 날짜
+                                    <input type="date" min={getTodayString()} value={selectedDate}
+                                        onChange={e => setSelectedDate(e.target.value)} />
+                                </label>
+                            </div>
 
                             <div className="draft-row">
                                 <label>
@@ -202,20 +237,8 @@ function MeetingRoomPage() {
                                 <textarea name="content" value={reservationForm.content}
                                     onChange={handleInputChange} />
                             </label>
-                            <div className="draft-row">
-                                <label>예약자 이름
-                                    <input name="reserverName" value={reservationForm.reserverName}
-                                        onChange={handleInputChange} required />
-                                </label>
-                                <label>연락처
-                                    <input type="tel" name="phone" value={reservationForm.phone}
-                                        onChange={handleInputChange} require />
-                                </label>
-                            </div>
-                            <label>이메일
-                                <input type="email" name="email" value={reservationForm.email}
-                                    onChange={handleInputChange} require />
-                            </label>
+
+
                             <div className="draft-actions">
                                 <button type="submit" className="erp-primary-button" disabled={isSaving}>
                                     {isSaving ? "예약 처리 중..." : "예약하기"}
@@ -229,11 +252,21 @@ function MeetingRoomPage() {
             {selectedReservation && (
                 <ModalBase title="예약 상세 정보" onClose={() => setSelectedReservation(null)}
                     layout={
+
+
                         <div className="draft-box meeting-room-detail">
+                            <p>예약 날짜: {selectedDate}</p>
+
                             <div className="draft-row">
                                 <strong>회의 제목</strong>
                                 <span>{selectedReservation.title}</span>
                             </div>
+
+                            <div className="draft-row">
+                                <strong>회의 내용</strong>
+                                <span>{selectedReservation.content}</span>
+                            </div>
+
                             <div className="draft-row">
                                 <strong>예약 날짜</strong>
                                 <span>{selectedDate}</span>
@@ -246,18 +279,12 @@ function MeetingRoomPage() {
                                 <strong>예약자</strong>
                                 <span>{selectedReservation.reserver_name}</span>
                             </div>
-                            <div className="draft-row">
-                                <strong>전화번호</strong>
-                                <span>{selectedReservation.phone || "-"}</span>
-                            </div>
+
                             <div className="draft-row">
                                 <strong>이메일</strong>
                                 <span>{selectedReservation.email || "-"}</span>
                             </div>
-                            <div className="draft-row">
-                                <strong>회의 내용</strong>
-                                <span>{selectedReservation.content || "-"}</span>
-                            </div>
+
                             <div className="draft-actions">
                                 <button type="button" onClick={() => setSelectedReservation(null)}>닫기</button>
                             </div>

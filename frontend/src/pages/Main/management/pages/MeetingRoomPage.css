@@ -67,9 +67,17 @@
     background: #f7fbff;
 }
 
+.meeting-room-slot-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
 .meeting-room-title,
 .meeting-room-title:hover {
     display: block;
+    flex: 1 1 auto;
     min-width: 0;
     min-height: 0;
     padding: 0;
@@ -78,11 +86,10 @@
     color: var(--color-brand);
     text-align: left;
     font-weight: 700;
-    overflow-wrap: anywhere;
-}
-
-.meeting-room-title:hover {
-    text-decoration: underline;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-decoration: none;
 }
 
 .meeting-room-title:focus-visible {
@@ -90,9 +97,17 @@
     outline-offset: 3px;
 }
 
-.meeting-room-slot span {
+.meeting-room-time {
     color: var(--color-muted);
     font-size: .86rem;
+    font-weight: 500;
+}
+
+.meeting-room-slot-heading > button:last-child {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 6px 10px;
+    font-size: .85rem;
 }
 
 .meeting-room-reserve-button {
@@ -108,6 +123,10 @@
 .meeting-room-form,
 .meeting-room-detail {
     width: 100%;
+}
+
+.meeting-room-form .meeting-room-filter {
+    margin-bottom: 0;
 }
 
 /* 예약 모달의 입력 그룹 바깥 카드 테두리만 제거 */

@@ -16,32 +16,39 @@ function BasicTable({title, th, td}){
             <h4 style={{marginBottom:"0px"}}>{title}</h4>
             <div className="table-shell">
                 <table>
-                    <tr>
-                        {th.map((item)=>(
-                            <th>{item}</th>
-                        ))}
-                    </tr>
+                    <thead>
+                        <tr>
+                            {th.map((item, index)=>(
+                                <th key={index}>{item}</th>
+                            ))}
+                        </tr>
+                    </thead>
 
-                    {!td ?
-                        <tr
-                            style={{
-                                height:'200px'
-                            }}
-                        ><td
-                            colSpan={th.length}
-                            style={{
-                                textAlign: 'center'
+                    <tbody>
+                        {!td ?
+                            <tr
+                                style={{
+                                    height:'200px'
+                                }}
+                            ><td
+                                colSpan={th.length}
+                                style={{
+                                    textAlign: 'center'
 
-                            }}
-                        >등록된 정보가 없습니다.</td></tr>
+                                }}
+                            >등록된 정보가 없습니다.</td></tr>
 
-                        : td.map((item)=>{
-                            return <tr>{item.content.map((item)=>(
-                                <td style={{
-                                    fontSize:"13"
-                                }}>{item}</td>
-                            ))}</tr>
-                    })}
+                            : td.map((item)=>{
+                                return <tr>{item.content.map((item, index)=>(
+                                    <td
+                                        key={index}
+                                        style={{
+                                            fontSize:"13"
+                                    }}>{item}</td>
+                                ))}</tr>
+                        })}
+                    </tbody>
+
                 </table>
             </div>
         </div>
