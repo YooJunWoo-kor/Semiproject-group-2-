@@ -11,9 +11,11 @@ function PaginationTable({ title, th, allData = [], itemsPerPage = 5, style = 1 
 
   // 총 페이지 수 계산
   const totalPages = Math.ceil(allData.length / itemsPerPage) || 1;
+  // 검색이나 삭제로 데이터가 줄어도 유효한 페이지를 표시한다.
+  const visiblePage = Math.min(currentPage, totalPages);
 
   // 현재 페이지에 표시할 데이터 슬라이싱
-  const startIndex = (currentPage - 1) * itemsPerPage;
+  const startIndex = (visiblePage - 1) * itemsPerPage;
   const currentTd = allData.slice(startIndex, startIndex + itemsPerPage);
 
   // 페이지 번호 배열 생성 ([1, 2, 3, ...])
@@ -27,14 +29,14 @@ function PaginationTable({ title, th, allData = [], itemsPerPage = 5, style = 1 
   };
 
   const handlePrev = () => {
-    if (currentPage > 1) setCurrentPage((prev) => prev - 1);
+    if (visiblePage > 1) setCurrentPage(visiblePage - 1);
   };
 
   const handleNext = () => {
-    if (currentPage < totalPages) setCurrentPage((prev) => prev + 1);
+    if (visiblePage < totalPages) setCurrentPage(visiblePage + 1);
   };
 
-  const setClass = style == 1 ? "pagination-table-wrapper" : "border-container";
+  const setClass = style === 1 ? "pagination-table-wrapper" : "border-container";
 
   return (
     <div className={setClass}>
@@ -48,7 +50,7 @@ function PaginationTable({ title, th, allData = [], itemsPerPage = 5, style = 1 
             type="button"
             className="page-btn nav-btn"
             onClick={handlePrev}
-            disabled={currentPage === 1}
+            disabled={visiblePage === 1}
           >
             &lt;
           </button>
@@ -58,7 +60,7 @@ function PaginationTable({ title, th, allData = [], itemsPerPage = 5, style = 1 
               <button
                 key={num}
                 type="button"
-                className={`page-btn number-btn ${currentPage === num ? 'active' : ''}`}
+                className={`page-btn number-btn ${visiblePage === num ? 'active' : ''}`}
                 onClick={() => handlePageChange(num)}
               >
                 {num}
@@ -70,7 +72,7 @@ function PaginationTable({ title, th, allData = [], itemsPerPage = 5, style = 1 
             type="button"
             className="page-btn nav-btn"
             onClick={handleNext}
-            disabled={currentPage === totalPages}
+            disabled={visiblePage === totalPages}
           >
             &gt;
           </button>
