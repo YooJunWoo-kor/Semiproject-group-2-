@@ -1,8 +1,7 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import ModalBase from "../../../../components/ModalBase";
 import DepEmpList from "../../../../components/DepEmpList";
-import { useSearchParams } from "react-router-dom";
 
 import { API_BASE_URL, getLoginUser } from "../../../../utils/authStorage";
 
@@ -109,7 +108,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             }
         }
 
-        const employeeId = getLoginUser()?.employeeKey;
+        const employeeId = Number(getLoginUser()?.employeeKey);
         if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
             alert("로그인 사용자 정보가 올바르지 않습니다.");
             return;
