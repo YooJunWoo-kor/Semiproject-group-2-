@@ -24,6 +24,19 @@
     margin: 0;
 }
 
+/* 제품 목록 제목과 제품 개수를 한 줄에 정렬 (다른 품질관리 페이지는 유지) */
+.quality-products-page .quality-title-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 4px 0 7px;
+}
+
+.quality-products-page .quality-title-row h1 {
+    margin: 0;
+}
+
 .quality-eyebrow,
 .quality-section-kicker {
     color: var(--color-brand);

@@ -1,35 +1,114 @@
-import React, { useState } from 'react';
+import React, { Component, useState } from 'react';
 import "./MyPage.css";
+import { getLoginUser } from '../../../utils/authStorage';
+import  { getHrEmployees } from '../../../components/HrData'
+import { useEffect } from 'react';
+import axios from 'axios';
+import { API_BASE_URL, formatDateToYYYYMMDD, getTodayString } from '../../../utils/authStorage';
 
-const initialEmployee = {
-    id: 'EMP001',
-    name: '홍길동',
-    department: '재무·회계팀',
-    position: '사원',
-    joinDate: '2024-03-04',
-    email: 'hong@example.com',
-    phone: '010-1234-5678',
-};
 
-const tasks = [
-    { id: 1, title: '10월 매출 보고서 작성', module: '재무관리', dueDate: '2026-10-27', status: '진행 중' },
-    { id: 2, title: '프로젝트 제출물 검토', module: '프로젝트관리', dueDate: '2026-10-29', status: '대기' },
-    { id: 3, title: '부서 주간회의 자료 작성', module: '일정관리', dueDate: '2026-10-30', status: '완료' },
-];
 
 
 
 function MyPage() {
-    const [employee, setEmployee] = useState(initialEmployee);
-    const [form, setForm] = useState({
-        email: initialEmployee.email,
-        phone: initialEmployee.phone,
+
+    const [employee, setEmployee] = useState({
+        id: "",
+        name: "",
+        department: "",
+        position: "",
+        hireDate: "",
+        email : "",
+        phone: "",
     });
+
+    const [form, setForm] = useState({
+        email: "",
+        phone: ""
+    });
+
     const [isEditing, setIsEditing] = useState(false);
     const [message, setMessage] = useState('');
     const [profileImage, setProfileImage] = useState(null);
+    const [tasks,setTasks] = useState([]);
+
+    useEffect(() => {
+        const loadEmployee = async () => {
+            try{
+                const loginUser = getLoginUser();
+
+                const response = await getHrEmployees();
+
+                const employees = response.data.data;
+
+                const myInfo = employees.find(
+                    item => (item.employeeId) === Number(loginUser.employeeKey)
+                );
+
+                console.log(response.data.data);
+            
+
+                if(!myInfo){
+                    console.error("직원 정보를 찾을 수 없습니다");
+                    return;
+                }
+                
+                const employeeData = {
+                    id : myInfo.employeeNumber,
+                    name : myInfo.name,
+                    department : myInfo.departmentName,
+                    position : myInfo.position,
+                    hireDate : myInfo.hireDate,
+                    email : myInfo.email,
+                    phone : myInfo.phone || ""
+                }
+
+                setEmployee(employeeData);
+            }
+
+            catch(error){
+                console.error("마이페이지 직원 조회 오류", error);
+            }
+        }
+        loadEmployee();
+    },[])
+
+    useEffect(() => {
+        const getSchedulData = async () => {
+            try{
+                const userID = getLoginUser()?.employeeKey;
+
+                const response = await axios.post(
+                    API_BASE_URL + '/schedule/getMySchedule',
+                    {userID}
+                );
+
+                const today = getTodayString();
+
+                const scheduleData = response.data.map(item => {
+                    const start = formatDateToYYYYMMDD(item.start_date);
+                    const end = formatDateToYYYYMMDD(item.end_date);
+
+                    return {
+                        id : item.schedule_id,
+                        title : item.schedule_name,
+                        dueDate : end,
+                        status : today < start ? "예정" : today > end ? "기간 종료" : "진행 중",
+                        module : "일정관리",
+                    }
+                })
+
+                setTasks(scheduleData);
 
 
+            }
+            catch (error){
+                console.error("스케쥴 조회 오류", error)
+            }
+        }
+
+        getSchedulData();
+    },[])
 
     function handleChange(event) {
         const { name, value } = event.target;
@@ -157,7 +236,7 @@ function MyPage() {
                     <p><strong>사원번호 : </strong>{employee.id}</p>
                     <p><strong>부서 : </strong>{employee.department}</p>
                     <p><strong>직급 : </strong>{employee.position}</p>
-                    <p><strong>입사일 : </strong>{employee.joinDate}</p>
+                    <p><strong>입사일 : </strong>{employee.hireDate}</p>
                 </div>
             </section>
 
@@ -200,7 +279,7 @@ function MyPage() {
                 <div className="mypage-task-summary">
                     <p>전체 업무: {tasks.length}건</p>
                     <p>진행 중: {tasks.filter((task) => task.status === '진행 중').length}건</p>
-                    <p>완료: {tasks.filter((task) => task.status === '완료').length}건</p>
+                    <p>완료: {tasks.filter((task) => task.status === '기간종료').length}건</p>
                 </div>
                 <div className="mypage-table-wrap">
                     <table className="mypage-task-table">

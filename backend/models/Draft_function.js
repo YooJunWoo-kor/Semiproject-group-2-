@@ -153,7 +153,7 @@ class Draft {
                             if (decision === 'reject') {
                                 return db.query(
                                     "UPDATE my_draft SET status = 'REJECTED' WHERE draft_id = ? AND status = 'PENDING'",
-                                    [draftId], err => err ? db.rollback(() => reject(err)) :
+                                        [draftId], err => err ? db.rollback(() => reject(err)) :
                                         db.commit(err => err ? db.rollback(() => reject(err)) : resolve(true))
                                 );
                             }
@@ -166,10 +166,69 @@ class Draft {
                                         return db.commit(err => err ? db.rollback(() => reject(err)) : resolve(true));
                                     }
                                     db.query(
-                                        "UPDATE my_draft SET status = 'APPROVED' WHERE draft_id = ? AND status = 'PENDING'",
+                                        `SELECT document_type, detail_data
+                                         FROM my_draft
+                                         WHERE draft_id = ? AND status = 'PENDING'
+                                         FOR UPDATE`,
                                         [draftId],
-                                        err => err ? db.rollback(() => reject(err)) :
-                                            db.commit(err => err ? db.rollback(() => reject(err)) : resolve(true))
+                                        (err, rows) => {
+                                            if (err) {
+                                                return db.rollback(() => reject(err));
+                                            }
+                                    
+                                            if (rows.length !== 1) {
+                                                return db.rollback(() => resolve(false));
+                                            }
+
+                                            const approveDraft = () => {
+                                                db.query(
+                                                    "UPDATE my_draft SET status = 'APPROVED' WHERE draft_id = ? AND status = 'PENDING'",
+                                                    [draftId],
+                                                    (err, result) => {
+                                                        if (err) return db.rollback(() => reject(err));
+                                                        if (result.affectedRows !== 1) {
+                                                            return db.rollback(() => resolve(false));
+                                                        }
+                                            
+                                                        db.commit(err =>
+                                                            err ? db.rollback(() => reject(err)) : resolve(true)
+                                                        );
+                                                    }
+                                                );
+                                            };
+                                    
+                                            const draft = rows[0];
+                                            
+                                            if(draft.document_type !== '비용'){
+                                                return approveDraft();
+                                            }
+
+                                            const detailData = typeof draft.detail_data === "string"? JSON.parse(draft.detail_data) : draft.detail_data;
+
+                                            const expenseRows = (detailData?.expenseItems || []).map(item => [
+                                                draftId,
+                                                item.useDate,
+                                                item.merchant,
+                                                Number(item.amount),
+                                                item.memo || null
+                                            ])
+
+                                            if(!expenseRows.length) {
+                                                return db.rollback(() => reject(new Error("비용 내역 없음")));
+                                            }
+
+                                            db.query(
+                                                `INSERT INTO expense_items
+                                                (draft_id, use_date, merchant, amount, memo)
+                                                VALUES ?`,
+                                                [expenseRows],
+                                                err => {
+                                                    if(err) return db.rollback(() => reject(err));
+                                                    approveDraft();
+                                                }
+                                            )
+                                        
+                                    }
                                     );
                                 }
                             );
@@ -179,6 +238,8 @@ class Draft {
             });
         });
     }
+
+    
 
     static create(employeeId, title, documentType, content, detailData = {}) {
         return new Promise((resolve, reject) => {

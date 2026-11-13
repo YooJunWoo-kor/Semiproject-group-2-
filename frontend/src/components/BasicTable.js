@@ -1,19 +1,16 @@
 import React from "react";
 
-//기본테이블 모듈
+// 기본 테이블 모듈
+function BasicTable({ title, th, td = [] }) {
+    const headers = th ?? ["메뉴1", "메뉴2", "메뉴3", "메뉴4", "메뉴5"];
+    const rows = Array.isArray(td) ? td : [];
 
-function BasicTable({title, th, td}){
-    th = th == null ? ["메뉴1","메뉴2","메뉴3","메뉴4","메뉴5",] : th;
-    td = td.length == 0 ? false : td;
-
-    title = title == null ? "테이블제목" : title;
-
-    return(
-        <div className="attendance-card" style = {{
-            maxWidth:"100%",
-            paddingBottom:"30px"
+    return (
+        <div className="attendance-card" style={{
+            maxWidth: "100%",
+            paddingBottom: "30px"
         }}>
-            <h4 style={{marginBottom:"0px"}}>{title}</h4>
+            <h4 style={{ marginBottom: "0px" }}>{title ?? "테이블제목"}</h4>
             <div className="table-shell">
                 <table>
                     <thead>
@@ -52,7 +49,7 @@ function BasicTable({title, th, td}){
                 </table>
             </div>
         </div>
-    )
+    );
 }
 
 export default BasicTable;
