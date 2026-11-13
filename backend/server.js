@@ -135,19 +135,6 @@ app.post('/api/attendance', async (req, res) =>{
 
 
 
-// 3. [사원 목록 조회 API]
-app.get('/api/users', async (req, res) => {
-    try {
-        const [rows] = await db.query(
-            'SELECT id, employee_id, name, email, department, position, phone, created_at FROM users ORDER BY id DESC'
-        );
-        res.json(rows);
-    } catch (error) {
-        console.error('사원 목록 조회 에러:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // 기존 로그인 API
 app.post('/api/login', (req, res) => {
 
