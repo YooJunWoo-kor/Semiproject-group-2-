@@ -31,6 +31,8 @@ export function useScheduleAlarm() {
                 const res = await axios.post(`${API_BASE_URL}/schedule/getMyAlarms`, { userID });
                 const alarms = res.data;
 
+                console.log(alarms);
+
                 const now = new Date();
                 const nowMin = getMinuteTimestamp(now);
 

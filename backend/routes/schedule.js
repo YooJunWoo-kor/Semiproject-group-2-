@@ -232,6 +232,8 @@ router.post('/getMyAlarms', (req, res) => {
             console.error('알람 일정 조회 DB 오류:', err);
             return res.status(500).json({ message: '알람 조회 실패' });
         }
+
+        console.log('조회성공', rows);
         return res.status(200).json(rows);
     });
 });
