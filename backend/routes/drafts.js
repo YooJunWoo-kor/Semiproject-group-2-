@@ -255,7 +255,7 @@ router.get('/departments', (req, res) => {
 
 router.post("/:draftId/receipt", receiptUpload.single("receipt"), (req, res) => {
     const draftId = Number(req.params.draftId);
-    const employeeId = Number(req.params.employeeId);
+    const employeeId = Number(req.body.employeeId);
 
     if(!req.file || !employeeId){
         return res.status(400).json({ message : "영수증 정보가 없습니다"});
@@ -265,10 +265,13 @@ router.post("/:draftId/receipt", receiptUpload.single("receipt"), (req, res) => 
 
     db.query(
         `UPDATE my_draft
+         SET receipt_image_url = ? 
          WHERE draft_id = ? AND employee_id = ?
          AND document_type = '비용'
-         AND status IN ('DRAFT','PENDING')`,
+         AND status IN ('DRAFT','PENDING')
+         AND receipt_image_url IS NULL` ,
          [imageUrl, draftId, employeeId],
+         
          (err, result) => {
             if(err) return res.status(500).json({message: "저장 실패"});
 

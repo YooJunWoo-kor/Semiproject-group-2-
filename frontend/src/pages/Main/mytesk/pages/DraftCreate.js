@@ -157,7 +157,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                     });
                 }
             } else if (saveType === "temporary") {
-                await axios.post(API_BASE_URL + "/drafts", payload);
+                response = await axios.post(API_BASE_URL + "/drafts", payload);
             } else {
                response = await axios.post(API_BASE_URL + "/drafts/submit", { ...payload, approverIds });
             }
