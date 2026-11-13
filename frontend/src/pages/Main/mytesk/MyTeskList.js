@@ -67,9 +67,9 @@ function MyTeskList() {
         try {
             const currentUser = getLoginUser();
             const [mine, received, approved] = await Promise.all([
-                axios.get(`${API_BASE_URL}/drafts`, { employeeId }),
-                axios.get(`${API_BASE_URL}/drafts/received/list`, { employeeId }),
-                axios.get(`${API_BASE_URL}/drafts/approved/list`, { employeeId })
+                axios.get(`${API_BASE_URL}/drafts`, { params: { employeeId } }),
+                axios.get(`${API_BASE_URL}/drafts/received/list`, { params: { employeeId } }),
+                axios.get(`${API_BASE_URL}/drafts/approved/list`, { params: { employeeId } })
             ]); // 서버에 get 요청 3개를 한꺼번에 보내고 모든걸로 부터 응답이 오면 밑 코드를 실행
             setDrafts(mine.data.map(row => toDraft(row, currentUser)));
             setReceivedDrafts(received.data.map(row => toDraft(row, currentUser)));
