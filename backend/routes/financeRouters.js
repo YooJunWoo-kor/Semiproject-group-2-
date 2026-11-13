@@ -4,7 +4,155 @@ const db = require("../db");
 const financeMysql = require("mysql2/promise");
 
 
+
 const router = express.Router();
+
+// 승인 기안서를 조회용 재무 목록 형식으로 변환합니다. DB에 복제하지 않습니다.
+function readDetailData(value) {
+    if (Buffer.isBuffer(value)) value = value.toString('utf8');
+    if (typeof value === 'string') {
+        try { value = JSON.parse(value); } catch { return {}; }
+    }
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function readAmount(value) {
+    if (typeof value !== 'number' && typeof value !== 'string') return null;
+    if (typeof value === 'string' && !/^[1-9]\d*(?:\.0+)?$/.test(value.trim())) return null;
+    const amount = Number(value);
+    return Number.isSafeInteger(amount) && amount > 0 ? amount : null;
+}
+
+function readDueDate(value) {
+    if (typeof value !== 'string' || !/^[1-9]\d{3}-\d{2}-\d{2}$/.test(value)) return null;
+    const date = new Date(`${value}T00:00:00Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value ? value : null;
+}
+
+function toApprovedDraftView(rows) {
+    const seen = new Set();
+    return rows.filter((row) => {
+        const id = String(row.draft_id ?? '');
+        if (row.status !== 'APPROVED' || !/^[1-9]\d*$/.test(id) || seen.has(id)) return false;
+        seen.add(id);
+        return true;
+    }).map((row) => {
+        const detail = readDetailData(row.detail_data);
+        return {
+            document_id: `draft-${row.draft_id}`,
+            source_type: 'draft', source_draft_id: row.draft_id,
+            is_payroll_draft: Number(row.is_payroll_draft) === 1,
+            linked_transaction_id: row.linked_transaction_id ?? null,
+            employee_id: row.employee_id,
+            requester_name: row.requester_name,
+            department_name: row.department_name,
+            title: row.title, content: row.content || '',
+            amount: readAmount(row.expense_amount ?? detail.amount),
+            due_date: readDueDate(detail.due_date),
+            approval_status: '승인', document_type: row.document_type,
+            created_at: row.created_at,
+            payment_methods: '', attachment_count: 0
+        };
+    });
+}
+
+
+// 연결 거래에서 완료한 지급도 원본 결재의 남은 지급액에 반영합니다.
+const approvalPaidRowsSql = `
+    SELECT document_id, amount FROM payments
+    WHERE document_id IS NOT NULL AND payment_status = '완료' AND payment_direction = '출금'
+    UNION ALL
+    SELECT link.source_id AS document_id, p.amount
+    FROM payments p
+    INNER JOIN trade_transactions link ON link.transaction_id = p.transaction_id AND link.source_type = 'approval'
+    WHERE p.payment_status = '완료' AND p.payment_direction = '출금'`;
+
+// 결제 관리의 분류와 기간 계산. 금액은 실제 payments 완료 내역을 기준으로 집계합니다.
+const expenseGroups = [
+    ['production', '제품 생산 및 매입 비용', ['원재료비', '부자재비', '완제품 매입비', '외주가공비', '물류 및 보관비']],
+    ['research', '연구개발 및 인증 비용', ['제품 연구개발비', '샘플 제작비', '시험·검사비', '인증·등록비']],
+    ['marketing', '마케팅 및 유통 판매비', ['광고비', '콘텐츠 제작비', '인플루언서 협찬비', '판매 수수료', '배송비', '프로모션비']],
+    ['administration', '일반 관리 및 인건비', ['급여', '복리후생비', '임차료', '공과금', '사무용품비', '시스템 이용료']],
+    ['other', '기타', ['기타 지출']]
+];
+// 수입 분류는 기본안이며 회사 기준에 맞게 이 목록에서 변경할 수 있습니다.
+const incomeGroups = [
+    ['sales', '제품 매출', ['도매 매출', '소매 매출', '온라인 매출']],
+    ['other_income', '기타 수입', ['환급금', '기타 수입']]
+];
+function groups(direction) {
+    const prefix = direction === '출금' ? 'expense' : 'income';
+    const source = direction === '출금' ? expenseGroups : incomeGroups;
+    return [...source.map(([id, label, names]) => ({
+        id, label,
+        items: names.map((name, index) => ({ code: `${prefix}_${id}_${index + 1}`, label: name }))
+    })), { id: 'unclassified', label: '미분류', items: [{ code: 'unclassified', label: '미분류' }] }];
+}
+function category(code, direction) {
+    for (const group of groups(direction)) {
+        const item = group.items.find(entry => entry.code === code);
+        if (item) return { ...item, group_id: group.id, group_label: group.label };
+    }
+    return null;
+}
+function seoulToday() {
+    return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+}
+function dateString(year, monthIndex, day) {
+    return new Date(Date.UTC(year, monthIndex, day)).toISOString().slice(0, 10);
+}
+function period(month, today = seoulToday()) {
+    if (typeof month !== 'string' || !/^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(month) || month > '9998-12') {
+        const error = new Error('올바른 조회 월을 선택해 주세요.'); error.status = 400; throw error;
+    }
+    const [year, number] = month.split('-').map(Number);
+    const index = number - 1;
+    const currentMonth = today.slice(0, 7) === month;
+    const lastDay = new Date(Date.UTC(year, index + 1, 0)).getUTCDate();
+    const previousLastDay = new Date(Date.UTC(year, index, 0)).getUTCDate();
+    const day = currentMonth ? Number(today.slice(8, 10)) : lastDay;
+    // 완료 월은 전월 전체, 진행 중인 월은 전월 동일 일수(말일 이내)와 비교합니다.
+    const previousDay = currentMonth ? Math.min(day, previousLastDay) : previousLastDay;
+    return {
+        start: `${month}-01`, end: dateString(year, index, day),
+        endExclusive: dateString(year, index, day + 1), monthEndExclusive: dateString(year, index + 1, 1),
+        previousStart: dateString(year, index - 1, 1), previousEnd: dateString(year, index - 1, previousDay),
+        previousEndExclusive: dateString(year, index - 1, previousDay + 1), currentMonth
+    };
+}
+function amount(value) {
+    const number = Number(value);
+    if (value == null || !Number.isFinite(number) || number < 0 || Math.abs(number * 100 - Math.round(number * 100)) > 0.001 || !Number.isSafeInteger(Math.round(number * 100))) {
+        throw new Error('집계 금액이 처리 가능한 범위를 초과했습니다.');
+    }
+    return number;
+}
+function sum(rows) {
+    let minor = 0;
+    for (const row of rows) {
+        minor += Math.round(amount(row.amount) * 100);
+        if (!Number.isSafeInteger(minor)) throw new Error('합계 금액이 처리 가능한 범위를 초과했습니다.');
+    }
+    return minor / 100;
+}
+function summary(entries, previousEntries, scheduled) {
+    const total = sum(entries), previous = sum(previousEntries);
+    return {
+        total, scheduled: sum(scheduled), previous_total: previous,
+        difference: Math.round((total - previous) * 100) / 100,
+        change_percent: previous === 0 ? null : Math.round((total - previous) / previous * 1000) / 10
+    };
+}
+
+
+// 거래처 달력 색상의 종류 ID. 빈 값은 기존 입금/출금 기본 색상을 사용합니다.
+function parsePartnerCalendarTypeId(value) {
+    if (value === undefined || value === null || value === "") return null;
+    if (!((typeof value === "number" && Number.isInteger(value)) ||
+        (typeof value === "string" && /^(0|[1-9]\d*)$/.test(value)))) return undefined;
+    const typeId = Number(value);
+    return Number.isInteger(typeId) && typeId >= 0 && typeId <= 255 ? typeId : undefined;
+}
 
 // [재무관리] 거래처 목록 조회
 router.get("/partners", (req, res) => {
@@ -73,6 +221,7 @@ router.post("/partners", (req, res) => {
         trade_role,
         company_type,
         closing_day,
+        calendar_type_id,
         bank_name,
         account_number,
         account_holder
@@ -116,13 +265,18 @@ router.post("/partners", (req, res) => {
         });
     }
 
+    const calendarTypeId = parsePartnerCalendarTypeId(calendar_type_id);
+    if (calendarTypeId === undefined) {
+        return res.status(400).json({ message: "일정 색상 값이 올바르지 않습니다." });
+    }
+
     const query = `
 INSERT INTO partners (
 company_name, tax_id, representative_name, company_phone,
 company_address, memo, trade_role, company_type,
-closing_day, bank_name, account_number, account_holder
+closing_day, bank_name, account_number, account_holder, calendar_type_id
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
 
     const values = [
@@ -137,7 +291,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         closingDay,
         optionalText(bank_name),
         optionalText(account_number),
-        optionalText(account_holder)
+        optionalText(account_holder),
+        calendarTypeId
     ];
 
     db.query(query, values, (err, result) => {
@@ -183,6 +338,7 @@ router.put("/partners/:id", (req, res) => {
         trade_role,
         company_type,
         closing_day,
+        calendar_type_id,
         bank_name,
         account_number,
         account_holder
@@ -223,6 +379,14 @@ router.put("/partners/:id", (req, res) => {
         });
     }
 
+    const calendarTypeId = parsePartnerCalendarTypeId(calendar_type_id);
+    if (calendarTypeId === undefined) {
+        return res.status(400).json({ message: "일정 색상 값이 올바르지 않습니다." });
+    }
+
+    // 이전 클라이언트가 색상 필드를 보내지 않으면 기존 선택을 유지합니다.
+    const hasCalendarColor = Object.prototype.hasOwnProperty.call(req.body, "calendar_type_id");
+
     // 수정할 거래처가 있는지 먼저 확인합니다.
     db.query(
         "SELECT partner_id FROM partners WHERE partner_id = ?",
@@ -245,7 +409,8 @@ router.put("/partners/:id", (req, res) => {
 UPDATE partners
 SET company_name=?, tax_id=?, representative_name=?, company_phone=?,
 company_address=?, memo=?, trade_role=?, company_type=?,
-closing_day=?, bank_name=?, account_number=?, account_holder=?
+closing_day=?, bank_name=?, account_number=?, account_holder=?,
+calendar_type_id=IF(?, ?, calendar_type_id)
 WHERE partner_id=?
 `;
 
@@ -262,6 +427,8 @@ WHERE partner_id=?
                 optionalText(bank_name),
                 optionalText(account_number),
                 optionalText(account_holder),
+                hasCalendarColor ? 1 : 0,
+                calendarTypeId,
                 partnerId
             ];
 
@@ -351,7 +518,9 @@ i.unit_price,
 i.supply_price,
 i.vat,
 (i.supply_price + i.vat) AS total_amount,
-p.closing_day
+p.closing_day,
+t.source_type AS linked_source_type,
+t.source_id AS linked_source_id
 FROM trade_items i
 INNER JOIN trade_transactions t
 ON i.transaction_id=t.transaction_id
@@ -385,6 +554,13 @@ router.post("/items", async (req, res) => {
         unit_price,
         vat
     } = req.body;
+
+    const sourceType = req.body.source_type ?? null;
+    const sourceId = req.body.source_id == null ? null : Number(req.body.source_id);
+    const hasSource = sourceType !== null || sourceId !== null;
+    if (hasSource && (!['approval', 'draft'].includes(sourceType) || !Number.isSafeInteger(sourceId) || sourceId <= 0)) {
+        return res.status(400).json({ message: "원본 승인 문서 정보를 확인해주세요." });
+    }
 
     // 입력값을 숫자와 문자열로 정리합니다.
     const partnerId = Number(partner_id);
@@ -504,6 +680,40 @@ router.post("/items", async (req, res) => {
 
         await connection.beginTransaction();
 
+        let approvedAmount = null;
+        if (hasSource) {
+            function failSource(status, message) { const error = new Error(message); error.status = status; throw error; }
+            if (trade_type !== '매입') failSource(400, '승인 지출은 매입 거래로 등록해주세요.');
+            // 원본을 먼저 잠가 같은 문서의 동시 등록/지급 요청을 직렬화합니다.
+            if (sourceType === 'approval') {
+                const [documents] = await connection.execute(
+                    'SELECT amount, approval_status FROM approval_documents WHERE document_id = ? FOR UPDATE', [sourceId]);
+                if (!documents.length) failSource(404, '원본 결재 문서를 찾을 수 없습니다.');
+                if (documents[0].approval_status !== '승인') failSource(409, '최종 승인된 문서만 거래로 등록할 수 있습니다.');
+                approvedAmount = readAmount(documents[0].amount);
+                const [paid] = await connection.execute(
+                    "SELECT payment_id FROM payments WHERE document_id = ? LIMIT 1 FOR UPDATE", [sourceId]);
+                if (paid.length) failSource(409, '지급 이력이 있는 문서는 거래로 전환할 수 없습니다. 기존 지급 내역을 확인해주세요.');
+            } else {
+                const [drafts] = await connection.execute(
+                    'SELECT status FROM my_draft WHERE draft_id = ? FOR UPDATE', [sourceId]);
+                if (!drafts.length) failSource(404, '원본 기안서를 찾을 수 없습니다.');
+                if (drafts[0].status !== 'APPROVED') failSource(409, '최종 승인된 기안서만 거래로 등록할 수 있습니다.');
+                const [payrollRows] = await connection.execute(
+                    'SELECT payroll_id FROM payrolls WHERE draft_id = ? LIMIT 1 FOR UPDATE', [sourceId]);
+                if (payrollRows.length) failSource(409, '급여 기안서는 인건비 목록에 자동 표시됩니다. 일반 품목 거래로 중복 등록할 수 없습니다.');
+                const [expenses] = await connection.execute('SELECT amount FROM draft_expense WHERE draft_id = ? FOR UPDATE', [sourceId]);
+                if (expenses.length && expenses.every(row => readAmount(row.amount) !== null)) {
+                    approvedAmount = expenses.reduce((total, row) => total + Number(row.amount), 0);
+                }
+            }
+            if (!Number.isSafeInteger(approvedAmount) || approvedAmount <= 0) failSource(409, '원본의 승인 금액이 미등록입니다. 먼저 원본 금액을 확인해주세요.');
+            const [links] = await connection.execute(
+                'SELECT transaction_id FROM trade_transactions WHERE source_type = ? AND source_id = ? FOR UPDATE', [sourceType, sourceId]);
+            if (links.length) failSource(409, '이미 거래로 등록한 문서입니다. 목록을 새로고침해주세요.');
+            if (totalAmount !== approvedAmount) failSource(400, '품목 합계(수량 × 단가 + 부가세)가 원본 승인 금액과 같아야 합니다.');
+        }
+
         // 선택한 거래처가 실제로 존재하는지 확인합니다.
         const [partners] = await connection.execute(
             "SELECT company_name FROM partners WHERE partner_id = ?",
@@ -523,15 +733,17 @@ router.post("/items", async (req, res) => {
         const [tradeResult] = await connection.execute(
             `INSERT INTO trade_transactions
         (partner_id, company_name, trade_type,
-         trade_date, due_date, settlement_status)
-            VALUES (?, ?, ?, ?, ?, ?)`,
+         trade_date, due_date, settlement_status, source_type, source_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 partnerId,
                 partners[0].company_name,
                 trade_type,
                 trade_date,
                 dueDate,
-                "미정산"
+                "미정산",
+                sourceType,
+                sourceId
             ]
         );
 
@@ -554,13 +766,21 @@ router.post("/items", async (req, res) => {
             ]
         );
 
-        // 두 테이블 저장이 모두 성공하면 확정합니다.
+        if (hasSource && sourceType === 'approval') {
+            await connection.execute(
+                `INSERT INTO finance_payment_classifications (source_type, source_id, category_code)
+                 SELECT 'transaction', ?, category_code FROM finance_payment_classifications
+                 WHERE source_type = 'approval' AND source_id = ?`, [transactionId, sourceId]);
+        }
+
+        // 거래·품목·원본 연결이 모두 저장돼야 확정합니다.
         await connection.commit();
 
         return res.status(201).json({
             message: "거래 품목이 등록되었습니다.",
             transaction_id: transactionId,
-            item_id: itemResult.insertId
+            item_id: itemResult.insertId,
+            linked_source_type: sourceType, linked_source_id: sourceId
         });
     } catch (err) {
         // 저장 도중 실패하면 거래와 품목 저장을 모두 취소합니다.
@@ -574,8 +794,8 @@ router.post("/items", async (req, res) => {
 
         console.error("거래 품목 등록 오류:", err);
 
-        return res.status(500).json({
-            message: "거래 품목 등록에 실패했습니다."
+        return res.status(err.status || (err.code === 'ER_DUP_ENTRY' ? 409 : 500)).json({
+            message: err.status ? err.message : err.code === 'ER_DUP_ENTRY' ? "이미 거래로 등록한 문서입니다. 목록을 새로고침해주세요." : "거래 품목 등록에 실패했습니다."
         });
     } finally {
         // 성공 또는 실패 후 전용 연결을 종료합니다.
@@ -722,6 +942,7 @@ router.put("/items/:itemId", async (req, res) => {
             `SELECT
                 i.transaction_id,
                 t.partner_id,
+                t.source_type,
                 t.trade_type,
                 DATE_FORMAT(t.trade_date, '%Y-%m-%d') AS trade_date
              FROM trade_items i
@@ -742,6 +963,15 @@ router.put("/items/:itemId", async (req, res) => {
 
         const currentItem = items[0];
         const transactionId = currentItem.transaction_id;
+        if (currentItem.source_type) {
+            const [totals] = await connection.execute(
+                'SELECT SUM(supply_price + vat) AS approved_total FROM trade_items WHERE transaction_id = ?', [transactionId]);
+            if (trade_type !== '매입' || supplyPrice + vatAmount !== Number(totals[0].approved_total)) {
+                await connection.rollback();
+                return res.status(409).json({ message: '승인 연결 거래는 매입 구분과 원본 승인 금액을 유지해야 합니다.' });
+            }
+        }
+
 
         // 입금·출금 기록이 있는 거래인지 확인합니다.
         const [payments] = await connection.execute(
@@ -961,6 +1191,7 @@ router.delete("/items/:itemId", async (req, res) => {
 
         // 마지막 품목이었다면 빈 거래도 함께 삭제합니다.
         if (transactionDeleted) {
+            await connection.execute("DELETE FROM finance_payment_classifications WHERE source_type = 'transaction' AND source_id = ?", [transactionId]);
             await connection.execute(
                 `DELETE FROM trade_transactions
                  WHERE transaction_id = ?`,
@@ -1910,7 +2141,14 @@ router.get("/employees", (req, res) => {
             e.employee_id,
             e.employee_number,
             e.name,
-            d.department_name
+            e.department_id,
+            d.department_name,
+            EXISTS (
+                SELECT 1 FROM employee_accounts ea
+                WHERE ea.employee_id = e.employee_id
+                  AND ea.account_status = 'ACTIVE'
+                  AND (e.department_id = 1 OR ea.role = 'MASTER')
+            ) AS can_approve
         FROM employees e
         LEFT JOIN departments d
             ON e.department_id = d.department_id
@@ -2416,6 +2654,45 @@ router.put("/bank-accounts/:accountId/status", (req, res) => {
     );
 });
 
+// 최종 승인된 기안서에 연결된 급여만 월별로 집계합니다. 지급 등록과는 별개입니다.
+router.get('/payrolls/summary', (req, res) => {
+    const query = `
+        SELECT p.pay_month,
+               'APPROVED' AS approval_status,
+               COUNT(DISTINCT p.employee_id) AS employee_count,
+               COUNT(*) AS payroll_count,
+               SUM(p.base_salary) AS base_salary,
+               SUM(p.allowance) AS allowance,
+               SUM(p.bonus) AS bonus,
+               SUM(p.gross_pay) AS gross_pay,
+               SUM(p.deduction) AS deduction,
+               SUM(p.net_pay) AS net_pay,
+               SUM(CASE WHEN p.payment_status = '지급완료' THEN 1 ELSE 0 END) AS paid_count
+        FROM payrolls p
+        INNER JOIN my_draft d ON d.draft_id = p.draft_id
+        WHERE d.status = 'APPROVED'
+          AND p.pay_month REGEXP '^[0-9]{4}-(0[1-9]|1[0-2])$'
+          AND NOT EXISTS (
+              SELECT 1 FROM trade_transactions linked_trade
+              WHERE linked_trade.source_type = 'draft' AND linked_trade.source_id = d.draft_id
+          )
+        GROUP BY p.pay_month
+        ORDER BY p.pay_month DESC
+    `;
+    db.query(query, (error, rows) => {
+        if (error) {
+            console.error('월 급여 조회 오류:', error);
+            return res.status(500).json({ message: '월 급여 합계를 불러오지 못했습니다.' });
+        }
+        return res.json(rows.map(row => ({
+            ...row,
+            // 결재 상태가 아닌 payrolls의 지급 상태만 표시합니다.
+            payment_status: Number(row.paid_count) === Number(row.payroll_count)
+                ? '지급완료' : Number(row.paid_count) > 0 ? '일부 지급' : '지급대기'
+        })));
+    });
+});
+
 // 결재 문서 목록 조회
 router.get("/approvals", (req, res) => {
     const query = `
@@ -2433,7 +2710,8 @@ router.get("/approvals", (req, res) => {
         DATE_FORMAT(
           a.created_at, '%Y-%m-%d %H:%i'
         ) AS created_at,
-        p.payment_methods
+        p.payment_methods,
+        source_link.transaction_id AS linked_transaction_id
       FROM approval_documents a
   
       LEFT JOIN employees e
@@ -2456,6 +2734,8 @@ router.get("/approvals", (req, res) => {
       ) p
         ON a.document_id = p.document_id
   
+      LEFT JOIN trade_transactions source_link
+        ON source_link.source_type = 'approval' AND source_link.source_id = a.document_id
       ORDER BY a.created_at DESC, a.document_id DESC
     `;
 
@@ -2468,7 +2748,38 @@ router.get("/approvals", (req, res) => {
             });
         }
 
-        res.json(rows);
+        // 최종 승인된 내업무 기안서는 원본을 읽어 함께 표시합니다.
+        // 문서 ID에 draft- 접두사를 붙여 기존 재무 문서 번호와 구분합니다.
+        // detail_data는 아직 없는 DB도 있으므로 선택 목록에 직접 참조하지 않습니다.
+        // 원본에 존재하면 변환 함수가 사용하고, 없으면 금액/마감일을 미등록으로 처리합니다.
+        const draftQuery = `
+          SELECT m.*,
+                 DATE_FORMAT(m.created_at, '%Y-%m-%d %H:%i') AS created_at,
+                 e.name AS requester_name, d.department_name, expense.expense_amount, source_link.transaction_id AS linked_transaction_id,
+                 EXISTS (SELECT 1 FROM payrolls payroll WHERE payroll.draft_id = m.draft_id) AS is_payroll_draft
+          FROM my_draft m
+          LEFT JOIN employees e ON m.employee_id = e.employee_id
+          LEFT JOIN departments d ON e.department_id = d.department_id
+          LEFT JOIN (
+            SELECT draft_id, SUM(amount) AS expense_amount
+            FROM draft_expense
+            GROUP BY draft_id
+          ) expense ON expense.draft_id = m.draft_id
+          LEFT JOIN trade_transactions source_link ON source_link.source_type = 'draft' AND source_link.source_id = m.draft_id
+          WHERE m.status = 'APPROVED'
+          ORDER BY m.created_at DESC, m.draft_id DESC
+        `;
+        db.query(draftQuery, (draftError, drafts) => {
+            if (draftError) {
+                console.error("승인 기안서 조회 오류:", draftError);
+                // 기안서 연동 오류가 기존 재무 결재 목록까지 가리지 않도록 합니다.
+                // 실제 오류 원인은 위 서버 로그로 확인합니다.
+                return res.json(rows);
+            }
+            const combined = [...rows, ...toApprovedDraftView(drafts)];
+            combined.sort((left, right) => String(right.created_at || '').localeCompare(String(left.created_at || '')));
+            return res.json(combined);
+        });
     });
 });
 
@@ -2540,6 +2851,11 @@ router.get("/approvals/:documentId/steps", (req, res) => {
 
 // 결재 기안 신규 등록
 router.post("/approvals", async (req, res) => {
+    const categoryCode = req.body.category_code;
+    if (categoryCode && !category(categoryCode, '출금')) {
+        return res.status(400).json({ message: '올바른 지출 세부 항목을 선택해 주세요.' });
+    }
+
     const {
         employee_id, // 작성자 ID
         approver_id, // 결재자 ID
@@ -2633,6 +2949,23 @@ router.post("/approvals", async (req, res) => {
         // 문서와 결재자 정보가 모두 저장돼야 등록을 완료합니다.
         await connection.beginTransaction();
 
+        // 프런트의 선택 목록과 별도로 DB의 현재 부서·계정 권한을 검증합니다.
+        const [eligibleApprovers] = await connection.execute(
+            `SELECT e.employee_id
+             FROM employees e
+             INNER JOIN employee_accounts ea ON ea.employee_id = e.employee_id
+             WHERE e.employee_id = ? AND ea.account_status = 'ACTIVE'
+               AND (e.department_id = 1 OR ea.role = 'MASTER')
+             FOR UPDATE`,
+            [approverId]
+        );
+        if (eligibleApprovers.length === 0) {
+            await connection.rollback();
+            return res.status(403).json({
+                message: "결재자는 재무부 소속의 활성 계정 또는 활성 MASTER 계정만 선택할 수 있습니다."
+            });
+        }
+
         const [documentResult] = await connection.execute(
             `INSERT INTO approval_documents (
           employee_id,
@@ -2655,6 +2988,13 @@ router.post("/approvals", async (req, res) => {
         );
 
         const documentId = documentResult.insertId;
+        if (categoryCode) {
+            await connection.execute(
+                "INSERT INTO finance_payment_classifications (source_type, source_id, category_code) VALUES ('approval', ?, ?)",
+                [documentId, categoryCode]
+            );
+        }
+
 
         // 결재자는 1명이며 첫 번째 결재 단계로 저장합니다.
         await connection.execute(
@@ -2751,6 +3091,23 @@ router.patch('/approvals/:documentId/decision', async (req, res) => {
 
         await connection.beginTransaction();
         transactionOpen = true;
+        // 지정 후 부서 이동 또는 권한 변경이 있어도 현재 권한으로 처리합니다.
+        const [eligibleApprovers] = await connection.execute(
+            `SELECT e.employee_id
+             FROM employees e
+             INNER JOIN employee_accounts ea ON ea.employee_id = e.employee_id
+             WHERE e.employee_id = ? AND ea.account_status = 'ACTIVE'
+               AND (e.department_id = 1 OR ea.role = 'MASTER')
+             FOR UPDATE`,
+            [employeeId]
+        );
+        if (eligibleApprovers.length === 0) {
+            await connection.rollback();
+            transactionOpen = false;
+            return res.status(403).json({
+                message: '결재는 재무부 소속의 활성 계정 또는 활성 MASTER 계정만 처리할 수 있습니다.'
+            });
+        }
         // 문서부터 잠가서 같은 문서에 대한 중복·동시 결재를 순서대로 처리합니다.
         const [documents] = await connection.execute(
             'SELECT document_id, approval_status FROM approval_documents WHERE document_id = ? FOR UPDATE',
@@ -2981,6 +3338,9 @@ router.post('/approvals/:documentId/payments', async (req, res) => {
         );
         if (documents.length === 0) fail(404, '해당 결재 문서를 찾을 수 없습니다.');
         if (documents[0].approval_status !== '승인') fail(409, '승인된 문서에만 지급을 등록할 수 있습니다.');
+        const [tradeLinks] = await connection.execute(
+            "SELECT transaction_id FROM trade_transactions WHERE source_type = 'approval' AND source_id = ? FOR UPDATE", [documentId]);
+        if (tradeLinks.length) fail(409, '거래로 연결된 문서입니다. 품목관리의 거래 전표에서 지급해주세요.');
         const documentAmount = money(documents[0].amount, '결재 문서');
         if (documentAmount === 0) fail(409, '지급할 문서 금액이 없습니다.');
 
@@ -3115,8 +3475,7 @@ router.get('/dashboard', async (req, res) => {
         FROM approval_documents a
         LEFT JOIN (
             SELECT document_id, SUM(amount) AS paid
-            FROM payments
-            WHERE payment_status = '완료' AND payment_direction = '출금'
+            FROM (${approvalPaidRowsSql}) source_payments
             GROUP BY document_id
         ) paid ON paid.document_id = a.document_id`;
     const remaining = 'GREATEST(a.amount - COALESCE(paid.paid, 0), 0)';
@@ -3153,6 +3512,421 @@ router.get('/dashboard', async (req, res) => {
     } catch (err) {
         console.error('재무 대시보드 조회 오류:', err);
         res.status(500).json({ message: '재무 대시보드를 불러오지 못했습니다.' });
+    }
+});
+
+// 대시보드 지급 일정 상세조회
+router.get('/dashboard/schedules/:documentId', (req, res) => {
+    const documentId = Number(req.params.documentId);
+
+    if (!Number.isSafeInteger(documentId) || documentId <= 0) {
+        return res.status(400).json({
+            message: '올바른 문서 ID가 필요합니다.'
+        });
+    }
+
+    const sql = `
+        SELECT
+            a.document_id,
+            a.title,
+            a.content,
+            a.document_type,
+            a.approval_status,
+            a.amount,
+            DATE_FORMAT(a.due_date, '%Y-%m-%d') AS due_date,
+            e.name AS requester_name,
+            d.department_name,
+            COALESCE(p.paid_amount, 0) AS paid_amount,
+            GREATEST(
+                a.amount - COALESCE(p.paid_amount, 0),
+                0
+            ) AS remaining_amount
+        FROM approval_documents a
+        LEFT JOIN employees e
+            ON a.employee_id = e.employee_id
+        LEFT JOIN departments d
+            ON e.department_id = d.department_id
+        LEFT JOIN (
+            SELECT document_id, SUM(amount) AS paid_amount
+            FROM (${approvalPaidRowsSql}) source_payments
+            GROUP BY document_id
+        ) p ON a.document_id = p.document_id
+        WHERE a.document_id = ?
+          AND a.approval_status = '승인'
+          AND a.due_date IS NOT NULL
+    `;
+
+    db.query(sql, [documentId], (err, rows) => {
+        if (err) {
+            console.error('지급 일정 상세조회 오류:', err);
+
+            return res.status(500).json({
+                message: '지급 일정 상세정보를 불러오지 못했습니다.'
+            });
+        }
+
+        if (rows.length === 0) {
+            return res.status(404).json({
+                message: '조회할 지급 문서를 찾을 수 없습니다.'
+            });
+        }
+
+        res.json(rows[0]);
+    });
+});
+
+// 영수증·청구서·견적서 보관: 실제 거래/결재/지급과 별도로 저장합니다.
+const financeDocumentTypes = { receipt: 'REC', invoice: 'INV', estimate: 'EST' };
+const financeDocumentCurrencies = { KRW: 0, USD: 2, EUR: 2, JPY: 0 };
+const financeDocumentSelect = `SELECT CAST(f.doc_id AS CHAR) AS doc_id,
+    f.document_number, f.document_type, f.employee_id, f.partner_id,
+    DATE_FORMAT(f.issue_date, '%Y-%m-%d') AS issue_date,
+    DATE_FORMAT(f.due_date, '%Y-%m-%d') AS due_date,
+    f.currency, CAST(f.total_amount AS CHAR) AS total_amount, f.snapshot_json,
+    DATE_FORMAT(f.created_at, '%Y-%m-%d %H:%i:%s') AS created_at
+    FROM finance_documents f`;
+
+function financeDocumentFail(status, message) {
+    const error = new Error(message);
+    error.status = status;
+    throw error;
+}
+
+function financeDocumentText(value, label, max, required = false) {
+    if (value == null && !required) return '';
+    if (typeof value !== 'string') financeDocumentFail(400, `${label}은 문자로 입력해주세요.`);
+    const text = value.trim();
+    if ((required && !text) || text.length > max) financeDocumentFail(400, `${label}을 확인해주세요. (최대 ${max}자)`);
+    return text;
+}
+
+function financeDocumentDate(value, label, optional = false) {
+    if (optional && (value == null || value === '')) return null;
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) financeDocumentFail(400, `${label}을 확인해주세요.`);
+    const date = new Date(`${value}T00:00:00Z`);
+    if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value || value < '1000-01-01') financeDocumentFail(400, `${label}이 올바른 날짜가 아닙니다.`);
+    return value;
+}
+
+function financeDocumentId(value, label, optional = false) {
+    if (optional && (value == null || value === '')) return null;
+    const text = String(value ?? '');
+    if (!/^[1-9]\d*$/.test(text) || text.length > 20 || BigInt(text) > 18446744073709551615n) financeDocumentFail(400, `${label}이 올바르지 않습니다.`);
+    return text;
+}
+
+// 소수 계산은 정수 단위로 처리하여 미리보기와 저장 금액의 반올림을 맞춥니다.
+function financeDocumentScaled(value, digits, label, max, allowZero = true) {
+    if (typeof value !== 'string' && typeof value !== 'number') financeDocumentFail(400, `${label}을 확인해주세요.`);
+    const text = String(value);
+    if (text.length > 40 || !/^\d+(?:\.\d+)?$/.test(text)) financeDocumentFail(400, `${label}은 일반 숫자 형식으로 입력해주세요.`);
+    const [whole, rawFraction = ''] = text.split('.');
+    const fraction = rawFraction.replace(/0+$/, '');
+    if (fraction.length > digits) financeDocumentFail(400, `${label}은 소수점 ${digits}자리까지 입력할 수 있습니다.`);
+    const scaled = BigInt(whole) * (10n ** BigInt(digits)) + BigInt(fraction.padEnd(digits, '0') || '0');
+    if ((!allowZero && scaled === 0n) || scaled > BigInt(max) * (10n ** BigInt(digits))) financeDocumentFail(400, `${label}의 입력 범위를 확인해주세요.`);
+    return scaled;
+}
+
+function financeDocumentDecimal(value, digits) {
+    if (!digits) return value.toString();
+    const text = value.toString().padStart(digits + 1, '0');
+    return `${text.slice(0, -digits)}.${text.slice(-digits)}`;
+}
+
+function financeDocumentParty(value, label) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) financeDocumentFail(400, `${label}를 입력해주세요.`);
+    const fields = { name: 100, email: 100, address: 200, city: 100, country: 100, phone: 100, businessNumber: 100 };
+    const party = Object.fromEntries(Object.entries(fields).map(([key, max]) => [key,
+        financeDocumentText(value[key], `${label} ${key === 'name' ? '이름' : key}`, max, key === 'name')]));
+    if (party.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(party.email)) financeDocumentFail(400, `${label} 이메일을 확인해주세요.`);
+    return party;
+}
+
+function financeDocumentPayload(body) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) financeDocumentFail(400, '문서 입력값을 확인해주세요.');
+    const type = body.document_type;
+    if (!Object.prototype.hasOwnProperty.call(financeDocumentTypes, type)) financeDocumentFail(400, '문서 종류를 확인해주세요.');
+    const raw = body.data;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) financeDocumentFail(400, '문서 내용이 없습니다.');
+    const currency = raw.currency;
+    if (!Object.prototype.hasOwnProperty.call(financeDocumentCurrencies, currency)) financeDocumentFail(400, '지원하지 않는 통화입니다.');
+    const digits = financeDocumentCurrencies[currency];
+    const date = financeDocumentDate(raw.date, '발행일');
+    const extraDate = type === 'receipt' ? null : financeDocumentDate(raw.extraDate, type === 'invoice' ? '지급 기한' : '견적 유효기한');
+    if (extraDate && extraDate < date) financeDocumentFail(400, '기한은 발행일 이후로 입력해주세요.');
+    if (!Array.isArray(raw.items) || raw.items.length < 1 || raw.items.length > 50) financeDocumentFail(400, '품목은 1~50개까지 저장할 수 있습니다.');
+    let supplyMinor = 0n;
+    let taxMinor = 0n;
+    const items = raw.items.map((item, index) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) financeDocumentFail(400, '품목 정보를 확인해주세요.');
+        const quantity = financeDocumentScaled(item.quantity, 3, '수량', 1000000, false);
+        const price = financeDocumentScaled(item.unitPrice, digits, '단가', 1000000000);
+        const rate = financeDocumentScaled(item.taxRate, 2, '세율', 100);
+        const supply = (quantity * price + 500n) / 1000n;
+        const tax = (supply * rate + 5000n) / 10000n;
+        supplyMinor += supply;
+        taxMinor += tax;
+        return {
+            id: index + 1,
+            name: financeDocumentText(item.name, '품목명', 150, true),
+            description: financeDocumentText(item.description, '품목 설명', 300),
+            quantity: financeDocumentDecimal(quantity, 3),
+            unitPrice: financeDocumentDecimal(price, digits),
+            taxRate: financeDocumentDecimal(rate, 2)
+        };
+    });
+    const totalMinor = supplyMinor + taxMinor;
+    if (totalMinor > 99999999999999n) financeDocumentFail(400, '문서 합계가 저장 가능한 범위를 초과했습니다. 품목 수량과 단가를 확인해주세요.');
+    const method = raw.method == null ? '계좌이체' : raw.method;
+    if (!['계좌이체', '카드', '현금', '기타'].includes(method)) financeDocumentFail(400, '결제 방법을 확인해주세요.');
+    return {
+        type, partnerId: financeDocumentId(body.partner_id, '거래처 ID', true),
+        data: {
+            business: financeDocumentParty(raw.business, '사업자 정보'), customer: financeDocumentParty(raw.customer, '고객 정보'),
+            date, extraDate: extraDate || '', currency, method,
+            account: financeDocumentText(raw.account, '입금 계좌 안내', 200),
+            note: financeDocumentText(raw.note, '비고', 2000), items
+        },
+        totals: { supply: financeDocumentDecimal(supplyMinor, digits), tax: financeDocumentDecimal(taxMinor, digits), total: financeDocumentDecimal(totalMinor, digits) }
+    };
+}
+
+function financeDocumentDecode(row) {
+    let snapshot = row.snapshot_json;
+    if (Buffer.isBuffer(snapshot)) snapshot = snapshot.toString('utf8');
+    if (typeof snapshot === 'string') snapshot = JSON.parse(snapshot);
+    if (!snapshot || snapshot.version !== 1 || !snapshot.data || !Array.isArray(snapshot.data.items)) financeDocumentFail(500, '저장 문서의 형식을 확인해주세요.');
+    return { ...row, snapshot_json: snapshot };
+}
+
+function financeDocumentError(res, error) {
+    if (error.status) return res.status(error.status).json({ message: error.message });
+    console.error('재무 문서 보관 오류:', error);
+    return res.status(500).json({ message: '문서를 처리하지 못했습니다. finance_documents 테이블과 서버 연결을 확인해주세요.' });
+}
+
+// 목록은 문서 번호, 작성 당시 고객명/담당자 이름으로 검색합니다.
+router.get('/documents', async (req, res) => {
+    try {
+        const page = Number(req.query.page ?? 1);
+        const limit = Number(req.query.limit ?? 10);
+        if (!Number.isSafeInteger(page) || page < 1 || page > 1000000 || !Number.isSafeInteger(limit) || limit < 1 || limit > 50) financeDocumentFail(400, '조회 페이지를 확인해주세요.');
+        const type = req.query.type || '';
+        if (type && !Object.prototype.hasOwnProperty.call(financeDocumentTypes, type)) financeDocumentFail(400, '문서 종류를 확인해주세요.');
+        const search = financeDocumentText(req.query.search ?? '', '검색어', 100);
+        const where = [];
+        const params = [];
+        if (type) { where.push('f.document_type = ?'); params.push(type); }
+        if (search) {
+            where.push(`(INSTR(f.document_number, ?) > 0 OR INSTR(JSON_UNQUOTE(JSON_EXTRACT(f.snapshot_json, '$.data.customer.name')), ?) > 0 OR INSTR(JSON_UNQUOTE(JSON_EXTRACT(f.snapshot_json, '$.author.name')), ?) > 0)`);
+            params.push(search, search, search);
+        }
+        const filter = where.length ? ` WHERE ${where.join(' AND ')}` : '';
+        const query = (sql, values) => new Promise((resolve, reject) => db.query(sql, values, (error, rows) => error ? reject(error) : resolve(rows)));
+        const counts = await query(`SELECT COUNT(*) AS total FROM finance_documents f${filter}`, params);
+        const rows = await query(`SELECT CAST(f.doc_id AS CHAR) AS doc_id, f.document_number, f.document_type,
+            DATE_FORMAT(f.issue_date, '%Y-%m-%d') AS issue_date, f.currency, CAST(f.total_amount AS CHAR) AS total_amount,
+            JSON_UNQUOTE(JSON_EXTRACT(f.snapshot_json, '$.data.customer.name')) AS customer_name,
+            JSON_UNQUOTE(JSON_EXTRACT(f.snapshot_json, '$.author.name')) AS employee_name,
+            DATE_FORMAT(f.created_at, '%Y-%m-%d %H:%i:%s') AS created_at
+            FROM finance_documents f${filter} ORDER BY f.doc_id DESC LIMIT ? OFFSET ?`, [...params, limit, (page - 1) * limit]);
+        return res.json({ items: rows, total: Number(counts[0].total), page, limit });
+    } catch (error) { return financeDocumentError(res, error); }
+});
+
+router.get('/documents/:docId', (req, res) => {
+    let id;
+    try { id = financeDocumentId(req.params.docId, '문서 ID'); }
+    catch (error) { return financeDocumentError(res, error); }
+    db.query(`${financeDocumentSelect} WHERE f.doc_id = ?`, [id], (error, rows) => {
+        if (error) return financeDocumentError(res, error);
+        if (!rows.length) return res.status(404).json({ message: '저장 문서를 찾을 수 없습니다.' });
+        try { return res.json(financeDocumentDecode(rows[0])); }
+        catch (decodeError) { return financeDocumentError(res, decodeError); }
+    });
+});
+
+router.post('/documents', async (req, res) => {
+    let connection;
+    try {
+        const payload = financeDocumentPayload(req.body);
+        // 제공된 기존 API와 동일한 사원 ID 전달 방식입니다.
+        // 서버 인증 미들웨어가 있다면 인증된 req.user.employee_id를 우선 사용합니다.
+        const employeeId = financeDocumentId(req.user?.employee_id ?? req.body.employee_id, '작성 사원 ID');
+        connection = await financeMysql.createConnection({
+            host: process.env.DB_HOST, port: Number(process.env.DB_PORT || 3306),
+            user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME,
+            supportBigNumbers: true, bigNumberStrings: true
+        });
+        await connection.beginTransaction();
+        const [employees] = await connection.execute('SELECT employee_id, name FROM employees WHERE employee_id = ?', [employeeId]);
+        if (!employees.length) financeDocumentFail(400, '작성 사원을 찾을 수 없습니다. 다시 로그인해주세요.');
+        if (payload.partnerId !== null) {
+            const [partners] = await connection.execute('SELECT partner_id FROM partners WHERE partner_id = ?', [payload.partnerId]);
+            if (!partners.length) financeDocumentFail(400, '선택한 거래처가 없습니다. 거래처 목록을 다시 불러오거나 직접 입력으로 변경해주세요.');
+        }
+        const createdDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+        const snapshot = {
+            version: 1, type: payload.type, data: payload.data, totals: payload.totals,
+            author: { employee_id: employeeId, name: employees[0].name }, createdDate
+        };
+        // NOT NULL + UNIQUE를 유지하면서, 확정 번호를 같은 트랜잭션 안에서 발급합니다.
+        const temporaryNumber = 'TMP-' + require('crypto').randomBytes(12).toString('hex');
+        const [insert] = await connection.execute(`INSERT INTO finance_documents
+            (document_number, document_type, employee_id, partner_id, issue_date, due_date, currency, total_amount, snapshot_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [temporaryNumber, payload.type, employeeId, payload.partnerId, payload.data.date, payload.data.extraDate || null,
+                payload.data.currency, payload.totals.total, JSON.stringify(snapshot)]);
+        const id = String(insert.insertId);
+        financeDocumentId(id, '생성 문서 ID');
+        const documentNumber = `${financeDocumentTypes[payload.type]}-${id.padStart(6, '0')}`;
+        snapshot.data.number = documentNumber;
+        snapshot.data.partnerId = payload.partnerId || '';
+        await connection.execute('UPDATE finance_documents SET document_number = ?, snapshot_json = ? WHERE doc_id = ?',
+            [documentNumber, JSON.stringify(snapshot), id]);
+        const [rows] = await connection.execute(`${financeDocumentSelect} WHERE f.doc_id = ?`, [id]);
+        const document = financeDocumentDecode(rows[0]);
+        await connection.commit();
+        return res.status(201).json({ message: '문서가 저장되었습니다.', document });
+    } catch (error) {
+        if (connection) { try { await connection.rollback(); } catch (rollbackError) { console.error('재무 문서 롤백 실패:', rollbackError); } }
+        return financeDocumentError(res, error);
+    } finally {
+        if (connection) { try { await connection.end(); } catch (closeError) { console.error('재무 문서 DB 연결 종료 실패:', closeError); } }
+    }
+});
+
+
+// 결제 관리: 완료된 입출금과 미정산 잔액을 서로 분리해 조회합니다.
+router.get('/payment-management', async (req, res) => {
+    let connection;
+    try {
+        const direction = req.query.direction || '출금';
+        if (!['출금', '입금'].includes(direction)) return res.status(400).json({ message: '입출금 구분을 확인해 주세요.' });
+        const range = period(req.query.month);
+        connection = await financeMysql.createConnection({
+            host: process.env.DB_HOST, port: Number(process.env.DB_PORT || 3306),
+            user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME
+        });
+        await connection.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+        await connection.beginTransaction();
+        // 품목과 직접 조인하지 않아, 품목 수에 따라 지급 금액이 중복 합산되지 않습니다.
+        const [rows] = await connection.execute(`SELECT p.payment_id, p.document_id, p.transaction_id,
+            DATE_FORMAT(p.payment_date, '%Y-%m-%d') AS payment_date,
+            p.amount, p.payment_method, p.payment_status,
+            COALESCE(a.title, t.company_name, '연결 문서 없는 입출금') AS title,
+            CASE WHEN p.document_id IS NOT NULL THEN 'approval'
+                 WHEN p.transaction_id IS NOT NULL THEN 'transaction' ELSE 'payment' END AS source_type,
+            COALESCE(p.document_id, p.transaction_id, p.payment_id) AS source_id,
+            c.category_code
+            FROM payments p
+            LEFT JOIN approval_documents a ON a.document_id = p.document_id
+            LEFT JOIN trade_transactions t ON t.transaction_id = p.transaction_id
+            LEFT JOIN finance_payment_classifications c ON c.source_type =
+                CASE WHEN p.document_id IS NOT NULL THEN 'approval'
+                     WHEN p.transaction_id IS NOT NULL THEN 'transaction' ELSE 'payment' END
+                AND c.source_id = COALESCE(p.document_id, p.transaction_id, p.payment_id)
+            WHERE p.payment_direction = ? AND p.payment_status = '완료'
+              AND p.payment_date >= ? AND p.payment_date < ?
+            ORDER BY p.payment_date DESC, p.payment_id DESC`,
+            [direction, range.previousStart, range.endExclusive]);
+        const decorate = row => {
+            const item = category(row.category_code, direction) || category('unclassified', direction);
+            return {
+                ...row, amount: Number(row.amount), category_code: item.code,
+                category_label: item.label, group_id: item.group_id, group_label: item.group_label
+            };
+        };
+        const entries = rows.filter(row => row.payment_date >= range.start).map(decorate);
+        const previousEntries = rows.filter(row => row.payment_date >= range.previousStart && row.payment_date < range.previousEndExclusive);
+        let scheduled = [];
+        if (direction === '출금') {
+            const [documents] = await connection.execute(`SELECT a.document_id AS source_id, 'approval' AS source_type,
+                a.title, DATE_FORMAT(COALESCE(a.due_date, a.created_at), '%Y-%m-%d') AS payment_date,
+                GREATEST(a.amount - COALESCE(p.paid, 0), 0) AS amount, c.category_code
+                FROM approval_documents a
+                LEFT JOIN (SELECT document_id, SUM(amount) AS paid FROM payments
+                    WHERE payment_status = '완료' AND payment_direction = '출금' GROUP BY document_id) p
+                    ON p.document_id = a.document_id
+                LEFT JOIN finance_payment_classifications c ON c.source_type = 'approval' AND c.source_id = a.document_id
+                WHERE a.approval_status = '승인' AND NOT EXISTS (SELECT 1 FROM trade_transactions link WHERE link.source_type = 'approval' AND link.source_id = a.document_id) AND COALESCE(a.due_date, a.created_at) >= ?
+                    AND COALESCE(a.due_date, a.created_at) < ?
+                HAVING amount > 0`, [range.start, range.monthEndExclusive]);
+            scheduled.push(...documents);
+        }
+        const [trades] = await connection.execute(`SELECT t.transaction_id AS source_id, 'transaction' AS source_type,
+            t.company_name AS title, DATE_FORMAT(COALESCE(t.due_date, t.trade_date), '%Y-%m-%d') AS payment_date,
+            GREATEST(i.total - COALESCE(p.paid, 0), 0) AS amount, c.category_code
+            FROM trade_transactions t
+            INNER JOIN (SELECT transaction_id, SUM(supply_price + vat) AS total FROM trade_items GROUP BY transaction_id) i
+                ON i.transaction_id = t.transaction_id
+            LEFT JOIN (SELECT transaction_id, SUM(amount) AS paid FROM payments
+                WHERE payment_status = '완료' AND payment_direction = ? GROUP BY transaction_id) p
+                ON p.transaction_id = t.transaction_id
+            LEFT JOIN finance_payment_classifications c ON c.source_type = 'transaction' AND c.source_id = t.transaction_id
+            WHERE t.trade_type = ? AND COALESCE(t.due_date, t.trade_date) >= ?
+                AND COALESCE(t.due_date, t.trade_date) < ? HAVING amount > 0`,
+            [direction, direction === '출금' ? '매입' : '매출', range.start, range.monthEndExclusive]);
+        scheduled.push(...trades);
+        scheduled = scheduled.map(decorate);
+        const totals = summary(entries, previousEntries, scheduled);
+        await connection.commit();
+        return res.json({ range, groups: groups(direction), entries, scheduled, summary: totals });
+    } catch (error) {
+        if (connection) { try { await connection.rollback(); } catch (rollbackError) { console.error(rollbackError.code); } }
+        console.error('결제 관리 조회 실패:', error.code || error.message);
+        return res.status(error.status || 500).json({
+            message: error.status ? error.message :
+                '결제 관리 조회에 실패했습니다. 분류 테이블 SQL 적용 여부와 DB 연결을 확인해 주세요.'
+        });
+    } finally {
+        if (connection) { try { await connection.end(); } catch (error) { console.error(error.code); } }
+    }
+});
+
+// 기존 문서/거래를 분류합니다. 계좌 잔액, 카드 한도, 지급 금액은 변경하지 않습니다.
+router.put('/payment-management/classification', async (req, res) => {
+    const { source_type: type, source_id: rawId, category_code: code, password } = req.body || {};
+    const employeeId = Number(req.user?.employee_id ?? req.body?.employee_id);
+    const id = Number(rawId);
+    if (!['approval', 'transaction', 'payment'].includes(type) || !Number.isSafeInteger(id) || id <= 0 ||
+        !Number.isSafeInteger(employeeId) || employeeId <= 0 || typeof password !== 'string' || !password) {
+        return res.status(400).json({ message: '분류할 거래와 로그인 비밀번호를 확인해 주세요.' });
+    }
+    let connection;
+    const fail = (status, message) => { const error = new Error(message); error.status = status; throw error; };
+    try {
+        connection = await financeMysql.createConnection({
+            host: process.env.DB_HOST,
+            port: Number(process.env.DB_PORT || 3306), user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD, database: process.env.DB_NAME
+        });
+        const [users] = await connection.execute(`SELECT e.department_id, ea.role FROM employees e
+            INNER JOIN employee_accounts ea ON ea.employee_id = e.employee_id
+            WHERE e.employee_id = ? AND ea.password_hash = ? AND ea.account_status = 'ACTIVE'`, [employeeId, password]);
+        if (!users.length) fail(401, '비밀번호 또는 계정 상태를 확인해 주세요.');
+        if (Number(users[0].department_id) !== 1 && users[0].role !== 'MASTER') fail(403, '재무부 또는 MASTER만 분류를 변경할 수 있습니다.');
+        await connection.beginTransaction();
+        let rows;
+        if (type === 'approval') {
+            [rows] = await connection.execute("SELECT '출금' AS direction FROM approval_documents WHERE document_id = ? FOR UPDATE", [id]);
+        } else if (type === 'transaction') {
+            [rows] = await connection.execute("SELECT CASE WHEN trade_type = '매출' THEN '입금' ELSE '출금' END AS direction FROM trade_transactions WHERE transaction_id = ? FOR UPDATE", [id]);
+        } else {
+            [rows] = await connection.execute('SELECT payment_direction AS direction FROM payments WHERE payment_id = ? AND document_id IS NULL AND transaction_id IS NULL FOR UPDATE', [id]);
+        }
+        if (!rows.length) fail(404, '분류할 문서 또는 거래가 없습니다.');
+        if (!category(code, rows[0].direction)) fail(400, '해당 입출금 구분에 맞는 분류를 선택해 주세요.');
+        await connection.execute(`INSERT INTO finance_payment_classifications (source_type, source_id, category_code)
+            VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE category_code = VALUES(category_code)`, [type, id, code]);
+        await connection.commit();
+        return res.json({ message: '분류를 저장했습니다.' });
+    } catch (error) {
+        if (connection) { try { await connection.rollback(); } catch (rollbackError) { console.error(rollbackError.code); } }
+        return res.status(error.status || 500).json({ message: error.status ? error.message : '분류를 저장하지 못했습니다. DB 연결과 분류 테이블을 확인해 주세요.' });
+    } finally {
+        if (connection) { try { await connection.end(); } catch (error) { console.error(error.code); } }
     }
 });
 

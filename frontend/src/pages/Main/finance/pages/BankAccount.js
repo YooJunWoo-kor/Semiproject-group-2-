@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getBankAccounts, getBankAccountPayments, createBankAccount, updateBankAccount, getFinanceEmployees, updateBankAccountStatus } from "../../../../utils/financeService";
 import ModalBase from '../../../../components/ModalBase';
-import '../FinanceRegistration.css';
+import '../components/Finance.css';
 import PaginationTable from '../../../../components/PaginationTable';
 
 function BankAccount() {
@@ -453,7 +453,7 @@ function BankAccount() {
   }
 
   return (
-    <div className="border-container">
+    <div className="border-container finance-accounts">
       {/* 1. 헤더 & 액션 버튼 영역 */}
       <header className="dashboard-header">
         <span className="subtitle">회사 계좌 관리</span>
@@ -472,7 +472,7 @@ function BankAccount() {
       <hr />
 
       {/* 2. 전사 잔액 요약 영역 (KPI 카드 구역) */}
-      <section>
+      <section className="finance-account-summary">
         <h3>자금 현황 요약</h3>
         <p>
           <strong>등록 계좌 수:</strong> {accountList.length}개 |{" "}
@@ -486,7 +486,10 @@ function BankAccount() {
       {/* 3. 검색 및 필터 구역 */}
       {/* 검색 및 필터 */}
       <section>
-        <form onSubmit={handleAccountSearch}>
+        <form
+          className="finance-card-search"
+          onSubmit={handleAccountSearch}
+        >
           <label htmlFor="bankFilter">은행 구분: </label>
           <select
             id="bankFilter"
@@ -549,10 +552,10 @@ function BankAccount() {
           <ModalBase
             title={editingAccountId === null ? "회사계좌 신규 등록" : "회사계좌 정보 수정"}
             onClose={closeRegistrationModal}
-  
+
             layout={(
               <form onSubmit={handleAccountSubmit}>
-              
+
                 <fieldset disabled={saving}>
                   {[
                     {
@@ -583,7 +586,7 @@ function BankAccount() {
                       <label htmlFor={`account-${field.name}`}>
                         {field.label}{field.required ? " *" : ""}
                       </label>
-              
+
                       <input
                         id={`account-${field.name}`}
                         name={field.name}
@@ -595,7 +598,7 @@ function BankAccount() {
                       />
                     </div>
                   ))}
-              
+
                   <div>
                     <label htmlFor="account-currency">통화 *</label>
                     <select
@@ -612,7 +615,7 @@ function BankAccount() {
                       <option value="EUR">EUR — 유로</option>
                     </select>
                   </div>
-              
+
                   <div>
                     <label htmlFor="account-balance">초기 잔액 *</label>
                     <input
@@ -627,10 +630,10 @@ function BankAccount() {
                       required
                     />
                   </div>
-              
+
                   <div>
                     <label htmlFor="account-employee">관리 사원</label>
-              
+
                     <select
                       id="account-employee"
                       name="employee_id"
@@ -639,7 +642,7 @@ function BankAccount() {
                       disabled={employeesLoading || Boolean(employeesError)}
                     >
                       <option value="">미지정</option>
-              
+
                       {employeeOptions.map((employee) => (
                         <option
                           key={employee.employee_id}
@@ -650,23 +653,23 @@ function BankAccount() {
                         </option>
                       ))}
                     </select>
-              
+
                     {employeesLoading && <p>관리 사원 목록을 불러오는 중입니다.</p>}
                     {employeesError && <p role="alert">{employeesError}</p>}
                   </div>
-              
+
                   <p>
                     {editingAccountId === null
                       ? "관리 사원은 선택 항목이며, 계좌 상태는 사용으로 등록됩니다."
                       : "수정 시 잔액과 통화는 기존 값을 유지합니다."}
                   </p>
-              
+
                   {formError && <p role="alert">{formError}</p>}
-              
+
                   <button type="submit">
                     {saving ? "저장 중..." : "저장"}
                   </button>
-              
+
                   <button
                     type="button"
                     onClick={closeRegistrationModal}
@@ -698,83 +701,83 @@ function BankAccount() {
               <section aria-label="회사계좌 거래내역">
 
 
-          <p>
-            {selectedAccount.bankName} / {selectedAccount.accountName}
-          </p>
-          <p>계좌번호: {selectedAccount.accountNumber}</p>
-          <p>
-            현재 잔액: {selectedAccount.balance.toLocaleString()}{" "}
-            {selectedAccount.currency}
-          </p>
+                <p>
+                  {selectedAccount.bankName} / {selectedAccount.accountName}
+                </p>
+                <p>계좌번호: {selectedAccount.accountNumber}</p>
+                <p>
+                  현재 잔액: {selectedAccount.balance.toLocaleString()}{" "}
+                  {selectedAccount.currency}
+                </p>
 
-          {paymentsLoading ? (
-            <p>거래내역을 불러오는 중입니다.</p>
-          ) : paymentsError ? (
-            <p role="alert">{paymentsError}</p>
-          ) : accountPayments.length === 0 ? (
-            <p>이 계좌에 연결된 입금·출금 이력이 없습니다.</p>
-          ) : (
-            <div className="table-shell finance-account-history">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">처리 날짜</th>
-                  <th scope="col">거래처</th>
-                  <th scope="col">구분</th>
-                  <th scope="col">결제수단</th>
-                  <th scope="col">금액</th>
-                  <th scope="col">상태</th>
-                </tr>
-              </thead>
+                {paymentsLoading ? (
+                  <p>거래내역을 불러오는 중입니다.</p>
+                ) : paymentsError ? (
+                  <p role="alert">{paymentsError}</p>
+                ) : accountPayments.length === 0 ? (
+                  <p>이 계좌에 연결된 입금·출금 이력이 없습니다.</p>
+                ) : (
+                  <div className="table-shell finance-account-history">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th scope="col">처리 날짜</th>
+                          <th scope="col">거래처</th>
+                          <th scope="col">구분</th>
+                          <th scope="col">결제수단</th>
+                          <th scope="col">금액</th>
+                          <th scope="col">상태</th>
+                        </tr>
+                      </thead>
 
-              <tbody>
-                {accountPayments.map((payment) => (
-                  <tr key={payment.payment_id}>
-                    <td>{payment.payment_date}</td>
-                    <td>{payment.company_name || "-"}</td>
-                    <td>{payment.payment_direction}</td>
-                    <td>{payment.payment_method}</td>
-                    <td>{Number(payment.amount).toLocaleString()}</td>
-                    <td>{payment.payment_status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
-          )}
+                      <tbody>
+                        {accountPayments.map((payment) => (
+                          <tr key={payment.payment_id}>
+                            <td>{payment.payment_date}</td>
+                            <td>{payment.company_name || "-"}</td>
+                            <td>{payment.payment_direction}</td>
+                            <td>{payment.payment_method}</td>
+                            <td>{Number(payment.amount).toLocaleString()}</td>
+                            <td>{payment.payment_status}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
-          <p>
-            계좌 상태:{" "}
-            {selectedAccount.status === "STOP"
-              ? "사용 중지"
-              : selectedAccount.status}
-          </p>
+                <p>
+                  계좌 상태:{" "}
+                  {selectedAccount.status === "STOP"
+                    ? "사용 중지"
+                    : selectedAccount.status}
+                </p>
 
-          {accountStatusError && (
-            <p role="alert">{accountStatusError}</p>
-          )}
+                {accountStatusError && (
+                  <p role="alert">{accountStatusError}</p>
+                )}
 
-          <div className="finance-detail-actions">
-            <button type="button" className="erp-primary-button"
-              disabled={saving || accountStatusSaving}
-              onClick={() => openEditAccountForm(selectedAccount)}>수정</button>
-          <button
-            type="button"
-            disabled={
-              saving || accountStatusSaving ||
-              !["사용", "ACTIVE", "STOP"].includes(selectedAccount.status)
-            }
-            onClick={() => handleAccountStatusChange(selectedAccount)}
-          >
-            {accountStatusSaving
-              ? "변경 중..."
-              : selectedAccount.status === "STOP"
-                ? "사용 재개"
-                : "사용 중지"}
-          </button>
+                <div className="finance-detail-actions">
+                  <button type="button" className="erp-primary-button"
+                    disabled={saving || accountStatusSaving}
+                    onClick={() => openEditAccountForm(selectedAccount)}>수정</button>
+                  <button
+                    type="button"
+                    disabled={
+                      saving || accountStatusSaving ||
+                      !["사용", "ACTIVE", "STOP"].includes(selectedAccount.status)
+                    }
+                    onClick={() => handleAccountStatusChange(selectedAccount)}
+                  >
+                    {accountStatusSaving
+                      ? "변경 중..."
+                      : selectedAccount.status === "STOP"
+                        ? "사용 재개"
+                        : "사용 중지"}
+                  </button>
 
-        
-          </div>
+
+                </div>
 
               </section>
             )}

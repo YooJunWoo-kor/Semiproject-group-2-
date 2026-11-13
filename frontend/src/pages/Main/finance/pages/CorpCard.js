@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getCorporateCards, updateCorporateCardLimit, getCorporateCardPayments, createCorporateCard, getCorporateCardOptions, updateCorporateCard, updateCorporateCardStatus } from "../../../../utils/financeService";
 import ModalBase from '../../../../components/ModalBase';
-import '../FinanceRegistration.css';
+import '../components/Finance.css';
 import PaginationTable from '../../../../components/PaginationTable';
 
 function CorpCard() {
@@ -550,7 +550,7 @@ function CorpCard() {
           <ModalBase
             title={editingCardId === null ? "법인카드 신규 등록" : "법인카드 기본정보 수정"}
             onClose={closeRegistrationModal}
-  
+
             layout={(
               <form onSubmit={handleCardSubmit}>
                 <fieldset disabled={cardSaving}>
@@ -639,7 +639,10 @@ function CorpCard() {
 
       {/* 법인카드 검색 및 부서 필터 */}
       <section>
-        <form onSubmit={handleCardSearch}>
+        <form
+          className="finance-card-search"
+          onSubmit={handleCardSearch}
+        >
           <label htmlFor="deptFilter">부서 선택: </label>
           <select
             id="deptFilter"
@@ -694,41 +697,41 @@ function CorpCard() {
               <section aria-label="법인카드 한도변경">
 
 
-          <p>법인카드: {limitTarget.cardName}</p>
-          <p>
-            당월 사용량: {limitTarget.currentUsage.toLocaleString()}원
-          </p>
+                <p>법인카드: {limitTarget.cardName}</p>
+                <p>
+                  당월 사용량: {limitTarget.currentUsage.toLocaleString()}원
+                </p>
 
-          <form onSubmit={handleLimitSubmit}>
-            <label htmlFor="card-monthly-limit">월 한도 *</label>
-            <input
-              id="card-monthly-limit"
-              type="number"
-              min="0"
-              step="1"
-              value={monthlyLimitInput}
-              onChange={(e) => setMonthlyLimitInput(e.target.value)}
-              required
-              disabled={limitSaving}
-            />
+                <form onSubmit={handleLimitSubmit}>
+                  <label htmlFor="card-monthly-limit">월 한도 *</label>
+                  <input
+                    id="card-monthly-limit"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={monthlyLimitInput}
+                    onChange={(e) => setMonthlyLimitInput(e.target.value)}
+                    required
+                    disabled={limitSaving}
+                  />
 
-            <p>월 한도는 당월 사용량 이상이어야 합니다.</p>
+                  <p>월 한도는 당월 사용량 이상이어야 합니다.</p>
 
-            {limitError && <p role="alert">{limitError}</p>}
+                  {limitError && <p role="alert">{limitError}</p>}
 
-            <button type="submit" disabled={limitSaving}>
-              {limitSaving ? "저장 중..." : "저장"}
-            </button>
+                  <button type="submit" disabled={limitSaving}>
+                    {limitSaving ? "저장 중..." : "저장"}
+                  </button>
 
-            <button
-              type="button"
-              disabled={limitSaving}
-              onClick={closeLimitModal}
-            >
-              취소
-            </button>
-          </form>
-        
+                  <button
+                    type="button"
+                    disabled={limitSaving}
+                    onClick={closeLimitModal}
+                  >
+                    취소
+                  </button>
+                </form>
+
               </section>
             )}
           />
@@ -744,78 +747,78 @@ function CorpCard() {
               <section aria-label="법인카드 상세정보">
 
 
-          <div className="table-shell">
-          <table className="finance-card-fields">
-            <tbody>
-              {[
-                ["카드 ID", selectedCard.id],
-                ["법인카드명", selectedCard.cardName],
-                ["발급부서", selectedCard.department],
-                ["관리자명", selectedCard.managerName],
-                [
-                  "당월 사용량",
-                  `${selectedCard.currentUsage.toLocaleString()}원`
-                ],
-                [
-                  "월 한도",
-                  `${selectedCard.monthlyLimit.toLocaleString()}원`
-                ],
-                [
-                  "잔여 한도",
-                  `${selectedCard.remainingLimit.toLocaleString()}원`
-                ],
-                ["상태", selectedCard.status === "STOP"
-                  ? "사용 중지"
-                  : selectedCard.status]
-              ].map(([label, value]) => (
-                <tr key={label}>
-                  <th scope="row">{label}</th>
-                  <td>{value}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
+                <div className="table-shell">
+                  <table className="finance-card-fields">
+                    <tbody>
+                      {[
+                        ["카드 ID", selectedCard.id],
+                        ["법인카드명", selectedCard.cardName],
+                        ["발급부서", selectedCard.department],
+                        ["관리자명", selectedCard.managerName],
+                        [
+                          "당월 사용량",
+                          `${selectedCard.currentUsage.toLocaleString()}원`
+                        ],
+                        [
+                          "월 한도",
+                          `${selectedCard.monthlyLimit.toLocaleString()}원`
+                        ],
+                        [
+                          "잔여 한도",
+                          `${selectedCard.remainingLimit.toLocaleString()}원`
+                        ],
+                        ["상태", selectedCard.status === "STOP"
+                          ? "사용 중지"
+                          : selectedCard.status]
+                      ].map(([label, value]) => (
+                        <tr key={label}>
+                          <th scope="row">{label}</th>
+                          <td>{value}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-          <h3>법인카드 사용 이력</h3>
+                <h3>법인카드 사용 이력</h3>
 
-          {paymentsLoading ? (
-            <p>사용 이력을 불러오는 중입니다.</p>
-          ) : paymentsError ? (
-            <p role="alert">{paymentsError}</p>
-          ) : cardPayments.length === 0 ? (
-            <p>이 카드에 연결된 사용 이력이 없습니다.</p>
-          ) : (
-            <div className="table-shell finance-card-history">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">처리 날짜</th>
-                  <th scope="col">거래처</th>
-                  <th scope="col">구분</th>
-                  <th scope="col">결제수단</th>
-                  <th scope="col">금액</th>
-                  <th scope="col">처리 상태</th>
-                </tr>
-              </thead>
+                {paymentsLoading ? (
+                  <p>사용 이력을 불러오는 중입니다.</p>
+                ) : paymentsError ? (
+                  <p role="alert">{paymentsError}</p>
+                ) : cardPayments.length === 0 ? (
+                  <p>이 카드에 연결된 사용 이력이 없습니다.</p>
+                ) : (
+                  <div className="table-shell finance-card-history">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th scope="col">처리 날짜</th>
+                          <th scope="col">거래처</th>
+                          <th scope="col">구분</th>
+                          <th scope="col">결제수단</th>
+                          <th scope="col">금액</th>
+                          <th scope="col">처리 상태</th>
+                        </tr>
+                      </thead>
 
-              <tbody>
-                {cardPayments.map((payment) => (
-                  <tr key={payment.payment_id}>
-                    <td>{payment.payment_date}</td>
-                    <td>{payment.company_name || "-"}</td>
-                    <td>{payment.payment_direction}</td>
-                    <td>{payment.payment_method}</td>
-                    <td>{Number(payment.amount).toLocaleString()}원</td>
-                    <td>{payment.payment_status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
-          )}
+                      <tbody>
+                        {cardPayments.map((payment) => (
+                          <tr key={payment.payment_id}>
+                            <td>{payment.payment_date}</td>
+                            <td>{payment.company_name || "-"}</td>
+                            <td>{payment.payment_direction}</td>
+                            <td>{payment.payment_method}</td>
+                            <td>{Number(payment.amount).toLocaleString()}원</td>
+                            <td>{payment.payment_status}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
-        
+
                 <div className="finance-detail-actions">
                   <button type="button" className="erp-primary-button"
                     disabled={cardSaving || limitSaving || statusSavingId !== null}

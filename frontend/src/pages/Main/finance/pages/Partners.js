@@ -1,11 +1,26 @@
 import React, { useEffect, useState } from "react";
 import ModalBase from '../../../../components/ModalBase';
-import '../FinanceRegistration.css';
+import '../components/Finance.css';
 import PaginationTable from '../../../../components/PaginationTable';
 import WeeklyCalendar from '../../../../components/weeklycalendar/WeeklyCalendar';
+import { TOGLE_COLORS } from "../../../../utils/authStorage";
 import BasicCalendar from '../../../../components/calendar/BasicCalendar';
 import { getPartners, createPartner, updatePartner, deletePartner } from "../../../../utils/financeService";
 
+
+// 공용 달력이 이미 지원하는 색상만 선택합니다. 공용 파일은 수정하지 않습니다.
+const partnerCalendarColors = Object.entries(TOGLE_COLORS || {})
+  .filter(([key, color]) => /^(0|[1-9]\d*)$/.test(key) && Number(key) <= 255 && typeof color === "string")
+  .map(([key, color]) => ({ typeId: Number(key), color }));
+
+function getPartnerCalendarTypeId(partner) {
+  const value = partner.calendarTypeId;
+  const selected = value === "" || value == null ? null : Number(value);
+  if (selected !== null && partnerCalendarColors.some(option => option.typeId === selected)) {
+    return selected;
+  }
+  return partner.settlementType === "입금 마감" ? 0 : 2;
+}
 
 // 신규 거래처 입력폼의 초기값
 const initialPartnerForm = {
@@ -18,6 +33,7 @@ const initialPartnerForm = {
   trade_role: "매입",
   company_type: "",
   closing_day: "",
+  calendar_type_id: "",
   bank_name: "",
   account_number: "",
   account_holder: ""
@@ -92,6 +108,7 @@ function Partners() {
 
           // 매월 정기 마감일
           closingDay: item.closing_day,
+          calendarTypeId: item.calendar_type_id == null ? "" : String(item.calendar_type_id),
 
           // 달력용 날짜는 다음 단계에서 연결
           closingDate: "",
@@ -219,7 +236,7 @@ function Partners() {
           title: `[${item.settlementType}] ${item.name}`,
           start: date,
           end: date,
-          typeId: item.settlementType === "입금 마감" ? 0 : 2,
+          typeId: getPartnerCalendarTypeId(item),
           description: "거래처 정기 정산 마감 일정"
         });
       });
@@ -278,6 +295,7 @@ function Partners() {
       trade_role: partner.type,
       company_type: inputValue(partner.companyType),
       closing_day: partner.closingDay ?? "",
+      calendar_type_id: partner.calendarTypeId ?? "",
       bank_name: inputValue(partner.bankInfo.bank),
       account_number: inputValue(partner.bankInfo.account),
       account_holder: inputValue(partner.bankInfo.holder)
@@ -325,6 +343,7 @@ function Partners() {
           partnerForm.closing_day === ""
             ? null
             : Number(partnerForm.closing_day),
+        calendarTypeId: partnerForm.calendar_type_id,
         closingDate: "",
         // 수정 시 기존 계산 금액을 유지하고, 신규 등록은 0원입니다.
         receivableAmount: isEditing
@@ -433,7 +452,7 @@ function Partners() {
   }
 
   return (
-    <div className="border-container">
+    <div className="border-container finance-partners">
       {/* 1. 상단 공통 헤더 */}
       <header className="dashboard-header">
         <span className="subtitle">거래처 및 정산 마감 관리</span>
@@ -455,10 +474,10 @@ function Partners() {
           <ModalBase
             title={editingPartnerId === null ? "신규 거래처 등록" : "거래처 수정"}
             onClose={closeRegistrationModal}
-  
+
             layout={(
               <form onSubmit={handlePartnerSubmit}>
-              
+
                 {/* 같은 구조의 문자 입력칸은 map으로 만듭니다. */}
                 {[
                   { name: "company_name", label: "거래처명", required: true, max: 100 },
@@ -487,7 +506,7 @@ function Partners() {
                     />
                   </div>
                 ))}
-              
+
                 <div>
                   <label htmlFor="partner-trade-role">거래 구분 *</label>
                   <select
@@ -501,7 +520,7 @@ function Partners() {
                     <option value="매출">매출</option>
                   </select>
                 </div>
-              
+
                 <div>
                   <label htmlFor="partner-closing-day">정기 마감일</label>
                   <input
@@ -517,7 +536,39 @@ function Partners() {
                     disabled={saving}
                   />
                 </div>
-              
+
+                <fieldset className="finance-color-fieldset" disabled={saving}>
+                  <legend className="finance-color-legend">일정 색상</legend>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, cursor: "pointer" }}>
+                    <input
+                      type="radio"
+                      name="calendar_type_id"
+                      value=""
+                      checked={partnerForm.calendar_type_id === ""}
+                      onChange={handlePartnerChange}
+                      className="finance-color-radio"
+                    />
+                    기본 색상 (입금 / 출금 구분)
+                  </label>
+                  <div className="finance-color-options">
+                    {partnerCalendarColors.map(({ typeId, color }, index) => (
+                      <label key={typeId} title={`색상 ${index + 1}: ${color}`} className="finance-color-option">
+                        <input
+                          type="radio"
+                          name="calendar_type_id"
+                          value={String(typeId)}
+                          checked={String(partnerForm.calendar_type_id) === String(typeId)}
+                          onChange={handlePartnerChange}
+                          aria-label={`일정 색상 ${index + 1}`}
+                          className="finance-color-radio"
+                        />
+                        <span aria-hidden="true" className="finance-color-swatch" style={{ backgroundColor: color }} />
+                      </label>
+                    ))}
+                  </div>
+                  <p className="subtext finance-color-guide">저장하면 이 거래처의 주간·월간 정산 마감 일정에 적용됩니다.</p>
+                </fieldset>
+
                 <div>
                   <label htmlFor="partner-memo">메모</label>
                   <textarea
@@ -528,13 +579,13 @@ function Partners() {
                     disabled={saving}
                   />
                 </div>
-              
+
                 {formError && <p role="alert">{formError}</p>}
-              
+
                 <button type="submit" disabled={saving}>
                   {saving ? "저장 중..." : "저장"}
                 </button>
-              
+
                 <button
                   type="button"
                   disabled={saving}
@@ -554,7 +605,7 @@ function Partners() {
         {/* [좌측 영역] 검색 필터 및 거래처 목록 테이블 (약 62% 너비) */}
         <div style={{ flex: '1 1 62%', minWidth: 0 }}>
           {/* 간이 검색/필터 구역 */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px' }}>
+          <div className="finance-partner-filters">
             <label htmlFor="partnerTypeSelect">구분: </label>
             <select
               id="partnerTypeSelect"
@@ -580,9 +631,13 @@ function Partners() {
                 }
               }}
             />
-
-            <button type="button" onClick={handleSearch} style={{ flexShrink: 0, whiteSpace: "nowrap" }}>
-              검색
+            <button
+              type="button"
+              className="finance-search-button action-btn"
+              onClick={handleSearch}
+              style={{ flexShrink: 0, whiteSpace: "nowrap" }}
+            >
+              조회
             </button>
           </div>
 
@@ -656,6 +711,13 @@ function Partners() {
                             </td>
                           </tr>
                           <tr>
+                            <th scope="row">일정 색상</th>
+                            <td>
+                              <span aria-hidden="true" className="finance-color-swatch finance-color-current" style={{ backgroundColor: TOGLE_COLORS?.[getPartnerCalendarTypeId(selectedPartner)] || "var(--color-brand)" }} />
+                              {selectedPartner.calendarTypeId === "" ? "기본 색상" : "선택한 색상"}
+                            </td>
+                          </tr>
+                          <tr>
                             <th scope="row">은행명</th>
                             <td>{selectedPartner.bankInfo.bank}</td>
                           </tr>
@@ -695,25 +757,25 @@ function Partners() {
 
 
         {/* [우측 영역] 상시 노출 마감일 달력 (약 38% 너비) */}
-        <div style={{ flex: '0 0 38%', minWidth: '340px', borderLeft: '1px solid #e2e8f0', paddingLeft: '20px' }}>
+        <div style={{ flex: '0 0 38%', minWidth: '340px', borderLeft: '1px solid var(--color-line)', paddingLeft: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <h4 style={{ margin: 0, fontSize: '15px', color: '#1e293b' }}>정산 마감 일정</h4>
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <button
+            <h4 className="board-title finance-calendar-title">정산 마감 일정</h4>
+            <ul className="grouplist">
+              <li><button
                 type="button"
-                className={calendarType === 'week' ? 'is-active' : ''}
+                className={calendarType === 'week' ? 'active' : ''}
                 onClick={() => setCalendarType('week')}
               >
                 주간
-              </button>
-              <button
+              </button></li>
+              <li><button
                 type="button"
-                className={calendarType === 'month' ? 'is-active' : ''}
+                className={calendarType === 'month' ? 'active' : ''}
                 onClick={() => setCalendarType('month')}
               >
                 월간
-              </button>
-            </div>
+              </button></li>
+            </ul>
           </div>
 
 

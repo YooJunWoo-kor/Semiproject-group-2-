@@ -2,7 +2,7 @@ import axios from "axios";
 import React, { useState } from "react";
 import GetPopover from '../../../../components/GetPopover';
 import DepartmentList from '../../../../components/DepartmentList';
-import { TOGLE_COLORS, API_BASE_URL } from '../../../../utils/authStorage';
+import { TOGLE_COLORS, API_BASE_URL, getLoginUser } from '../../../../utils/authStorage';
 
 function SetNewProjectLayout({setIsModal}) {
     const [projectName, setProjectName] = useState('');
@@ -14,6 +14,9 @@ function SetNewProjectLayout({setIsModal}) {
     const [visible, setVisible] = useState('public');
     const [typeId, setTypeId] = useState(0);
   
+    //내 아이디
+    const getMyID = getLoginUser();
+    
     // 에러 번호: 0(정상), 1(제목), 2(시작일), 3(마감일), 4(내용), 5(리더)
     const [errStep, setErrStep] = useState(0);
   
@@ -259,8 +262,12 @@ function SetNewProjectLayout({setIsModal}) {
   
           {/* 버튼 */}
           <div style={{ display: 'flex', gap: '10px', marginBottom: '100px' }}>
-            <button type="submit" style={{ marginLeft: 'auto' }}>완료</button>
-            <button type="button">취소</button>
+            <button type="submit" style={{ marginLeft: 'auto' }}>
+              완료
+            </button>
+            <button type="button">
+              취소
+            </button>
           </div>
         </form>
       </div>

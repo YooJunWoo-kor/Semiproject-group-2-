@@ -2,12 +2,13 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-
 const db = require('./db');
 const app = express();
+// 미들웨어
+app.use(cors());
+app.use(express.json());
 
 const PORT = process.env.PORT || 4000;
-
 const path = require("path");
 
 // 라우터
@@ -24,20 +25,12 @@ const mrRoutes = require('./routes/mrRoutes');
 // 품질관리 라우터 추가
 const qualityRoutes = require('./routes/quality');
 
-// 미들웨어
-app.use(cors());
-app.use(express.json());
+
 
 // 모든 HTTP 요청 확인
 app.use((req, res, next) => {
     console.log("요청 도착:", req.method, req.url);
     next();
-});
-
-// 서버 응답 테스트
-app.get('/api/health', (req, res) => {
-    console.log("health API 실행");
-    res.json({ success: true, message: "서버 정상" });
 });
 
 // API 연결

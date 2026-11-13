@@ -165,4 +165,77 @@ router.post('/getMySchedule', async (req, res) => {
     });
 })
 
+// POST /api/schedule/getMyWorklist
+router.post('/getMyWorklist', async (req, res) => {
+    const { userID } = req.body;
+    
+    try {
+        const sql = `
+            SELECT 
+                worklist_id,
+                title,
+                type_id,
+                content,
+                DATE_FORMAT(start_day, '%Y-%m-%d') AS start,
+                DATE_FORMAT(end_day, '%Y-%m-%d') AS end,
+                start_time,
+                end_time,
+                employee_id,
+                is_completed
+            FROM worklist
+            WHERE employee_id = ?
+            ORDER BY start_day ASC
+        `;
+
+        const [rows] = await db.promise().query(sql, [userID]);
+
+        console.log(`조회된 내 할 일 개수 (${userID}):`, rows.length, '건');
+        console.log('조회 결과 데이터:', rows);
+
+        return res.status(200).json(rows);
+
+    } catch (error) {
+        console.error('내 할 일 스케줄 조회 DB 오류:', error);
+        return res.status(500).json({
+            message: '할 일 목록 조회 중 서버 오류가 발생했습니다.',
+            error: error.message
+        });
+    }
+});
+
+// POST /api/schedule/getMyAlarms
+router.post('/getMyAlarms', (req, res) => {
+    const { userID } = req.body;
+
+    if (!userID) {
+        return res.status(400).json({ message: 'userID가 필요합니다.' });
+    }
+
+    const sql = `
+        SELECT 
+            s.schedule_id,
+            s.schedule_name,
+            s.start_date,
+            s.end_date,
+            sa.timerNum,
+            sa.timerType,
+            sa.timerTiming
+        FROM schedule_attendee sa
+        INNER JOIN schedule s ON sa.schedule_id = s.schedule_id
+        WHERE sa.employee_id = ?
+          AND sa.isNotifyEnabled = '1'
+          AND s.end_date >= NOW()
+    `;
+
+    db.query(sql, [userID], (err, rows) => {
+        if (err) {
+            console.error('알람 일정 조회 DB 오류:', err);
+            return res.status(500).json({ message: '알람 조회 실패' });
+        }
+
+        console.log('조회성공', rows);
+        return res.status(200).json(rows);
+    });
+});
+
 module.exports = router;
