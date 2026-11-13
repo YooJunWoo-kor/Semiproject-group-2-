@@ -303,25 +303,28 @@ router.delete('/cancel/:draftId/:employeeId', (req, res) => {
     const draftId = Number(req.params.draftId);
     const employeeId = Number(req.params.employeeId);
 
+    if (!Number.isSafeInteger(draftId) || draftId <= 0 ||
+        !Number.isSafeInteger(employeeId) || employeeId <= 0) {
+        return res.status(400).json({ message: '올바른 문서 및 사원 ID가 필요합니다.' });
+    }
 
+    // 기존 취소 동작(결재대기 문서 삭제)은 유지한다.
     const sql = `
         DELETE FROM my_draft
         WHERE draft_id = ? AND employee_id = ? AND status = 'PENDING'
-    `
+    `;
 
-    const values = [draftId, employeeId];
-
-    db.query(sql, values, (err, rows) => {
-        if(err){
-            console.log("기안서 삭제 실패");
-            return res.status(500).json({
-                message: "삭제 오류"
-            })
+    db.query(sql, [draftId, employeeId], (err, result) => {
+        if (err) {
+            console.error('결재 요청 취소 오류:', err);
+            return res.status(500).json({ message: '결재 요청 취소 실패' });
         }
-
-        return res.json(rows);
-    })
-})
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: '취소 가능한 결재 요청이 없습니다.' });
+        }
+        return res.json({ message: '결재 요청 취소 완료' });
+    });
+});
 
 
 module.exports = router;
