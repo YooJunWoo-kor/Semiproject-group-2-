@@ -114,3 +114,141 @@ export function validateDateRange(start, end, {
   if (!allowSameDay && start.trim() === end.trim()) return failure(`${endLabel}은 ${startLabel} 이후여야 합니다.`);
   return success();
 }
+
+
+// HH:mm 형식만 허용합니다. 예: 09:00, 18:30
+function isValidTime(value) {
+  return typeof value === 'string'
+    && /^([01]\d|2[0-3]):[0-5]\d$/.test(value.trim());
+}
+
+// 시작 시간과 종료 시간의 순서를 검사합니다.
+// 같은 날 이용하는 시간을 기준으로 하며, 자정을 넘는 예약은 허용하지 않습니다.
+export function validateTimeRange(start, end, {
+  required = false,
+  allowSameTime = false,
+  startLabel = '시작 시간',
+  endLabel = '종료 시간'
+} = {}) {
+  if (required && isEmpty(start)) {
+    return failure(`${startLabel}을 입력해주세요.`);
+  }
+
+  if (required && isEmpty(end)) {
+    return failure(`${endLabel}을 입력해주세요.`);
+  }
+
+  for (const [value, label] of [[start, startLabel], [end, endLabel]]) {
+    if (!isEmpty(value) && !isValidTime(value)) {
+      return failure(`${label}을 올바른 시간(HH:mm)으로 입력해주세요.`);
+    }
+  }
+
+  if (isEmpty(start) || isEmpty(end)) return success();
+
+  if (start.trim() > end.trim()) {
+    return failure(`${endLabel}은 ${startLabel}보다 빠를 수 없습니다.`);
+  }
+
+  if (!allowSameTime && start.trim() === end.trim()) {
+    return failure(`${endLabel}은 ${startLabel} 이후여야 합니다.`);
+  }
+
+  return success();
+}
+
+// 회의실 예약이 운영시간 안에 들어오는지 검사합니다.
+export function validateMeetingRoomHours(start, end, {
+  openTime = '09:00',
+  closeTime = '18:00'
+} = {}) {
+  const hoursResult = validateTimeRange(openTime, closeTime, {
+    required: true,
+    startLabel: '예약 가능 시작 시간',
+    endLabel: '예약 가능 종료 시간'
+  });
+
+  if (!hoursResult.valid) return hoursResult;
+
+  const reservationResult = validateTimeRange(start, end, {
+    required: true,
+    startLabel: '예약 시작 시간',
+    endLabel: '예약 종료 시간'
+  });
+
+  if (!reservationResult.valid) return reservationResult;
+
+  if (start.trim() < openTime.trim() || end.trim() > closeTime.trim()) {
+    return failure(
+      `회의실은 ${openTime.trim()}부터 ${closeTime.trim()}까지 예약할 수 있습니다.`
+    );
+  }
+
+  return success();
+}
+
+// 같은 회의실·날짜의 기존 예약과 시간이 겹치는지 검사합니다.
+// reservations에는 취소된 예약을 제외한 목록을 전달해주세요.
+// 수정 중인 예약은 excludeId로 제외할 수 있습니다.
+export function validateMeetingRoomOverlap({
+  roomId,
+  date,
+  start,
+  end,
+  reservations = [],
+  excludeId = null
+}) {
+  if (roomId === null || roomId === undefined || roomId === '') {
+    return failure('회의실을 선택해주세요.');
+  }
+
+  const dateResult = validateDateRange(date, date, {
+    required: true,
+    startLabel: '예약일',
+    endLabel: '예약일'
+  });
+
+  if (!dateResult.valid) return dateResult;
+
+  const timeResult = validateTimeRange(start, end, {
+    required: true,
+    startLabel: '예약 시작 시간',
+    endLabel: '예약 종료 시간'
+  });
+
+  if (!timeResult.valid) return timeResult;
+
+  if (!Array.isArray(reservations)) {
+    return failure('예약 목록을 확인할 수 없습니다.');
+  }
+
+  const sameRoomReservations = reservations.filter(reservation => {
+    const isExcluded = excludeId !== null
+      && excludeId !== undefined
+      && String(reservation.id) === String(excludeId);
+
+    return !isExcluded
+      && String(reservation.roomId) === String(roomId)
+      && reservation.date === date.trim();
+  });
+
+  for (const reservation of sameRoomReservations) {
+    if (
+      !isValidTime(reservation.start)
+      || !isValidTime(reservation.end)
+      || reservation.start.trim() >= reservation.end.trim()
+    ) {
+      return failure('기존 예약의 시간 정보가 올바르지 않습니다.');
+    }
+
+    // 앞 예약의 종료 시간과 다음 예약의 시작 시간이 같으면 허용합니다.
+    const overlaps = start.trim() < reservation.end.trim()
+      && end.trim() > reservation.start.trim();
+
+    if (overlaps) {
+      return failure('선택한 시간에 이미 등록된 회의실 예약이 있습니다.');
+    }
+  }
+
+  return success();
+}

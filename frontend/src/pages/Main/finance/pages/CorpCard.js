@@ -134,7 +134,6 @@ function CorpCard({
   // 선택한 카드가 바뀌면 해당 카드의 사용 이력을 조회합니다.
   
   const cardTableTitle = "법인카드 목록 현황";
-  const cardHeaders = ["법인카드 ID", "법인카드 명", "발급부서", "관리자명", "당월 사용량", "월 한도", "잔여 한도", "상태", "관리"];
   useEffect(() => {
     onSummaryChange?.({
       loading,
@@ -352,30 +351,67 @@ function CorpCard({
 
   // 선택한 ID와 일치하는 카드 정보를 찾습니다.
   const selectedCard = cardList.find(card => card.id === selectedCardId);
-  const tCardData = filteredCards.map(card => {
-    const remaining = card.remainingLimit;
-    return {
-      content: [card.id, <strong>{card.cardName}</strong>, card.department, card.managerName, card.currentUsage.toLocaleString() + "원", card.monthlyLimit.toLocaleString() + "원", remaining.toLocaleString() + "원", <FinanceStatusBadge tone={card.status === "STOP" ? "status-danger" : ""}>
-          {card.status === "STOP" ? "사용 중지" : card.status}
-        </FinanceStatusBadge>, <div style={{
-        display: 'flex',
-        gap: '4px'
-      }}>
-          <button type="button" disabled={cardSaving || limitSaving || statusSavingId !== null} onClick={() => openCardDetail(card.id)}>
-            상세
-          </button>
-          <button type="button" disabled={cardSaving || limitSaving || statusSavingId !== null} onClick={() => openEditCardForm(card)}>
-            수정
-          </button>
-          <button type="button" disabled={limitSaving || cardSaving || statusSavingId !== null} onClick={() => openLimitForm(card)}>
-            한도변경
-          </button>
-          <button type="button" disabled={statusSavingId !== null || cardSaving || limitSaving || !["사용", "ACTIVE", "STOP"].includes(card.status)} onClick={() => handleCardStatusChange(card)}>
-            {statusSavingId === card.id ? "변경 중..." : card.status === "STOP" ? "사용 재개" : "사용 중지"}
-          </button>
-        </div>]
+  // 상세 창의 키보드 포커스와 배경 스크롤을 관리합니다.
+  const detailOpen = Boolean(selectedCard) && !cardFormOpen && !limitTarget;
+  useEffect(() => {
+    if (!detailOpen) return;
+    const dialog = document.getElementById('finance-card-detail-dialog');
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialog?.focus();
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') { setSelectedCardId(null); return; }
+      if (event.key !== 'Tab' || !dialog) return;
+      const controls = Array.from(dialog.querySelectorAll('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]'));
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (!first) { event.preventDefault(); dialog.focus(); return; }
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog)) {
+        event.preventDefault(); first.focus();
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+      if (previousFocus?.isConnected) previousFocus.focus();
     };
-  });
+  }, [detailOpen]);
+  // 목록 수정은 이 배열에서만 합니다.
+  // label: 제목 / field: 표시할 카드 데이터 / render: 버튼·배지 등 별도 표시
+  // 항목을 이동하거나 삭제하면 제목과 내용이 함께 변경됩니다.
+  const cardColumns = [
+    { key: 'id', label: 'ID', field: 'id' },
+    { key: 'name', label: '법인카드 명', render: card => <strong>{card.cardName}</strong> },
+    { key: 'department', label: '발급부서', field: 'department' },
+    { key: 'manager', label: '관리자명', field: 'managerName' },
+    {
+      key: 'status', label: '상태',
+      render: card => <FinanceStatusBadge tone={card.status === "STOP" ? "status-danger" : ""}>
+        {card.status === "ACTIVE" ? "사용" : card.status === "STOP" ? "사용 중지" : card.status}
+      </FinanceStatusBadge>
+    },
+    {
+      key: 'actions', label: '관리',
+      render: card => <div style={{ display: 'flex', gap: '4px' }}>
+        <button type="button" disabled={cardSaving || limitSaving || statusSavingId !== null} onClick={() => openCardDetail(card.id)}>상세</button>
+        <button type="button" disabled={statusSavingId !== null || cardSaving || limitSaving || !["사용", "ACTIVE", "STOP"].includes(card.status)} onClick={() => handleCardStatusChange(card)}>
+          {statusSavingId === card.id ? "변경 중..." : card.status === "STOP" ? "사용 재개" : "사용 중지"}
+        </button>
+      </div>
+    }
+  ];
+
+  // 제목과 셀을 같은 설정에서 생성합니다.
+  const cardHeaders = cardColumns.map(column => column.label);
+  const tCardData = filteredCards.map(card => ({
+    content: cardColumns.map(column => <React.Fragment key={column.key}>
+      {column.render ? column.render(card) : (card[column.field] ?? '-')}
+    </React.Fragment>)
+  }));
 
   // 상세와 등록·수정·한도변경 모달은 한 번에 하나씩 표시합니다.
   function openCardDetail(cardId) {
@@ -500,30 +536,36 @@ function CorpCard({
               </section>} />
         </div>}
 
-      {selectedCard && !cardFormOpen && !limitTarget && <div className="finance-registration-modal finance-card-detail">
-          <ModalBase title="법인카드 상세정보" onClose={closeCardDetail} layout={<section aria-label="법인카드 상세정보">
-
-
-                <div className="table-shell">
-                  <table className="finance-card-fields">
-                    <tbody>
-                      <FinanceDetailRows rows={[["카드 ID", selectedCard.id], ["법인카드명", selectedCard.cardName], ["발급부서", selectedCard.department], ["관리자명", selectedCard.managerName], ["당월 사용량", `${selectedCard.currentUsage.toLocaleString()}원`], ["월 한도", `${selectedCard.monthlyLimit.toLocaleString()}원`], ["잔여 한도", `${selectedCard.remainingLimit.toLocaleString()}원`], ["상태", selectedCard.status === "STOP" ? "사용 중지" : selectedCard.status]]} />
-                    </tbody>
-                  </table>
-                </div>
-
-                <h3>법인카드 사용 이력</h3>
-
-                {paymentsLoading ? <p>사용 이력을 불러오는 중입니다.</p> : paymentsError ? <p role="alert">{paymentsError}</p> : cardPayments.length === 0 ? <p>이 카드에 연결된 사용 이력이 없습니다.</p> : <FinancePaymentHistory className="finance-card-history" payments={cardPayments} showPartner />}
-
-
-                <div className="finance-detail-actions">
-                  <button type="button" className="erp-primary-button" disabled={cardSaving || limitSaving || statusSavingId !== null} onClick={() => openEditCardForm(selectedCard)}>수정</button>
-                  <button type="button" disabled={cardSaving || limitSaving || statusSavingId !== null} onClick={() => openLimitForm(selectedCard)}>한도변경</button>
-                </div>
-
-              </section>} />
-        </div>}
+      {selectedCard && !cardFormOpen && !limitTarget && <div
+        style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, boxSizing: 'border-box' }}
+        onClick={event => { if (event.target === event.currentTarget) closeCardDetail(); }}>
+        <div id="finance-card-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="finance-card-detail-title" tabIndex={-1}
+          style={{ width: 900, maxWidth: '100%', maxHeight: 'calc(100dvh - 40px)', background: 'white', borderRadius: 14, padding: 24, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 20, overflow: 'hidden', color: 'var(--color-text, #1e293b)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexShrink: 0 }}>
+            <h2 id="finance-card-detail-title" style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>법인카드 상세정보</h2>
+            <button type="button" aria-label="법인카드 상세 닫기" onClick={closeCardDetail}
+              style={{ background: 'transparent', border: 0, padding: 8, cursor: 'pointer', color: 'inherit', fontSize: 20 }}>×</button>
+          </div>
+          <div style={{ minHeight: 0, overflow: 'auto', scrollbarGutter: 'stable', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="table-shell" style={{ flexShrink: 0, border: '1px solid var(--color-line)', borderRadius: 12, overflow: 'hidden' }}>
+              <table className="finance-card-fields" style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', overflowWrap: 'anywhere' }}>
+                <colgroup><col style={{ width: '28%' }} /><col /></colgroup>
+                <tbody>
+                  <FinanceDetailRows rows={[["카드 ID", selectedCard.id], ["법인카드명", selectedCard.cardName], ["발급부서", selectedCard.department], ["관리자명", selectedCard.managerName], ["당월 사용량", `${selectedCard.currentUsage.toLocaleString()}원`], ["월 한도", `${selectedCard.monthlyLimit.toLocaleString()}원`], ["잔여 한도", `${selectedCard.remainingLimit.toLocaleString()}원`], ["상태", selectedCard.status === "ACTIVE" ? "사용" : selectedCard.status === "STOP" ? "사용 중지" : selectedCard.status]]} />
+                </tbody>
+              </table>
+            </div>
+            <h3 style={{ margin: 0, fontSize: 14 }}>법인카드 사용 이력</h3>
+            <div style={{ minHeight: 160, flexShrink: 0 }}>
+              {paymentsLoading ? <p>사용 이력을 불러오는 중입니다.</p> : paymentsError ? <p role="alert">{paymentsError}</p> : cardPayments.length === 0 ? <p>이 카드에 연결된 사용 이력이 없습니다.</p> : <FinancePaymentHistory className="finance-card-history" payments={cardPayments} showPartner />}
+            </div>
+          </div>
+          <div className="finance-detail-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexShrink: 0, margin: 0 }}>
+            <button type="button" className="erp-primary-button" disabled={cardSaving || limitSaving || statusSavingId !== null} onClick={() => openEditCardForm(selectedCard)}>수정</button>
+            <button type="button" disabled={cardSaving || limitSaving || statusSavingId !== null} onClick={() => openLimitForm(selectedCard)}>한도변경</button>
+          </div>
+        </div>
+      </div>}
     </div>;
 }
 export default CorpCard;
