@@ -306,40 +306,36 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                     <>
                         <div className="table-shell">
                             <table>
-                                                                <thead>
-                                <tr>
-                                    <th>사용일</th>
-                                    <th>사용처</th>
-                                    <th>금액</th>
-                                    <th>비고</th>
-                                    <th>관리</th>
-                                </tr>
-                                                            </thead>
-                                
-                                                            <tbody>
-                                {expenseItems.map((item, index) => (
-                                    <tr key={index}>
-                                        <td>
-                                            <input type="date" value={item.useDate} onChange={(e) => handleExpenseChange(index, "useDate", e.target.value)} />
-                                        </td>
-                                
-                                        <td>
-                                            <input type="text" value={item.merchant} onChange={(e) => handleExpenseChange(index, "merchant", e.target.value)} />
-                                        </td>
-                                
-                                        <td>
-                                            <input type="number" min="0" value={item.amount} onChange={(e) => handleExpenseChange(index, "amount", e.target.value)} />
-                                        </td>
-                                
-                                        <td>
-                                            <input type="text" value={item.memo} onChange={(e) => handleExpenseChange(index, "memo", e.target.value)} />
-                                        </td>
-                                
-                                        <td>
-                                            <button type="button" onClick={() => handleDeleteExpense(index)} disabled={expenseItems.length === 1}>삭제</button>
-                                        </td>
+                                <thead>
+                                    <tr>
+                                        <th>사용일</th>
+                                        <th>사용처</th>
+                                        <th>금액</th>
+                                        <th>비고</th>
+                                        <th>관리</th>
                                     </tr>
-                                ))}
+                                </thead>
+
+                                <tbody>
+                                    {expenseItems.map((item, index) => (
+                                        <tr key={index}>
+                                            <td>
+                                                <input type="date" value={item.useDate} onChange={(e) => handleExpenseChange(index, "useDate", e.target.value)} />
+                                            </td>
+                                            <td>
+                                                <input type="text" value={item.merchant} onChange={(e) => handleExpenseChange(index, "merchant", e.target.value)} />
+                                            </td>
+                                            <td>
+                                                <input type="number" min="0" value={item.amount} onChange={(e) => handleExpenseChange(index, "amount", e.target.value)} />
+                                            </td>
+                                            <td>
+                                                <input type="text" value={item.memo} onChange={(e) => handleExpenseChange(index, "memo", e.target.value)} />
+                                            </td>
+                                            <td>
+                                                <button type="button" onClick={() => handleDeleteExpense(index)} disabled={expenseItems.length === 1}>삭제</button>
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
