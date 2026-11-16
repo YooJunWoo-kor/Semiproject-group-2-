@@ -1,8 +1,8 @@
+import { FinanceAttachments } from '../components/FinanceApproval';
+import { FinancePaymentHistory } from '../components/FinanceFunds';
+import { FinanceDetailRows } from '../components/FinanceDetailUI';
 // [공통화 추가] 재무 전용 공통 컴포넌트·함수 재사용 (상위 공용 파일 수정 없음)
-import FinanceAttachments from '../components/FinanceAttachments';
-import FinancePaymentHistory from '../components/FinancePaymentHistory';
-import FinanceDetailRows from '../components/FinanceDetailRows';
-import { getFinanceError, koreaDate } from '../components/financeUtils';
+import { getFinanceError, koreaDate, toApprovedTradeRows, normalizeApprovalStatus, toPayrollPurchaseRows } from '../components/financeUtils';
 import React, { useEffect, useState } from 'react';
 import { getItems, getItemCategories, getApprovals, getPartners, createItem, updateItem, deleteItem, createPayment, getTransactionPayments, getBankAccounts, getCorporateCards } from "../../../../utils/financeService";
 import ModalBase from '../../../../components/ModalBase';
@@ -11,8 +11,6 @@ import PaginationTable from '../../../../components/PaginationTable';
 import { FilterTabs, RadioGroup, CheckboxFilter, SelectFilter } from '../../../../components/FilterControls';
 import WeeklyCalendar from '../../../../components/weeklycalendar/WeeklyCalendar';
 import BasicCalendar from '../../../../components/calendar/BasicCalendar';
-import { toApprovedTradeRows, normalizeApprovalStatus } from '../components/approvedTradeRows';
-import { toPayrollPurchaseRows } from '../components/payrollPurchaseRows';
 import { API_BASE_URL, getLoginUser } from '../../../../utils/authStorage';
 import "../../../../css/Form.css";
 import "../../../../css/Table.css";
@@ -1362,18 +1360,7 @@ function Items({
                           </tr>)}</tbody>
                         </table>
                       </div>}
-                      {deductionData.history.length > 0 && <section style={{
-                marginTop: 12
-              }} aria-label="공제액 납부 이력">
-                        <h4 style={{
-                  margin: '0 0 8px'
-                }}>납부 이력</h4>
-                        {deductionData.history.map(row => <p key={row.payment_id} style={{
-                  fontSize: 13
-                }}>
-                          #{row.payment_id} · {row.payment_date} · {payrollWon(row.amount)}<br />{row.bank_name} · {row.account_name}
-                        </p>)}
-                      </section>}
+                     
                       {Number(deductionData.pending_total) > 0 && payrollCanPay && <form onSubmit={handleDeductionPayment} style={{
                 marginTop: 14
               }}>

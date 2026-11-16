@@ -1,10 +1,8 @@
+import { FinanceResourceModal, FinanceResourceDetails, FinanceSearchForm, FinanceStatusBadge } from '../components/FinanceDetailUI';
+import { useFinanceHistory, FinancePaymentHistory } from '../components/FinanceFunds';
 // [공통화 추가] 재무 전용 공통 컴포넌트·함수 재사용 (상위 공용 파일 수정 없음)
-import useFinanceHistory from '../components/useFinanceHistory';
-import FinanceSearchForm from '../components/FinanceSearchForm';
-import FinancePaymentHistory from '../components/FinancePaymentHistory';
-import FinanceStatusBadge from '../components/FinanceStatusBadge';
 import { getFinanceError } from '../components/financeUtils';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { getBankAccounts, getBankAccountPayments, createBankAccount, updateBankAccount, getFinanceEmployees, updateBankAccountStatus } from "../../../../utils/financeService";
 import ModalBase from '../../../../components/ModalBase';
 import '../components/Finance.css';
@@ -19,6 +17,8 @@ function BankAccount({
   onSummaryChange,
   onBusyChange
 }) {
+  const accountListRef = useRef(null);
+
   // DB에서 조회한 회사계좌 목록
   const [accountList, setAccountList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -160,22 +160,22 @@ function BankAccount({
   });
 
   // 목록 수정은 이 배열에서만 합니다.
-  // label: 제목 / field: 표시할 계좌 데이터 / render: 버튼·배지 등 별도 표시
+  // width: 열 너비 / label: 제목 / field: 표시할 계좌 데이터 / render: 버튼·배지 등 별도 표시
   // 항목을 이동하거나 삭제하면 제목과 내용이 함께 변경됩니다.
   const accountColumns = [
-    { key: 'id', label: 'ID', field: 'id' },
-    { key: 'bank', label: '은행명', render: acc => <strong>{acc.bankName}</strong> },
-    { key: 'number', label: '계좌번호', field: 'accountNumber' },
-    { key: 'manager', label: '관리자', field: 'managerName' },
-    { key: 'name', label: '계좌명', render: acc => <span title={acc.accountName}>{acc.accountName}</span> },
+    { key: 'id', width: '50px', label: 'ID', field: 'id' },
+    { key: 'bank', width: '130px', label: '은행명', render: acc => <strong>{acc.bankName}</strong> },
+    { key: 'number', width: '210px', label: '계좌번호', field: 'accountNumber' },
+    { key: 'manager', width: '110px', label: '관리자', field: 'managerName' },
+    { key: 'name', width: 'auto', label: '계좌명', render: acc => <span title={acc.accountName}>{acc.accountName}</span> },
     {
-      key: 'status', label: '상태',
+      key: 'status', width: '80px', label: '상태',
       render: acc => <FinanceStatusBadge tone={acc.status === "STOP" || acc.status.includes("동결") ? "status-danger" : "status-success"}>
         {acc.status === "ACTIVE" ? "사용" : acc.status === "STOP" ? "사용 중지" : acc.status}
       </FinanceStatusBadge>
     },
     {
-      key: 'actions', label: '관리',
+      key: 'actions', width: '180px', label: '관리',
       render: acc => <div style={{ display: 'inline-flex', gap: 4, flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
         <button type="button" disabled={saving || accountStatusSaving} onClick={() => openAccountDetail(acc.id)} style={{ flexShrink: 0, whiteSpace: 'nowrap', padding: '6px 8px' }}>상세</button>
         <button type="button" disabled={saving || accountStatusSaving} onClick={() => openAccountHistory(acc.id)} style={{ flexShrink: 0, whiteSpace: 'nowrap', padding: '6px 8px' }}>거래내역</button>
@@ -192,38 +192,51 @@ function BankAccount({
     </React.Fragment>)
   }));
 
+  // BasicTable은 thead 없이 첫 tr에 제목을 표시합니다.
+  // 공통 파일 대신 이 목록의 DOM에만 인라인 너비·여백을 적용합니다.
+  useEffect(() => {
+    const container = accountListRef.current;
+    if (!container) return;
+    function applyLayout() {
+      const table = container.querySelector('table');
+      if (!table) return;
+      Object.assign(table.style, {
+        width: '100%', minWidth: '0', maxWidth: '100%',
+        tableLayout: 'fixed', boxSizing: 'border-box'
+      });
+      const headers = table.rows[0]?.cells;
+      const cols = table.querySelectorAll('colgroup > col');
+      accountColumns.forEach((column, index) => {
+        if (headers?.[index]) Object.assign(headers[index].style, {
+          width: column.width || 'auto', minWidth: '0', boxSizing: 'border-box'
+        });
+        if (cols[index]) Object.assign(cols[index].style, { width: column.width || 'auto', minWidth: '0' });
+      });
+      table.querySelectorAll('th, td').forEach(cell => Object.assign(cell.style, {
+        padding: '8px 10px', boxSizing: 'border-box',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+      }));
+      table.querySelectorAll('button').forEach(button => Object.assign(button.style, {
+        minHeight: '30px', height: '30px', padding: '6px 8px', fontSize: '12px',
+        lineHeight: '16px', borderRadius: '8px', whiteSpace: 'nowrap', flexShrink: '0',
+        boxSizing: 'border-box', cursor: button.disabled ? 'default' : 'pointer'
+      }));
+      const card = container.querySelector('.attendance-card');
+      if (card) Object.assign(card.style, { paddingBottom: '12px', minWidth: '0' });
+      const title = card?.querySelector('h4');
+      if (title) Object.assign(title.style, { marginTop: '0', marginBottom: '10px' });
+      const shell = container.querySelector('.table-shell');
+      if (shell) Object.assign(shell.style, { width: '100%', maxWidth: '100%', minWidth: '0', boxSizing: 'border-box' });
+    }
+    applyLayout();
+    // 페이지 전환으로 교체되는 행에도 같은 여백을 적용합니다.
+    const observer = new MutationObserver(applyLayout);
+    observer.observe(container, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  });
+
   // 선택한 계좌의 정보
   const selectedAccount = accountList.find(acc => acc.id === selectedAccountId);
-
-  // 상세 창의 키보드 포커스와 배경 스크롤을 관리합니다.
-  const detailOpen = Boolean(selectedAccount) && !formOpen;
-  useEffect(() => {
-    if (!detailOpen) return;
-    const dialog = document.getElementById('finance-account-dialog');
-    const previousFocus = document.activeElement;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    dialog?.focus();
-    function handleKeyDown(event) {
-      if (event.key === 'Escape' && !accountStatusSaving) { setSelectedAccountId(null); return; }
-      if (event.key !== 'Tab' || !dialog) return;
-      const controls = Array.from(dialog.querySelectorAll('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]'));
-      const first = controls[0];
-      const last = controls[controls.length - 1];
-      if (!first) { event.preventDefault(); dialog.focus(); return; }
-      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
-        event.preventDefault(); last.focus();
-      } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog)) {
-        event.preventDefault(); first.focus();
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', handleKeyDown);
-      if (previousFocus?.isConnected) previousFocus.focus();
-    };
-  }, [detailOpen, accountStatusSaving, accountView]);
 
   // 신규 계좌 등록폼 열기
   function openAccountForm() {
@@ -516,26 +529,22 @@ function BankAccount({
     </div>}
 
     {/* 4. 규격화된 PaginationTable 연동 */}
-    <div className="finance-resource-list">
+    <div className="finance-resource-list" ref={accountListRef} style={{ width: '100%', minWidth: 0 }}>
       <PaginationTable key={JSON.stringify(searchFilter)} title={accountTableTitle} th={accountHeaders} allData={tAccountData} itemsPerPage={5} />
     </div>
 
-    {selectedAccount && !formOpen && <div
-      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, boxSizing: 'border-box' }}
-      onClick={event => { if (event.target === event.currentTarget) closeAccountHistory(); }}>
-      <div id="finance-account-dialog" role="dialog" aria-modal="true" aria-labelledby="finance-account-dialog-title" tabIndex={-1}
-        style={{ width: 900, maxWidth: '100%', maxHeight: 'calc(100dvh - 40px)', background: 'white', borderRadius: 14, padding: 24, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 12, overflow: 'hidden' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexShrink: 0 }}>
-          <h2 id="finance-account-dialog-title" style={{ margin: 0, fontSize: 18 }}>{accountView === "detail" ? "회사계좌 상세정보" : "회사계좌 거래내역"}</h2>
-          <button type="button" aria-label="회사계좌 창 닫기" disabled={accountStatusSaving} onClick={closeAccountHistory}
-            style={{ background: 'transparent', border: 0, padding: 8, cursor: 'pointer', fontSize: 20 }}>×</button>
-        </div>
-        <div style={{ minHeight: 0, overflow: 'auto', scrollbarGutter: 'stable' }}>
-          {accountView === "detail" ? <div style={{ border: '1px solid var(--color-line)', borderRadius: 12, overflow: 'hidden' }}>
-            <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
-              <colgroup><col style={{ width: '28%' }} /><col /></colgroup>
-              <tbody>
-                {[
+    {selectedAccount && !formOpen && <FinanceResourceModal
+      key={accountView}
+      title={accountView === "detail" ? "회사계좌 상세정보" : "회사계좌 거래내역"}
+      onClose={closeAccountHistory} busy={saving || accountStatusSaving}
+      actions={<>
+          {accountView === "detail" && <button type="button" disabled={saving || accountStatusSaving} onClick={() => openAccountHistory(selectedAccount.id)}>거래내역</button>}
+          <button type="button" className="erp-primary-button" disabled={saving || accountStatusSaving} onClick={() => openEditAccountForm(selectedAccount)}>수정</button>
+          {accountView === "detail" && <button type="button" disabled={saving || accountStatusSaving || !["사용", "ACTIVE", "STOP"].includes(selectedAccount.status)} onClick={() => handleAccountStatusChange(selectedAccount)}>
+            {accountStatusSaving ? "변경 중..." : selectedAccount.status === "STOP" ? "사용 재개" : "사용 중지"}
+          </button>}
+      </>}>
+      {accountView === "detail" ? <FinanceResourceDetails rows={[
                   ["계좌 ID", selectedAccount.id], ["은행명", selectedAccount.bankName],
                   ["계좌번호", selectedAccount.accountNumber], ["계좌명", selectedAccount.accountName],
                   ["용도 구분", selectedAccount.accountType],
@@ -543,29 +552,14 @@ function BankAccount({
                   ["통화", selectedAccount.currency], ["담당자", selectedAccount.managerName],
                   ["최근 거래일시", selectedAccount.lastTransactionDate],
                   ["상태", selectedAccount.status === "ACTIVE" ? "사용" : selectedAccount.status === "STOP" ? "사용 중지" : selectedAccount.status]
-                ].map(([label, value]) => <tr key={label}>
-                  <th scope="row" style={{ padding: '12px 14px', textAlign: 'left', background: 'var(--color-canvas, #f5f7fa)', borderBottom: '1px solid var(--color-line)', fontSize: 12, whiteSpace: 'normal' }}>{label}</th>
-                  <td style={{ padding: '12px 14px', textAlign: 'left', borderBottom: '1px solid var(--color-line)', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>{value}</td>
-                </tr>)}
-              </tbody>
-            </table>
-          </div> : <>
+                ]} /> : <>
             <div style={{ marginBottom: 8, overflowWrap: 'anywhere' }}>
               <p style={{ margin: 0 }}>계좌번호: {selectedAccount.accountNumber}</p>
             </div>
-            {paymentsLoading ? <p>거래내역을 불러오는 중입니다.</p> : paymentsError ? <p role="alert">{paymentsError}</p> : accountPayments.length === 0 ? <p>이 계좌에 연결된 입금·출금 이력이 없습니다.</p> : <FinancePaymentHistory className="finance-account-history" payments={accountPayments} showPartner amountSuffix="" statusLabel="상태" enablePeriodFilter currency={selectedAccount.currency} currentBalance={selectedAccount.balance} />}
-          </>}
-          {accountStatusError && <p role="alert">{accountStatusError}</p>}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>
-          {accountView === "detail" && <button type="button" disabled={saving || accountStatusSaving} onClick={() => openAccountHistory(selectedAccount.id)}>거래내역</button>}
-          <button type="button" className="erp-primary-button" disabled={saving || accountStatusSaving} onClick={() => openEditAccountForm(selectedAccount)}>수정</button>
-          {accountView === "detail" && <button type="button" disabled={saving || accountStatusSaving || !["사용", "ACTIVE", "STOP"].includes(selectedAccount.status)} onClick={() => handleAccountStatusChange(selectedAccount)}>
-            {accountStatusSaving ? "변경 중..." : selectedAccount.status === "STOP" ? "사용 재개" : "사용 중지"}
-          </button>}
-        </div>
-      </div>
-    </div>}
+            {paymentsLoading ? <p>거래내역을 불러오는 중입니다.</p> : paymentsError ? <p role="alert">{paymentsError}</p> : <FinancePaymentHistory className="finance-account-history" payments={accountPayments} showPartner amountSuffix="" statusLabel="상태" enablePeriodFilter currency={selectedAccount.currency} currentBalance={selectedAccount.balance} />}
+      </>}
+      {accountStatusError && <p role="alert">{accountStatusError}</p>}
+    </FinanceResourceModal>}
 
   </div>;
 }

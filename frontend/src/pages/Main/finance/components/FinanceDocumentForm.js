@@ -7,6 +7,7 @@ import "../../../../css/Form.css";
 import "../../../../css/Table.css";
 import "../../../../css/SubMain.css";
 import "../../../../css/ModalPopup.css";
+
 let itemId = 0;
 const newItem = () => ({
   id: ++itemId,
@@ -48,6 +49,7 @@ function Field({
 }) {
   return <label className="fd-field"><span>{label}{required && <b aria-hidden="true"> *</b>}</span><input data-validation={validation} data-date-role={dateRole} data-label={label} required={required} {...props} /></label>;
 }
+
 // 이전 customValidity는 매번 초기화해 수정된 값이나 거래처 자동입력에 남지 않게 합니다.
 function refreshValidity(form) {
   const fields = Array.from(form.querySelectorAll('input, textarea, select'));
@@ -78,6 +80,7 @@ function refreshValidity(form) {
     if (!result.valid) (start.value ? end : start).setCustomValidity(result.message);
   }
 }
+
 function PartyFields({
   title,
   value,
@@ -110,6 +113,7 @@ function PartyFields({
         </div>
     </section>;
 }
+
 function PartyPreview({
   title,
   party
@@ -123,6 +127,7 @@ function PartyPreview({
         {party.email && <p>{party.email}</p>}
     </div>;
 }
+
 export default function FinanceDocumentForm({
   type = 'receipt',
   onClose,
@@ -222,6 +227,7 @@ export default function FinanceDocumentForm({
       onBusyChange?.(false);
     }
   }
+
   function handlePrint() {
     if (!savedDocument || saving) return;
     try {
@@ -230,6 +236,7 @@ export default function FinanceDocumentForm({
       setStorageError(error.message || '인쇄 창을 열지 못했습니다. 브라우저 설정을 확인해주세요.');
     }
   }
+  
   function selectPartner(event) {
     setStorageError('');
     const id = event.target.value;

@@ -1,8 +1,5 @@
-// [공통화 추가] 재무 전용 공통 컴포넌트·함수 재사용 (상위 공용 파일 수정 없음)
-import FinanceAttachments from '../components/FinanceAttachments';
-import FinanceSearchForm from '../components/FinanceSearchForm';
-import FinanceDetailRows from '../components/FinanceDetailRows';
-import FinanceStatusBadge from '../components/FinanceStatusBadge';
+import { FinanceAttachments, ApprovalPayments } from '../components/FinanceApproval';
+import { FinanceSearchForm, FinanceDetailRows, FinanceStatusBadge } from '../components/FinanceDetailUI';
 import { getFinanceError } from '../components/financeUtils';
 import React, { useEffect, useState } from "react";
 import PaginationTable from "../../../../components/PaginationTable";
@@ -10,14 +7,12 @@ import { getApprovals, getApprovalSteps, getFinanceEmployees, createApproval, de
 import { getLoginUser } from "../../../../utils/authStorage";
 import ModalBase from "../../../../components/ModalBase";
 import '../components/Finance.css';
-import ApprovalPayments from "../components/ApprovalPayments";
-// DB 응답을 화면에 표시할 이름으로 변환합니다.
-
 import "../../../../css/Form.css";
 import "../../../../css/Table.css";
 import "../../../../css/SubMain.css";
 import "../../../../css/ModalPopup.css";
 import "../../../../css/GroupBord.css";
+
 function toApproval(item) {
   return {
     id: item.document_id,

@@ -16,7 +16,7 @@ function selectPayrolls(value0) {
         FROM payrolls p
         INNER JOIN my_draft d ON d.draft_id = p.draft_id
         LEFT JOIN (${value0}) link ON link.payroll_id = p.payroll_id
-        WHERE d.status = 'APPROVED'
+        WHERE d.status IN ('APPROVED', '승인')
           AND p.pay_month REGEXP '^[0-9]{4}-(0[1-9]|1[0-2])$'
           AND NOT EXISTS (
               SELECT 1 FROM trade_transactions linked_trade
@@ -49,7 +49,7 @@ function selectPayrolls2(value0) {
         LEFT JOIN (${value0}) link ON link.payroll_id = p.payroll_id
         LEFT JOIN payments paid ON paid.payment_id = link.payment_id
         LEFT JOIN bank_accounts account ON account.account_id = paid.account_id
-        WHERE p.pay_month = ? AND d.status = 'APPROVED'
+        WHERE d.status IN ('APPROVED', '승인')
           AND NOT EXISTS (
               SELECT 1 FROM trade_transactions t
               WHERE t.source_type = 'draft' AND t.source_id = d.draft_id
@@ -64,7 +64,7 @@ const selectEmployees = `SELECT e.department_id, ea.role
 
 const selectPayrolls3 = `SELECT p.*, d.status AS approval_status
             FROM payrolls p INNER JOIN my_draft d ON d.draft_id = p.draft_id
-            WHERE p.pay_month = ? AND d.status = 'APPROVED'
+            WHERE d.status IN ('APPROVED', '승인')
             ORDER BY p.payroll_id FOR UPDATE`;
 
 const selectPayments = 'SELECT payroll_id FROM payments WHERE payroll_id = ? FOR UPDATE';

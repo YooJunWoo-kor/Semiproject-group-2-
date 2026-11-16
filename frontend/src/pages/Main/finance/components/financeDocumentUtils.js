@@ -1,5 +1,6 @@
 import { validateEmail, validatePhone, validateBusinessNumber, validateLength, validateDateRange } from '../../../../utils/validation';
 import { API_BASE_URL } from '../../../../utils/authStorage';
+
 export const DOCUMENT_TYPES = {
   receipt: {
     title: '영수증',
@@ -29,6 +30,7 @@ export const DOCUMENT_TYPES = {
     total: '총 견적 금액'
   }
 };
+
 export function localDate(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -65,6 +67,7 @@ function previewScaled(value, digits) {
   }
   return window.BigInt(whole) * 10n ** window.BigInt(digits) + window.BigInt(fraction.padEnd(digits, '0') || '0');
 }
+
 export function calculateRows(items, currency) {
   const digits = currencyDigits(currency);
   const scale = 10 ** digits;
@@ -84,6 +87,7 @@ export function calculateRows(items, currency) {
     };
   });
 }
+
 export function calculateTotals(rows, currency) {
   const supplyMinor = rows.reduce((sum, row) => sum + window.BigInt(row.supplyMinor), 0n);
   const taxMinor = rows.reduce((sum, row) => sum + window.BigInt(row.taxMinor), 0n);
@@ -111,6 +115,7 @@ function collectDocumentStyles(ownerDocument) {
       return '';
     }
   }
+
   function fromRules(rules) {
     return Array.from(rules || []).map(rule => {
       if (rule.styleSheet) return fromSheet(rule.styleSheet);
@@ -133,6 +138,7 @@ function collectDocumentStyles(ownerDocument) {
   }
   return styles;
 }
+
 export function printDocument(paper, title) {
   if (!paper) {
     throw new Error('인쇄할 문서를 찾을 수 없습니다.');
@@ -194,6 +200,7 @@ export function printDocument(paper, title) {
     `;
   document.body.appendChild(frame);
 }
+
 const DOCUMENT_API = `${API_BASE_URL}/finance/documents`;
 async function documentRequest(url, options = {}) {
   const response = await fetch(url, options);
@@ -208,6 +215,7 @@ async function documentRequest(url, options = {}) {
   }
   return result;
 }
+
 export function saveFinanceDocument(payload) {
   return documentRequest(DOCUMENT_API, {
     method: 'POST',
@@ -217,6 +225,7 @@ export function saveFinanceDocument(payload) {
     body: JSON.stringify(payload)
   });
 }
+
 export function getFinanceDocuments({
   page = 1,
   type = '',
@@ -233,11 +242,13 @@ export function getFinanceDocuments({
     signal
   });
 }
+
 export function getFinanceDocument(id, signal) {
   return documentRequest(`${DOCUMENT_API}/${encodeURIComponent(id)}`, {
     signal
   });
 }
+
 export function getDocumentPartners(signal) {
   return documentRequest(`${API_BASE_URL}/finance/partners`, {
     signal

@@ -1,5 +1,5 @@
+import { FinanceSummaryBox, FinanceResourceModal, FinanceDetailRows, FinanceTwoColumn, FinanceLayoutColumn } from '../components/FinanceDetailUI';
 // [공통화 추가] 거래처 상세정보 행 재사용
-import FinanceDetailRows from '../components/FinanceDetailRows';
 // [공통화 추가] 재무 전용 공통 컴포넌트·함수 재사용 (상위 공용 파일 수정 없음)
 import { FilterTabs } from '../../../../components/FilterControls';
 import { getFinanceError } from '../components/financeUtils';
@@ -530,47 +530,22 @@ function Partners() {
       </form>} />
     </div>}
 
-    {amountDetail && <div className="finance-partner-amount-modal"
-      onClick={() => setAmountDetail(null)}
-      onKeyDown={event => { if (event.key === "Escape") setAmountDetail(null); }}
-      style={{
-        position: "fixed", inset: 0, zIndex: 1000,
-        background: "rgba(0, 0, 0, 0.5)", padding: "16px",
-        display: "flex", alignItems: "center", justifyContent: "center"
-      }}>
-
-      <div
-        className="modal-boder"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="partner-amount-title"
-        onClick={event => event.stopPropagation()}
-        style={{
-          width: "900px",
-          height: "640px"
-        }}
-      >
-
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", marginBottom: "20px", flexShrink: 0 }}>
-          <h3 id="partner-amount-title" style={{ margin: 0, fontSize: "18px" }}>
-            {amountDetail.partner.name} · {amountDetail.type === "매출" ? "받을 금액" : "지급할 금액"} 상세
-          </h3>
-          <button type="button" autoFocus aria-label="닫기" onClick={() => setAmountDetail(null)}
-            style={{ cursor: "pointer", border: "none", background: "none", color: "inherit", fontSize: "16px", flexShrink: 0 }}>✕</button>
-        </div>
+    {amountDetail && <FinanceResourceModal
+      title={`${amountDetail.partner.name} · ${amountDetail.type === "매출" ? "받을 금액" : "지급할 금액"} 상세`}
+      onClose={() => setAmountDetail(null)}>
         <section className="finance-partner-amount-content" aria-label="금액 상세정보"
-          style={{ flex: "1 1 auto", minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          <div className="finance-partner-month-filter">
-            <label className="finance-partner-all-periods">
+          style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <label style={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: 4, margin: 0, whiteSpace: 'nowrap' }}>
               <input type="checkbox" checked={allAmountPeriods}
                 onChange={event => setAllAmountPeriods(event.target.checked)} />
               전체 기간
             </label>
-            <div className="finance-partner-month-navigation">
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               <button type="button" aria-label="이전 월" disabled={allAmountPeriods}
                 onClick={() => setAmountMonth(month => shiftPartnerMonth(month, -1))}>◀</button>
-              <label htmlFor="partner-amount-month" className="finance-partner-month-label">조회 월</label>
-              <input id="partner-amount-month" type="month" value={amountMonth} disabled={allAmountPeriods}
+              <label htmlFor="partner-amount-month" style={{ margin: 0, whiteSpace: 'nowrap' }}>조회 월</label>
+              <input style={{ width: 145, margin: 0, boxSizing: 'border-box' }} id="partner-amount-month" type="month" value={amountMonth} disabled={allAmountPeriods}
                 min="1900-01" max="9999-12"
                 onChange={event => {
                   if (/^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(event.target.value)) {
@@ -584,8 +559,14 @@ function Partners() {
           {amountDetail.loading ? <p role="status">금액 내역을 불러오는 중입니다.</p> :
             amountDetail.error ? <p role="alert">{amountDetail.error}</p> : <>
               
-              <div className="table-shell" style={{ flex: "1 1 auto", minHeight: 0, overflow: "auto", scrollbarGutter: "stable" }}>
-                <table style={{ width: "100%", tableLayout: "fixed" }}>
+              <FinanceSummaryBox items={[{
+                key: 'remaining',
+                label: `${allAmountPeriods ? "전체 기간" : "선택 월"} 남은 금액 합계`,
+                value: amountRows.some(row => row.remaining_amount == null) ? "확인 필요" :
+                  `${amountRows.reduce((sum, row) => sum + Number(row.remaining_amount), 0).toLocaleString()}원`
+              }]} />
+              <div className="table-shell" style={{ overflowX: "auto", border: "1px solid var(--color-line)", borderRadius: 12 }}>
+                <table style={{ width: "100%", minWidth: 640, tableLayout: "fixed" }}>
                   <thead><tr>{["거래 번호", "거래일", "마감일", "거래 총액", "정산 완료액", "남은 금액"].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead>
                   <tbody>{amountRows.length === 0 ? <tr><td colSpan={6}>선택한 기간의 거래 내역이 없습니다.</td></tr> :
                     amountRows.map(row => <tr key={row.transaction_id}>
@@ -594,29 +575,17 @@ function Partners() {
                       <td>{Number(row.paid_amount).toLocaleString()}원</td>
                       <td>{row.remaining_amount == null ? "확인 필요" : `${Number(row.remaining_amount).toLocaleString()}원`}</td>
                     </tr>)}</tbody>
-                  <tfoot><tr><th scope="row" colSpan={5}>{allAmountPeriods ? "전체 기간" : "선택 월"} 남은 금액 합계</th><td>
-                    {amountRows.some(row => row.remaining_amount == null) ? "확인 필요" :
-                      `${amountRows.reduce((sum, row) => sum + Number(row.remaining_amount), 0).toLocaleString()}원`}
-                  </td></tr></tfoot>
+
                 </table></div>
             </>}
         </section>
-      </div>
-    </div>}
+    </FinanceResourceModal>}
 
     {/* 2. 좌우 2단 분할 레이아웃 컨테이너 (테이블 좌측, 달력 우측 상시 노출) */}
-    <div style={{
-      display: 'flex',
-      gap: '24px',
-      alignItems: 'flex-start',
-      marginTop: '16px'
-    }}>
+    <FinanceTwoColumn>
 
       {/* [좌측 영역] 검색 필터 및 거래처 목록 테이블 (약 62% 너비) */}
-      <div style={{
-        flex: '1 1 62%',
-        minWidth: 0
-      }}>
+      <FinanceLayoutColumn>
         {/* 간이 검색/필터 구역 */}
         <div className="finance-partner-filters">
           <label htmlFor="partnerTypeSelect">구분: </label>
@@ -703,16 +672,11 @@ function Partners() {
             </div>
           </section>} />
         </div>}
-      </div>
+      </FinanceLayoutColumn>
 
 
       {/* [우측 영역] 상시 노출 마감일 달력 (약 38% 너비) */}
-      <div style={{
-        flex: '0 0 38%',
-        minWidth: '340px',
-        borderLeft: '1px solid var(--color-line)',
-        paddingLeft: '20px'
-      }}>
+      <FinanceLayoutColumn side="right">
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -728,9 +692,9 @@ function Partners() {
         <div className="calendar-widget-wrapper">
           {calendarType === "week" ? <WeeklyCalendar schedule={calendarEvents} /> : <BasicCalendar schedule={calendarEvents} />}
         </div>
-      </div>
+      </FinanceLayoutColumn>
 
-    </div>
+    </FinanceTwoColumn>
   </div>;
 }
 export default Partners;

@@ -2542,3 +2542,8 @@
 .finance-attachments td:first-child { overflow-wrap: anywhere; }
 .finance-attachment-preview { margin-top: 12px; padding: 12px; border: 1px solid var(--color-line); }
 .finance-attachment-preview img { display: block; max-width: 100%; max-height: 420px; object-fit: contain; margin: 8px auto; }
+
+/* 2단 배치의 구분선: 공통 색상 변수 사용 */
+.finance-layout-column-divider {
+  border-left: 1px solid var(--color-line);
+}

@@ -1,7 +1,9 @@
-//재무 공통 UI: 계좌·카드·거래 전표의 입출금 이력 표.
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getFinanceError } from './financeUtils';
+import { FinanceSummaryBox } from './FinanceDetailUI';
 
-export default function FinancePaymentHistory({ payments = [], className = '', showPartner = false, amountSuffix = '원', statusLabel = '처리 상태', enablePeriodFilter = false, currency = '', currentBalance = null }) {
+//계좌·카드·거래 전표의 입출금 이력 표
+export function FinancePaymentHistory({ payments = [], className = '', showPartner = false, amountSuffix = '원', statusLabel = '처리 상태', enablePeriodFilter = false, currency = '', currentBalance = null }) {
   const [month, setMonth] = useState(() => {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
@@ -10,6 +12,7 @@ export default function FinancePaymentHistory({ payments = [], className = '', s
   const visiblePayments = enablePeriodFilter && !allPeriods
     ? payments.filter(payment => String(payment.payment_date || '').slice(0, 7) === month)
     : payments;
+    
   // 실제 완료된 입출금만 합산하며 대기·취소 내역은 합계에서 제외합니다.
   const completedPayments = visiblePayments.filter(payment => ['완료', 'COMPLETED'].includes(payment.payment_status));
   const totalFor = direction => completedPayments
@@ -35,11 +38,11 @@ export default function FinancePaymentHistory({ payments = [], className = '', s
         </label>
         <button type="button" aria-label="다음 월" disabled={allPeriods} onClick={() => changeMonth(1)}>▶</button>
       </div>
-      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', padding: 12, border: '1px solid var(--color-line)', borderRadius: 10 }}>
-        <span>입금 합계: <strong>{totalFor('입금').toLocaleString()} {currency || amountSuffix}</strong></span>
-        <span>출금 합계: <strong>{totalFor('출금').toLocaleString()} {currency || amountSuffix}</strong></span>
-        {currentBalance !== null && <span>현재 잔액: <strong>{Number(currentBalance).toLocaleString()} {currency || amountSuffix}</strong></span>}
-      </div>
+      <FinanceSummaryBox items={[
+        { key: 'income', label: '입금 합계', value: `${totalFor('입금').toLocaleString()} ${currency || amountSuffix}` },
+        { key: 'expense', label: '출금 합계', value: `${totalFor('출금').toLocaleString()} ${currency || amountSuffix}` },
+        ...(currentBalance !== null ? [{ key: 'balance', label: '현재 잔액', value: `${Number(currentBalance).toLocaleString()} ${currency || amountSuffix}` }] : [])
+      ]} />
     </div>}
     <div className={`table-shell ${className}`.trim()} style={enablePeriodFilter ? { overflowX: 'auto' } : undefined}>
     <table style={enablePeriodFilter ? { width: '100%', minWidth: 640, tableLayout: 'auto' } : undefined}>
@@ -63,4 +66,38 @@ export default function FinancePaymentHistory({ payments = [], className = '', s
       </tbody>
     </table>
   </div></>;
+}
+
+// useFinanceHistory
+//재무 공통 기능: 선택한 계좌·카드의 이력 조회 및 이전 요청 결과 무시.
+
+export function useFinanceHistory(request, selectedId, fallbackMessage) {
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setPayments([]);
+    setError('');
+    if (selectedId === null) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    async function load() {
+      try {
+        const data = await request(selectedId);
+        if (!cancelled) setPayments(data);
+      } catch (err) {
+        if (!cancelled) setError(getFinanceError(err, fallbackMessage));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [request, selectedId, fallbackMessage]);
+
+  return { payments, loading, error };
 }
