@@ -3,13 +3,18 @@ import axios from "axios";
 import ModalBase from "../../../../components/ModalBase";
 import DepEmpList from "../../../../components/DepEmpList";
 
-import { API_BASE_URL, getLoginUser } from "../../../../utils/authStorage";
+import { API_BASE_URL, getLoginUser, getEmployeeAccounts } from "../../../../utils/authStorage";
 
 const emptyForm = {
     title: "", draftType: "일반", content: "",
     startDate: "", endDate: "",
     itemName: "", quantity: "",
-    useDate: "", amount: ""
+    useDate: "", amount: "",
+
+    paymentType: "수당",
+    payMonth: "",
+    targetEmployeeId: "",
+
 };
 
 function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftChanged }) {
@@ -22,6 +27,8 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
     const [isSaving, setIsSaving] = useState(false);
     const [receiptFile, setReceiptFile] = useState(null);
 
+    const [payEmployees, setPayEmployees] = useState([]);
+
     const [expenseItems, setExpenseItems] = useState([
         {
             useDate: "",
@@ -31,7 +38,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
         }
     ]);
 
-    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount } = form;
+    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount, paymentType, payMonth, targetEmployeeId } = form;
 
     useEffect(() => {
         const loadDepartments = async () => {
@@ -60,10 +67,19 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             itemName: detail.itemName || "",
             quantity: detail.quantity ?? "",
             useDate: detail.useDate || "",
-            amount: detail.amount ?? ""
+            amount: detail.amount ?? "",
+            paymentType: detail.paymentType || "수당",
+            payMonth: detail.payMonth || "",
+            targetEmployeeId: detail.targetEmployeeId || ""
         });
         setApprovers(editingDraft.approvers || []);
     }, [editingDraft]);
+
+    useEffect(() => {
+        if (draftType !== '추가급여') return;
+
+        getEmployeeAccounts().then(setPayEmployees).catch(error => console.error("직원 조회 실패", error))  //.then -> promise가 성공적으로 응답을 받았을 때 실행
+    }, [draftType]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -117,11 +133,29 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             if (draftType === "비용") {
                 const invalidExpense = expenseItems.some(item => !item.useDate || !item.merchant.trim() || item.amount === ""
                     || !Number.isSafeInteger(Number(item.amount)) || Number(item.amount) <= 0);
-                
+
 
 
                 if (expenseItems.length === 0 || invalidExpense) {
                     alert("모든 비용 항목의 사용일, 사용처, 올바른 금액을 입력해주세요.");
+                    return;
+                }
+            }
+
+            if(draftType === "구매" && (!itemName.trim() || !quantity || Number(quantity) <= 0)){
+                alert("물품명과 올바른 수량을 입력해주세요");
+                return;
+            }
+
+            if (draftType === "추가급여") {
+                if (
+                    !targetEmployeeId ||
+                    !["수당", "상여"].includes(paymentType) ||
+                    !/^\d{4}-(0[1-9]|1[0-2])$/.test(payMonth) ||
+                    !Number.isSafeInteger(Number(amount)) ||
+                    Number(amount) <= 0
+                ) {
+                    alert("추가급여 정보를 올바르게 입력해주세요.");
                     return;
                 }
             }
@@ -136,7 +170,8 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
 
         const detailData = draftType === "휴가" ? { startDate, endDate } :
             draftType === "구매" ? { itemName, quantity } :
-                draftType === "비용" ? { expenseItems, totalAmount } : {};
+            draftType === "비용" ? { expenseItems, totalAmount } :
+            draftType === "추가급여" ? {targetEmployeeId : Number(targetEmployeeId), paymentType, payMonth, amount : Number(amount)} : {};
 
         const payload = {
             employeeId, title: title.trim(), documentType: draftType,
@@ -159,13 +194,13 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             } else if (saveType === "temporary") {
                 response = await axios.post(API_BASE_URL + "/drafts", payload);
             } else {
-               response = await axios.post(API_BASE_URL + "/drafts/submit", { ...payload, approverIds });
+                response = await axios.post(API_BASE_URL + "/drafts/submit", { ...payload, approverIds });
             }
-            
+
 
             const draftId = editingDraft ? editingDraft.id : response.data.draftId;
 
-            if(draftType === "비용" && receiptFile){
+            if (draftType === "비용" && receiptFile) {
                 const formData = new FormData();
 
                 formData.append("receipt", receiptFile);
@@ -241,6 +276,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                             <option>휴가</option>
                             <option>구매</option>
                             <option>비용</option>
+                            <option>추가급여</option>
                         </select>
                     </label>
                 </div>
@@ -271,42 +307,101 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                         <div className="table-shell">
                             <table>
                                 <thead>
-                                <tr>
-                                    <th>사용일</th>
-                                    <th>사용처</th>
-                                    <th>금액</th>
-                                    <th>비고</th>
-                                    <th>관리</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                {expenseItems.map((item, index) => (
-                                    <tr key={index}>
-                                        <td>
-                                            <input type="date" value={item.useDate} onChange={(e) => handleExpenseChange(index, "useDate", e.target.value)} />
-                                        </td>
-
-                                        <td>
-                                            <input type="text" value={item.merchant} onChange={(e) => handleExpenseChange(index, "merchant", e.target.value)} />
-                                        </td>
-
-                                        <td>
-                                            <input type="number" min="0" value={item.amount} onChange={(e) => handleExpenseChange(index, "amount", e.target.value)} />
-                                        </td>
-
-                                        <td>
-                                            <input type="text" value={item.memo} onChange={(e) => handleExpenseChange(index, "memo", e.target.value)} />
-                                        </td>
-
-                                        <td>
-                                            <button type="button" onClick={() => handleDeleteExpense(index)} disabled={expenseItems.length === 1}>삭제</button>
-                                        </td>
+                                    <tr>
+                                        <th>사용일</th>
+                                        <th>사용처</th>
+                                        <th>금액</th>
+                                        <th>비고</th>
+                                        <th>관리</th>
                                     </tr>
-                                ))}
+                                </thead>
+
+                                <tbody>
+                                    {expenseItems.map((item, index) => (
+                                        <tr key={index}>
+                                            <td>
+                                                <input type="date" value={item.useDate} onChange={(e) => handleExpenseChange(index, "useDate", e.target.value)} />
+                                            </td>
+
+                                            <td>
+                                                <input type="text" value={item.merchant} onChange={(e) => handleExpenseChange(index, "merchant", e.target.value)} />
+                                            </td>
+
+                                            <td>
+                                                <input type="number" min="0" value={item.amount} onChange={(e) => handleExpenseChange(index, "amount", e.target.value)} />
+                                            </td>
+
+                                            <td>
+                                                <input type="text" value={item.memo} onChange={(e) => handleExpenseChange(index, "memo", e.target.value)} />
+                                            </td>
+
+                                            <td>
+                                                <button type="button" onClick={() => handleDeleteExpense(index)} disabled={expenseItems.length === 1}>삭제</button>
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
+
+
+                        {draftType === "추가급여" && (
+                            <>
+                                <div className="draft-row">
+                                    <label>지급 구분
+                                        <select
+                                            name="paymentType"
+                                            value={paymentType}
+                                            onChange={handleInputChange}
+                                        >
+                                            <option value="수당">수당</option>
+                                            <option value="상여">상여</option>
+                                        </select>
+                                    </label>
+
+                                    <label>지급 대상 직원
+                                        <select
+                                            name="targetEmployeeId"
+                                            value={targetEmployeeId}
+                                            onChange={handleInputChange}
+                                            >
+
+                                            <option value="">직원 선택</option>
+                                            {payEmployees.map(employee => (
+                                                <option
+                                                    key={employee.employee_id}
+                                                    value={employee.employee_id}
+                                                >
+                                                    {employee.name} ({employee.department_name})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                </div>
+
+                                <div className="draft-row">
+                                    <label>지급 월
+                                        <input
+                                            type="month"
+                                            name="payMonth"
+                                            value={payMonth}
+                                            onChange={handleInputChange}
+                                        />
+                                    </label>
+
+                                    <label>지급 금액
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            name="amount"
+                                            value={amount}
+                                            onChange={handleInputChange}
+                                        />
+                                    </label>
+                                </div>
+                            </>
+                        )}
+
 
                         <p>
                             총 합계 : {totalAmount.toLocaleString("ko-KR")}원
@@ -356,34 +451,36 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 </div>
             </form>
 
-            {showApproverModal && (
-                <ModalBase title="결재자 추가" onClose={closeApproverModal}
-                    layout={
-                        <div className="draft-box">
-                            <h4>부서 선택</h4>
-                            <div className="draft-row">
-                                {departments.map(department => (
-                                    <button key={department} type="button"
-                                        onClick={() => {
-                                            setSelectedDepartment(department);
-                                            setTempApprover(null);
-                                        }}>
-                                        {department}
-                                    </button>
-                                ))}
+            {
+                showApproverModal && (
+                    <ModalBase title="결재자 추가" onClose={closeApproverModal}
+                        layout={
+                            <div className="draft-box">
+                                <h4>부서 선택</h4>
+                                <div className="draft-row">
+                                    {departments.map(department => (
+                                        <button key={department} type="button"
+                                            onClick={() => {
+                                                setSelectedDepartment(department);
+                                                setTempApprover(null);
+                                            }}>
+                                            {department}
+                                        </button>
+                                    ))}
+                                </div>
+                                {selectedDepartment && (
+                                    <DepEmpList departmentName={selectedDepartment} onSelect={setTempApprover} />
+                                )}
+                                <div className="draft-actions">
+                                    <button type="button" className="erp-primary-button"
+                                        onClick={addApprover}>결재자 추가</button>
+                                </div>
                             </div>
-                            {selectedDepartment && (
-                                <DepEmpList departmentName={selectedDepartment} onSelect={setTempApprover} />
-                            )}
-                            <div className="draft-actions">
-                                <button type="button" className="erp-primary-button"
-                                    onClick={addApprover}>결재자 추가</button>
-                            </div>
-                        </div>
-                    }
-                />
-            )}
-        </div>
+                        }
+                    />
+                )
+            }
+        </div >
     );
 }
 
