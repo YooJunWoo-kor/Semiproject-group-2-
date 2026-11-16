@@ -1,3 +1,8 @@
+// [공통화 추가] 거래처 상세정보 행 재사용
+import FinanceDetailRows from '../components/FinanceDetailRows';
+// [공통화 추가] 재무 전용 공통 컴포넌트·함수 재사용 (상위 공용 파일 수정 없음)
+import { FilterTabs } from '../../../../components/FilterControls';
+import { getFinanceError } from '../components/financeUtils';
 import React, { useEffect, useState } from "react";
 import ModalBase from '../../../../components/ModalBase';
 import '../components/Finance.css';
@@ -195,7 +200,7 @@ function Partners() {
         ...request, loading: false,
         error: err.response?.status === 404
           ? "금액 상세 API를 찾지 못했습니다. financeRouters.js 교체 후 백엔드를 재시작해 주세요."
-          : err.response?.data?.message || (err.response
+          : getFinanceError(err, err.response
             ? `금액 상세 조회에 실패했습니다. (HTTP ${err.response.status})`
             : "백엔드에 연결하지 못했습니다. 서버 실행 상태를 확인해 주세요.")
       } : current);
@@ -362,7 +367,7 @@ function Partners() {
       setEditingPartnerId(null);
       alert(isEditing ? "거래처가 수정되었습니다." : "거래처가 등록되었습니다.");
     } catch (err) {
-      setFormError(err.response?.data?.message || "거래처 저장에 실패했습니다.");
+      setFormError(getFinanceError(err, "거래처 저장에 실패했습니다."));
     } finally {
       setSaving(false);
     }
@@ -397,7 +402,7 @@ function Partners() {
       alert("거래처가 삭제되었습니다.");
     } catch (err) {
       // 거래 내역이 있어 삭제가 차단된 경우도 표시합니다.
-      alert(err.response?.data?.message || "거래처 삭제에 실패했습니다.");
+      alert(getFinanceError(err, "거래처 삭제에 실패했습니다."));
     } finally {
       setDeleting(false);
     }
@@ -661,69 +666,30 @@ function Partners() {
             <div className="table-shell">
               <table>
                 <tbody>
-                  <tr>
-                    <th scope="row">거래처 번호</th>
-                    <td>{selectedPartner.id}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">거래처명</th>
-                    <td>{selectedPartner.name}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">거래 구분</th>
-                    <td>{selectedPartner.type}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">업체 유형</th>
-                    <td>{selectedPartner.companyType}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">사업자번호</th>
-                    <td>{selectedPartner.bizNumber}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">대표자</th>
-                    <td>{selectedPartner.ceo}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">연락처</th>
-                    <td>{selectedPartner.contact}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">주소</th>
-                    <td>{selectedPartner.address}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">정기 마감일</th>
-                    <td>
+                  {/* [공통화] 거래처·카드·결재·품목 상세 행 재사용 */}
+                  <FinanceDetailRows rows={[
+                    ["거래처 번호", <>{selectedPartner.id}</>],
+                    ["거래처명", <>{selectedPartner.name}</>],
+                    ["거래 구분", <>{selectedPartner.type}</>],
+                    ["업체 유형", <>{selectedPartner.companyType}</>],
+                    ["사업자번호", <>{selectedPartner.bizNumber}</>],
+                    ["대표자", <>{selectedPartner.ceo}</>],
+                    ["연락처", <>{selectedPartner.contact}</>],
+                    ["주소", <>{selectedPartner.address}</>],
+                    ["정기 마감일", <>
                       {selectedPartner.closingDay ? Number(selectedPartner.closingDay) === 31 ? "매월 말일" : `매월 ${selectedPartner.closingDay}일` : "-"}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row">일정 색상</th>
-                    <td>
+                    </>],
+                    ["일정 색상", <>
                       <span aria-hidden="true" className="finance-color-swatch finance-color-current" style={{
                         backgroundColor: TOGLE_COLORS?.[getPartnerCalendarTypeId(selectedPartner)] || "var(--color-brand)"
                       }} />
                       {selectedPartner.calendarTypeId === "" ? "기본 색상" : "선택한 색상"}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row">은행명</th>
-                    <td>{selectedPartner.bankInfo.bank}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">계좌번호</th>
-                    <td>{selectedPartner.bankInfo.account}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">예금주</th>
-                    <td>{selectedPartner.bankInfo.holder}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">메모</th>
-                    <td>{selectedPartner.memo}</td>
-                  </tr>
+                    </>],
+                    ["은행명", <>{selectedPartner.bankInfo.bank}</>],
+                    ["계좌번호", <>{selectedPartner.bankInfo.account}</>],
+                    ["예금주", <>{selectedPartner.bankInfo.holder}</>],
+                    ["메모", <>{selectedPartner.memo}</>]
+                  ]} />
                 </tbody>
               </table>
             </div>
@@ -754,14 +720,7 @@ function Partners() {
           marginBottom: '12px'
         }}>
           <h4 className="board-title finance-calendar-title">정산 마감 일정</h4>
-          <ul className="grouplist">
-            <li><button type="button" className={calendarType === 'week' ? 'active' : ''} onClick={() => setCalendarType('week')}>
-              주간
-            </button></li>
-            <li><button type="button" className={calendarType === 'month' ? 'active' : ''} onClick={() => setCalendarType('month')}>
-              월간
-            </button></li>
-          </ul>
+          <FilterTabs label="달력 보기" options={[{ value: 'week', label: '주간' }, { value: 'month', label: '월간' }]} value={calendarType} onChange={setCalendarType} />
         </div>
 
 

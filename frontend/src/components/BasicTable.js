@@ -21,19 +21,18 @@ function BasicTable({ title, th, td = [] }) {
                         </tr>
                     </thead>
 
-                    <tbody>
-                        {!td ?
-                            <tr
-                                style={{
-                                    height:'200px'
-                                }}
-                            ><td
-                                colSpan={th.length}
-                                style={{
-                                    textAlign: 'center'
+                    {!td ?
+                        <tr
+                            style={{
+                                height:'200px'
+                            }}
+                        ><td
+                            colSpan={th.length}
+                            style={{
+                                textAlign: 'center'
 
-                                }}
-                            >등록된 정보가 없습니다.</td></tr>
+                            }}
+                        >등록된 정보가 없습니다.</td></tr>
 
                             : td.map((item)=>{
                                 return <tr>{item.content.map((item, index)=>(
@@ -44,7 +43,6 @@ function BasicTable({ title, th, td = [] }) {
                                     }}>{item}</td>
                                 ))}</tr>
                         })}
-                    </tbody>
 
                 </table>
             </div>

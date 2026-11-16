@@ -2536,3 +2536,9 @@
     bottom: 0;
     background: var(--color-surface);
 }
+
+/* 재무 결재/거래 전표에서 공유하는 첨부 이미지 */
+.finance-attachments { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--color-line); }
+.finance-attachments td:first-child { overflow-wrap: anywhere; }
+.finance-attachment-preview { margin-top: 12px; padding: 12px; border: 1px solid var(--color-line); }
+.finance-attachment-preview img { display: block; max-width: 100%; max-height: 420px; object-fit: contain; margin: 8px auto; }

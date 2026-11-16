@@ -27,10 +27,16 @@ const qualityRoutes = require('./routes/quality');
 
 
 
+<<<<<<< HEAD
 // 모든 HTTP 요청 확인
 app.use((req, res, next) => {
     console.log("요청 도착:", req.method, req.url);
     next();
+=======
+// 실제 실행 중인 서버가 이 ERP 백엔드인지 확인하는 점검 API
+app.get('/api/health', (req, res) => {
+    res.json({ success: true, service: 'semiproject-group-2-backend', message: 'ERP API 서버 정상 작동' });
+>>>>>>> ghy
 });
 
 // API 연결
