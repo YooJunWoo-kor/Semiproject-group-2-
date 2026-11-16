@@ -114,6 +114,7 @@ function ProjectDetail({ project, onClose }) {
               style={{
                 marginLeft:'auto'
               }}
+              onClick = {()=>{onClose()}}
             > 닫기</button>
           </div>
         </div>

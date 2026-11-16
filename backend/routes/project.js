@@ -100,7 +100,12 @@ router.post('/setProject', async (req, res) => {
 router.post('/get_employee', async(req, res)=>{
     const employee_id = req.body.employee_id;
     const query = `
-        select * from employees where employee_id = ?
+        SELECT 
+            e.*, 
+            d.*
+        FROM employees e
+        LEFT JOIN departments d ON e.department_id = d.department_id
+        WHERE e.employee_id = ?;
     `
     db.query(query, employee_id, (err,data)=>{
         if(err){

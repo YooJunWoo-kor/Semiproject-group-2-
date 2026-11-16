@@ -4,6 +4,7 @@ import ModalBase from "../../../../components/ModalBase";
 import { API_BASE_URL, getTodayString, getLoginUser } from "../../../../utils/authStorage";
 import "./MeetingRoomPage.css";
 import { useNavigate } from "react-router-dom";
+import EmployeeTage from "../../../../components/EmployeeTag";
 
 const rooms = Array.from({ length: 9 }, (_, i) => ({
     id: i + 1,
@@ -120,6 +121,8 @@ function MeetingRoomPage() {
         }
 
     }
+
+    
 
     return (
 
@@ -273,7 +276,9 @@ function MeetingRoomPage() {
                             </div>
                             <div className="draft-row">
                                 <strong>예약자</strong>
-                                <span>{selectedReservation.reserver_name}</span>
+                                <span>
+                                    <EmployeeTage id = {selectedReservation.employee_id}/> 
+                                </span>
                             </div>
 
                             <div className="draft-actions">

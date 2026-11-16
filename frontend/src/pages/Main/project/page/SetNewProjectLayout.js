@@ -4,7 +4,7 @@ import GetPopover from '../../../../components/GetPopover';
 import DepartmentList from '../../../../components/DepartmentList';
 import { TOGLE_COLORS, API_BASE_URL, getLoginUser } from '../../../../utils/authStorage';
 
-function SetNewProjectLayout({setIsModal}) {
+function SetNewProjectLayout({setIsModal, onClose}) {
     const [projectName, setProjectName] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -265,7 +265,9 @@ function SetNewProjectLayout({setIsModal}) {
             <button type="submit" style={{ marginLeft: 'auto' }}>
               완료
             </button>
-            <button type="button">
+            <button type="button"
+              onClick ={()=>{onClose()}}
+            >
               취소
             </button>
           </div>
