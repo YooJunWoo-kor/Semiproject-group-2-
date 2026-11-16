@@ -106,7 +106,15 @@ function ProductList() {
                 <div className="quality-product-grid">
                     {filteredProducts.map(product => (
                         <article key={product.product_id} className="quality-product-card"
-                            onClick={() => navigate("/main/qa/products/" + product.product_id)}>
+                            onClick={() => navigate("/main/qa/products/" + product.product_id)}
+                            onKeyDown={event => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                    event.preventDefault();
+                                    navigate("/main/qa/products/" + product.product_id);
+                                }
+                            }}
+                            tabIndex={0}
+                            role="link">
                             <div className="quality-product-image">
                                 {product.image_url ? (
                                     <img src={product.image_url} alt={product.product_name} />

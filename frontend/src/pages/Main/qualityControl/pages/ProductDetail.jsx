@@ -107,7 +107,7 @@ function ProductDetail() {
                 };
 
                 setProduct(productData);
-                setNextInspectionDate(data.nextInspectionDate || "");
+                setNextInspectionDate(data.next_inspection_date || "");
 
                 setInspector(data.inspector || "");
 
@@ -336,8 +336,8 @@ function ProductDetail() {
                     <h1>
                         {product.name}
 
-                        <span className={qualityStatus === "통과" ? "quality-status is-pass" : qualityStatus === "불합격" ? "quality-status is-fail" : "quality-status is-wait"}>
-                            {qualityStatus}
+                        <span className={product.qualityStatus === "통과" ? "quality-status is-pass" : product.qualityStatus === "불합격" ? "quality-status is-fail" : "quality-status is-wait"}>
+                            {product.qualityStatus || "미실시"}
                         </span>
                     </h1>
 
@@ -359,10 +359,11 @@ function ProductDetail() {
 
                 <div className="detail-image-area">
 
-                    <img
-                        src={product.image}
-                        alt={product.name}
-                    />
+                    {product.image ? (
+                        <img src={product.image} alt={product.name} />
+                    ) : (
+                        <span className="quality-image-placeholder">등록된 이미지가 없습니다.</span>
+                    )}
 
                 </div>
 
@@ -697,6 +698,7 @@ function ProductDetail() {
 
                 <button
                     className="save-button erp-primary-button"
+                    disabled={isSaving}
                     onClick={handleSave}
                 >
                     검사 결과 저장
