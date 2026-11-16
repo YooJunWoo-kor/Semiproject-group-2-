@@ -176,10 +176,10 @@ function BankAccount({
     },
     {
       key: 'actions', label: '관리',
-      render: acc => <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-        <button type="button" disabled={saving || accountStatusSaving} onClick={() => openAccountDetail(acc.id)}>상세</button>
-        <button type="button" disabled={saving || accountStatusSaving} onClick={() => openAccountHistory(acc.id)}>거래내역</button>
-        <button type="button" disabled={saving || accountStatusSaving} onClick={() => openEditAccountForm(acc)}>수정</button>
+      render: acc => <div style={{ display: 'inline-flex', gap: 4, flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
+        <button type="button" disabled={saving || accountStatusSaving} onClick={() => openAccountDetail(acc.id)} style={{ flexShrink: 0, whiteSpace: 'nowrap', padding: '6px 8px' }}>상세</button>
+        <button type="button" disabled={saving || accountStatusSaving} onClick={() => openAccountHistory(acc.id)} style={{ flexShrink: 0, whiteSpace: 'nowrap', padding: '6px 8px' }}>거래내역</button>
+        <button type="button" disabled={saving || accountStatusSaving} onClick={() => openEditAccountForm(acc)} style={{ flexShrink: 0, whiteSpace: 'nowrap', padding: '6px 8px' }}>수정</button>
       </div>
     }
   ];
@@ -524,7 +524,7 @@ function BankAccount({
       style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, boxSizing: 'border-box' }}
       onClick={event => { if (event.target === event.currentTarget) closeAccountHistory(); }}>
       <div id="finance-account-dialog" role="dialog" aria-modal="true" aria-labelledby="finance-account-dialog-title" tabIndex={-1}
-        style={{ width: 900, maxWidth: '100%', maxHeight: 'calc(100dvh - 40px)', background: 'white', borderRadius: 14, padding: 24, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 20, overflow: 'hidden' }}>
+        style={{ width: 900, maxWidth: '100%', maxHeight: 'calc(100dvh - 40px)', background: 'white', borderRadius: 14, padding: 24, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 12, overflow: 'hidden' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexShrink: 0 }}>
           <h2 id="finance-account-dialog-title" style={{ margin: 0, fontSize: 18 }}>{accountView === "detail" ? "회사계좌 상세정보" : "회사계좌 거래내역"}</h2>
           <button type="button" aria-label="회사계좌 창 닫기" disabled={accountStatusSaving} onClick={closeAccountHistory}
@@ -550,12 +550,10 @@ function BankAccount({
               </tbody>
             </table>
           </div> : <>
-            <div style={{ marginBottom: 16, overflowWrap: 'anywhere' }}>
-              <strong>{selectedAccount.bankName} / {selectedAccount.accountName}</strong>
-              <p>계좌번호: {selectedAccount.accountNumber}</p>
-              <p>현재 잔액: {selectedAccount.balance.toLocaleString()} {selectedAccount.currency}</p>
+            <div style={{ marginBottom: 8, overflowWrap: 'anywhere' }}>
+              <p style={{ margin: 0 }}>계좌번호: {selectedAccount.accountNumber}</p>
             </div>
-            {paymentsLoading ? <p>거래내역을 불러오는 중입니다.</p> : paymentsError ? <p role="alert">{paymentsError}</p> : accountPayments.length === 0 ? <p>이 계좌에 연결된 입금·출금 이력이 없습니다.</p> : <FinancePaymentHistory className="finance-account-history" payments={accountPayments} showPartner amountSuffix="" statusLabel="상태" enablePeriodFilter currency={selectedAccount.currency} />}
+            {paymentsLoading ? <p>거래내역을 불러오는 중입니다.</p> : paymentsError ? <p role="alert">{paymentsError}</p> : accountPayments.length === 0 ? <p>이 계좌에 연결된 입금·출금 이력이 없습니다.</p> : <FinancePaymentHistory className="finance-account-history" payments={accountPayments} showPartner amountSuffix="" statusLabel="상태" enablePeriodFilter currency={selectedAccount.currency} currentBalance={selectedAccount.balance} />}
           </>}
           {accountStatusError && <p role="alert">{accountStatusError}</p>}
         </div>

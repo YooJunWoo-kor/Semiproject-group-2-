@@ -1,7 +1,7 @@
 //재무 공통 UI: 계좌·카드·거래 전표의 입출금 이력 표.
 import React, { useState } from 'react';
 
-export default function FinancePaymentHistory({ payments = [], className = '', showPartner = false, amountSuffix = '원', statusLabel = '처리 상태', enablePeriodFilter = false, currency = '' }) {
+export default function FinancePaymentHistory({ payments = [], className = '', showPartner = false, amountSuffix = '원', statusLabel = '처리 상태', enablePeriodFilter = false, currency = '', currentBalance = null }) {
   const [month, setMonth] = useState(() => {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
@@ -23,14 +23,14 @@ export default function FinancePaymentHistory({ payments = [], className = '', s
     setMonth(`${nextYear}-${String(date.getMonth() + 1).padStart(2, '0')}`);
   }
   return <>
-    {enablePeriodFilter && <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+    {enablePeriodFilter && <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 8, margin: 0 }}>
+        <label style={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: 4, margin: 0, width: 'auto', whiteSpace: 'nowrap' }}>
           <input type="checkbox" checked={allPeriods} onChange={event => setAllPeriods(event.target.checked)} />전체 기간
         </label>
         <button type="button" aria-label="이전 월" disabled={allPeriods} onClick={() => changeMonth(-1)}>◀</button>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>조회 월
-          <input type="month" min="1900-01" max="9999-12" value={month} disabled={allPeriods}
+        <label style={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: 8, margin: 0, width: 'auto', whiteSpace: 'nowrap' }}>조회 월
+          <input type="month" style={{ width: 145, margin: 0, boxSizing: 'border-box' }} min="1900-01" max="9999-12" value={month} disabled={allPeriods}
             onChange={event => { if (/^\d{4}-\d{2}$/.test(event.target.value)) setMonth(event.target.value); }} />
         </label>
         <button type="button" aria-label="다음 월" disabled={allPeriods} onClick={() => changeMonth(1)}>▶</button>
@@ -38,8 +38,8 @@ export default function FinancePaymentHistory({ payments = [], className = '', s
       <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', padding: 12, border: '1px solid var(--color-line)', borderRadius: 10 }}>
         <span>입금 합계: <strong>{totalFor('입금').toLocaleString()} {currency || amountSuffix}</strong></span>
         <span>출금 합계: <strong>{totalFor('출금').toLocaleString()} {currency || amountSuffix}</strong></span>
+        {currentBalance !== null && <span>현재 잔액: <strong>{Number(currentBalance).toLocaleString()} {currency || amountSuffix}</strong></span>}
       </div>
-      <p style={{ margin: 0, fontSize: 12 }}>조회 기간의 완료된 거래만 합산합니다. 현재 잔액은 조회 기간과 무관한 계좌 잔액입니다.</p>
     </div>}
     <div className={`table-shell ${className}`.trim()} style={enablePeriodFilter ? { overflowX: 'auto' } : undefined}>
     <table style={enablePeriodFilter ? { width: '100%', minWidth: 640, tableLayout: 'auto' } : undefined}>
