@@ -24,9 +24,8 @@ function Main() {
             catch (error){
                 console.error("캘린저 조회 실패");
             }
-            
-            loadCalender();
         }
+        loadCalender();
     }, []);
 
     useEffect(() => {
@@ -79,6 +78,20 @@ function Main() {
         return <p role="alert">{error}</p>;
     }
 
+    const calendarSchedules = calendarEvents.filter(item =>
+        (statusFilter === "전체" || item.quality_status === statusFilter) &&
+        (
+            item.product_name.includes(searchText) ||
+            item.product_code.includes(searchText)
+        )
+    ).map(item => ({
+        schedule_id: item.event_id,
+        title: `${item.product_name} (${item.product_code}) - ${item.event_type}`,
+        start: item.event_date,
+        end: item.event_date,
+        typeId: item.event_type === "검사 완료" ? (item.quality_status === "통과" ? 3 : 2) : 0
+    }));
+
     return (
         <div className="quality-dashboard-page">
             <header className="dashboard-header">
@@ -129,7 +142,7 @@ function Main() {
                 </div>
             </div>
 
-            <BasicCalendar schedule={calendarEvents} />
+            <BasicCalendar schedule={calendarSchedules} />
         </section>
 
             <div className="quality-dashboard-grid">

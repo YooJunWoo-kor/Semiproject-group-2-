@@ -12,20 +12,22 @@ import { calculateQualityScore } from "../../../../utils/qualityScore";
 function ProductDetail() {
 
     const { id } = useParams();
-    
+
     const [product, setProduct] = useState(null);
 
     const [qualityStatus, setQualityStatus] = useState("미실시");
     const [inspector, setInspector] = useState("");
     const [failReason, setFailReason] = useState("");
     const [memo, setMemo] = useState("");
-    
+
     const [isSaving, setIsSaving] = useState(false);
     const [inspectionHistory, setInspectionHistory] = useState([]);
     const [historyRefresh, setHistoryRefresh] = useState(0);
 
     const [selectedInspectionId, setSelectedInspectionId] = useState(null);
     const [historyChecklist, setHistoryChecklist] = useState(null);
+
+    const [nextInspectionDate, setNextInspectionDate] = useState("");
 
     const navigate = useNavigate();
 
@@ -73,94 +75,96 @@ function ProductDetail() {
     };
 
     const undoItem = checklist.filter(
-        item =>  item.result === '미실시' 
+        item => item.result === '미실시'
     )
-    
-useEffect(() => {
 
-    async function loadProduct() {
-        setProduct(null);
+    useEffect(() => {
 
-        try {
-            const response = await axios.get(
-                `${API_BASE_URL}/quality/products/${id}`
-            );
+        async function loadProduct() {
+            setProduct(null);
 
-            const data = response.data;
+            try {
+                const response = await axios.get(
+                    `${API_BASE_URL}/quality/products/${id}`
+                );
 
-            const productData = {
-                id: data.product_id,
-                code: data.product_code,
-                name: data.product_name,
-                type: data.product_type,
-                company: data.company,
-                inspector: data.inspector || "-",
-                price: Number(data.price ?? 0), // ?? 값이 null이거나 undefined면 0
-                stock: data.stock,
-                image: data.image_url,
-                variantText: data.variant_text,
-                qualityStatus: data.quality_status,
-                created_at: data.created_at || "-",
-                memo: data.memo || ""
-            };
+                const data = response.data;
 
-            setProduct(productData);
-            setInspector(data.inspector || "");
+                const productData = {
+                    id: data.product_id,
+                    code: data.product_code,
+                    name: data.product_name,
+                    type: data.product_type,
+                    company: data.company,
+                    inspector: data.inspector || "-",
+                    price: Number(data.price ?? 0), // ?? 값이 null이거나 undefined면 0
+                    stock: data.stock,
+                    image: data.image_url,
+                    variantText: data.variant_text,
+                    qualityStatus: data.quality_status,
+                    created_at: data.created_at || "-",
+                    memo: data.memo || ""
+                };
 
-            setQualityStatus(data.quality_status || "미실시");
-            setMemo(data.memo || "");
+                setProduct(productData);
+                setNextInspectionDate(data.nextInspectionDate || "");
 
-        } catch (error) {
-            console.log("상세페이지 에러");
+                setInspector(data.inspector || "");
+
+                setQualityStatus(data.quality_status || "미실시");
+                setMemo(data.memo || "");
+
+            } catch (error) {
+                console.log("상세페이지 에러");
+            }
         }
-    }
 
-    loadProduct();
+        loadProduct();
 
-}, [id]);
+    }, [id]);
 
-useEffect(() => {
-    function QualityResult() {
-        if(undoItem.length > 0){
-            setQualityStatus("미실시");
+    useEffect(() => {
+        function QualityResult() {
+            if (undoItem.length > 0) {
+                setQualityStatus("미실시");
+            }
+            else if (qualityScore === "10.0") {
+                setQualityStatus("통과");
+            }
+            else {
+                setQualityStatus("불합격");
+            }
         }
-        else if(qualityScore === "10.0"){
-            setQualityStatus("통과");
+
+        QualityResult();
+
+
+    }, [undoItem.length, qualityScore]);
+
+
+
+    useEffect(() => {
+        async function loadHistory() {
+            try {
+                // 1. 제품의 검사 이력 가져오기
+                const response = await axios.get(
+                    `${API_BASE_URL}/quality/products/${id}/inspections`
+                );
+
+                const history = response.data;
+                setInspectionHistory(history);
+
+                if (history.length === 0) return;
+
+
+
+            } catch (error) {
+                console.error("체크리스트 조회 실패:", error);
+            }
         }
-        else{
-            setQualityStatus("불합격");
-        }
-    }
 
-    QualityResult();
-
-    
-}, [undoItem.length, qualityScore]);
-
-
-
-useEffect(() => {
-    async function loadHistory() {
-        try {
-            // 1. 제품의 검사 이력 가져오기
-            const response = await axios.get(
-                `${API_BASE_URL}/quality/products/${id}/inspections`
-            );
-
-            const history = response.data;
-            setInspectionHistory(history);
-
-            if (history.length === 0) return;
-
-            
-
-        } catch (error) {
-            console.error("체크리스트 조회 실패:", error);
-        }
-    }
-
-    loadHistory();
-}, [id, historyRefresh]);
+        loadHistory();
+    }, [id, historyRefresh]);
 
 
 
@@ -172,141 +176,155 @@ useEffect(() => {
     }
 
 
-const loadHistoryChecklist = async (inspectionId) => {
+    const loadHistoryChecklist = async (inspectionId) => {
 
-    setSelectedInspectionId(inspectionId);
-    setHistoryChecklist(null);
-
-    try {
-        const response = await axios.get(
-            `${API_BASE_URL}/quality/inspections/${inspectionId}/items`
-        );
-
-        setHistoryChecklist(response.data);
-
-    } catch (error) {
-        console.error("체크리스트 조회 실패:", error);
-        alert("체크리스트를 불러오지 못했습니다.");
-        setSelectedInspectionId(null);
-    }
-};
-
-
-    
-const handleSave = async () => {
-
-    if (isSaving || !product) return;
-
-    // 필수 입력값 검사
-    if (!inspector.trim()) {
-        alert("검사자를 입력해주세요.");
-        return;
-    }
-
-    if (qualityStatus === "불합격" && !failReason.trim()) {
-        alert("불합격 사유를 입력해주세요.");
-        return;
-    }
-
-    const inspectionData = {
-        productId: product.id,
-        inspector: inspector.trim(),
-        qualityStatus,
-        failReason: qualityStatus === "불합격" ? failReason.trim() : null,
-        memo: memo.trim(),
-        qualityScore: Number(qualityScore),
-        checklist: checklist
-    };
-
-    try {
-        setIsSaving(true);
-
-        const response = await axios.post(
-            `${API_BASE_URL}/quality/inspections`, inspectionData
-        );
-
-        console.log("검사 저장 성공:", response.data);
-
-        // 검사 결과가 정상 저장되면 최신 검사 정보와 DB 저장 시각을 갱신
-        setProduct(prev => ({
-            ...prev,
-            qualityStatus,
-            inspector: inspector.trim(),
-            memo: memo.trim()
-        }));
+        setSelectedInspectionId(inspectionId);
+        setHistoryChecklist(null);
 
         try {
-            const latest = await axios.get(`${API_BASE_URL}/quality/products/${product.id}`);
-            setProduct(prev => prev && prev.id === product.id
-                ? { ...prev, created_at: latest.data.created_at || "-" }
-                : prev);
-        } catch (refreshError) {
-            console.error("최근 검사 저장 시각 갱신 실패:", refreshError);
+            const response = await axios.get(
+                `${API_BASE_URL}/quality/inspections/${inspectionId}/items`
+            );
+
+            setHistoryChecklist(response.data);
+
+        } catch (error) {
+            console.error("체크리스트 조회 실패:", error);
+            alert("체크리스트를 불러오지 못했습니다.");
+            setSelectedInspectionId(null);
+        }
+    };
+
+
+
+    const handleSave = async () => {
+
+        if (isSaving || !product) return;
+
+        // 필수 입력값 검사
+        if (!inspector.trim()) {
+            alert("검사자를 입력해주세요.");
+            return;
         }
 
-        setHistoryRefresh(prev => prev + 1);
-        alert("검사 결과가 저장되었습니다.");
+        if (qualityStatus === "불합격" && !failReason.trim()) {
+            alert("불합격 사유를 입력해주세요.");
+            return;
+        }
 
-    } catch (error) {
-        console.error("검사 저장 실패:", error);
-        alert("검사 결과를 저장하지 못했습니다.");
+        const inspectionData = {
+            productId: product.id,
+            inspector: inspector.trim(),
+            qualityStatus,
+            failReason: qualityStatus === "불합격" ? failReason.trim() : null,
+            memo: memo.trim(),
+            qualityScore: Number(qualityScore),
+            checklist: checklist
+        };
 
-    } finally {
-        setIsSaving(false);
-    }
+        try {
+            setIsSaving(true);
 
-};
+            const response = await axios.post(
+                `${API_BASE_URL}/quality/inspections`, inspectionData
+            );
+
+            console.log("검사 저장 성공:", response.data);
+
+            // 검사 결과가 정상 저장되면 최신 검사 정보와 DB 저장 시각을 갱신
+            setProduct(prev => ({
+                ...prev,
+                qualityStatus,
+                inspector: inspector.trim(),
+                memo: memo.trim()
+            }));
+
+            try {
+                const latest = await axios.get(`${API_BASE_URL}/quality/products/${product.id}`);
+                setProduct(prev => prev && prev.id === product.id
+                    ? { ...prev, created_at: latest.data.created_at || "-" }
+                    : prev);
+            } catch (refreshError) {
+                console.error("최근 검사 저장 시각 갱신 실패:", refreshError);
+            }
+
+            setHistoryRefresh(prev => prev + 1);
+            alert("검사 결과가 저장되었습니다.");
+
+        } catch (error) {
+            console.error("검사 저장 실패:", error);
+            alert("검사 결과를 저장하지 못했습니다.");
+
+        } finally {
+            setIsSaving(false);
+        }
+
+    };
 
     const selectedInspection = inspectionHistory.find(
         item => item.inspection_id === selectedInspectionId
     );
 
 
-    
-    
- 
-    
-       const DeleteProduct =  async (product_id) => {
-            try {
-                // 1. 제품의 검사 이력 가져오기
-                const response = await axios.delete(
-                    `${API_BASE_URL}/quality/products/${product_id}`
-                );
+    const handleSaveInspectionDate = async () => {
+        try {
+            await axios.patch(
+                `${API_BASE_URL}/quality/products/${id}/next-inspection`,
+                { nextInspectionDate }
+            );
 
-                console.log(response.data);
-                alert("제품 삭제 완료");
+            alert("검사 예정일 저장 완료")
+        }
+        catch (error) {
+            console.error("검사 예정일 저장 실패 : ", error);
+            alert("검사 예정일 저장 실패");
+        }
+    }
 
 
-                navigate("/main/qa/products");
-                
-    
-            } catch (error) {
-                console.error(error);
-                alert("제품 삭제 실패");
-            }
-       }
 
-       const  DeleteInspectionList =  async (id) => {
-            try{
-                await axios.delete(
-                    `${API_BASE_URL}/quality/inspections/${id}`
-                )
 
-                const newHistory = inspectionHistory.filter(
-                    item => item.inspection_id !== id
-                )
-    
-                setInspectionHistory(newHistory) 
-            }
-            catch(error){
-                console.error("검사 이력 삭제 실패");
-            }
-       }
+    const DeleteProduct = async (product_id) => {
+        try {
+            // 1. 제품의 검사 이력 가져오기
+            const response = await axios.delete(
+                `${API_BASE_URL}/quality/products/${product_id}`
+            );
 
-       
-    
-        
-    
+            console.log(response.data);
+            alert("제품 삭제 완료");
+
+
+            navigate("/main/qa/products");
+
+
+        } catch (error) {
+            console.error(error);
+            alert("제품 삭제 실패");
+        }
+    }
+
+    const DeleteInspectionList = async (id) => {
+        try {
+            await axios.delete(
+                `${API_BASE_URL}/quality/inspections/${id}`
+            )
+
+            const newHistory = inspectionHistory.filter(
+                item => item.inspection_id !== id
+            )
+
+            setInspectionHistory(newHistory)
+        }
+        catch (error) {
+            console.error("검사 이력 삭제 실패");
+        }
+    }
+
+
+
+
+
     return (
 
         <div className="product-detail-page">
@@ -323,9 +341,9 @@ const handleSave = async () => {
                         </span>
                     </h1>
 
-                    
 
-                    
+
+
                 </div>
 
                 <span>
@@ -389,6 +407,32 @@ const handleSave = async () => {
 
                 </div>
 
+            </section>
+
+            <section className="quality-panel">
+                <h2>다음 검사 일정</h2>
+
+                <div className="inspection-form-grid">
+                    <div>
+                        <label>검사 예정일</label>
+
+                        <input
+                            type="date"
+                            value={nextInspectionDate}
+                            onChange={e => setNextInspectionDate(e.target.value)}
+                        />
+                    </div>
+                </div>
+
+                <div className="detail-save-area">
+                    <button
+                        type="button"
+                        className="erp-primary-button"
+                        onClick={handleSaveInspectionDate}
+                    >
+                        검사 일정 저장
+                    </button>
+                </div>
             </section>
 
 
@@ -478,84 +522,84 @@ const handleSave = async () => {
 
 
                 <div className="quality-table-shell">
-                <table className="quality-table quality-data-table">
+                    <table className="quality-table quality-data-table">
 
-                    <thead>
+                        <thead>
 
-                        <tr>
-                            <th>검사일시</th>
-                            <th>검사자</th>
-                            <th>검사결과</th>
-                            <th>비고</th>
-                            <th>체크리스트</th>
-                        </tr>
-
-                    </thead>
-
-
-                    
-                    <tbody>
-                        {inspectionHistory.length === 0 ? (
                             <tr>
-                                <td colSpan={5}>
-                                    등록된 검사 이력이 없습니다.
-                                </td>
+                                <th>검사일시</th>
+                                <th>검사자</th>
+                                <th>검사결과</th>
+                                <th>비고</th>
+                                <th>체크리스트</th>
                             </tr>
-                        ) : (
-                            inspectionHistory.map(item => (
-                                <tr key={item.inspection_id}>
-                                    <td>{item.created_at}</td>
 
-                                    <td>{item.inspector || "-"}</td>
+                        </thead>
 
-                                    <td>
-                                        <span className={
-                                            item.quality_status === "통과" ? "quality-status is-pass" : item.quality_status === "불합격" ? "quality-status is-fail" : "quality-status is-wait"
-                                        }>
-                                            {item.quality_status}
-                                        </span>
-                                    </td>
 
-                                    <td>{item.memo || item.fail_reason || "-"}</td>
 
-                                    <td>
-                                        <button type="button" onClick={() => loadHistoryChecklist(item.inspection_id)}>
-                                            보기
-                                        </button>
-
-                                        <button type="button" onClick= {() => DeleteInspectionList(item.inspection_id)}>삭제</button>
+                        <tbody>
+                            {inspectionHistory.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5}>
+                                        등록된 검사 이력이 없습니다.
                                     </td>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
+                            ) : (
+                                inspectionHistory.map(item => (
+                                    <tr key={item.inspection_id}>
+                                        <td>{item.created_at}</td>
+
+                                        <td>{item.inspector || "-"}</td>
+
+                                        <td>
+                                            <span className={
+                                                item.quality_status === "통과" ? "quality-status is-pass" : item.quality_status === "불합격" ? "quality-status is-fail" : "quality-status is-wait"
+                                            }>
+                                                {item.quality_status}
+                                            </span>
+                                        </td>
+
+                                        <td>{item.memo || item.fail_reason || "-"}</td>
+
+                                        <td>
+                                            <button type="button" onClick={() => loadHistoryChecklist(item.inspection_id)}>
+                                                보기
+                                            </button>
+
+                                            <button type="button" onClick={() => DeleteInspectionList(item.inspection_id)}>삭제</button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
 
 
-                </table>
+                    </table>
                 </div>
 
                 {selectedInspectionId !== null && (
-                        
-                        <div className="quality-panel">
-                            <h3>{selectedInspection?.created_at} {selectedInspection?.inspector} 검사자 체크리스트</h3>
 
-                            {historyChecklist === null ? (
-                                <p>불러오는 중...</p>
-                            ) : historyChecklist.length === 0 ? (
-                                <p>저장된 체크리스트가 없습니다.</p>
-                            ) : (
-                                <ul>
-                                    {historyChecklist.map(item => (
-                                        <li key={item.item_id}>
-                                            {item.item_name} : {item.result}
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-                    )}
+                    <div className="quality-panel">
+                        <h3>{selectedInspection?.created_at} {selectedInspection?.inspector} 검사자 체크리스트</h3>
 
-                    <hr/>
+                        {historyChecklist === null ? (
+                            <p>불러오는 중...</p>
+                        ) : historyChecklist.length === 0 ? (
+                            <p>저장된 체크리스트가 없습니다.</p>
+                        ) : (
+                            <ul>
+                                {historyChecklist.map(item => (
+                                    <li key={item.item_id}>
+                                        {item.item_name} : {item.result}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                )}
+
+                <hr />
 
             </section>
 
@@ -620,7 +664,7 @@ const handleSave = async () => {
                                 미실시
                             </button>
 
-                            
+
                         </div>
                     </div>
                 ))}
@@ -651,12 +695,12 @@ const handleSave = async () => {
 
             <div className="detail-save-area">
 
-                    <button
-                        className="save-button erp-primary-button"
-                        onClick={handleSave}
-                    >
-                        검사 결과 저장
-                    </button>
+                <button
+                    className="save-button erp-primary-button"
+                    onClick={handleSave}
+                >
+                    검사 결과 저장
+                </button>
 
             </div>
 

@@ -277,6 +277,41 @@ router.post('/inspections', (req, res) => {
 });
 
 
+router.patch("/products/:id/next-inspection", (req, res) => {
+    const productId = Number(req.params.id);
+    const { nextInspectionDate } = req.body;
+
+    // 제품 ID 검사
+    if (!Number.isInteger(productId) || productId <= 0) {
+        return res.status(400).json({ message: "잘못된 제품 ID입니다." });
+    }
+
+    // 날짜 형식 검사 (빈 값은 허용)
+    if (nextInspectionDate && !/^\d{4}-\d{2}-\d{2}$/.test(nextInspectionDate)) {
+        return res.status(400).json({ message: "날짜 형식이 올바르지 않습니다." });
+    }
+
+    const sql = `
+        UPDATE quality_products
+        SET next_inspection_date = ?
+        WHERE product_id = ?
+    `;
+
+    db.query(sql, [nextInspectionDate || null, productId], (err, result) => {
+        if (err) {
+            console.error("검사 일정 저장 오류:", err);
+            return res.status(500).json({ message: "검사 일정 저장 실패" });
+        }
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "제품이 존재하지 않습니다." });
+        }
+
+        res.json({ message: "검사 일정 저장 완료" });
+    });
+});
+
+
 
 
     router.get('/products/:id', (req, res) => {
@@ -299,6 +334,7 @@ router.post('/inspections', (req, res) => {
                 p.stock,
                 p.image_url,
                 p.variant_text,
+                DATE_FORMAT(p.next_inspection_date, '%Y-%m-%d') AS next_inspection_date,
                 COALESCE(i.quality_status, '미실시') AS quality_status,
                 DATE_FORMAT(i.created_at, '%Y-%m-%d / %H:%i:%s') AS created_at,
                 i.inspector,
