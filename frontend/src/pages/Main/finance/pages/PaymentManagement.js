@@ -1,3 +1,5 @@
+// [공통화 추가] 재무 전용 공통 컴포넌트·함수 재사용 (상위 공용 파일 수정 없음)
+import { getFinanceError } from '../components/financeUtils';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BasicTable from '../../../../components/BasicTable';
@@ -173,7 +175,7 @@ export default function PaymentManagement({
     }).catch(err => {
       if (!cancelled) {
         setData(null);
-        setError(err.response?.data?.message || '결제 관리 정보를 불러오지 못했습니다.');
+        setError(getFinanceError(err, '결제 관리 정보를 불러오지 못했습니다.'));
       }
     }).finally(() => {
       if (!cancelled) setLoading(false);
@@ -262,7 +264,7 @@ export default function PaymentManagement({
       setSelectedRow(null);
       setRefresh(value => value + 1);
     } catch (err) {
-      setSaveError(err.response?.data?.message || '분류를 저장하지 못했습니다.');
+      setSaveError(getFinanceError(err, '분류를 저장하지 못했습니다.'));
     } finally {
       setPassword('');
       delete form.dataset.saving;

@@ -1,3 +1,9 @@
+// [공통화 추가] 재무 전용 공통 컴포넌트·함수 재사용 (상위 공용 파일 수정 없음)
+import useFinanceHistory from '../components/useFinanceHistory';
+import FinanceSearchForm from '../components/FinanceSearchForm';
+import FinancePaymentHistory from '../components/FinancePaymentHistory';
+import FinanceStatusBadge from '../components/FinanceStatusBadge';
+import { getFinanceError } from '../components/financeUtils';
 import React, { useEffect, useState } from 'react';
 import { getBankAccounts, getBankAccountPayments, createBankAccount, updateBankAccount, getFinanceEmployees, updateBankAccountStatus } from "../../../../utils/financeService";
 import ModalBase from '../../../../components/ModalBase';
@@ -32,9 +38,10 @@ function BankAccount({
 
   // 거래내역을 확인할 계좌
   const [selectedAccountId, setSelectedAccountId] = useState(null);
-  const [accountPayments, setAccountPayments] = useState([]);
-  const [paymentsLoading, setPaymentsLoading] = useState(false);
-  const [paymentsError, setPaymentsError] = useState("");
+  // [공통화] 선택 이력 조회는 계좌·카드 공통 훅을 사용합니다.
+  const { payments: accountPayments, loading: paymentsLoading, error: paymentsError } = useFinanceHistory(getBankAccountPayments, selectedAccountId, "계좌 거래내역을 불러오지 못했습니다.");
+  
+  
 
   // 계좌 등록폼 상태
   const [formOpen, setFormOpen] = useState(false);
@@ -92,35 +99,7 @@ function BankAccount({
   }, []);
 
   // 선택한 계좌가 바뀌면 거래내역을 조회합니다.
-  useEffect(() => {
-    let cancelled = false;
-    if (selectedAccountId === null) return;
-    setAccountPayments([]);
-    setPaymentsError("");
-    setPaymentsLoading(true);
-    async function loadAccountPayments() {
-      try {
-        const data = await getBankAccountPayments(selectedAccountId);
-
-        // 다른 계좌를 선택했다면 이전 조회 결과는 반영하지 않습니다.
-        if (!cancelled) {
-          setAccountPayments(data);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setPaymentsError(err.response?.data?.message || "계좌 거래내역을 불러오지 못했습니다.");
-        }
-      } finally {
-        if (!cancelled) {
-          setPaymentsLoading(false);
-        }
-      }
-    }
-    loadAccountPayments();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedAccountId]);
+  
 
   // 관리 사원 목록 조회
   useEffect(() => {
@@ -184,9 +163,9 @@ function BankAccount({
   const tAccountData = filteredAccounts.map(acc => {
     const formattedBalance = `${acc.balance.toLocaleString()} ${acc.currency}`;
     return {
-      content: [acc.id, <strong>{acc.bankName}</strong>, acc.accountNumber, acc.accountName, acc.accountType, formattedBalance, acc.currency, acc.managerName, acc.lastTransactionDate, <span className={`status-badge ${acc.status === "STOP" || acc.status.includes("동결") ? "status-danger" : "status-success"}`}>
+      content: [acc.id, <strong>{acc.bankName}</strong>, acc.accountNumber, acc.accountName, acc.accountType, formattedBalance, acc.currency, acc.managerName, acc.lastTransactionDate, <FinanceStatusBadge tone={acc.status === "STOP" || acc.status.includes("동결") ? "status-danger" : "status-success"}>
           {acc.status === "STOP" ? "사용 중지" : acc.status}
-        </span>, <div style={{
+        </FinanceStatusBadge>, <div style={{
         display: 'flex',
         gap: '4px'
       }}>
@@ -295,7 +274,7 @@ function BankAccount({
       setFormOpen(false);
       setEditingAccountId(null);
     } catch (err) {
-      setFormError(err.response?.data?.message || (isEditing ? "회사계좌 수정에 실패했습니다." : "회사계좌 등록에 실패했습니다."));
+      setFormError(getFinanceError(err, isEditing ? "회사계좌 수정에 실패했습니다." : "회사계좌 등록에 실패했습니다."));
     } finally {
       setSaving(false);
     }
@@ -335,7 +314,7 @@ function BankAccount({
       } : item));
       alert(result.message);
     } catch (err) {
-      setAccountStatusError(err.response?.data?.message || "회사계좌 상태 변경에 실패했습니다.");
+      setAccountStatusError(getFinanceError(err, "회사계좌 상태 변경에 실패했습니다."));
     } finally {
       setAccountStatusSaving(false);
     }
@@ -345,9 +324,7 @@ function BankAccount({
   function openAccountHistory(accountId) {
     if (saving || accountStatusSaving) return;
     setFormOpen(false);
-    setAccountPayments([]);
-    setPaymentsError("");
-    setPaymentsLoading(true);
+    // [공통화] 이력 초기화·로딩 처리는 useFinanceHistory에서 수행합니다.
     setAccountStatusError("");
     setSelectedAccountId(accountId);
   }
@@ -392,30 +369,10 @@ function BankAccount({
       {/* 3. 검색 및 필터 구역 */}
       {/* 검색 및 필터 */}
       <section className="finance-resource-filters">
-        <form className="finance-card-search finance-resource-search" onSubmit={handleAccountSearch}>
-          <label htmlFor="bankFilter">은행 구분: </label>
-          <select id="bankFilter" value={bankFilter} onChange={e => setBankFilter(e.target.value)}>
-            <option value="ALL">전체 은행</option>
-
-            {bankOptions.map(bank => <option key={bank} value={bank}>
-                {bank}
-              </option>)}
-          </select>
-
-          <label htmlFor="typeFilter">용도 구분: </label>
-          <select id="typeFilter" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
-            <option value="ALL">전체 용도</option>
-
-            {typeOptions.map(type => <option key={type} value={type}>
-                {type}
-              </option>)}
-          </select>
-
-          <label htmlFor="account-search-keyword">검색: </label>
-          <input id="account-search-keyword" type="text" placeholder="계좌명 또는 계좌번호 검색" value={searchKeyword} onChange={e => setSearchKeyword(e.target.value)} />
-
-          <button type="submit">조회</button>
-        </form>
+        <FinanceSearchForm className="finance-card-search finance-resource-search" onSubmit={handleAccountSearch} filters={[
+  { id: 'bankFilter', label: '은행 구분: ', value: bankFilter, onChange: setBankFilter, options: [{ value: 'ALL', label: '전체 은행' }, ...bankOptions.map(value => ({ value, label: value }))] },
+  { id: 'typeFilter', label: '용도 구분: ', value: typeFilter, onChange: setTypeFilter, options: [{ value: 'ALL', label: '전체 용도' }, ...typeOptions.map(value => ({ value, label: value }))] }
+ ]} keyword={{ id: 'account-search-keyword', placeholder: '계좌명 또는 계좌번호 검색', value: searchKeyword, onChange: setSearchKeyword }} />
       </section>
 
 
@@ -524,31 +481,7 @@ function BankAccount({
                   {selectedAccount.currency}
                 </p>
 
-                {paymentsLoading ? <p>거래내역을 불러오는 중입니다.</p> : paymentsError ? <p role="alert">{paymentsError}</p> : accountPayments.length === 0 ? <p>이 계좌에 연결된 입금·출금 이력이 없습니다.</p> : <div className="table-shell finance-account-history">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th scope="col">처리 날짜</th>
-                          <th scope="col">거래처</th>
-                          <th scope="col">구분</th>
-                          <th scope="col">결제수단</th>
-                          <th scope="col">금액</th>
-                          <th scope="col">상태</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {accountPayments.map(payment => <tr key={payment.payment_id}>
-                            <td>{payment.payment_date}</td>
-                            <td>{payment.company_name || "-"}</td>
-                            <td>{payment.payment_direction}</td>
-                            <td>{payment.payment_method}</td>
-                            <td>{Number(payment.amount).toLocaleString()}</td>
-                            <td>{payment.payment_status}</td>
-                          </tr>)}
-                      </tbody>
-                    </table>
-                  </div>}
+                {paymentsLoading ? <p>거래내역을 불러오는 중입니다.</p> : paymentsError ? <p role="alert">{paymentsError}</p> : accountPayments.length === 0 ? <p>이 계좌에 연결된 입금·출금 이력이 없습니다.</p> : <FinancePaymentHistory className="finance-account-history" payments={accountPayments} showPartner amountSuffix="" statusLabel="상태" />}
 
                 <p>
                   계좌 상태:{" "}

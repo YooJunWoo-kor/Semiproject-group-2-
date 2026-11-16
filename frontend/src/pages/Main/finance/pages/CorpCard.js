@@ -1,3 +1,10 @@
+// [공통화 추가] 재무 전용 공통 컴포넌트·함수 재사용 (상위 공용 파일 수정 없음)
+import useFinanceHistory from '../components/useFinanceHistory';
+import FinanceSearchForm from '../components/FinanceSearchForm';
+import FinancePaymentHistory from '../components/FinancePaymentHistory';
+import FinanceDetailRows from '../components/FinanceDetailRows';
+import FinanceStatusBadge from '../components/FinanceStatusBadge';
+import { getFinanceError, toFinanceCard } from '../components/financeUtils';
 import React, { useEffect, useState } from 'react';
 import { getCorporateCards, updateCorporateCardLimit, getCorporateCardPayments, createCorporateCard, getCorporateCardOptions, updateCorporateCard, updateCorporateCardStatus } from "../../../../utils/financeService";
 import ModalBase from '../../../../components/ModalBase';
@@ -38,9 +45,10 @@ function CorpCard({
   const [limitError, setLimitError] = useState("");
 
   // 선택한 법인카드의 사용 이력
-  const [cardPayments, setCardPayments] = useState([]);
-  const [paymentsLoading, setPaymentsLoading] = useState(false);
-  const [paymentsError, setPaymentsError] = useState("");
+  // [공통화] 선택 이력 조회는 계좌·카드 공통 훅을 사용합니다.
+  const { payments: cardPayments, loading: paymentsLoading, error: paymentsError } = useFinanceHistory(getCorporateCardPayments, selectedCardId, "법인카드 사용 이력을 불러오지 못했습니다.");
+  
+  
 
   // null이면 신규 등록, ID가 있으면 해당 카드의 기본정보 수정
   const [editingCardId, setEditingCardId] = useState(null);
@@ -81,7 +89,7 @@ function CorpCard({
         }
       } catch (err) {
         if (!cancelled) {
-          setOptionsError(err.response?.data?.message || "부서와 관리자 목록을 불러오지 못했습니다.");
+          setOptionsError(getFinanceError(err, "부서와 관리자 목록을 불러오지 못했습니다."));
         }
       } finally {
         if (!cancelled) setOptionsLoading(false);
@@ -101,24 +109,13 @@ function CorpCard({
         const data = await getCorporateCards();
 
         // DB 컬럼명을 현재 화면에서 사용하는 이름으로 변환합니다.
-        const cards = data.map(card => ({
-          id: card.card_id,
-          cardName: card.card_name,
-          departmentId: card.department_id,
-          department: card.department_name || "미지정",
-          managerId: card.employee_id,
-          managerName: card.manager_name || "미지정",
-          currentUsage: Number(card.monthly_usage ?? 0),
-          monthlyLimit: Number(card.monthly_limit ?? 0),
-          remainingLimit: Number(card.remaining_limit ?? 0),
-          status: card.card_status || "미지정"
-        }));
+        const cards = data.map(toFinanceCard);
         if (!cancelled) {
           setCardList(cards);
         }
       } catch (err) {
         if (!cancelled) {
-          setLoadError(err.response?.data?.message || "법인카드 목록을 불러오지 못했습니다.");
+          setLoadError(getFinanceError(err, "법인카드 목록을 불러오지 못했습니다."));
         }
       } finally {
         if (!cancelled) {
@@ -135,38 +132,7 @@ function CorpCard({
   }, []);
 
   // 선택한 카드가 바뀌면 해당 카드의 사용 이력을 조회합니다.
-  useEffect(() => {
-    let cancelled = false;
-    setCardPayments([]);
-    setPaymentsError("");
-    if (selectedCardId === null) {
-      setPaymentsLoading(false);
-      return;
-    }
-    async function loadCardPayments() {
-      setPaymentsLoading(true);
-      try {
-        const data = await getCorporateCardPayments(selectedCardId);
-        if (!cancelled) {
-          setCardPayments(data);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setPaymentsError(err.response?.data?.message || "법인카드 사용 이력을 불러오지 못했습니다.");
-        }
-      } finally {
-        if (!cancelled) {
-          setPaymentsLoading(false);
-        }
-      }
-    }
-    loadCardPayments();
-
-    // 다른 카드를 선택하거나 화면을 떠나면 이전 조회 결과를 무시합니다.
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedCardId]);
+  
   const cardTableTitle = "법인카드 목록 현황";
   const cardHeaders = ["법인카드 ID", "법인카드 명", "발급부서", "관리자명", "당월 사용량", "월 한도", "잔여 한도", "상태", "관리"];
   useEffect(() => {
@@ -219,7 +185,7 @@ function CorpCard({
       } : item));
       alert(result.message);
     } catch (err) {
-      setStatusError(err.response?.data?.message || "법인카드 상태 변경에 실패했습니다.");
+      setStatusError(getFinanceError(err, "법인카드 상태 변경에 실패했습니다."));
     } finally {
       setStatusSavingId(null);
     }
@@ -346,7 +312,7 @@ function CorpCard({
       setEditingCardId(null);
       alert(result.message || (isEditing ? "법인카드 정보가 수정되었습니다." : "법인카드가 등록되었습니다."));
     } catch (err) {
-      setCardFormError(err.response?.data?.message || (isEditing ? "법인카드 정보 수정에 실패했습니다." : "법인카드 등록에 실패했습니다."));
+      setCardFormError(getFinanceError(err, isEditing ? "법인카드 정보 수정에 실패했습니다." : "법인카드 등록에 실패했습니다."));
     } finally {
       setCardSaving(false);
     }
@@ -373,23 +339,12 @@ function CorpCard({
 
       // DB에서 목록을 다시 조회하여 최신 사용량과 잔여 한도를 표시합니다.
       const data = await getCorporateCards();
-      const cards = data.map(card => ({
-        id: card.card_id,
-        cardName: card.card_name,
-        departmentId: card.department_id,
-        department: card.department_name || "미지정",
-        managerId: card.employee_id,
-        managerName: card.manager_name || "미지정",
-        currentUsage: Number(card.monthly_usage ?? 0),
-        monthlyLimit: Number(card.monthly_limit ?? 0),
-        remainingLimit: Number(card.remaining_limit ?? 0),
-        status: card.card_status || "미지정"
-      }));
+      const cards = data.map(toFinanceCard);
       setCardList(cards);
       setLimitTarget(null);
       alert(result.message);
     } catch (err) {
-      setLimitError(err.response?.data?.message || "한도 저장 또는 최신 목록 조회에 실패했습니다. 새로고침하여 저장 결과를 확인해 주세요.");
+      setLimitError(getFinanceError(err, "한도 저장 또는 최신 목록 조회에 실패했습니다. 새로고침하여 저장 결과를 확인해 주세요."));
     } finally {
       setLimitSaving(false);
     }
@@ -400,9 +355,9 @@ function CorpCard({
   const tCardData = filteredCards.map(card => {
     const remaining = card.remainingLimit;
     return {
-      content: [card.id, <strong>{card.cardName}</strong>, card.department, card.managerName, card.currentUsage.toLocaleString() + "원", card.monthlyLimit.toLocaleString() + "원", remaining.toLocaleString() + "원", <span className={`status-badge ${card.status === "STOP" ? "status-danger" : ""}`}>
+      content: [card.id, <strong>{card.cardName}</strong>, card.department, card.managerName, card.currentUsage.toLocaleString() + "원", card.monthlyLimit.toLocaleString() + "원", remaining.toLocaleString() + "원", <FinanceStatusBadge tone={card.status === "STOP" ? "status-danger" : ""}>
           {card.status === "STOP" ? "사용 중지" : card.status}
-        </span>, <div style={{
+        </FinanceStatusBadge>, <div style={{
         display: 'flex',
         gap: '4px'
       }}>
@@ -498,21 +453,9 @@ function CorpCard({
 
       {/* 법인카드 검색 및 부서 필터 */}
       <section className="finance-resource-filters">
-        <form className="finance-card-search finance-resource-search" onSubmit={handleCardSearch}>
-          <label htmlFor="deptFilter">부서 선택: </label>
-          <select id="deptFilter" value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)}>
-            <option value="ALL">전체 부서</option>
-
-            {departmentOptions.map(department => <option key={department} value={department}>
-                {department}
-              </option>)}
-          </select>
-
-          <label htmlFor="card-search-keyword">검색: </label>
-          <input id="card-search-keyword" type="text" placeholder="카드명 또는 관리자명 입력" value={searchKeyword} onChange={e => setSearchKeyword(e.target.value)} />
-
-          <button type="submit">조회</button>
-        </form>
+        <FinanceSearchForm className="finance-card-search finance-resource-search" onSubmit={handleCardSearch} filters={[
+  { id: 'deptFilter', label: '부서 선택: ', value: departmentFilter, onChange: setDepartmentFilter, options: [{ value: 'ALL', label: '전체 부서' }, ...departmentOptions.map(value => ({ value, label: value }))] }
+ ]} keyword={{ id: 'card-search-keyword', placeholder: '카드명 또는 관리자명 입력', value: searchKeyword, onChange: setSearchKeyword }} />
       </section>
 
 
@@ -564,41 +507,14 @@ function CorpCard({
                 <div className="table-shell">
                   <table className="finance-card-fields">
                     <tbody>
-                      {[["카드 ID", selectedCard.id], ["법인카드명", selectedCard.cardName], ["발급부서", selectedCard.department], ["관리자명", selectedCard.managerName], ["당월 사용량", `${selectedCard.currentUsage.toLocaleString()}원`], ["월 한도", `${selectedCard.monthlyLimit.toLocaleString()}원`], ["잔여 한도", `${selectedCard.remainingLimit.toLocaleString()}원`], ["상태", selectedCard.status === "STOP" ? "사용 중지" : selectedCard.status]].map(([label, value]) => <tr key={label}>
-                          <th scope="row">{label}</th>
-                          <td>{value}</td>
-                        </tr>)}
+                      <FinanceDetailRows rows={[["카드 ID", selectedCard.id], ["법인카드명", selectedCard.cardName], ["발급부서", selectedCard.department], ["관리자명", selectedCard.managerName], ["당월 사용량", `${selectedCard.currentUsage.toLocaleString()}원`], ["월 한도", `${selectedCard.monthlyLimit.toLocaleString()}원`], ["잔여 한도", `${selectedCard.remainingLimit.toLocaleString()}원`], ["상태", selectedCard.status === "STOP" ? "사용 중지" : selectedCard.status]]} />
                     </tbody>
                   </table>
                 </div>
 
                 <h3>법인카드 사용 이력</h3>
 
-                {paymentsLoading ? <p>사용 이력을 불러오는 중입니다.</p> : paymentsError ? <p role="alert">{paymentsError}</p> : cardPayments.length === 0 ? <p>이 카드에 연결된 사용 이력이 없습니다.</p> : <div className="table-shell finance-card-history">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th scope="col">처리 날짜</th>
-                          <th scope="col">거래처</th>
-                          <th scope="col">구분</th>
-                          <th scope="col">결제수단</th>
-                          <th scope="col">금액</th>
-                          <th scope="col">처리 상태</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {cardPayments.map(payment => <tr key={payment.payment_id}>
-                            <td>{payment.payment_date}</td>
-                            <td>{payment.company_name || "-"}</td>
-                            <td>{payment.payment_direction}</td>
-                            <td>{payment.payment_method}</td>
-                            <td>{Number(payment.amount).toLocaleString()}원</td>
-                            <td>{payment.payment_status}</td>
-                          </tr>)}
-                      </tbody>
-                    </table>
-                  </div>}
+                {paymentsLoading ? <p>사용 이력을 불러오는 중입니다.</p> : paymentsError ? <p role="alert">{paymentsError}</p> : cardPayments.length === 0 ? <p>이 카드에 연결된 사용 이력이 없습니다.</p> : <FinancePaymentHistory className="finance-card-history" payments={cardPayments} showPartner />}
 
 
                 <div className="finance-detail-actions">

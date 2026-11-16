@@ -1,3 +1,7 @@
+// [공통화 추가] 재무 전용 공통 컴포넌트·함수 재사용 (상위 공용 파일 수정 없음)
+import FinancePaymentHistory from '../components/FinancePaymentHistory';
+import FinanceDetailRows from '../components/FinanceDetailRows';
+import { getFinanceError, koreaDate } from '../components/financeUtils';
 import React, { useEffect, useState } from 'react';
 import { getItems, getItemCategories, getApprovals, getPartners, createItem, updateItem, deleteItem, createPayment, getTransactionPayments, getBankAccounts, getCorporateCards } from "../../../../utils/financeService";
 import ModalBase from '../../../../components/ModalBase';
@@ -326,7 +330,7 @@ function Items({
         if (!Array.isArray(data)) throw new Error('잘못된 결재 목록 응답');
         if (!cancelled) setApprovedDocuments(data);
       } catch (err) {
-        if (!cancelled) setApprovalsError(err.response?.data?.message || '결재·기안서 목록을 불러오지 못했습니다.');
+        if (!cancelled) setApprovalsError(getFinanceError(err, '결재·기안서 목록을 불러오지 못했습니다.'));
       } finally {
         if (!cancelled) setApprovalsLoading(false);
       }
@@ -657,7 +661,7 @@ function Items({
       setEditingItemId(null);
       alert(isEditing ? "거래 품목이 수정되었습니다." : "거래 품목이 등록되었습니다.");
     } catch (err) {
-      setFormError(err.response?.data?.message || (isEditing ? "거래 품목 수정에 실패했습니다." : "거래 품목 등록에 실패했습니다."));
+      setFormError(getFinanceError(err, isEditing ? "거래 품목 수정에 실패했습니다." : "거래 품목 등록에 실패했습니다."));
     } finally {
       setSaving(false);
     }
@@ -688,7 +692,7 @@ function Items({
       }
       alert("거래 품목이 삭제되었습니다.");
     } catch (err) {
-      alert(err.response?.data?.message || "거래 품목 삭제에 실패했습니다.");
+      alert(getFinanceError(err, "거래 품목 삭제에 실패했습니다."));
     } finally {
       setSaving(false);
     }
@@ -700,12 +704,7 @@ function Items({
   useEffect(() => {
     setPayrollPayForm({
       account_id: '',
-      payment_date: new Intl.DateTimeFormat('sv-SE', {
-        timeZone: 'Asia/Seoul',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      }).format(new Date()),
+      payment_date: koreaDate(),
       password: ''
     });
     setPayrollPaymentError('');
@@ -790,12 +789,7 @@ function Items({
   useEffect(() => {
     setDeductionForm({
       account_id: '',
-      payment_date: new Intl.DateTimeFormat('sv-SE', {
-        timeZone: 'Asia/Seoul',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      }).format(new Date()),
+      payment_date: koreaDate(),
       password: ''
     });
     setDeductionNotice('');
@@ -898,7 +892,7 @@ function Items({
         }
       } catch (err) {
         if (!cancelled) {
-          setPaymentHistoryError(err.response?.data?.message || "입금·출금 이력을 불러오지 못했습니다.");
+          setPaymentHistoryError(getFinanceError(err, "입금·출금 이력을 불러오지 못했습니다."));
         }
       } finally {
         if (!cancelled) {
@@ -1002,7 +996,7 @@ function Items({
       setPaymentTarget(null);
       alert(`${result.message}\n남은 금액: ${Number(result.remaining_amount).toLocaleString()}원`);
     } catch (err) {
-      setPaymentError(err.response?.data?.message || "입금·출금 등록에 실패했습니다.");
+      setPaymentError(getFinanceError(err, "입금·출금 등록에 실패했습니다."));
     } finally {
       setPaymentSaving(false);
     }
@@ -1581,10 +1575,7 @@ function Items({
               <div className="table-shell">
               <table className="finance-voucher-fields">
                 <tbody>
-                  {(selectedItem.isApprovalDocument ? [["원본 결재 번호", selectedItem.sourceDocumentId], ["거래 구분", selectedItem.type === "SALES" ? "매출" : "매입"], ["거래일", selectedItem.date], ["정산 마감일", selectedItem.dueDate || "미등록"], ["거래처", selectedItem.customer], ["작성자", selectedItem.requester || "미등록"], ["작성일", selectedItem.createdAt || "미등록"]] : [["거래 ID", selectedItem.transactionId], ["품목 ID", selectedItem.id], ["거래 구분", selectedItem.type === "SALES" ? "매출" : "매입"], ["거래일", selectedItem.date], ["정산 마감일", selectedItem.dueDate || "미등록"], ["거래처", selectedItem.customer], ["제목", selectedItem.itemName], ["품목명", selectedItem.itemName], ["규격", selectedItem.spec], ["수량", selectedItem.quantity == null ? "미등록" : selectedItem.quantity.toLocaleString()], ["단가", selectedItem.unitPrice == null ? "미등록" : `${selectedItem.unitPrice.toLocaleString()}원`], ["공급가액", selectedItem.supplyAmount == null ? "미등록" : `${selectedItem.supplyAmount.toLocaleString()}원`], ["부가세", selectedItem.vat == null ? "미등록" : `${selectedItem.vat.toLocaleString()}원`], ["합계 금액", selectedItem.totalAmount == null ? "미등록" : `${selectedItem.totalAmount.toLocaleString()}원`], ["정산 상태", getSettlementLabel(selectedItem.status)]]).map(([label, value]) => <tr key={label}>
-                      <th scope="row">{label}</th>
-                      <td>{value}</td>
-                    </tr>)}
+                  <FinanceDetailRows rows={selectedItem.isApprovalDocument ? [["원본 결재 번호", selectedItem.sourceDocumentId], ["거래 구분", selectedItem.type === "SALES" ? "매출" : "매입"], ["거래일", selectedItem.date], ["정산 마감일", selectedItem.dueDate || "미등록"], ["거래처", selectedItem.customer], ["작성자", selectedItem.requester || "미등록"], ["작성일", selectedItem.createdAt || "미등록"]] : [["거래 ID", selectedItem.transactionId], ["품목 ID", selectedItem.id], ["거래 구분", selectedItem.type === "SALES" ? "매출" : "매입"], ["거래일", selectedItem.date], ["정산 마감일", selectedItem.dueDate || "미등록"], ["거래처", selectedItem.customer], ["제목", selectedItem.itemName], ["품목명", selectedItem.itemName], ["규격", selectedItem.spec], ["수량", selectedItem.quantity == null ? "미등록" : selectedItem.quantity.toLocaleString()], ["단가", selectedItem.unitPrice == null ? "미등록" : `${selectedItem.unitPrice.toLocaleString()}원`], ["공급가액", selectedItem.supplyAmount == null ? "미등록" : `${selectedItem.supplyAmount.toLocaleString()}원`], ["부가세", selectedItem.vat == null ? "미등록" : `${selectedItem.vat.toLocaleString()}원`], ["합계 금액", selectedItem.totalAmount == null ? "미등록" : `${selectedItem.totalAmount.toLocaleString()}원`], ["정산 상태", getSettlementLabel(selectedItem.status)]]} />
                 </tbody>
               </table>
               </div>
@@ -1595,31 +1586,7 @@ function Items({
               {paymentLoading ? <p>정산 정보를 불러오는 중입니다.</p> : paymentHistoryError ? <p role="alert">{paymentHistoryError}</p> : paymentSummary && Number(paymentSummary.transaction_id) === Number(selectedItem.transactionId) && <div>
                     <h4>입금·출금 이력</h4>
 
-                    {paymentSummary.payments.length === 0 ? <p>등록된 입금·출금 이력이 없습니다.</p> : <div className="table-shell finance-voucher-history">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th scope="col">처리 날짜</th>
-                            <th scope="col">구분</th>
-                            <th scope="col">결제수단</th>
-                            <th scope="col">금액</th>
-                            <th scope="col">처리 상태</th>
-                          </tr>
-                        </thead>
-
-                        <tbody>
-                          {paymentSummary.payments.map(payment => <tr key={payment.payment_id}>
-                              <td>{payment.payment_date}</td>
-                              <td>{payment.payment_direction}</td>
-                              <td>{payment.payment_method}</td>
-                              <td>
-                                {Number(payment.amount).toLocaleString()}원
-                              </td>
-                              <td>{payment.payment_status}</td>
-                            </tr>)}
-                        </tbody>
-                      </table>
-                      </div>}
+                    {paymentSummary.payments.length === 0 ? <p>등록된 입금·출금 이력이 없습니다.</p> : <FinancePaymentHistory className="finance-voucher-history" payments={paymentSummary.payments} />}
                   </div>}
 
               {selectedItem.linkedSourceType && <p>승인 문서에 연결된 거래입니다. 승인 금액을 유지하며 이 전표에서 지급·정산할 수 있습니다.</p>}
@@ -1664,14 +1631,7 @@ function Items({
           marginBottom: '12px'
         }}>
             <h4 className="board-title finance-calendar-title">품목 정산 마감 일정</h4>
-            <ul className="grouplist">
-              <li><button type="button" className={calendarType === 'week' ? 'active' : ''} onClick={() => setCalendarType('week')}>
-                주간
-              </button></li>
-              <li><button type="button" className={calendarType === 'month' ? 'active' : ''} onClick={() => setCalendarType('month')}>
-                월간
-              </button></li>
-            </ul>
+            <FilterTabs label="달력 보기" options={[{ value: 'week', label: '주간' }, { value: 'month', label: '월간' }]} value={calendarType} onChange={setCalendarType} />
           </div>
 
 

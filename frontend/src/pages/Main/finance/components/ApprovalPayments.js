@@ -1,3 +1,5 @@
+// [공통화 추가] 재무 전용 공통 컴포넌트·함수 재사용 (상위 공용 파일 수정 없음)
+import { getFinanceError, koreaDate as todayInKorea } from './financeUtils';
 import React, { useEffect, useState } from "react";
 import ModalBase from "../../../../components/ModalBase";
 import { getApprovalPayments, createApprovalPayment, getBankAccounts, getCorporateCards } from "../../../../utils/financeService";
@@ -7,15 +9,7 @@ import "../../../../css/Table.css";
 import "../../../../css/SubMain.css";
 import "../../../../css/ModalPopup.css";
 
-function todayInKorea() {
-  const parts = new Intl.DateTimeFormat("en", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).formatToParts(new Date());
-  return ["year", "month", "day"].map(type => parts.find(part => part.type === type).value).join("-");
-}
+// [공통화] 지급 날짜는 financeUtils.koreaDate를 사용합니다.
 export default function ApprovalPayments({
   approval,
   loginUser,
@@ -66,7 +60,7 @@ export default function ApprovalPayments({
           setPayments(data.payments);
         }
       } catch (err) {
-        if (!cancelled) setError(err.response?.data?.message || "지급 현황을 불러오지 못했습니다.");
+        if (!cancelled) setError(getFinanceError(err, "지급 현황을 불러오지 못했습니다."));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -219,7 +213,7 @@ export default function ApprovalPayments({
       setRefresh(previous => previous + 1);
       await onPaid();
     } catch (err) {
-      setFormError(err.response?.data?.message || "지급 결과를 확인하지 못했습니다. 지급 현황을 다시 조회한 뒤 확인해 주세요.");
+      setFormError(getFinanceError(err, "지급 결과를 확인하지 못했습니다. 지급 현황을 다시 조회한 뒤 확인해 주세요."));
       setSummary(null);
       setRefresh(previous => previous + 1);
     } finally {

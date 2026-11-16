@@ -1,3 +1,8 @@
+// [공통화 추가] 재무 전용 공통 컴포넌트·함수 재사용 (상위 공용 파일 수정 없음)
+import FinanceSearchForm from '../components/FinanceSearchForm';
+import FinanceDetailRows from '../components/FinanceDetailRows';
+import FinanceStatusBadge from '../components/FinanceStatusBadge';
+import { getFinanceError } from '../components/financeUtils';
 import React, { useEffect, useState } from "react";
 import PaginationTable from "../../../../components/PaginationTable";
 import { getApprovals, getApprovalSteps, getFinanceEmployees, createApproval, decideApproval, uploadApprovalAttachment, getApprovalAttachments, downloadApprovalAttachment } from "../../../../utils/financeService";
@@ -126,7 +131,7 @@ function Approval({
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err.response?.data?.message || "결재 문서 목록을 불러오지 못했습니다.");
+          setError(getFinanceError(err, "결재 문서 목록을 불러오지 못했습니다."));
         }
       } finally {
         if (!cancelled) {
@@ -186,7 +191,7 @@ function Approval({
         }
       } catch (err) {
         if (!cancelled) {
-          setStepsError(err.response?.data?.message || "결재 처리 이력을 불러오지 못했습니다.");
+          setStepsError(getFinanceError(err, "결재 처리 이력을 불러오지 못했습니다."));
         }
       } finally {
         if (!cancelled) {
@@ -233,7 +238,7 @@ function Approval({
         const data = await getApprovalAttachments(selectedApprovalId);
         if (!cancelled) setAttachmentList(data);
       } catch (error) {
-        if (!cancelled) setAttachmentListError(error.response?.data?.message || "첨부파일 목록을 불러오지 못했습니다.");
+        if (!cancelled) setAttachmentListError(getFinanceError(error, "첨부파일 목록을 불러오지 못했습니다."));
       } finally {
         if (!cancelled) setAttachmentListLoading(false);
       }
@@ -272,9 +277,9 @@ function Approval({
   const tApprovalData = filteredApprovals.map(item => {
     const statusClass = item.status === "대기" ? "status-pending" : item.status === "반려" ? "status-danger" : "status-success";
     return {
-      content: [item.id, item.department, item.requester, <strong>{item.title}</strong>, item.amount == null ? "미등록" : `${item.amount.toLocaleString()}원`, item.paymentMethod, item.attachmentCount > 0 ? `${item.attachmentCount}건` : "미첨부", item.deadline, <span className={`status-badge ${statusClass}`}>
+      content: [item.id, item.department, item.requester, <strong>{item.title}</strong>, item.amount == null ? "미등록" : `${item.amount.toLocaleString()}원`, item.paymentMethod, item.attachmentCount > 0 ? `${item.attachmentCount}건` : "미첨부", item.deadline, <FinanceStatusBadge tone={statusClass}>
           {item.status}
-        </span>, <button type="button" disabled={decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy} onClick={() => openApprovalDetail(item.id)}>
+        </FinanceStatusBadge>, <button type="button" disabled={decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy} onClick={() => openApprovalDetail(item.id)}>
           상세
         </button>]
     };
@@ -318,7 +323,7 @@ function Approval({
         setError("결재 처리는 완료됐지만 목록 재조회에 실패했습니다. 새로고침해 확인해 주세요.");
       }
     } catch (err) {
-      setDecisionError(err.response?.data?.message || "처리 결과를 확인하지 못했습니다. 최신 상태를 확인한 뒤 다시 시도해 주세요.");
+      setDecisionError(getFinanceError(err, "처리 결과를 확인하지 못했습니다. 최신 상태를 확인한 뒤 다시 시도해 주세요."));
       // 중복 요청이나 통신 오류가 나면 실제 DB 상태와 결재 순서를 다시 확인합니다.
       setStepsRefresh(previous => previous + 1);
       try {
@@ -379,7 +384,7 @@ function Approval({
         setAttachmentMessage("파일은 첨부되었습니다. 목록 재조회에 실패했으므로 F5로 첨부 건수를 확인해 주세요.");
       }
     } catch (err) {
-      setAttachmentError(err.response?.data?.message || "첨부 결과를 확인하지 못했습니다. F5로 첨부 건수를 확인한 뒤 다시 시도해 주세요.");
+      setAttachmentError(getFinanceError(err, "첨부 결과를 확인하지 못했습니다. F5로 첨부 건수를 확인한 뒤 다시 시도해 주세요."));
     } finally {
       setAttachmentPassword("");
       setAttachmentSaving(false);
@@ -400,7 +405,7 @@ function Approval({
       document.body.appendChild(link);
       link.click();
     } catch (error) {
-      setDownloadError(error.response?.data?.message || "첨부파일을 다운로드하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      setDownloadError(getFinanceError(error, "첨부파일을 다운로드하지 못했습니다. 잠시 후 다시 시도해 주세요."));
     } finally {
       link?.remove();
       // 브라우저가 다운로드를 시작한 뒤 임시 URL을 해제합니다.
@@ -511,7 +516,7 @@ function Approval({
       }
       alert(result.message);
     } catch (err) {
-      setDraftError(err.response?.data?.message || "결재 기안 등록에 실패했습니다.");
+      setDraftError(getFinanceError(err, "결재 기안 등록에 실패했습니다."));
     } finally {
       setDraftSaving(false);
     }
@@ -624,26 +629,10 @@ function Approval({
       <hr />
 
       <section>
-        <form className="finance-card-search" onSubmit={handleSearch}>
-          <label htmlFor="approval-status">결재 상태: </label>
-          <select id="approval-status" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-            <option value="ALL">전체 보기</option>
-            <option value="대기">대기</option>
-            <option value="승인">승인</option>
-            <option value="반려">반려</option>
-          </select>
-
-          <label htmlFor="approval-department">부서 선택: </label>
-          <select id="approval-department" value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)}>
-            <option value="ALL">전체 부서</option>
-
-            {departmentOptions.map(department => <option key={department} value={department}>
-                {department}
-              </option>)}
-          </select>
-
-          <button type="submit">조회</button>
-        </form>
+        <FinanceSearchForm onSubmit={handleSearch} filters={[
+  { id: 'approval-status', label: '결재 상태: ', value: statusFilter, onChange: setStatusFilter, options: [{ value: 'ALL', label: '전체 보기' }, ...['대기', '승인', '반려'].map(value => ({ value, label: value }))] },
+  { id: 'approval-department', label: '부서 선택: ', value: departmentFilter, onChange: setDepartmentFilter, options: [{ value: 'ALL', label: '전체 부서' }, ...departmentOptions.map(value => ({ value, label: value }))] }
+ ]} />
       </section>
 
       <br />
@@ -661,10 +650,7 @@ function Approval({
                   <div className="table-shell">
                     <table className="finance-approval-fields">
                       <tbody>
-                        {[["문서 ID", selectedApproval.id], ["제목", selectedApproval.title], ["문서 유형", selectedApproval.documentType], ["상신 부서", selectedApproval.department], ["작성자", selectedApproval.requester], ["신청 금액", selectedApproval.amount == null ? "미등록" : `${selectedApproval.amount.toLocaleString()}원`], ["등록된 결제수단", selectedApproval.paymentMethod], ["처리 마감일", selectedApproval.deadline], ["진행 상태", selectedApproval.status], ["작성일시", selectedApproval.createdAt], ["첨부파일 수", `${selectedApproval.attachmentCount}건`]].map(([label, value]) => <tr key={label}>
-                            <th scope="row">{label}</th>
-                            <td>{value}</td>
-                          </tr>)}
+                        <FinanceDetailRows rows={[["문서 ID", selectedApproval.id], ["제목", selectedApproval.title], ["문서 유형", selectedApproval.documentType], ["상신 부서", selectedApproval.department], ["작성자", selectedApproval.requester], ["신청 금액", selectedApproval.amount == null ? "미등록" : `${selectedApproval.amount.toLocaleString()}원`], ["등록된 결제수단", selectedApproval.paymentMethod], ["처리 마감일", selectedApproval.deadline], ["진행 상태", selectedApproval.status], ["작성일시", selectedApproval.createdAt], ["첨부파일 수", `${selectedApproval.attachmentCount}건`]]} />
 
                         <tr>
                           <th scope="row">내용</th>
