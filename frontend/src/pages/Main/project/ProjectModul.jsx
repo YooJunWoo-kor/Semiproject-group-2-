@@ -13,17 +13,16 @@ export default function ProjectModul() {
   const [projectData, setProjectData] = useState([]);
   const [filterType, setFilterType] = useState('ALL'); // 필터 상태 추가 ('ALL', 'IN_PROGRESS', 'UPCOMING', 'COMPLETED')
 
-  const getProjectData = async function () {
-    try {
-      let data = await axios.get(API_BASE_URL + '/project/getproject');
-      for (let i = 0; i < data.data.data.length; i++) {
-        data.data.data[i].start = formatDateToYYYYMMDD(data.data.data[i].start);
-        data.data.data[i].end = formatDateToYYYYMMDD(data.data.data[i].end);
-      }
-      console.log(data.data.data);
-      setProjectData(data.data.data);
-    } catch (err) {
-      alert('데이터 조회 실패', err.response?.data?.message);
+  const getProjectData = async function(){
+    try{
+        let data = await axios.get(API_BASE_URL + '/project/getproject')
+        for(let i = 0; i < data.data.data.length; i++){
+          data.data.data[i].start = formatDateToYYYYMMDD(data.data.data[i].start);
+          data.data.data[i].end = formatDateToYYYYMMDD(data.data.data[i].end);
+        }
+        setProjectData(data.data.data);
+    }catch(err){ 
+        alert('데이터 조회 실패', err.response?.data?.massage);
     }
   };
 

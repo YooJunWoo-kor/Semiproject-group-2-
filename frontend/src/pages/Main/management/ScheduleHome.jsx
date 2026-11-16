@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Routes, Route, Navigate, Link, NavLink } from 'react-router-dom';
+import { Routes, Route, Navigate, NavLink } from 'react-router-dom';
 import ScheduleModul from './ScheduleModul';
 import MeetingRoomPage from "./pages/MeetingRoomPage";
 

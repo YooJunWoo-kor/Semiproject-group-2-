@@ -171,5 +171,214 @@ form.draft-box > label { display: flex; flex-direction: column; gap: 10px; color
 @media (max-width: 680px) {
   form.draft-box > label, form.draft-box > .draft-row, form.draft-box > .draft-box, .draft-item { padding: 16px; }
   .draft-row > p, .draft-row > label { flex-basis: 100%; }
-  .draft-actions > button { flex: 1 1 auto; }
+  .draft-actions > button { flex: 1 1 auto;  }
+}
+
+
+
+/* 비용 기안서: 기존 draft-box, table-shell, 버튼 스타일 재사용 */
+form.draft-box > .table-shell {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card, 12px);
+  box-shadow: var(--card-shadow);
+}
+
+form.draft-box > .table-shell table {
+  width: 100%;
+  min-width: 790px;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+form.draft-box > .table-shell th,
+form.draft-box > .table-shell td {
+  padding: 12px 10px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--color-line);
+}
+
+form.draft-box > .table-shell th {
+  color: var(--color-ink);
+  background: #f2f8ff;
+  font-size: .88rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+form.draft-box > .table-shell th:nth-child(1) { width: 21%; }
+form.draft-box > .table-shell th:nth-child(2) { width: 22%; }
+form.draft-box > .table-shell th:nth-child(3) { width: 18%; }
+form.draft-box > .table-shell th:nth-child(4) { width: 27%; }
+form.draft-box > .table-shell th:nth-child(5) { width: 12%; }
+
+form.draft-box > .table-shell tbody tr { cursor: default; }
+form.draft-box > .table-shell tbody tr:hover { background: #f8fbff; }
+form.draft-box > .table-shell tbody tr:last-child td { border-bottom: 0; }
+
+form.draft-box > .table-shell td input {
+  min-width: 0;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+}
+
+form.draft-box > .table-shell td:nth-child(3) input {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+form.draft-box > .table-shell td:last-child { text-align: center; }
+form.draft-box > .table-shell td:last-child button {
+  min-height: 38px;
+  padding: 7px 12px;
+  color: var(--color-danger);
+  border-color: var(--color-line);
+  white-space: nowrap;
+}
+
+form.draft-box > p {
+  padding: 14px 18px;
+  text-align: right;
+  color: var(--color-ink);
+  font-size: 1.05rem;
+  font-weight: 700;
+  background: #f2f8ff;
+  border: 1px solid var(--color-line);
+  border-radius: var(--layer-radius, 10px);
+  font-variant-numeric: tabular-nums;
+}
+
+form.draft-box > label > input[type='file'] {
+  min-height: 48px;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+
+form.draft-box > label > input[type='file']::file-selector-button {
+  margin-right: 12px;
+  padding: 7px 12px;
+  color: var(--color-brand);
+  background: #f2f8ff;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+form.draft-box > button[type='button'] {
+  width: max-content;
+  justify-self: end;
+  color: var(--color-brand);
+  border-color: var(--color-line);
+  background: var(--color-surface);
+}
+
+form.draft-box > button[type='button']:hover {
+  background: #f2f8ff;
+  border-color: var(--color-brand);
+}
+
+@media (max-width: 680px) {
+  form.draft-box > .table-shell th,
+  form.draft-box > .table-shell td { padding: 10px 8px; }
+  form.draft-box > button[type='button'] { width: 100%; justify-self: stretch; }
+}
+
+/* 전자결재 목록 3종에만 적용: 공용 BasicTable/다른 화면의 테이블은 변경하지 않음 */
+.draft-list-view,
+.draft-list-view .pagination-table-wrapper,
+.draft-list-view .attendance-card {
+  min-width: 0;
+  width: 100%;
+}
+
+.draft-list-view .table-shell {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.draft-list-view .table-shell table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.draft-list-view .table-shell th,
+.draft-list-view .table-shell td {
+  text-align: center;
+  vertical-align: middle;
+  padding: 13px 10px;
+  line-height: 1.55;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.draft-list-view .table-shell th {
+  font-size: 12px;
+}
+
+.draft-list-view .table-shell td {
+  font-size: 13px;
+}
+
+.draft-list-view .table-shell .draft-actions {
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin-top: 0;
+}
+
+.draft-list-view .table-shell .draft-actions button,
+.draft-list-view .table-shell td > button {
+  max-width: 100%;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.draft-list-view .table-shell .table-link-title {
+  display: inline-block;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+/* 내 결재 요청: 제목 / 문서 종류 / 작성일 / 상태 / 관리 */
+.draft-list-view[data-page="draft-request"] table { min-width: 850px; }
+.draft-list-view[data-page="draft-request"] th:nth-child(1) { width: 27%; }
+.draft-list-view[data-page="draft-request"] th:nth-child(2) { width: 14%; }
+.draft-list-view[data-page="draft-request"] th:nth-child(3) { width: 22%; }
+.draft-list-view[data-page="draft-request"] th:nth-child(4) { width: 13%; }
+.draft-list-view[data-page="draft-request"] th:nth-child(5) { width: 24%; }
+
+/* 결재할 문서: 결재요청자 / 제목 / 문서 종류 / 내용 / 작성일 / 상태 / 관리 */
+.draft-list-view[data-page="draft-received"] table { min-width: 1040px; }
+.draft-list-view[data-page="draft-received"] th:nth-child(1) { width: 11%; }
+.draft-list-view[data-page="draft-received"] th:nth-child(2) { width: 16%; }
+.draft-list-view[data-page="draft-received"] th:nth-child(3) { width: 11%; }
+.draft-list-view[data-page="draft-received"] th:nth-child(4) { width: 20%; }
+.draft-list-view[data-page="draft-received"] th:nth-child(5) { width: 15%; }
+.draft-list-view[data-page="draft-received"] th:nth-child(6) { width: 13%; }
+.draft-list-view[data-page="draft-received"] th:nth-child(7) { width: 14%; }
+
+/* 결재 완료: 작성자 / 제목 / 문서 종류 / 내용 / 작성일 / 문서 상태 */
+.draft-list-view[data-page="draft-approved"] table { min-width: 900px; }
+.draft-list-view[data-page="draft-approved"] th:nth-child(1) { width: 14%; }
+.draft-list-view[data-page="draft-approved"] th:nth-child(2) { width: 19%; }
+.draft-list-view[data-page="draft-approved"] th:nth-child(3) { width: 12%; }
+.draft-list-view[data-page="draft-approved"] th:nth-child(4) { width: 27%; }
+.draft-list-view[data-page="draft-approved"] th:nth-child(5) { width: 17%; }
+.draft-list-view[data-page="draft-approved"] th:nth-child(6) { width: 11%; }
+
+@media (max-width: 900px) {
+  .draft-list-view .table-shell th,
+  .draft-list-view .table-shell td {
+    padding: 11px 8px;
+  }
 }

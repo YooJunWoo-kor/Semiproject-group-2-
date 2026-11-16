@@ -3,7 +3,7 @@ import PaginationTable from "../../../../components/PaginationTable";
 
 function DraftApproved({ drafts }) {
     return (
-        <div className="draft-box">
+        <div className="draft-box draft-list-view" data-page="draft-approved">
             <h2>내가 승인한 기안서</h2>
             
 {drafts.length === 0 ? (

@@ -4,44 +4,9 @@ const router = express.Router();
 const db = require('../db');
 
 // multer가 이미지 파일을 저장하기 위한 코드
-const multer = require("multer"); // 파일 처리
-const path = require("path"); // 경로
-const fs = require("fs"); // 폴더 관리
-const { randomUUID } = require("crypto"); // 고유 파일명 생성
-
-const uploadPath = path.join(__dirname, "../uploads/Images");
-
-fs.mkdirSync(uploadPath, { recursive: true }) // recursive:true (상위폴더가 존재하지 않아도 한번에 필요한 폴더 생성)
-
-const imageTypes = {
-    "image/jpeg" : ".jpg",
-    "image/png" : ".png",
-    "image/webp" : ".webp"
-};
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadPath);
-    },
-
-    filename: (req, file, cb) => {
-        const filename = randomUUID() + imageTypes[file.mimetype];
-        cb(null, filename);
-    }
-})
-
-// 파일 업로드 제한 설정
-const upload = multer({
-    storage,
-    limits: {fileSize: 5 * 1024 * 1024},
-    fileFilter: (req, file, cb) => {
-        if(!imageTypes[file.mimetype]){
-            return cb(new Error("JPG, PNG, WEBP 파일만 가능합니다."))
-        }
-        
-        cb(null, true);
-    }
-})
+const fs = require("fs"); // 업로드 실패 시 파일 정리
+const createImageUpload = require("../middleware/imageUpload");
+const upload = createImageUpload("Images");
 
 //제품 목록 조회
 router.get('/products', (req,res) => {
