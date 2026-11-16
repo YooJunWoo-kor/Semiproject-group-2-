@@ -14,6 +14,7 @@ const emptyForm = {
     paymentType: "수당",
     payMonth: "",
     paymentDate: "",
+    paymentDetail : ""
 
 };
 
@@ -36,7 +37,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
         }
     ]);
 
-    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount, paymentType, payMonth, paymentDate } = form;
+    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount, paymentType, payMonth, paymentDate, paymentDetail } = form;
 
     useEffect(() => {
         const loadDepartments = async () => {
@@ -68,6 +69,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             amount: detail.amount ?? "",
             paymentType: detail.paymentType || "수당",
             payMonth: detail.payMonth || "",
+            paymentDetail : detail.paymentDetail || "",
         });
         setApprovers(editingDraft.approvers || []);
     }, [editingDraft]);
@@ -104,6 +106,11 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
 
         if (!title.trim()) {
             alert("제목을 입력해주세요.");
+            return;
+        }
+
+        if(!paymentDetail.trim()){
+            alert("상세 내용을 입력해주세요");
             return;
         }
 
@@ -157,14 +164,14 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
 
         const detailData =
 
-        draftType === "휴가" ? { startDate, endDate } :
-        draftType === "구매" ? { itemName, quantity } :
-        draftType === "비용" ? { expenseItems, totalAmount } :
-        draftType === "추가급여" ? {
-            paymentType,
-            payMonth,
-            amount: amount === "" ? null : Number(amount)
-        } : {};
+            draftType === "휴가" ? { startDate, endDate } :
+                draftType === "구매" ? { itemName, quantity } :
+                    draftType === "비용" ? { expenseItems, totalAmount } :
+                        draftType === "추가급여" ? {
+                            paymentType,
+                            payMonth,
+                            amount: amount === "" ? null : Number(amount)
+                        } : {};
 
         const payload = {
             employeeId, title: title.trim(), documentType: draftType,
@@ -366,6 +373,17 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                                 </select>
                             </label>
                         </div>
+
+                        <label>상세 분류
+                            <input
+                                type="text"
+                                name="paymentDetail"
+                                value={paymentDetail}
+                                onChange={handleInputChange}
+                                placeholder="예: 야근 수당, 근무 수당, 성과급"
+                                maxLength={50}
+                            />
+                        </label>
 
                         <div className="draft-row">
                             <label>지급 예정일
