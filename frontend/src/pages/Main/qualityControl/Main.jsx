@@ -15,17 +15,17 @@ function Main() {
     const [searchText, setSearchText] = useState("");
 
     useEffect(() => {
-        const loadCalender = async () => {
+        const loadCalendar = async () => {
             try{
                 const response = await axios.get(API_BASE_URL + "/quality/calendar/events");
 
                 setCalendarEvents(response.data);
             }
             catch (error){
-                console.error("캘린저 조회 실패");
+                console.error("캘린더 조회 실패:", error);
             }
         }
-        loadCalender();
+        loadCalendar();
     }, []);
 
     useEffect(() => {
@@ -78,26 +78,33 @@ function Main() {
         return <p role="alert">{error}</p>;
     }
 
-    const calendarSchedules = calendarEvents.filter(item =>
-        (statusFilter === "전체" || item.quality_status === statusFilter) &&
-        (
-            item.product_name.includes(searchText) ||
-            item.product_code.includes(searchText)
+    const keyword = searchText.trim().toLowerCase();
+    const calendarSchedules = calendarEvents
+        .filter(item =>
+            (statusFilter === "전체" || item.quality_status === statusFilter) &&
+            (
+                (item.product_name || "").toLowerCase().includes(keyword) ||
+                (item.product_code || "").toLowerCase().includes(keyword)
+            )
         )
-    ).map(item => ({
-        schedule_id: item.event_id,
-        title: `${item.product_name} (${item.product_code}) - ${item.event_type}`,
-        start: item.event_date,
-        end: item.event_date,
-        typeId: item.event_type === "검사 완료" ? (item.quality_status === "통과" ? 3 : 2) : 0
-    }));
+        .map(item => ({
+            schedule_id: item.event_id,
+            title: `${item.product_name} (${item.product_code}) · ${item.event_type === "검사 완료"
+                ? `검사 완료 (${item.quality_status})`
+                : item.event_type}`,
+            start: item.event_date,
+            end: item.event_date,
+            typeId: item.event_type === "검사 완료"
+                ? (item.quality_status === "통과" ? 3 : 2)
+                : (item.event_type === "재검사 예정" ? 1 : 0)
+        }));
 
     return (
         <div className="quality-dashboard-page">
             <header className="dashboard-header">
                 <span className="subtitle">품질관리 대시보드</span>
                 <div className="dashboard-top">
-                    <span className="subtext">실시간 품질 현황</span>
+                    <span className="subtext">제품별 검사 결과와 향후 검사 일정을 확인하세요.</span>
                 </div>
             </header>
 
@@ -112,6 +119,7 @@ function Main() {
 
             <div className="quality-panel-heading">
                 <h2>품질 검사 일정</h2>
+                <span className="quality-header-badge">표시 일정 {calendarSchedules.length}건</span>
             </div>
 
             <div className="quality-toolbar">
@@ -122,6 +130,7 @@ function Main() {
 
                 <div className="quality-filter-controls">
                     <select
+                        aria-label="캘린더 검사 상태 필터"
                         value={statusFilter}
                         onChange={e => setStatusFilter(e.target.value)}
                     >
@@ -135,6 +144,7 @@ function Main() {
                         <input
                             type="text"
                             placeholder="제품명 또는 제품코드 검색"
+                            aria-label="캘린더 제품 검색"
                             value={searchText}
                             onChange={e => setSearchText(e.target.value)}
                         />
@@ -142,7 +152,7 @@ function Main() {
                 </div>
             </div>
 
-            <BasicCalendar schedule={calendarSchedules} />
+            <BasicCalendar schedule={calendarSchedules} readOnly />
         </section>
 
             <div className="quality-dashboard-grid">
