@@ -13,9 +13,10 @@ import MyPage from './mypage/MyPage';
 import ProjectHome from './project/ProjectHome';
 import HeaderNav from '../../components/HeaderNav';
 import MyTeskList from './mytesk/MyTeskList';
+import { useScheduleAlarm } from '../../utils/useScheduleAlarm';
 
 function MainApp() {
-    
+    useScheduleAlarm();
     return (
         <div className="main-sell" data-theme='light'>
             <HeaderNav />

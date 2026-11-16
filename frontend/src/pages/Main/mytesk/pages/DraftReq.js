@@ -12,12 +12,12 @@ function DraftReq({ drafts, setEditingDraft, onDraftChanged }) {
     const [selectedDraft, setSelectedDraft] = useState(null);
 
     const navigate = useNavigate();
-    const employeeId = getLoginUser()?.employeeKey;
+    const employeeId = Number(getLoginUser()?.employeeKey);
 
     const requestedDrafts = drafts.filter(draft =>
-        draft.writerEmployeeKey === employeeId &&
+        Number(draft.writerEmployeeKey) === employeeId &&
         draft.status !== "최종승인" &&
-        draft.title.includes(searchText)
+        (draft.title || "").includes(searchText)
     );
 
     async function handleDelete(id) {
@@ -33,8 +33,26 @@ function DraftReq({ drafts, setEditingDraft, onDraftChanged }) {
         }
     }
 
+    const CancelReq = async (draftId) => {
+        if(!window.confirm("결재 요청을 취소하시겠습니까?")){
+            return;
+        }
+
+        try{
+            await axios.delete(`${API_BASE_URL}/drafts/cancel/${draftId}/${employeeId}`
+            );
+
+            await onDraftChanged();
+            
+        }
+        catch (error){
+            console.error("요청 취소 오류:", error);
+            alert(error.response?.data?.message || "결재 요청 취소에 실패했습니다.");
+        }
+    }
+
     return (
-        <div className="draft-box" data-page="draft-request">
+        <div className="draft-box draft-list-view" data-page="draft-request">
             <h2>요청된 기안서 / 임시저장된 기안서</h2>
     
             <input
@@ -81,7 +99,7 @@ function DraftReq({ drafts, setEditingDraft, onDraftChanged }) {
                                     삭제
                                 </button>
                             </div>
-                        ) : null
+                        ) : draft.status === "결재대기" ? (<button onClick={() => CancelReq(draft.id)}>요청취소</button>) : null
                     ]
                 }))}
 

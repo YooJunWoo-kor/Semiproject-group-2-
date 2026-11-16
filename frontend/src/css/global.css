@@ -3,7 +3,7 @@
     --radius-card: 14px;
     --layer-radius: 10px;
     --layer-shadow: 0px 10px 10px #527d8a55;
-    --card-shadow: 0px 3px 5px #527d8a33;
+    --card-shadow: 0px 3px 5px #2831336b;
     --button-radius: 5px;
     
     --nav-radius: 6px;
@@ -17,4 +17,33 @@
     padding: 10;
     border-radius: 12px;
     box-shadow: var(--card-shadow),
+}
+
+.vertical-box{
+    display: flex;
+    flex-flow: column;
+    gap:10px;
+}
+
+.vertical-box > * {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    margin: 0;
+}
+
+.horizontal-box{
+    display: flex;
+    flex-flow: low;
+    gap:10px;
+    align-items: center;
+}
+
+.horizontal-box > * {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    margin: 0;
+  }
+
+.size-fill{
+    flex: 1;
 }

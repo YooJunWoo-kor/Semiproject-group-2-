@@ -25,6 +25,14 @@ ChartJS.register(
     Legend
 );
 
+// CategoryScale 가로축에 '통과', '불합격' 같은 항목 표시
+// LinearScale	세로축에 0, 1, 2, 3 같은 숫자 표시
+// BarElement	막대그래프를 그리는 기능
+// ArcElement	원형그래프의 조각을 그리는 기능
+// Title	그래프 제목 기능
+// Tooltip	마우스를 올렸을 때 나오는 정보
+// Legend	그래프의 범례 기능
+
 const ANIMATION_DURATION = 900;
 
 const barValuePlugin = {

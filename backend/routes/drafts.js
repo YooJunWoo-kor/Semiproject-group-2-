@@ -3,6 +3,9 @@ const router = express.Router();
 const Draft = require('../models/Draft_function');
 const db = require('../db');
 
+const createImageUpload = require("../middleware/imageUpload");
+const receiptUpload = createImageUpload("Receipts");
+
 function isValidDetailData(detailData) {
     return detailData !== null &&
         typeof detailData === 'object' &&
@@ -250,6 +253,36 @@ router.get('/departments', (req, res) => {
     })
 })
 
+router.post("/:draftId/receipt", receiptUpload.single("receipt"), (req, res) => {
+    const draftId = Number(req.params.draftId);
+    const employeeId = Number(req.body.employeeId);
+
+    if(!req.file || !employeeId){
+        return res.status(400).json({ message : "영수증 정보가 없습니다"});
+    }
+
+    const imageUrl = `/api/drafts/receipts/${req.file.filename}`
+
+    db.query(
+        `UPDATE my_draft
+         SET receipt_image_url = ? 
+         WHERE draft_id = ? AND employee_id = ?
+         AND document_type = '비용'
+         AND status IN ('DRAFT','PENDING')
+         AND receipt_image_url IS NULL` ,
+         [imageUrl, draftId, employeeId],
+         
+         (err, result) => {
+            if(err) return res.status(500).json({message: "저장 실패"});
+
+         
+
+         res.json({imageUrl});
+         }
+         
+    )
+})
+
 
 // 3. 기안서 상세 조회
 router.get('/:draftId', async (req, res) => {
@@ -297,6 +330,33 @@ router.get('/:draftId', async (req, res) => {
             message: '기안서 조회 중 오류가 발생했습니다.'
         });
     }
+});
+
+router.delete('/cancel/:draftId/:employeeId', (req, res) => {
+    const draftId = Number(req.params.draftId);
+    const employeeId = Number(req.params.employeeId);
+
+    if (!Number.isSafeInteger(draftId) || draftId <= 0 ||
+        !Number.isSafeInteger(employeeId) || employeeId <= 0) {
+        return res.status(400).json({ message: '올바른 문서 및 사원 ID가 필요합니다.' });
+    }
+
+    // 기존 취소 동작(결재대기 문서 삭제)은 유지한다.
+    const sql = `
+        DELETE FROM my_draft
+        WHERE draft_id = ? AND employee_id = ? AND status = 'PENDING'
+    `;
+
+    db.query(sql, [draftId, employeeId], (err, result) => {
+        if (err) {
+            console.error('결재 요청 취소 오류:', err);
+            return res.status(500).json({ message: '결재 요청 취소 실패' });
+        }
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: '취소 가능한 결재 요청이 없습니다.' });
+        }
+        return res.json({ message: '결재 요청 취소 완료' });
+    });
 });
 
 

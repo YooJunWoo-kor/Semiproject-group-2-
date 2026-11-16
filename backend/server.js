@@ -2,12 +2,13 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-
 const db = require('./db');
 const app = express();
+// 미들웨어
+app.use(cors());
+app.use(express.json());
 
 const PORT = process.env.PORT || 4000;
-
 const path = require("path");
 
 // 라우터
@@ -24,9 +25,13 @@ const mrRoutes = require('./routes/mrRoutes');
 // 품질관리 라우터 추가
 const qualityRoutes = require('./routes/quality');
 
-// 미들웨어
-app.use(cors());
-app.use(express.json());
+
+
+// 모든 HTTP 요청 확인
+app.use((req, res, next) => {
+    console.log("요청 도착:", req.method, req.url);
+    next();
+});
 
 // API 연결
 app.use('/api/hr', hrRouter);
@@ -130,19 +135,6 @@ app.post('/api/attendance', async (req, res) =>{
 
 
 
-// 3. [사원 목록 조회 API]
-app.get('/api/users', async (req, res) => {
-    try {
-        const [rows] = await db.query(
-            'SELECT id, employee_id, name, email, department, position, phone, created_at FROM users ORDER BY id DESC'
-        );
-        res.json(rows);
-    } catch (error) {
-        console.error('사원 목록 조회 에러:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // 기존 로그인 API
 app.post('/api/login', (req, res) => {
 
@@ -193,10 +185,12 @@ app.post('/api/login', (req, res) => {
                     employee_id: user.employee_id,
                     employee_number: user.employee_number,
                     name: user.name,
+                    email: user.email,
                     department_name: user.department_name,
                     department_id: user.department_id,
                     position: user.position,
                     role: user.role
+                    
                 }
             });
         } else {
@@ -205,6 +199,11 @@ app.post('/api/login', (req, res) => {
             );
         }
     });
+});
+
+// 등록되지 않은 API 요청을 명확한 404 응답으로 안내
+app.use('/api', (req, res) => {
+    res.status(404).json({ message: `등록되지 않은 API 경로: ${req.method} ${req.originalUrl}` });
 });
 
 // 서버 실행

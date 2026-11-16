@@ -57,7 +57,7 @@ function ScheduleModul({dataType = 1}) {
 
                 return {
                     scheduleID: item.schedule_id
-                    ,title: item.description
+                    ,title: item.schedule_name
                     ,start: start
                     ,end: end
                     ,typeId: item.type_id
@@ -65,13 +65,40 @@ function ScheduleModul({dataType = 1}) {
             });
             setMySchduleData(dataSet);
         } catch (error) {
-            alert('내 스케쥴 데이터에러',error.data);
+            console.error(error.response?.data);
+        }
+    };
+
+    //프로젝트에서 등록한 할일 리스트
+    const [myWorklistData, setMyWorklistData] = useState([]);
+
+    const getMyWorklistData = async function () {
+        try {
+            const userID = user.employeeKey;
+            const res = await axios.post(API_BASE_URL + '/schedule/getMyWorklist', { userID });
+            const dataSet = res.data.map((item) => {
+                const start = formatDateToYYYYMMDD(item.start);
+                const end = formatDateToYYYYMMDD(item.end);
+
+                return {
+                    scheduleID: `work_${item.worklist_id}`, // 일반 schedule_id와 충돌 방지
+                    title: `[할일] ${item.title}`,
+                    start: start,
+                    end: end,
+                    typeId: item.type_id
+                };
+            });
+
+            setMyWorklistData(dataSet);
+        } catch (error) {
+            console.error('프로젝트 할 일 스케줄 조회 에러:', error);
         }
     };
 
     useEffect(()=>{
         getSchduleData();
         getMySchduleData();
+        getMyWorklistData();
     },[])
 
     let finalSchadulData = [];
@@ -86,7 +113,7 @@ function ScheduleModul({dataType = 1}) {
                 return !isFind;
             }
         );
-        finalSchadulData = [...allScheduleData, ...filterMySchaduleData];
+        finalSchadulData = [...myWorklistData, ...allScheduleData, ...filterMySchaduleData];
     }
     //내 일정 선택 시
     else if(dataType == 2){
@@ -108,6 +135,11 @@ function ScheduleModul({dataType = 1}) {
             const endDay = new Date(item.end);
             return ((endDay - today)/(1000* 60 * 60 * 34)) < 2;
         });
+    }
+
+    //프로젝트 할일 리스트 보기
+    else if(dataType == 4){
+        finalSchadulData = [...myWorklistData]
     }
 
     //토글에전달할 데이터
