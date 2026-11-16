@@ -720,6 +720,8 @@ export default function UnifiedEmployees() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
   const historyRequestRef = useRef(0);
+  const [openPayrollMenu, setOpenPayrollMenu] = useState(null);
+  const payrollMenuRef = useRef(null);
 
   // 페이지를 오래 열어 둔 상태에서 월이 바뀌면 현재월을 자동 반영합니다.
   // 사용자가 과거 월을 직접 선택한 경우에는 그 선택을 유지합니다.
@@ -743,6 +745,24 @@ export default function UnifiedEmployees() {
       document.removeEventListener("visibilitychange", syncCurrentPayMonth);
     };
   }, []);
+
+  useEffect(() => {
+    if (!openPayrollMenu) {
+      return undefined;
+    }
+
+    function closeMenuOnOutsideClick(event) {
+      if (!payrollMenuRef.current?.contains(event.target)) {
+        setOpenPayrollMenu(null);
+      }
+    }
+
+    document.addEventListener("mousedown", closeMenuOnOutsideClick);
+
+    return () => {
+      document.removeEventListener("mousedown", closeMenuOnOutsideClick);
+    };
+  }, [openPayrollMenu]);
 
   async function refreshOrganization() {
     const organization = await fetchOrganization();
@@ -2418,59 +2438,110 @@ export default function UnifiedEmployees() {
                         )}
 
                         {bulkValidation.blockingMessages.length > 0 && (
-                          <p className="hr-single-error" role="alert">
-                            전체 급여 확정 차단: {bulkValidation.blockingMessages.join(", ")}
+                          <p className="hr-payroll-blocking-notice" role="status">
+                            {bulkValidation.blockingMessages.join(" · ")} · 전체 확정 불가
                           </p>
                         )}
 
-                        <div className="employee-detail-actions hr-payroll-actions">
-                          <button
-                            type="button"
-                            className="erp-primary-button"
-                            onClick={generateNextMonthPayrolls}
-                            disabled={!isMaster || saving}
-                          >
-                            다음 달 급여 생성
-                          </button>
-                          <button
-                            type="button"
-                            className="erp-primary-button"
-                            onClick={applyApprovedDraftsToPayroll}
-                            disabled={!isMaster || saving}
-                          >
-                            승인 기안 급여 반영
-                          </button>
-                          <button
-                            type="button"
-                            className="erp-primary-button"
-                            onClick={() =>
-                              bulkConfirmPayrolls(selectedPayrolls, "선택 급여")
-                            }
-                            disabled={
-                              !isMaster ||
-                              selectedPayrolls.length === 0 ||
-                              saving
-                            }
-                          >
-                            선택 급여 확정
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              bulkConfirmPayrolls(
-                                bulkValidation.targetPayrolls,
-                                "전체 급여"
-                              )
-                            }
-                            disabled={
-                              !isMaster ||
-                              bulkValidation.blockingMessages.length > 0 ||
-                              bulkValidation.targetPayrolls.length === 0 ||
-                              saving
-                            }
-                          >
-                            전체 급여 확정
-                          </button>
+                        <div className="employee-detail-actions hr-payroll-actions" ref={payrollMenuRef}>
+                          <div className="hr-payroll-action-menu">
+                            <button
+                              type="button"
+                              className="erp-primary-button"
+                              onClick={() =>
+                                setOpenPayrollMenu((current) =>
+                                  current === "prepare" ? null : "prepare"
+                                )
+                              }
+                              disabled={!isMaster || saving}
+                              aria-haspopup="menu"
+                              aria-expanded={openPayrollMenu === "prepare"}
+                            >
+                              급여 준비 <span aria-hidden="true">▾</span>
+                            </button>
+                            {openPayrollMenu === "prepare" && (
+                              <div className="hr-payroll-menu" role="menu">
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    setOpenPayrollMenu(null);
+                                    generateNextMonthPayrolls();
+                                  }}
+                                  disabled={!isMaster || saving}
+                                >
+                                  다음 달 급여 생성
+                                </button>
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    setOpenPayrollMenu(null);
+                                    applyApprovedDraftsToPayroll();
+                                  }}
+                                  disabled={!isMaster || saving}
+                                >
+                                  승인 기안 급여 반영
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="hr-payroll-action-menu">
+                            <button
+                              type="button"
+                              className="erp-primary-button"
+                              onClick={() =>
+                                setOpenPayrollMenu((current) =>
+                                  current === "confirm" ? null : "confirm"
+                                )
+                              }
+                              disabled={!isMaster || saving}
+                              aria-haspopup="menu"
+                              aria-expanded={openPayrollMenu === "confirm"}
+                            >
+                              급여 확정 <span aria-hidden="true">▾</span>
+                            </button>
+                            {openPayrollMenu === "confirm" && (
+                              <div className="hr-payroll-menu" role="menu">
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    setOpenPayrollMenu(null);
+                                    bulkConfirmPayrolls(selectedPayrolls, "선택 급여");
+                                  }}
+                                  disabled={
+                                    !isMaster ||
+                                    selectedPayrolls.length === 0 ||
+                                    saving
+                                  }
+                                >
+                                  선택 직원 급여 확정
+                                </button>
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    setOpenPayrollMenu(null);
+                                    bulkConfirmPayrolls(
+                                      bulkValidation.targetPayrolls,
+                                      "전체 급여"
+                                    );
+                                  }}
+                                  disabled={
+                                    !isMaster ||
+                                    bulkValidation.blockingMessages.length > 0 ||
+                                    bulkValidation.targetPayrolls.length === 0 ||
+                                    saving
+                                  }
+                                >
+                                  전체 급여 확정
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
                           <button
                             type="button"
                             className="erp-primary-button"
