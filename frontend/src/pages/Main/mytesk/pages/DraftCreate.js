@@ -122,6 +122,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             }
 
 
+
             if (draftType === "비용") {
                 const invalidExpense = expenseItems.some(item => !item.useDate || !item.merchant.trim() || item.amount === ""
                     || !Number.isSafeInteger(Number(item.amount)) || Number(item.amount) <= 0);
@@ -134,12 +135,18 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 }
             }
 
-            draftType === "추가급여" ? {
-                paymentType,
-                payMonth,
-                amount: amount === "" ? null : Number(amount)
-            } : {};
-
+            if (draftType === "추가급여") {
+                if (
+                    !["수당", "상여"].includes(paymentType) ||
+                    !/^\d{4}-(0[1-9]|1[0-2])$/.test(payMonth) ||
+                    amount === "" ||
+                    !Number.isSafeInteger(Number(amount)) ||
+                    Number(amount) <= 0
+                ) {
+                    alert("추가급여 정보를 올바르게 입력해주세요.");
+                    return;
+                }
+            }
         }
 
         const employeeId = Number(getLoginUser()?.employeeKey);
@@ -148,15 +155,16 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             return;
         }
 
-        const detailData = draftType === "휴가" ? { startDate, endDate } :
-            draftType === "구매" ? { itemName, quantity } :
-                draftType === "비용" ? { expenseItems, totalAmount } :
-                    draftType === "추가급여" ? {
-                        targetEmployeeId: targetEmployeeId ? Number(targetEmployeeId) : null,
-                        paymentType,
-                        payMonth,
-                        amount: amount === "" ? null : Number(amount)
-                    } : {};
+        const detailData =
+        
+        draftType === "휴가" ? { startDate, endDate } :
+        draftType === "구매" ? { itemName, quantity } :
+        draftType === "비용" ? { expenseItems, totalAmount } :
+        draftType === "추가급여" ? {
+            paymentType,
+            payMonth,
+            amount: amount === "" ? null : Number(amount)
+        } : {};
 
         const payload = {
             employeeId, title: title.trim(), documentType: draftType,
