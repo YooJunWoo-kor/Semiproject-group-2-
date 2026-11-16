@@ -57,7 +57,7 @@ function toApprovedDraftView(rows, includeUnapproved = false) {
             due_date: readDueDate(detail.due_date),
             approval_status: financeApprovalStatus(row.status), original_approval_status: row.status, document_type: row.document_type,
             created_at: row.created_at,
-            payment_methods: '', attachment_count: 0
+            payment_methods: '', attachment_count: row.receipt_image_url ? 1 : 0
         };
     });
 }

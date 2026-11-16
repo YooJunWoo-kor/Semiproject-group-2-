@@ -1,11 +1,12 @@
 // [공통화 추가] 재무 전용 공통 컴포넌트·함수 재사용 (상위 공용 파일 수정 없음)
+import FinanceAttachments from '../components/FinanceAttachments';
 import FinanceSearchForm from '../components/FinanceSearchForm';
 import FinanceDetailRows from '../components/FinanceDetailRows';
 import FinanceStatusBadge from '../components/FinanceStatusBadge';
 import { getFinanceError } from '../components/financeUtils';
 import React, { useEffect, useState } from "react";
 import PaginationTable from "../../../../components/PaginationTable";
-import { getApprovals, getApprovalSteps, getFinanceEmployees, createApproval, decideApproval, uploadApprovalAttachment, getApprovalAttachments, downloadApprovalAttachment } from "../../../../utils/financeService";
+import { getApprovals, getApprovalSteps, getFinanceEmployees, createApproval, decideApproval } from "../../../../utils/financeService";
 import { getLoginUser } from "../../../../utils/authStorage";
 import ModalBase from "../../../../components/ModalBase";
 import '../components/Finance.css';
@@ -55,19 +56,7 @@ function Approval({
   const [decisionError, setDecisionError] = useState("");
   const [decisionMessage, setDecisionMessage] = useState("");
   const [stepsRefresh, setStepsRefresh] = useState(0);
-  // 증빙파일 첨부 상태
-  const [attachmentFile, setAttachmentFile] = useState(null);
-  const [attachmentPassword, setAttachmentPassword] = useState("");
   const [attachmentSaving, setAttachmentSaving] = useState(false);
-  const [attachmentError, setAttachmentError] = useState("");
-  const [attachmentMessage, setAttachmentMessage] = useState("");
-  const [attachmentInputElement, setAttachmentInputElement] = useState(null);
-  const [attachmentList, setAttachmentList] = useState([]);
-  const [attachmentListLoading, setAttachmentListLoading] = useState(false);
-  const [attachmentListError, setAttachmentListError] = useState("");
-  const [attachmentListRefresh, setAttachmentListRefresh] = useState(0);
-  const [downloadingFileId, setDownloadingFileId] = useState(null);
-  const [downloadError, setDownloadError] = useState("");
   // DB에서 불러온 결재 문서
   const [storedApprovalList, setApprovalList] = useState([]);
   // 서버에서 조회한 결재 문서만 표시합니다.
@@ -113,8 +102,8 @@ function Approval({
   const [employeesLoading, setEmployeesLoading] = useState(false);
   const [employeesError, setEmployeesError] = useState("");
   useEffect(() => {
-    onBusyChange?.(draftSaving || decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy || embedded && (draftOpen || selectedApprovalId !== null));
-  }, [draftSaving, decisionSaving, attachmentSaving, downloadingFileId, paymentBusy, embedded, draftOpen, selectedApprovalId, onBusyChange]);
+    onBusyChange?.(draftSaving || decisionSaving || attachmentSaving || paymentBusy || embedded && (draftOpen || selectedApprovalId !== null));
+  }, [draftSaving, decisionSaving, attachmentSaving, paymentBusy, embedded, draftOpen, selectedApprovalId, onBusyChange]);
   useEffect(() => () => onBusyChange?.(false), [onBusyChange]);
 
   // 화면이 처음 열릴 때 결재 문서를 조회합니다.
@@ -214,40 +203,8 @@ function Approval({
     setDecisionPassword("");
     setDecisionError("");
     setDecisionMessage("");
-    setAttachmentFile(null);
-    setAttachmentPassword("");
-    setAttachmentError("");
-    setAttachmentMessage("");
-    setDownloadError("");
-    if (attachmentInputElement) attachmentInputElement.value = "";
-  }, [selectedApprovalId, attachmentInputElement]);
+  }, [selectedApprovalId]);
 
-  // 문서를 열거나 업로드를 완료하면 첨부파일 목록을 다시 조회합니다.
-  useEffect(() => {
-    let cancelled = false;
-    setAttachmentList([]);
-    setAttachmentListError("");
-    if (selectedApprovalId === null || String(selectedApprovalId).startsWith("draft-")) {
-      if (String(selectedApprovalId).startsWith("draft-")) setAttachmentListError("기안서의 증빙파일은 내업무 관리에서 확인해주세요.");
-      setAttachmentListLoading(false);
-      return;
-    }
-    async function loadAttachments() {
-      setAttachmentListLoading(true);
-      try {
-        const data = await getApprovalAttachments(selectedApprovalId);
-        if (!cancelled) setAttachmentList(data);
-      } catch (error) {
-        if (!cancelled) setAttachmentListError(getFinanceError(error, "첨부파일 목록을 불러오지 못했습니다."));
-      } finally {
-        if (!cancelled) setAttachmentListLoading(false);
-      }
-    }
-    loadAttachments();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedApprovalId, attachmentListRefresh]);
 
   // 목록에 있는 부서명으로 검색 선택 항목을 만듭니다.
   const departmentOptions = [...new Set(approvalList.map(item => item.department))];
@@ -279,7 +236,7 @@ function Approval({
     return {
       content: [item.id, item.department, item.requester, <strong>{item.title}</strong>, item.amount == null ? "미등록" : `${item.amount.toLocaleString()}원`, item.paymentMethod, item.attachmentCount > 0 ? `${item.attachmentCount}건` : "미첨부", item.deadline, <FinanceStatusBadge tone={statusClass}>
           {item.status}
-        </FinanceStatusBadge>, <button type="button" disabled={decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy} onClick={() => openApprovalDetail(item.id)}>
+        </FinanceStatusBadge>, <button type="button" disabled={decisionSaving || attachmentSaving || paymentBusy} onClick={() => openApprovalDetail(item.id)}>
           상세
         </button>]
     };
@@ -287,7 +244,7 @@ function Approval({
   const currentStep = approvalSteps.find(step => step.step_status !== "승인");
   const canDecide = selectedApproval?.status === "대기" && !stepsLoading && !stepsError && currentStep?.step_status === "대기" && Number(currentStep.employee_id) === Number(loginUser?.employee_id);
   async function handleDecision(decision) {
-    if (decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy || !canDecide) return;
+    if (decisionSaving || attachmentSaving || paymentBusy || !canDecide) return;
     if (!decisionPassword) {
       setDecisionError("결재를 처리하려면 로그인 비밀번호를 입력해 주세요.");
       return;
@@ -338,81 +295,6 @@ function Approval({
     }
   }
   const canAttach = selectedApproval?.status === "대기" && Number(loginUser?.employee_id) > 0 && Number(selectedApproval.employeeId) === Number(loginUser?.employee_id);
-  async function handleAttachmentSubmit(event) {
-    event.preventDefault();
-    if (attachmentSaving || decisionSaving || downloadingFileId !== null || paymentBusy || !canAttach) return;
-    setAttachmentError("");
-    setAttachmentMessage("");
-    if (!attachmentFile) {
-      setAttachmentError("첨부할 파일을 선택해 주세요.");
-      return;
-    }
-    if (!/\.(pdf|jpe?g|png)$/i.test(attachmentFile.name)) {
-      setAttachmentError("PDF, JPG, JPEG, PNG 파일만 첨부할 수 있습니다.");
-      return;
-    }
-    if (attachmentFile.size > 10 * 1024 * 1024) {
-      setAttachmentError("파일은 최대 10MB까지 첨부할 수 있습니다.");
-      return;
-    }
-    if (Array.from(attachmentFile.name).length > 255) {
-      setAttachmentError("원본 파일명은 255자 이내로 작성해 주세요.");
-      return;
-    }
-    if (!attachmentPassword) {
-      setAttachmentError("작성자 계정의 로그인 비밀번호를 입력해 주세요.");
-      return;
-    }
-    const documentId = selectedApprovalId;
-    setAttachmentSaving(true);
-    try {
-      const result = await uploadApprovalAttachment(documentId, attachmentFile, loginUser.employee_id, attachmentPassword);
-      // 업로드 성공 뒤에는 다시 전송되지 않도록 파일 선택을 비웁니다.
-      setAttachmentFile(null);
-      if (attachmentInputElement) attachmentInputElement.value = "";
-      setApprovalList(previous => previous.map(item => item.id === documentId ? {
-        ...item,
-        attachmentCount: item.attachmentCount + 1
-      } : item));
-      setAttachmentMessage(result.message || "증빙파일이 첨부되었습니다.");
-      setAttachmentListRefresh(previous => previous + 1);
-      try {
-        const data = await getApprovals();
-        setApprovalList(data.map(toApproval));
-        setError("");
-      } catch {
-        setAttachmentMessage("파일은 첨부되었습니다. 목록 재조회에 실패했으므로 F5로 첨부 건수를 확인해 주세요.");
-      }
-    } catch (err) {
-      setAttachmentError(getFinanceError(err, "첨부 결과를 확인하지 못했습니다. F5로 첨부 건수를 확인한 뒤 다시 시도해 주세요."));
-    } finally {
-      setAttachmentPassword("");
-      setAttachmentSaving(false);
-    }
-  }
-  async function handleAttachmentDownload(file) {
-    if (downloadingFileId !== null || attachmentSaving || decisionSaving || paymentBusy) return;
-    setDownloadingFileId(file.file_id);
-    setDownloadError("");
-    let objectUrl;
-    let link;
-    try {
-      const blob = await downloadApprovalAttachment(selectedApprovalId, file.file_id);
-      objectUrl = window.URL.createObjectURL(blob);
-      link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = file.original_name || "첨부파일";
-      document.body.appendChild(link);
-      link.click();
-    } catch (error) {
-      setDownloadError(getFinanceError(error, "첨부파일을 다운로드하지 못했습니다. 잠시 후 다시 시도해 주세요."));
-    } finally {
-      link?.remove();
-      // 브라우저가 다운로드를 시작한 뒤 임시 URL을 해제합니다.
-      if (objectUrl) window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
-      setDownloadingFileId(null);
-    }
-  }
   function handlePaymentBusyChange(value) {
     setPaymentBusy(value);
   }
@@ -426,12 +308,12 @@ function Approval({
     }
   }
   function openApprovalDetail(documentId) {
-    if (decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy || draftSaving) return;
+    if (decisionSaving || attachmentSaving || paymentBusy || draftSaving) return;
     setDraftOpen(false);
     setSelectedApprovalId(documentId);
   }
   function closeApprovalDetail() {
-    if (decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy) return;
+    if (decisionSaving || attachmentSaving || paymentBusy) return;
     if (paymentFormOpen) {
       setPaymentFormOpen(false);
       return;
@@ -526,7 +408,7 @@ function Approval({
         <span className="subtitle">{embedded ? "기존 결재·이력" : "결제(지출) 관리"}</span>
 
         {allowCreate && <div className="dashboard-top">
-          <button type="button" className="register-btn" disabled={draftOpen || draftSaving || decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy} onClick={openDraftForm}>
+          <button type="button" className="register-btn" disabled={draftOpen || draftSaving || decisionSaving || attachmentSaving || paymentBusy} onClick={openDraftForm}>
             + 지출 결재 기안
           </button>
         </div>}
@@ -664,64 +546,13 @@ function Approval({
                     </table>
                   </div>
                 </div>
-                {selectedApproval.isSourceDraft || selectedApproval.isLinkedTrade ? <p role="status">{selectedApproval.isLinkedTrade ? "거래로 연결된 문서입니다. 거래·정산 탭의 전표에서 지급해주세요." : "내업무 관리에서 최종 승인된 기안서입니다. 품목관리에서 거래정보를 등록한 뒤 지급할 수 있습니다."}</p> : <ApprovalPayments key={selectedApproval.id} embedded paymentFormOpen={paymentFormOpen} onFormOpenChange={setPaymentFormOpen} approval={selectedApproval} loginUser={loginUser} blocked={decisionSaving || attachmentSaving || downloadingFileId !== null} onBusyChange={handlePaymentBusyChange} onPaid={handlePaymentSaved} />}                <div hidden={paymentFormOpen}>
+                {selectedApproval.isSourceDraft || selectedApproval.isLinkedTrade ? <p role="status">{selectedApproval.isLinkedTrade ? "거래로 연결된 문서입니다. 거래·정산 탭의 전표에서 지급해주세요." : "내업무 관리에서 최종 승인된 기안서입니다. 품목관리에서 거래정보를 등록한 뒤 지급할 수 있습니다."}</p> : <ApprovalPayments key={selectedApproval.id} embedded paymentFormOpen={paymentFormOpen} onFormOpenChange={setPaymentFormOpen} approval={selectedApproval} loginUser={loginUser} blocked={decisionSaving || attachmentSaving} onBusyChange={handlePaymentBusyChange} onPaid={handlePaymentSaved} />}                <div hidden={paymentFormOpen}>
 
 
-                  <section className="finance-registration-modal" aria-label="증빙파일 첨부">
-                    <h3>증빙파일</h3>
-                    <button type="button" disabled={selectedApproval.isSourceDraft || attachmentListLoading || attachmentSaving || downloadingFileId !== null} onClick={() => setAttachmentListRefresh(previous => previous + 1)}>
-                      목록 새로고침
-                    </button>
-                    {attachmentListLoading ? <p>첨부파일 목록을 불러오는 중입니다.</p> : attachmentListError ? <p role="alert">{attachmentListError}</p> : attachmentList.length === 0 ? <p>등록된 첨부파일이 없습니다.</p> : <div className="table-shell finance-approval-scroll">
-                            <table>
-                              <thead>
-                                <tr>
-                                  <th scope="col">파일명</th>
-                                  <th scope="col">크기</th>
-                                  <th scope="col">첨부일시</th>
-                                  <th scope="col">다운로드</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {attachmentList.map(file => <tr key={file.file_id}>
-                                    <td>{file.original_name}</td>
-                                    <td>{(Number(file.file_size || 0) / 1024).toLocaleString("ko-KR", {
-                        maximumFractionDigits: 1
-                      })} KB</td>
-                                    <td>{file.created_at || "-"}</td>
-                                    <td>
-                                      <button type="button" aria-label={`${file.original_name} 다운로드`} disabled={downloadingFileId !== null || attachmentSaving || decisionSaving || paymentBusy} onClick={() => handleAttachmentDownload(file)}>
-                                        {downloadingFileId === file.file_id ? "다운로드 중..." : "다운로드"}
-                                      </button>
-                                    </td>
-                                  </tr>)}
-                              </tbody>
-                            </table>
-                          </div>}
-                    {downloadError && <p role="alert">{downloadError}</p>}
-                    {canAttach ? <form onSubmit={handleAttachmentSubmit}>
-                        <fieldset disabled={attachmentSaving || decisionSaving || downloadingFileId !== null || paymentBusy}>
-                          <div>
-                            <label htmlFor="approval-attachment-file">증빙파일</label>
-                            <input ref={setAttachmentInputElement} id="approval-attachment-file" type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={event => {
-                    setAttachmentFile(event.target.files?.[0] || null);
-                    setAttachmentError("");
-                    setAttachmentMessage("");
-                  }} />
-                            <p>PDF, JPG, JPEG, PNG / 최대 10MB / 한 번에 1개</p>
-                          </div>
-                          <div>
-                            <label htmlFor="approval-attachment-password">작성자 로그인 비밀번호 확인</label>
-                            <input id="approval-attachment-password" type="password" autoComplete="current-password" value={attachmentPassword} onChange={event => setAttachmentPassword(event.target.value)} />
-                          </div>
-                          <button type="submit">
-                            {attachmentSaving ? "첨부 중..." : "증빙파일 첨부"}
-                          </button>
-                        </fieldset>
-                      </form> : <p>기안 작성자가 대기 상태의 문서에 증빙파일을 첨부할 수 있습니다.</p>}
-                    {attachmentError && <p role="alert">{attachmentError}</p>}
-                    {attachmentMessage && <p role="status">{attachmentMessage}</p>}
-                  </section>
+                  <FinanceAttachments key={selectedApproval.id} documentId={selectedApproval.id}
+                    employeeId={loginUser?.employee_id} canUpload={canAttach}
+                    blocked={decisionSaving || paymentBusy} onBusyChange={setAttachmentSaving}
+                    onUploaded={async () => { const data = await getApprovals(); setApprovalList(data.map(toApproval)); }} />
 
                   <h3>결재자 및 처리 이력</h3>
 
@@ -756,7 +587,7 @@ function Approval({
                     </div>}
                   {selectedApproval.status === "대기" && !stepsLoading && !stepsError && (canDecide ? <section aria-label="결재 처리">
                         <h3>결재 처리</h3>
-                        <fieldset disabled={decisionSaving || attachmentSaving || downloadingFileId !== null || paymentBusy}>
+                        <fieldset disabled={decisionSaving || attachmentSaving || paymentBusy}>
                           <div>
                             <label htmlFor="decision-opinion">결재 의견 (반려 시 필수, 최대 500자)</label>
                             <textarea id="decision-opinion" maxLength={500} value={decisionOpinion} onChange={e => setDecisionOpinion(e.target.value)} />
