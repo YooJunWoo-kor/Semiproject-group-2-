@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './Calendar.css';
 import { TOGLE_COLORS } from '../../utils/authStorage';
 
+
 function BasicCalendar({ schedule = [] }) {
 
   // 현재 보고 있는 연도와 월

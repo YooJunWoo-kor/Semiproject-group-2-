@@ -3,11 +3,31 @@ import axios from "axios";
 import { API_BASE_URL } from "../../../utils/authStorage";
 import StatisticsCard from "../../../components/StatisticsCard";
 import "./pages/QualityControl.css";
+import BasicCalendar from "../../../components/calendar/BasicCalendar";
 
 function Main() {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+
+    const [calendarEvents, setCalendarEvents] = useState([]);
+    const [statusFilter, setStatusFilter] = useState("전체");
+    const [searchText, setSearchText] = useState("");
+
+    useEffect(() => {
+        const loadCalender = async () => {
+            try{
+                const response = await axios.get(API_BASE_URL + "/quality/calendar/events");
+
+                setCalendarEvents(response.data);
+            }
+            catch (error){
+                console.error("캘린저 조회 실패");
+            }
+            
+            loadCalender();
+        }
+    }, []);
 
     useEffect(() => {
         async function loadProducts() {
@@ -74,6 +94,43 @@ function Main() {
                 <StatisticsCard title="불합격" count={failCount} stiyle={0} />
                 <StatisticsCard title="미실시" count={notTestedCount} stiyle={0} />
             </section>
+
+            <section className="quality-panel">
+
+            <div className="quality-panel-heading">
+                <h2>품질 검사 일정</h2>
+            </div>
+
+            <div className="quality-toolbar">
+                <div className="quality-toolbar-copy">
+                    <strong>검사 및 재검사 일정</strong>
+                    <span>제품별 예정 일정과 완료 기록을 확인합니다.</span>
+                </div>
+
+                <div className="quality-filter-controls">
+                    <select
+                        value={statusFilter}
+                        onChange={e => setStatusFilter(e.target.value)}
+                    >
+                        <option value="전체">전체</option>
+                        <option value="통과">통과</option>
+                        <option value="불합격">불합격</option>
+                        <option value="미실시">미실시</option>
+                    </select>
+
+                    <div className="quality-search-box">
+                        <input
+                            type="text"
+                            placeholder="제품명 또는 제품코드 검색"
+                            value={searchText}
+                            onChange={e => setSearchText(e.target.value)}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <BasicCalendar schedule={calendarEvents} />
+        </section>
 
             <div className="quality-dashboard-grid">
                 <section className="quality-panel">
