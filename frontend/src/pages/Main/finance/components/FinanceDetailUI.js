@@ -1,7 +1,16 @@
-// 재무 전용 공통 상세·거래내역 창. 상위 ModalBase와 CSS는 수정하지 않습니다.
 import React, { useLayoutEffect, useId, useRef } from 'react';
 
-export default function FinanceResourceModal({ title, onClose, busy = false, children, actions }) {
+//재무 공통 UI: 기존 table > tbody 안에서 항목명·값 행을 재사용합니다.
+
+export function FinanceDetailRows({ rows = [] }) {
+  return <>{rows.map(([label, value]) => <tr key={label}>
+    <th scope="row">{label}</th>
+    <td>{value}</td>
+  </tr>)}</>;
+}
+
+// 재무 전용 공통 상세·거래내역 창
+export function FinanceResourceModal({ title, onClose, busy = false, children, actions }) {
   const titleId = useId();
   const dialogRef = useRef(null);
   const latest = useRef({ onClose, busy });
@@ -73,4 +82,71 @@ export function FinanceResourceDetails({ rows = [] }) {
       </tr>)}</tbody>
     </table>
   </div>;
+}
+
+//계좌·카드·결재의 검색 폼.
+export function FinanceSearchForm({ filters = [], keyword, onSubmit, className = 'finance-card-search' }) {
+  return <form className={className} onSubmit={onSubmit}>
+    {filters.map(filter => <React.Fragment key={filter.id}>
+      <label htmlFor={filter.id}>{filter.label}</label>
+      <select id={filter.id} value={filter.value} onChange={event => filter.onChange(event.target.value)}>
+        {filter.options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select>
+    </React.Fragment>)}
+    {keyword && <>
+      <label htmlFor={keyword.id}>검색: </label>
+      <input id={keyword.id} type="text" placeholder={keyword.placeholder} value={keyword.value} onChange={event => keyword.onChange(event.target.value)} />
+    </>}
+    <button type="submit">조회</button>
+  </form>;
+}
+
+
+//상태 문구·색상 판정은 호출 화면에서 전달합니다.
+export function FinanceStatusBadge({ tone = '', children }) {
+  return <span className={`status-badge ${tone}`}>{children}</span>;
+}
+
+
+// 재무 공통 합계 박스. 금액 계산과 단위 지정은 호출하는 화면에서 처리합니다.
+export function FinanceSummaryBox({ items = [] }) {
+  return <div aria-label="금액 요약" style={{
+    display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 20px',
+    padding: 12, border: '1px solid var(--color-line)', borderRadius: 10,
+    fontSize: 16, lineHeight: 1.5
+  }}>
+    {items.map(item => <span key={item.key} style={{
+      display: 'inline-flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 4,
+      fontSize: 'inherit', lineHeight: 'inherit'
+    }}>
+      <span style={{ fontSize: 'inherit', lineHeight: 'inherit' }}>{item.label}:</span>
+      <strong style={{ fontSize: 'inherit', lineHeight: 'inherit', fontWeight: 700 }}>{item.value}</strong>
+    </span>)}
+  </div>;
+}
+
+
+
+// 좌측 목록·우측 달력 등 재무 화면의 2단 배치입니다.
+// 글자·색상은 기존 공통 CSS를 상속하고, 여기서는 배치만 지정합니다.
+export function FinanceTwoColumn({ children }) {
+  return (
+    <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', marginTop: 16 }}>
+      {children}
+    </div>
+  );
+}
+
+export function FinanceLayoutColumn({ side = 'left', children }) {
+  const isRight = side === 'right';
+  return (
+    <div
+      className={isRight ? 'finance-layout-column-divider' : undefined}
+      style={isRight
+        ? { flex: '0 0 38%', minWidth: 340, paddingLeft: 20 }
+        : { flex: '1 1 62%', minWidth: 0 }}
+    >
+      {children}
+    </div>
+  );
 }

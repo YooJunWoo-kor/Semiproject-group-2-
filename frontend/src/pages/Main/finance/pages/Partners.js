@@ -1,7 +1,5 @@
-import FinanceSummaryBox from '../components/FinanceSummaryBox';
-import FinanceResourceModal from '../components/FinanceResourceModal';
+import { FinanceSummaryBox, FinanceResourceModal, FinanceDetailRows, FinanceTwoColumn, FinanceLayoutColumn } from '../components/FinanceDetailUI';
 // [공통화 추가] 거래처 상세정보 행 재사용
-import FinanceDetailRows from '../components/FinanceDetailRows';
 // [공통화 추가] 재무 전용 공통 컴포넌트·함수 재사용 (상위 공용 파일 수정 없음)
 import { FilterTabs } from '../../../../components/FilterControls';
 import { getFinanceError } from '../components/financeUtils';
@@ -584,18 +582,10 @@ function Partners() {
     </FinanceResourceModal>}
 
     {/* 2. 좌우 2단 분할 레이아웃 컨테이너 (테이블 좌측, 달력 우측 상시 노출) */}
-    <div style={{
-      display: 'flex',
-      gap: '24px',
-      alignItems: 'flex-start',
-      marginTop: '16px'
-    }}>
+    <FinanceTwoColumn>
 
       {/* [좌측 영역] 검색 필터 및 거래처 목록 테이블 (약 62% 너비) */}
-      <div style={{
-        flex: '1 1 62%',
-        minWidth: 0
-      }}>
+      <FinanceLayoutColumn>
         {/* 간이 검색/필터 구역 */}
         <div className="finance-partner-filters">
           <label htmlFor="partnerTypeSelect">구분: </label>
@@ -682,16 +672,11 @@ function Partners() {
             </div>
           </section>} />
         </div>}
-      </div>
+      </FinanceLayoutColumn>
 
 
       {/* [우측 영역] 상시 노출 마감일 달력 (약 38% 너비) */}
-      <div style={{
-        flex: '0 0 38%',
-        minWidth: '340px',
-        borderLeft: '1px solid var(--color-line)',
-        paddingLeft: '20px'
-      }}>
+      <FinanceLayoutColumn side="right">
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -707,9 +692,9 @@ function Partners() {
         <div className="calendar-widget-wrapper">
           {calendarType === "week" ? <WeeklyCalendar schedule={calendarEvents} /> : <BasicCalendar schedule={calendarEvents} />}
         </div>
-      </div>
+      </FinanceLayoutColumn>
 
-    </div>
+    </FinanceTwoColumn>
   </div>;
 }
 export default Partners;

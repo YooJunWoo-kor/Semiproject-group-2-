@@ -62,7 +62,7 @@ const selectPayrolls = `
                     'expense_administration_1' AS category_code
                 FROM payrolls p
                 INNER JOIN my_draft d ON d.draft_id = p.draft_id
-                WHERE d.status = 'APPROVED'
+                WHERE d.status IN ('APPROVED', '승인')
                   AND p.pay_month = ?
                   AND COALESCE(p.payment_status, '') <> '지급완료'
                   AND NOT EXISTS (
