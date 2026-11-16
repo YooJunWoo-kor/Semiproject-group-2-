@@ -1265,7 +1265,7 @@ export default function Attendance() {
     .reduce((total, leave) => total + Number(leave.leaveDays || 0), 0);
 
   const leaveTableHeaders = [
-    "휴가 유형", "시작일", "종료일", "일수", "신청 상태", "신청일", "사유", "승인자", "승인일", "관리"
+    "휴가 유형", "시작일", "종료일", "일수", "신청 상태", "신청일", "사유", "승인자", "승인일"
   ];
   const leaveTableData = selectedEmployeeLeaves.map((leave) => {
     const canDecide =
@@ -1285,26 +1285,6 @@ export default function Attendance() {
         leave.reason || "-",
         leave.approverName || "-",
         leave.approvalDate || "-",
-        canDecide ? (
-          <div className="attendance-leave-actions">
-            <button
-              type="button"
-              className="erp-primary-button"
-              onClick={() => decideLeave(leave, "approve")}
-              disabled={saving}
-            >
-              승인
-            </button>
-            <button
-              type="button"
-              className="attendance-leave-reject-button"
-              onClick={() => decideLeave(leave, "reject")}
-              disabled={saving}
-            >
-              반려
-            </button>
-          </div>
-        ) : "-"
       ]
     };
   });

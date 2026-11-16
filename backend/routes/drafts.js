@@ -255,8 +255,20 @@ router.get('/departments', (req, res) => {
 
 router.get('/leaves', async (req, res) => {
     try {
+        const { month, year } = req.query;
+
         const leaves = await Draft.getLeaveDrafts();
-        res.json(leaves);
+
+        const filteredLeaves = leaves.filter(leave => {
+            const startDate = leave.startDate || "";  // startDate => 문자열이 특정 문자로 시작하는지
+            
+            return(!month || startDate.startsWith(month)) && (!year || startDate.startsWith(year));
+        })
+
+        res.json({
+            success: true,
+            data: filteredLeaves
+        });
     }
     catch (error) {
         console.error("휴가 조회 오류 : ", error);

@@ -4,15 +4,53 @@ class Draft {
     static getLeaveDrafts() {
         return new Promise((resolve, reject) => {
             const sql = `
-                SELECT d.draft_id, d.employee_id, e.name AS employeeName,
-                d.document_type, d.title, d.content,
-                d.detail_data, d.status, d.created_at
-                FROM my_draft d
-                JOIN employees e on d.employee_id = e.employee_id
-                WHERE d.document_type = "휴가"
-                AND d.status != 'DRAFT'
-                ORDER BY d.created_at DESC
+                SELECT
+                d.draft_id AS draftId,
+                d.draft_id AS leaveId,
+                d.employee_id AS employeeId,
+                e.name AS employeeName,
+                d.document_type AS leaveType,
+                d.content AS reason,
+
+                JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.startDate')) AS startDate,
+                JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.endDate')) AS endDate,
+
+                DATEDIFF(
+                    JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.endDate')),
+                    JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.startDate'))
+                ) + 1 AS leaveDays,
+
+                CASE
+                    WHEN d.status = 'APPROVED' THEN '승인완료'
+                    WHEN d.status = 'REJECTED' THEN '반려'
+                    ELSE '승인대기'
+                END AS applicationStatus,
+
+                d.status AS sourceStatus,
+                DATE_FORMAT(d.created_at, '%Y-%m-%d %H:%i') AS applicationDate,
+
+                s.employee_id AS approverId,
+                approver.name AS approverName
+
+            FROM my_draft d
+            JOIN employees e
+                ON d.employee_id = e.employee_id
+
+            JOIN draft_approval_steps s
+                ON d.draft_id = s.draft_id
+                AND s.step_status = 'PENDING'
+
+            JOIN employees approver
+                ON s.employee_id = approver.employee_id
+
+            WHERE d.document_type = '휴가'
+              AND d.status IN ('PENDING', 'APPROVED', 'REJECTED')
+
+            ORDER BY d.created_at DESC
             `
+            // JSON_UNQUOTE : json 문자열을 일반 문자열로
+            // JSON_EXTRACT : detail_data에서 원하는 데이터를 추출
+            // DATEDIFF : 두 날짜 간의 차이
 
             db.query(sql, (err, rows) => {
                 if(err) return reject(err);
