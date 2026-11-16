@@ -9,7 +9,13 @@ const emptyForm = {
     title: "", draftType: "일반", content: "",
     startDate: "", endDate: "",
     itemName: "", quantity: "",
-    useDate: "", amount: ""
+    useDate: "", amount: "",
+
+    paymentType: "수당",
+    payMonth: "",
+    paymentDate: "",
+    paymentDetail : ""
+
 };
 
 function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftChanged }) {
@@ -31,7 +37,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
         }
     ]);
 
-    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount } = form;
+    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount, paymentType, payMonth, paymentDate, paymentDetail } = form;
 
     useEffect(() => {
         const loadDepartments = async () => {
@@ -60,10 +66,14 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             itemName: detail.itemName || "",
             quantity: detail.quantity ?? "",
             useDate: detail.useDate || "",
-            amount: detail.amount ?? ""
+            amount: detail.amount ?? "",
+            paymentType: detail.paymentType || "수당",
+            payMonth: detail.payMonth || "",
+            paymentDetail : detail.paymentDetail || "",
         });
         setApprovers(editingDraft.approvers || []);
     }, [editingDraft]);
+
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -99,6 +109,11 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             return;
         }
 
+        if(!paymentDetail.trim()){
+            alert("상세 내용을 입력해주세요");
+            return;
+        }
+
         if (saveType === "submit") {
             if (!content.trim() || approvers.length === 0) {
                 alert("내용을 입력하고 결재자를 한 명 이상 선택해주세요.");
@@ -114,10 +129,11 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             }
 
 
+
             if (draftType === "비용") {
                 const invalidExpense = expenseItems.some(item => !item.useDate || !item.merchant.trim() || item.amount === ""
                     || !Number.isSafeInteger(Number(item.amount)) || Number(item.amount) <= 0);
-                
+
 
 
                 if (expenseItems.length === 0 || invalidExpense) {
@@ -126,6 +142,18 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 }
             }
 
+            if (draftType === "추가급여") {
+                if (
+                    !["수당", "상여"].includes(paymentType) ||
+                    !/^\d{4}-(0[1-9]|1[0-2])$/.test(payMonth) ||
+                    amount === "" ||
+                    !Number.isSafeInteger(Number(amount)) ||
+                    Number(amount) <= 0
+                ) {
+                    alert("추가급여 정보를 올바르게 입력해주세요.");
+                    return;
+                }
+            }
         }
 
         const employeeId = Number(getLoginUser()?.employeeKey);
@@ -134,9 +162,16 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             return;
         }
 
-        const detailData = draftType === "휴가" ? { startDate, endDate } :
-            draftType === "구매" ? { itemName, quantity } :
-                draftType === "비용" ? { expenseItems, totalAmount } : {};
+        const detailData =
+
+            draftType === "휴가" ? { startDate, endDate } :
+                draftType === "구매" ? { itemName, quantity } :
+                    draftType === "비용" ? { expenseItems, totalAmount } :
+                        draftType === "추가급여" ? {
+                            paymentType,
+                            payMonth,
+                            amount: amount === "" ? null : Number(amount)
+                        } : {};
 
         const payload = {
             employeeId, title: title.trim(), documentType: draftType,
@@ -159,13 +194,13 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             } else if (saveType === "temporary") {
                 response = await axios.post(API_BASE_URL + "/drafts", payload);
             } else {
-               response = await axios.post(API_BASE_URL + "/drafts/submit", { ...payload, approverIds });
+                response = await axios.post(API_BASE_URL + "/drafts/submit", { ...payload, approverIds });
             }
-            
+
 
             const draftId = editingDraft ? editingDraft.id : response.data.draftId;
 
-            if(draftType === "비용" && receiptFile){
+            if (draftType === "비용" && receiptFile) {
                 const formData = new FormData();
 
                 formData.append("receipt", receiptFile);
@@ -241,6 +276,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                             <option>휴가</option>
                             <option>구매</option>
                             <option>비용</option>
+                            <option>추가급여</option>
                         </select>
                     </label>
                 </div>
@@ -271,39 +307,35 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                         <div className="table-shell">
                             <table>
                                 <thead>
-                                <tr>
-                                    <th>사용일</th>
-                                    <th>사용처</th>
-                                    <th>금액</th>
-                                    <th>비고</th>
-                                    <th>관리</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                {expenseItems.map((item, index) => (
-                                    <tr key={index}>
-                                        <td>
-                                            <input type="date" value={item.useDate} onChange={(e) => handleExpenseChange(index, "useDate", e.target.value)} />
-                                        </td>
-
-                                        <td>
-                                            <input type="text" value={item.merchant} onChange={(e) => handleExpenseChange(index, "merchant", e.target.value)} />
-                                        </td>
-
-                                        <td>
-                                            <input type="number" min="0" value={item.amount} onChange={(e) => handleExpenseChange(index, "amount", e.target.value)} />
-                                        </td>
-
-                                        <td>
-                                            <input type="text" value={item.memo} onChange={(e) => handleExpenseChange(index, "memo", e.target.value)} />
-                                        </td>
-
-                                        <td>
-                                            <button type="button" onClick={() => handleDeleteExpense(index)} disabled={expenseItems.length === 1}>삭제</button>
-                                        </td>
+                                    <tr>
+                                        <th>사용일</th>
+                                        <th>사용처</th>
+                                        <th>금액</th>
+                                        <th>비고</th>
+                                        <th>관리</th>
                                     </tr>
-                                ))}
+                                </thead>
+
+                                <tbody>
+                                    {expenseItems.map((item, index) => (
+                                        <tr key={index}>
+                                            <td>
+                                                <input type="date" value={item.useDate} onChange={(e) => handleExpenseChange(index, "useDate", e.target.value)} />
+                                            </td>
+                                            <td>
+                                                <input type="text" value={item.merchant} onChange={(e) => handleExpenseChange(index, "merchant", e.target.value)} />
+                                            </td>
+                                            <td>
+                                                <input type="number" min="0" value={item.amount} onChange={(e) => handleExpenseChange(index, "amount", e.target.value)} />
+                                            </td>
+                                            <td>
+                                                <input type="text" value={item.memo} onChange={(e) => handleExpenseChange(index, "memo", e.target.value)} />
+                                            </td>
+                                            <td>
+                                                <button type="button" onClick={() => handleDeleteExpense(index)} disabled={expenseItems.length === 1}>삭제</button>
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
@@ -321,8 +353,48 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                             />
                         </label>
 
-                        <button type="button" onClick={handleAddExpense}>행 추가</button>
+                        <button type="button" onClick={handleAddExpense}>
+                            행 추가
+                        </button>
                     </>
+                )}
+
+                {draftType === "추가급여" && (
+                    <div className="draft-box">
+                        <div className="draft-row">
+                            <h4>추가급여 지급 정보</h4>
+                        </div>
+
+                        <div className="draft-row">
+                            <label>지급 구분
+                                <select name="paymentType" value={paymentType} onChange={handleInputChange}>
+                                    <option value="수당">수당</option>
+                                    <option value="상여">상여금</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <label>상세 분류
+                            <input
+                                type="text"
+                                name="paymentDetail"
+                                value={paymentDetail}
+                                onChange={handleInputChange}
+                                placeholder="예: 야근 수당, 근무 수당, 성과급"
+                                maxLength={50}
+                            />
+                        </label>
+
+                        <div className="draft-row">
+                            <label>지급 예정일
+                                <input type="date" name="paymentDate" value={paymentDate} onChange={handleInputChange} />
+                            </label>
+
+                            <label>신청 금액 (원)
+                                <input type="number" min="1" step="1" name="amount" value={amount} onChange={handleInputChange} />
+                            </label>
+                        </div>
+                    </div>
                 )}
 
                 <label>내용
@@ -356,34 +428,36 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 </div>
             </form>
 
-            {showApproverModal && (
-                <ModalBase title="결재자 추가" onClose={closeApproverModal}
-                    layout={
-                        <div className="draft-box">
-                            <h4>부서 선택</h4>
-                            <div className="draft-row">
-                                {departments.map(department => (
-                                    <button key={department} type="button"
-                                        onClick={() => {
-                                            setSelectedDepartment(department);
-                                            setTempApprover(null);
-                                        }}>
-                                        {department}
-                                    </button>
-                                ))}
+            {
+                showApproverModal && (
+                    <ModalBase title="결재자 추가" onClose={closeApproverModal}
+                        layout={
+                            <div className="draft-box">
+                                <h4>부서 선택</h4>
+                                <div className="draft-row">
+                                    {departments.map(department => (
+                                        <button key={department} type="button"
+                                            onClick={() => {
+                                                setSelectedDepartment(department);
+                                                setTempApprover(null);
+                                            }}>
+                                            {department}
+                                        </button>
+                                    ))}
+                                </div>
+                                {selectedDepartment && (
+                                    <DepEmpList departmentName={selectedDepartment} onSelect={setTempApprover} />
+                                )}
+                                <div className="draft-actions">
+                                    <button type="button" className="erp-primary-button"
+                                        onClick={addApprover}>결재자 추가</button>
+                                </div>
                             </div>
-                            {selectedDepartment && (
-                                <DepEmpList departmentName={selectedDepartment} onSelect={setTempApprover} />
-                            )}
-                            <div className="draft-actions">
-                                <button type="button" className="erp-primary-button"
-                                    onClick={addApprover}>결재자 추가</button>
-                            </div>
-                        </div>
-                    }
-                />
-            )}
-        </div>
+                        }
+                    />
+                )
+            }
+        </div >
     );
 }
 

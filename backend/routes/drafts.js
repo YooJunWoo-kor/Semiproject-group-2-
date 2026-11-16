@@ -253,6 +253,17 @@ router.get('/departments', (req, res) => {
     })
 })
 
+router.get('/leaves', async (req, res) => {
+    try {
+        const leaves = await Draft.getLeaveDrafts();
+        res.json(leaves);
+    }
+    catch (error) {
+        console.error("휴가 조회 오류 : ", error);
+        res.status(500).json({ message : '휴가 조회 실패' })
+    }
+});
+
 router.post("/:draftId/receipt", receiptUpload.single("receipt"), (req, res) => {
     const draftId = Number(req.params.draftId);
     const employeeId = Number(req.body.employeeId);

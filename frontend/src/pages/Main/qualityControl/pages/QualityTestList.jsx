@@ -71,8 +71,8 @@ const [products, setProducts] = useState([]);
 
     const filteredProducts = products.filter(product => {
         const searchMatch =
-            product.name.toLowerCase().includes(search.toLowerCase()) ||
-            product.code.toLowerCase().includes(search.toLowerCase());
+            (product.name || "").toLowerCase().includes(search.toLowerCase()) ||
+            (product.code || "").toLowerCase().includes(search.toLowerCase());
 
         const statusMatch =
             statusFilter === "전체" || product.qualityStatus === statusFilter;
@@ -154,6 +154,14 @@ const [products, setProducts] = useState([]);
                                     <tr
                                         key={product.id}
                                         onClick={() => navigate(`/main/qa/products/${product.id}`)}
+                                        onKeyDown={event => {
+                                            if (event.key === "Enter" || event.key === " ") {
+                                                event.preventDefault();
+                                                navigate(`/main/qa/products/${product.id}`);
+                                            }
+                                        }}
+                                        tabIndex={0}
+                                        role="link"
                                         className="quality-clickable-row"
                                     >
                                         <td className="quality-code-cell">{product.code}</td>

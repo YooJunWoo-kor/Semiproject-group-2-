@@ -1,6 +1,29 @@
 const db = require('../db');
 
 class Draft {
+    static getLeaveDrafts() {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                SELECT d.draft_id, d.employee_id, e.name AS employeeName,
+                d.document_type, d.title, d.content,
+                d.detail_data, d.status, d.created_at
+                FROM my_draft d
+                JOIN employees e on d.employee_id = e.employee_id
+                WHERE d.document_type = "휴가"
+                AND d.status != 'DRAFT'
+                ORDER BY d.created_at DESC
+            `
+
+            db.query(sql, (err, rows) => {
+                if(err) return reject(err);
+                
+                resolve(rows);
+            })
+        })
+
+
+    }
+
     static getById(draftId) {
         return new Promise((resolve, reject) => {
 
