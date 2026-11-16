@@ -13,7 +13,7 @@ const emptyForm = {
 
     paymentType: "수당",
     payMonth: "",
-    targetEmployeeId: "",
+    paymentDate: "",
 
 };
 
@@ -36,7 +36,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
         }
     ]);
 
-    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount, paymentType, payMonth, targetEmployeeId } = form;
+    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount, paymentType, payMonth, paymentDate } = form;
 
     useEffect(() => {
         const loadDepartments = async () => {
@@ -156,7 +156,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
         }
 
         const detailData =
-        
+
         draftType === "휴가" ? { startDate, endDate } :
         draftType === "구매" ? { itemName, quantity } :
         draftType === "비용" ? { expenseItems, totalAmount } :
@@ -368,8 +368,8 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                         </div>
 
                         <div className="draft-row">
-                            <label>지급 월
-                                <input type="month" name="payMonth" value={payMonth} onChange={handleInputChange} />
+                            <label>지급 예정일
+                                <input type="date" name="paymentDate" value={paymentDate} onChange={handleInputChange} />
                             </label>
 
                             <label>신청 금액 (원)
