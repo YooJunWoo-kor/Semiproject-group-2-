@@ -6,6 +6,7 @@ import ModalBase from "../../../../components/ModalBase";
 import { getLoginUser } from "../../../../utils/authStorage";
 import {
   getHrAttendance,
+  getHrLeavesByYear,
   getHrLeaves,
   getHrOrganization,
   createHrAttendance,
@@ -114,6 +115,10 @@ function getStatusClass(status) {
   if (status === "지각") return "late";
   if (status === "휴가") return "leave";
   return "off";
+}
+
+function isApprovedLeave(leave) {
+  return leave.applicationStatus === "승인완료";
 }
 
 function getLeaveStatusClass(status) {
@@ -348,15 +353,162 @@ function AttendanceStatistics({ records, month }) {
   );
 }
 
+function LeavePendingView({ leaves }) {
+  const pending = leaves.filter(
+    (leave) => leave.applicationStatus === "승인대기"
+  );
+
+  if (pending.length === 0) {
+    return <p className="attendance-empty">승인 대기 중인 휴가 신청이 없습니다.</p>;
+  }
+
+  return (
+    <div className="attendance-subview">
+      <div className="attendance-subview-heading">
+        <div>
+          <h3>승인 대기</h3>
+          <p>결재 처리는 전자결재에서 진행하며, 이 화면에서는 신청 내역만 확인할 수 있습니다.</p>
+        </div>
+        <strong>{pending.length}건</strong>
+      </div>
+      <div className="table-shell">
+        <table>
+          <thead>
+            <tr>
+              <th>신청 직원</th>
+              <th>휴가 유형</th>
+              <th>휴가 기간</th>
+              <th>일수</th>
+              <th>신청 사유</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pending.map((leave) => (
+              <tr key={leave.draftId}>
+                <td>{leave.employeeName}</td>
+                <td>{leave.leaveType || "휴가"}</td>
+                <td>{leave.startDate} ~ {leave.endDate}</td>
+                <td>{leave.leaveDays ?? "-"}일</td>
+                <td>{leave.reason || "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function LeaveBalanceView({ employee, leaves, year }) {
+  const employeeLeaves = leaves.filter(
+    (leave) => String(leave.employeeId) === String(employee.employeeId)
+  );
+  const approvedLeaves = employeeLeaves.filter(isApprovedLeave);
+  const pendingLeaves = employeeLeaves.filter(
+    (leave) => leave.applicationStatus === "승인대기"
+  );
+  const usedDays = approvedLeaves.reduce(
+    (total, leave) => total + Number(leave.leaveDays || 0),
+    0
+  );
+  const pendingDays = pendingLeaves.reduce(
+    (total, leave) => total + Number(leave.leaveDays || 0),
+    0
+  );
+
+  return (
+    <div className="attendance-subview">
+      <div className="attendance-subview-heading">
+        <div>
+          <h3>{employee.employeeName} {year}년 연차 현황</h3>
+          <p>선택 직원의 연차 부여·사용 현황입니다.</p>
+        </div>
+      </div>
+      <div className="table-shell">
+        <table>
+          <thead>
+            <tr>
+              <th>기준 연도</th>
+              <th>부여 연차</th>
+              <th>이월·조정</th>
+              <th>사용 일수</th>
+              <th>승인 대기</th>
+              <th>잔여 연차</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{year}년</td>
+              <td>미등록</td>
+              <td>-</td>
+              <td>{usedDays}일</td>
+              <td>{pendingDays}일</td>
+              <td>-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+
+
+      <div className="attendance-subview-heading attendance-leave-history-heading">
+        <div>
+          <h3>연차 사용 내역</h3>
+          <p>승인 완료된 휴가 사용 내역입니다.</p>
+        </div>
+      </div>
+      <div className="table-shell attendance-leave-history-table">
+        <table>
+          <thead>
+            <tr>
+              <th>휴가 유형</th>
+              <th>사용 기간</th>
+              <th>사용 일수</th>
+              <th>신청 상태</th>
+              <th>신청일</th>
+              <th>승인일</th>
+            </tr>
+          </thead>
+          <tbody>
+            {approvedLeaves.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="attendance-leave-history-empty">
+                  승인 완료된 휴가 사용 내역이 없습니다.
+                </td>
+              </tr>
+            ) : (
+              approvedLeaves.map((leave) => (
+                <tr key={leave.leaveId}>
+                  <td>{leave.leaveType || "휴가"}</td>
+                  <td>{leave.startDate} ~ {leave.endDate}</td>
+                  <td>{leave.leaveDays ?? "-"}일</td>
+                  <td>
+                    <span className="status-tag working">
+                      {leave.applicationStatus}
+                    </span>
+                  </td>
+                  <td>{leave.applicationDate || "-"}</td>
+                  <td>{leave.approvalDate || "-"}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function AttendanceEmployeeHeader({
   employee,
   isAttendanceTab,
   attendanceRate,
   leaveCount,
+  isLeaveBalance,
   children
 }) {
   return (
-    <div className="attendance-detail-header">
+    <div className={`attendance-detail-header${isLeaveBalance ? " leave-balance-header" : ""}`}>
       <div>
         <span className="attendance-badge">선택 직원</span>
         <h2>{employee.employeeName}</h2>
@@ -367,10 +519,12 @@ function AttendanceEmployeeHeader({
         </p>
       </div>
       {children}
-      <div className="detail-attendance-rate">
+      {!isLeaveBalance && (
+        <div className="detail-attendance-rate">
           <span>{isAttendanceTab ? "출근율" : "휴가 신청"}</span>
           <strong>{isAttendanceTab ? attendanceRate : `${leaveCount}건`}</strong>
         </div>
+      )}
     </div>
   );
 }
@@ -426,6 +580,24 @@ function AttendanceSubTabs({
             onClick={() => setActiveTab("leave-requests")}
           >
             신청 목록
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={activeTab === "leave-pending" ? "active" : ""}
+            aria-selected={activeTab === "leave-pending"}
+            onClick={() => setActiveTab("leave-pending")}
+          >
+            승인 대기
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={activeTab === "leave-balance" ? "active" : ""}
+            aria-selected={activeTab === "leave-balance"}
+            onClick={() => setActiveTab("leave-balance")}
+          >
+            연차 현황
           </button>
         </>
       )}
@@ -560,6 +732,9 @@ export default function Attendance() {
   const [leaveData, setLeaveData] = useState([]);
   const [leaveLoading, setLeaveLoading] = useState(false);
   const [leaveError, setLeaveError] = useState("");
+  const [leaveYearData, setLeaveYearData] = useState([]);
+  const [leaveYearLoading, setLeaveYearLoading] = useState(false);
+  const [leaveYearError, setLeaveYearError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -630,20 +805,27 @@ export default function Attendance() {
   }, []);
 
   useEffect(() => {
-    // 휴가 신청 탭에 진입할 때 전자결재에서 상신한 휴가 기안서를 조회합니다.
-    // 근태 조회의 월 필터와 무관하게 해당 직원의 전체 신청 내역을 보여줍니다.
-    if (activeTab !== "leave-requests") return undefined;
+    if (!selectedMonth) {
+      setLeaveData([]);
+      setLeaveError("");
+      return undefined;
+    }
 
     let ignore = false;
 
+    // 선택한 기준 월의 휴가 신청 데이터를 조회합니다.
+    // 기준 월이 바뀌면 해당 월의 휴가 신청 목록을 다시 조회합니다.
     async function loadLeaves() {
       setLeaveLoading(true);
       setLeaveError("");
 
       try {
-        const response = await getHrLeaves();
+        const response = await getHrLeaves(selectedMonth);
 
-        if (!response.data.success || !Array.isArray(response.data.data)) {
+        if (
+          !response.data.success ||
+          !Array.isArray(response.data.data)
+        ) {
           throw new Error("휴가 신청 응답 형식이 올바르지 않습니다.");
         }
 
@@ -652,6 +834,7 @@ export default function Attendance() {
         }
       } catch (requestError) {
         console.error("휴가 신청 조회 오류:", requestError);
+
         if (!ignore) {
           setLeaveData([]);
           setLeaveError(
@@ -660,13 +843,66 @@ export default function Attendance() {
           );
         }
       } finally {
-        if (!ignore) setLeaveLoading(false);
+        if (!ignore) {
+          setLeaveLoading(false);
+        }
       }
     }
 
     loadLeaves();
-    return () => { ignore = true; };
-  }, [activeTab]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [selectedMonth]);
+
+  useEffect(() => {
+    if (activeTab !== "leave-balance") {
+      return undefined;
+    }
+
+    let ignore = false;
+    const year = selectedMonth.slice(0, 4) || String(new Date().getFullYear());
+
+    // 연차 현황 탭에서만 연도별 휴가 데이터를 조회합니다.
+    async function loadLeaveYear() {
+      setLeaveYearLoading(true);
+      setLeaveYearError("");
+
+      try {
+        const response = await getHrLeavesByYear(year);
+
+        if (
+          !response.data.success ||
+          !Array.isArray(response.data.data)
+        ) {
+          throw new Error("연차 현황 응답 형식이 올바르지 않습니다.");
+        }
+
+        if (!ignore) {
+          setLeaveYearData(response.data.data);
+        }
+      } catch (requestError) {
+        if (!ignore) {
+          setLeaveYearData([]);
+          setLeaveYearError(
+            requestError.response?.data?.message ||
+            "연차 현황을 불러오지 못했습니다."
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setLeaveYearLoading(false);
+        }
+      }
+    }
+
+    loadLeaveYear();
+
+    return () => {
+      ignore = true;
+    };
+  }, [activeTab, selectedMonth]);
 
   // 부서와 검색어를 동시에 적용해 왼쪽 직원 목록을 구성합니다.
   // 필터 결과를 기준으로 페이지 목록과 현재 선택 직원을 계산합니다.
@@ -930,29 +1166,48 @@ export default function Attendance() {
     setCurrentPage(1);
   }
 
-  // 선택 직원이 전자결재에 상신한 휴가 기안서만 표시합니다.
+  // 선택 직원의 휴가만 계산합니다. 직원 목록은 두 탭에서 동일합니다.
   const selectedEmployeeLeaves = leaveData
     .filter((leave) =>
       String(leave.employeeId) === String(selectedEmployeeId)
     )
     .sort((a, b) =>
-      String(b.applicationDate || "").localeCompare(String(a.applicationDate || "")) ||
-      Number(b.draftId) - Number(a.draftId)
+      String(b.startDate || "").localeCompare(String(a.startDate || ""))
     );
 
+  const leavePendingCount = selectedEmployeeLeaves.filter(
+    (leave) => leave.applicationStatus === "승인대기"
+  ).length;
+  const leaveApprovedCount = selectedEmployeeLeaves.filter(isApprovedLeave).length;
+  const leaveUsedDays = selectedEmployeeLeaves
+    .filter(isApprovedLeave)
+    .reduce((total, leave) => total + Number(leave.leaveDays || 0), 0);
+  const selectedEmployeeYearLeaves = leaveYearData.filter(
+    (leave) => String(leave.employeeId) === String(selectedEmployeeId)
+  );
+  const annualPendingDays = selectedEmployeeYearLeaves
+    .filter((leave) => leave.applicationStatus === "승인대기")
+    .reduce((total, leave) => total + Number(leave.leaveDays || 0), 0);
+  const annualUsedDays = selectedEmployeeYearLeaves
+    .filter(isApprovedLeave)
+    .reduce((total, leave) => total + Number(leave.leaveDays || 0), 0);
+
   const leaveTableHeaders = [
-    "기안 제목", "휴가 기간", "일수", "결재 상태", "신청일", "사유"
+    "휴가 유형", "시작일", "종료일", "일수", "신청 상태", "신청일", "사유", "승인자", "승인일"
   ];
   const leaveTableData = selectedEmployeeLeaves.map((leave) => ({
     content: [
-      leave.title || "휴가 신청",
-      `${leave.startDate || "-"} ~ ${leave.endDate || "-"}`,
+      leave.leaveType || "휴가",
+      leave.startDate || "-",
+      leave.endDate || "-",
       `${leave.leaveDays ?? "-"}일`,
       <span className={`status-tag ${getLeaveStatusClass(leave.applicationStatus)}`}>
         {leave.applicationStatus || "-"}
       </span>,
       leave.applicationDate || "-",
-      leave.reason || "-"
+      leave.reason || "-",
+      leave.approverName || "-",
+      leave.approvalDate || "-"
     ]
   }));
 
@@ -1019,7 +1274,7 @@ export default function Attendance() {
                 aria-selected={isLeaveTab}
                 onClick={() => setActiveTab("leave-requests")}
               >
-                휴가 신청
+                휴가 신청·승인
               </button>
             </nav>
 
@@ -1239,6 +1494,7 @@ export default function Attendance() {
                     selectedEmployee.employeeId
                   )}
                   leaveCount={selectedEmployeeLeaves.length}
+                  isLeaveBalance={activeTab === "leave-balance"}
                 >
                   {isAttendanceTab ? (
                     <div className="attendance-summary">
@@ -1255,7 +1511,37 @@ export default function Attendance() {
                         <span>휴가</span><strong>{leaveCount}</strong>
                       </div>
                     </div>
-                  ) : null}
+                  ) : activeTab === "leave-balance" ? (
+                    <div className="attendance-summary">
+                      <div className="summary-item">
+                        <span>부여 연차</span><strong>미등록</strong>
+                      </div>
+                      <div className="summary-item">
+                        <span>사용 일수</span><strong>{annualUsedDays}일</strong>
+                      </div>
+                      <div className="summary-item">
+                        <span>승인 대기</span><strong>{annualPendingDays}일</strong>
+                      </div>
+                      <div className="summary-item">
+                        <span>잔여 연차</span><strong>-</strong>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="attendance-summary">
+                      <div className="summary-item">
+                        <span>전체 신청</span><strong>{selectedEmployeeLeaves.length}</strong>
+                      </div>
+                      <div className="summary-item">
+                        <span>승인 대기</span><strong>{leavePendingCount}</strong>
+                      </div>
+                      <div className="summary-item">
+                        <span>승인 완료</span><strong>{leaveApprovedCount}</strong>
+                      </div>
+                      <div className="summary-item">
+                        <span>사용 일수</span><strong>{leaveUsedDays}</strong>
+                      </div>
+                    </div>
+                  )}
                 </AttendanceEmployeeHeader>
                 <AttendanceSubTabs
                   activeTab={activeTab}
@@ -1293,15 +1579,21 @@ export default function Attendance() {
                   month={selectedMonth}
                 />
               )
-            ) : leaveLoading ? (
+            ) :
+              (activeTab === "leave-requests" ||
+                activeTab === "leave-pending") &&
+              leaveLoading ? (
               <p className="attendance-feedback" role="status">
                 휴가 신청 내역을 불러오는 중입니다.
               </p>
-            ) : leaveError ? (
+            ) :
+              (activeTab === "leave-requests" ||
+                activeTab === "leave-pending") &&
+              leaveError ? (
               <p className="attendance-feedback attendance-error" role="alert">
                 {leaveError}
               </p>
-            ) : (
+            ) : activeTab === "leave-requests" ? (
               <>
                 {leaveTableData.length > 0 ? (
                   <PaginationTable
@@ -1313,11 +1605,27 @@ export default function Attendance() {
                   />
                 ) : (
                   <p className="attendance-empty">
-                    선택한 직원의 휴가 기안서 신청 내역이 없습니다.
+                    선택한 기준 월의 휴가 신청 내역이 없습니다.
                   </p>
                 )}
                 
               </>
+            ) : activeTab === "leave-pending" ? (
+              <LeavePendingView leaves={leaveData} />
+            ) : leaveYearLoading ? (
+              <p className="attendance-feedback" role="status">
+                연차 현황을 불러오는 중입니다.
+              </p>
+            ) : leaveYearError ? (
+              <p className="attendance-feedback attendance-error" role="alert">
+                {leaveYearError}
+              </p>
+            ) : (
+              <LeaveBalanceView
+                employee={selectedEmployee}
+                leaves={leaveYearData}
+                year={selectedMonth.slice(0, 4) || String(new Date().getFullYear())}
+              />
             )}
           </section>
         </div>
