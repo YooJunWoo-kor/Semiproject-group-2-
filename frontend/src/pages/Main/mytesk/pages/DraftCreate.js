@@ -142,11 +142,6 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 }
             }
 
-            if (draftType === "구매" && (!itemName.trim() || !quantity || Number(quantity) <= 0)) {
-                alert("물품명과 올바른 수량을 입력해주세요");
-                return;
-            }
-
             if (draftType === "추가급여") {
                 if (
                     !targetEmployeeId ||
@@ -171,7 +166,12 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
         const detailData = draftType === "휴가" ? { startDate, endDate } :
             draftType === "구매" ? { itemName, quantity } :
                 draftType === "비용" ? { expenseItems, totalAmount } :
-                    draftType === "추가급여" ? { targetEmployeeId: Number(targetEmployeeId), paymentType, payMonth, amount: Number(amount) } : {};
+                    draftType === "추가급여" ? {
+                        targetEmployeeId: targetEmployeeId ? Number(targetEmployeeId) : null,
+                        paymentType,
+                        payMonth,
+                        amount: amount === "" ? null : Number(amount)
+                    } : {};
 
         const payload = {
             employeeId, title: title.trim(), documentType: draftType,
@@ -306,7 +306,41 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                     <>
                         <div className="table-shell">
                             <table>
-                                {/* 기존 비용 테이블 코드 그대로 */}
+                                                                <thead>
+                                <tr>
+                                    <th>사용일</th>
+                                    <th>사용처</th>
+                                    <th>금액</th>
+                                    <th>비고</th>
+                                    <th>관리</th>
+                                </tr>
+                                                            </thead>
+                                
+                                                            <tbody>
+                                {expenseItems.map((item, index) => (
+                                    <tr key={index}>
+                                        <td>
+                                            <input type="date" value={item.useDate} onChange={(e) => handleExpenseChange(index, "useDate", e.target.value)} />
+                                        </td>
+                                
+                                        <td>
+                                            <input type="text" value={item.merchant} onChange={(e) => handleExpenseChange(index, "merchant", e.target.value)} />
+                                        </td>
+                                
+                                        <td>
+                                            <input type="number" min="0" value={item.amount} onChange={(e) => handleExpenseChange(index, "amount", e.target.value)} />
+                                        </td>
+                                
+                                        <td>
+                                            <input type="text" value={item.memo} onChange={(e) => handleExpenseChange(index, "memo", e.target.value)} />
+                                        </td>
+                                
+                                        <td>
+                                            <button type="button" onClick={() => handleDeleteExpense(index)} disabled={expenseItems.length === 1}>삭제</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                                </tbody>
                             </table>
                         </div>
 
@@ -330,61 +364,42 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 )}
 
                 {draftType === "추가급여" && (
-                    <>
+                    <div className="draft-box">
+                        <div className="draft-row">
+                            <h4>추가급여 지급 정보</h4>
+                        </div>
+
                         <div className="draft-row">
                             <label>지급 구분
-                                <select
-                                    name="paymentType"
-                                    value={paymentType}
-                                    onChange={handleInputChange}
-                                >
+                                <select name="paymentType" value={paymentType} onChange={handleInputChange}>
                                     <option value="수당">수당</option>
-                                    <option value="상여">상여</option>
+                                    <option value="상여">상여금</option>
                                 </select>
                             </label>
 
                             <label>지급 대상 직원
-                                <select
-                                    name="targetEmployeeId"
-                                    value={targetEmployeeId}
-                                    onChange={handleInputChange}
-                                >
-
+                                <select name="targetEmployeeId" value={targetEmployeeId} onChange={handleInputChange}>
                                     <option value="">직원 선택</option>
                                     {payEmployees.map(employee => (
-                                        <option
-                                            key={employee.employee_id}
-                                            value={employee.employee_id}
-                                        >
+                                        <option key={employee.employee_id} value={employee.employee_id}>
                                             {employee.name} ({employee.department_name})
                                         </option>
                                     ))}
                                 </select>
                             </label>
+                        </div>
 
-                            <div className="draft-row">
-                                <label>지급 월
-                                    <input
-                                        type="month"
-                                        name="payMonth"
-                                        value={payMonth}
-                                        onChange={handleInputChange}
-                                    />
-                                </label>
+                        <div className="draft-row">
+                            <label>지급 월
+                                <input type="month" name="payMonth" value={payMonth} onChange={handleInputChange} />
+                            </label>
 
-                                <label>지급 금액
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        name="amount"
-                                        value={amount}
-                                        onChange={handleInputChange}
-                                    />
-                                </label>
-                                </div>
-                            </div>
-                        </>
-                    )}
+                            <label>지급 금액 (원)
+                                <input type="number" min="1" step="1" name="amount" value={amount} onChange={handleInputChange} />
+                            </label>
+                        </div>
+                    </div>
+                )}
 
                 <label>내용
                     <textarea name="content" value={content} onChange={handleInputChange} />
