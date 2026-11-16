@@ -26,25 +26,17 @@ export function getHrAttendance(params) {
   return axios.get(API_BASE_URL + '/hr/attendance', { params });
 }
 
-// 기존 결재 초안과 휴가 기간 데이터를 조합한 휴가 신청 목록을 조회합니다.
+// 전자결재 휴가 기안을 월별로 조회합니다.
 export function getHrLeaves(month) {
   return axios.get(API_BASE_URL + '/drafts/leaves', {
-    params:month;
+    params: { month }
   });
 }
 
-// 연차 사용량 집계에 필요한 해당 연도의 휴가 신청 데이터를 조회합니다.
+// 연차 현황에서 사용할 해당 연도 휴가 기안을 조회합니다.
 export function getHrLeavesByYear(year) {
   return axios.get(API_BASE_URL + '/drafts/leaves', {
-    params: {year}
-  })
-}
-
-// 기존 전자결재 API로 휴가 기안의 승인·반려를 처리합니다.
-export function decideHrLeave(draftId, employeeId, decision) {
-  return axios.post(API_BASE_URL + '/drafts/' + draftId + '/decision', {
-    employeeId,
-    decision
+    params: { year }
   });
 }
 

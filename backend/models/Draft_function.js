@@ -5,61 +5,66 @@ class Draft {
         return new Promise((resolve, reject) => {
             const sql = `
                 SELECT
-                d.draft_id AS draftId,
-                d.draft_id AS leaveId,
-                d.employee_id AS employeeId,
-                e.name AS employeeName,
-                d.document_type AS leaveType,
-                d.content AS reason,
-
-                JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.startDate')) AS startDate,
-                JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.endDate')) AS endDate,
-
-                DATEDIFF(
-                    JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.endDate')),
-                    JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.startDate'))
-                ) + 1 AS leaveDays,
-
-                CASE
-                    WHEN d.status = 'APPROVED' THEN '승인완료'
-                    WHEN d.status = 'REJECTED' THEN '반려'
-                    ELSE '승인대기'
-                END AS applicationStatus,
-
-                d.status AS sourceStatus,
-                DATE_FORMAT(d.created_at, '%Y-%m-%d %H:%i') AS applicationDate,
-
-                s.employee_id AS approverId,
-                approver.name AS approverName
-
-            FROM my_draft d
-            JOIN employees e
-                ON d.employee_id = e.employee_id
-
-            JOIN draft_approval_steps s
-                ON d.draft_id = s.draft_id
-                AND s.step_status = 'PENDING'
-
-            JOIN employees approver
-                ON s.employee_id = approver.employee_id
-
-            WHERE d.document_type = '휴가'
-              AND d.status IN ('PENDING', 'APPROVED', 'REJECTED')
-
-            ORDER BY d.created_at DESC
-            `
-            // JSON_UNQUOTE : json 문자열을 일반 문자열로
-            // JSON_EXTRACT : detail_data에서 원하는 데이터를 추출
-            // DATEDIFF : 두 날짜 간의 차이
+                    d.draft_id AS draftId,
+                    d.draft_id AS leaveId,
+                    d.employee_id AS employeeId,
+                    e.employee_number AS employeeNumber,
+                    e.name AS employeeName,
+                    e.department_id AS departmentId,
+                    dep.department_name AS departmentName,
+                    e.position,
+                    d.document_type AS leaveType,
+                    d.title,
+                    d.content AS reason,
+                    JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.startDate')) AS startDate,
+                    JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.endDate')) AS endDate,
+                    DATEDIFF(
+                        JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.endDate')),
+                        JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.startDate'))
+                    ) + 1 AS leaveDays,
+                    CASE
+                        WHEN d.status = 'APPROVED' THEN '승인완료'
+                        WHEN d.status = 'REJECTED' THEN '반려'
+                        WHEN d.status = 'PENDING' THEN '승인대기'
+                        ELSE d.status
+                    END AS applicationStatus,
+                    d.status AS sourceStatus,
+                    DATE_FORMAT(d.created_at, '%Y-%m-%d %H:%i') AS applicationDate,
+                    s.employee_id AS approverId,
+                    approver.name AS approverName,
+                    NULL AS approvalDate
+                FROM my_draft d
+                INNER JOIN employees e
+                    ON d.employee_id = e.employee_id
+                LEFT JOIN departments dep
+                    ON e.department_id = dep.department_id
+                LEFT JOIN draft_approval_steps s
+                    ON s.draft_id = d.draft_id
+                    AND s.step_order = (
+                        SELECT COALESCE(
+                            MIN(CASE WHEN d.status = 'PENDING' AND step.step_status = 'PENDING'
+                                THEN step.step_order END),
+                            MAX(CASE WHEN d.status = 'REJECTED' AND step.step_status = 'REJECTED'
+                                THEN step.step_order END),
+                            MAX(CASE WHEN d.status = 'APPROVED' AND step.step_status = 'APPROVED'
+                                THEN step.step_order END),
+                            MAX(step.step_order)
+                        )
+                        FROM draft_approval_steps step
+                        WHERE step.draft_id = d.draft_id
+                    )
+                LEFT JOIN employees approver
+                    ON s.employee_id = approver.employee_id
+                WHERE d.document_type = '휴가'
+                  AND d.status IN ('PENDING', 'APPROVED', 'REJECTED')
+                ORDER BY d.created_at DESC, d.draft_id DESC
+            `;
 
             db.query(sql, (err, rows) => {
-                if(err) return reject(err);
-                
+                if (err) return reject(err);
                 resolve(rows);
-            })
-        })
-
-
+            });
+        });
     }
 
     static getById(draftId) {

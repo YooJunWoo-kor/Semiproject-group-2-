@@ -254,25 +254,47 @@ router.get('/departments', (req, res) => {
 })
 
 router.get('/leaves', async (req, res) => {
-    try {
-        const { month, year } = req.query;
+    const { month, year } = req.query;
 
-        const leaves = await Draft.getLeaveDrafts();
-
-        const filteredLeaves = leaves.filter(leave => {
-            const startDate = leave.startDate || "";  // startDate => 문자열이 특정 문자로 시작하는지
-            
-            return(!month || startDate.startsWith(month)) && (!year || startDate.startsWith(year));
-        })
-
-        res.json({
-            success: true,
-            data: filteredLeaves
-        });
+    if (month !== undefined && (typeof month !== 'string' || !/^\\d{4}-(0[1-9]|1[0-2])$/.test(month))) {
+        return res.status(400).json({ success: false, message: '조회 월은 YYYY-MM 형식이어야 합니다.' });
     }
-    catch (error) {
-        console.error("휴가 조회 오류 : ", error);
-        res.status(500).json({ message : '휴가 조회 실패' })
+    if (year !== undefined && (typeof year !== 'string' || !/^\\d{4}$/.test(year))) {
+        return res.status(400).json({ success: false, message: '조회 연도는 YYYY 형식이어야 합니다.' });
+    }
+    if (month && year) {
+        return res.status(400).json({ success: false, message: '월과 연도를 동시에 지정할 수 없습니다.' });
+    }
+
+    try {
+        const leaves = await Draft.getLeaveDrafts();
+        let rangeStart = null;
+        let rangeEnd = null;
+
+        if (month) {
+            const [y, m] = month.split('-').map(Number);
+            const lastDay = String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0');
+            rangeStart = month + '-01';
+            rangeEnd = month + '-' + lastDay;
+        } else if (year) {
+            rangeStart = year + '-01-01';
+            rangeEnd = year + '-12-31';
+        }
+
+        // 휴가 시작일만 비교하지 않고 조회 기간과 겹치는 휴가도 포함합니다.
+        const filteredLeaves = leaves.filter(leave =>
+            !rangeStart || (
+                leave.startDate &&
+                leave.endDate &&
+                leave.startDate <= rangeEnd &&
+                leave.endDate >= rangeStart
+            )
+        );
+
+        return res.json({ success: true, data: filteredLeaves });
+    } catch (error) {
+        console.error('휴가 조회 오류:', error);
+        return res.status(500).json({ success: false, message: '휴가 조회 실패' });
     }
 });
 

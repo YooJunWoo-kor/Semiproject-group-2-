@@ -5,7 +5,6 @@ import PaginationTable from "../../../../components/PaginationTable";
 import ModalBase from "../../../../components/ModalBase";
 import { getLoginUser } from "../../../../utils/authStorage";
 import {
-  decideHrLeave,
   getHrAttendance,
   getHrLeavesByYear,
   getHrLeaves,
@@ -354,7 +353,7 @@ function AttendanceStatistics({ records, month }) {
   );
 }
 
-function LeavePendingView({ leaves, loginEmployeeId, onDecide, saving }) {
+function LeavePendingView({ leaves }) {
   const pending = leaves.filter(
     (leave) => leave.applicationStatus === "승인대기"
   );
@@ -368,7 +367,7 @@ function LeavePendingView({ leaves, loginEmployeeId, onDecide, saving }) {
       <div className="attendance-subview-heading">
         <div>
           <h3>승인 대기</h3>
-          <p>현재 로그인한 승인자에게 배정된 신청만 처리할 수 있습니다.</p>
+          <p>결재 처리는 전자결재에서 진행하며, 이 화면에서는 신청 내역만 확인할 수 있습니다.</p>
         </div>
         <strong>{pending.length}건</strong>
       </div>
@@ -381,48 +380,18 @@ function LeavePendingView({ leaves, loginEmployeeId, onDecide, saving }) {
               <th>휴가 기간</th>
               <th>일수</th>
               <th>신청 사유</th>
-              <th>관리</th>
             </tr>
           </thead>
           <tbody>
-            {pending.map((leave) => {
-              const canDecide =
-                Number(leave.approverId) === Number(loginEmployeeId);
-
-              return (
-                <tr key={leave.leaveId}>
-                  <td>{leave.employeeName}</td>
-                  <td>{leave.leaveType || "휴가"}</td>
-                  <td>{leave.startDate} ~ {leave.endDate}</td>
-                  <td>{leave.leaveDays ?? "-"}일</td>
-                  <td>{leave.reason || "-"}</td>
-                  <td>
-                    {canDecide ? (
-                      <div className="attendance-leave-actions">
-                        <button
-                          type="button"
-                          className="erp-primary-button"
-                          onClick={() => onDecide(leave, "approve")}
-                          disabled={saving}
-                        >
-                          승인
-                        </button>
-                        <button
-                          type="button"
-                          className="attendance-leave-reject-button"
-                          onClick={() => onDecide(leave, "reject")}
-                          disabled={saving}
-                        >
-                          반려
-                        </button>
-                      </div>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
+            {pending.map((leave) => (
+              <tr key={leave.draftId}>
+                <td>{leave.employeeName}</td>
+                <td>{leave.leaveType || "휴가"}</td>
+                <td>{leave.startDate} ~ {leave.endDate}</td>
+                <td>{leave.leaveDays ?? "-"}일</td>
+                <td>{leave.reason || "-"}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -1197,47 +1166,6 @@ export default function Attendance() {
     setCurrentPage(1);
   }
 
-  async function decideLeave(leave, decision) {
-    const employeeId = Number(loginUser?.employeeKey);
-
-    if (!Number.isSafeInteger(employeeId) || employeeId < 1 || saving) {
-      setLeaveError("로그인 사용자 정보를 확인해 주세요.");
-      return;
-    }
-
-    const actionLabel = decision === "approve" ? "승인" : "반려";
-
-    if (!window.confirm(`${leave.employeeName}님의 휴가 신청을 ${actionLabel}할까요?`)) {
-      return;
-    }
-
-    setSaving(true);
-    setLeaveError("");
-    setNotice("");
-
-    try {
-      const response = await decideHrLeave(leave.draftId, employeeId, decision);
-      const leaveResponse = await getHrLeaves(selectedMonth);
-
-      if (
-        !leaveResponse.data.success ||
-        !Array.isArray(leaveResponse.data.data)
-      ) {
-        throw new Error("휴가 신청 응답 형식이 올바르지 않습니다.");
-      }
-
-      setLeaveData(leaveResponse.data.data);
-      setNotice(response.data.message || `휴가 신청이 ${actionLabel}되었습니다.`);
-    } catch (requestError) {
-      setLeaveError(
-        requestError.response?.data?.message ||
-        `휴가 신청을 ${actionLabel}하지 못했습니다.`
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
   // 선택 직원의 휴가만 계산합니다. 직원 목록은 두 탭에서 동일합니다.
   const selectedEmployeeLeaves = leaveData
     .filter((leave) =>
@@ -1267,27 +1195,21 @@ export default function Attendance() {
   const leaveTableHeaders = [
     "휴가 유형", "시작일", "종료일", "일수", "신청 상태", "신청일", "사유", "승인자", "승인일"
   ];
-  const leaveTableData = selectedEmployeeLeaves.map((leave) => {
-    const canDecide =
-      leave.applicationStatus === "승인대기" &&
-      Number(leave.approverId) === Number(loginUser?.employeeKey);
-
-    return {
-      content: [
-        leave.leaveType || "휴가",
-        leave.startDate || "-",
-        leave.endDate || "-",
-        `${leave.leaveDays ?? "-"}일`,
-        <span className={`status-tag ${getLeaveStatusClass(leave.applicationStatus)}`}>
-          {leave.applicationStatus || "-"}
-        </span>,
-        leave.applicationDate || "-",
-        leave.reason || "-",
-        leave.approverName || "-",
-        leave.approvalDate || "-",
-      ]
-    };
-  });
+  const leaveTableData = selectedEmployeeLeaves.map((leave) => ({
+    content: [
+      leave.leaveType || "휴가",
+      leave.startDate || "-",
+      leave.endDate || "-",
+      `${leave.leaveDays ?? "-"}일`,
+      <span className={`status-tag ${getLeaveStatusClass(leave.applicationStatus)}`}>
+        {leave.applicationStatus || "-"}
+      </span>,
+      leave.applicationDate || "-",
+      leave.reason || "-",
+      leave.approverName || "-",
+      leave.approvalDate || "-"
+    ]
+  }));
 
   return (
     <div className="border-container hr-attendance-management">
@@ -1676,7 +1598,7 @@ export default function Attendance() {
                 {leaveTableData.length > 0 ? (
                   <PaginationTable
                     key={`leave-${selectedEmployeeId}-${selectedMonth}`}
-                    title="휴가 신청·승인 내역"
+                    title="휴가 신청 내역"
                     th={leaveTableHeaders}
                     allData={leaveTableData}
                     itemsPerPage={8}
@@ -1689,12 +1611,7 @@ export default function Attendance() {
                 
               </>
             ) : activeTab === "leave-pending" ? (
-              <LeavePendingView
-                leaves={leaveData}
-                loginEmployeeId={loginUser?.employeeKey}
-                onDecide={decideLeave}
-                saving={saving}
-              />
+              <LeavePendingView leaves={leaveData} />
             ) : leaveYearLoading ? (
               <p className="attendance-feedback" role="status">
                 연차 현황을 불러오는 중입니다.
