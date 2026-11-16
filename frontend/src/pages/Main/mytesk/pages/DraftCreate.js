@@ -3,7 +3,7 @@ import axios from "axios";
 import ModalBase from "../../../../components/ModalBase";
 import DepEmpList from "../../../../components/DepEmpList";
 
-import { API_BASE_URL, getLoginUser, getEmployeeAccounts } from "../../../../utils/authStorage";
+import { API_BASE_URL, getLoginUser } from "../../../../utils/authStorage";
 
 const emptyForm = {
     title: "", draftType: "일반", content: "",
@@ -13,7 +13,8 @@ const emptyForm = {
 
     paymentType: "수당",
     payMonth: "",
-    targetEmployeeId: "",
+    paymentDate: "",
+    paymentDetail : ""
 
 };
 
@@ -27,8 +28,6 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
     const [isSaving, setIsSaving] = useState(false);
     const [receiptFile, setReceiptFile] = useState(null);
 
-    const [payEmployees, setPayEmployees] = useState([]);
-
     const [expenseItems, setExpenseItems] = useState([
         {
             useDate: "",
@@ -38,7 +37,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
         }
     ]);
 
-    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount, paymentType, payMonth, targetEmployeeId } = form;
+    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount, paymentType, payMonth, paymentDate, paymentDetail } = form;
 
     useEffect(() => {
         const loadDepartments = async () => {
@@ -70,16 +69,11 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             amount: detail.amount ?? "",
             paymentType: detail.paymentType || "수당",
             payMonth: detail.payMonth || "",
-            targetEmployeeId: detail.targetEmployeeId || ""
+            paymentDetail : detail.paymentDetail || "",
         });
         setApprovers(editingDraft.approvers || []);
     }, [editingDraft]);
 
-    useEffect(() => {
-        if (draftType !== '추가급여') return;
-
-        getEmployeeAccounts().then(setPayEmployees).catch(error => console.error("직원 조회 실패", error))  //.then -> promise가 성공적으로 응답을 받았을 때 실행
-    }, [draftType]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -115,6 +109,11 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             return;
         }
 
+        if(!paymentDetail.trim()){
+            alert("상세 내용을 입력해주세요");
+            return;
+        }
+
         if (saveType === "submit") {
             if (!content.trim() || approvers.length === 0) {
                 alert("내용을 입력하고 결재자를 한 명 이상 선택해주세요.");
@@ -128,6 +127,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 alert("물품명과 올바른 수량을 입력해주세요.");
                 return;
             }
+
 
 
             if (draftType === "비용") {
@@ -144,9 +144,9 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
 
             if (draftType === "추가급여") {
                 if (
-                    !targetEmployeeId ||
                     !["수당", "상여"].includes(paymentType) ||
                     !/^\d{4}-(0[1-9]|1[0-2])$/.test(payMonth) ||
+                    amount === "" ||
                     !Number.isSafeInteger(Number(amount)) ||
                     Number(amount) <= 0
                 ) {
@@ -154,7 +154,6 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                     return;
                 }
             }
-
         }
 
         const employeeId = Number(getLoginUser()?.employeeKey);
@@ -163,15 +162,16 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             return;
         }
 
-        const detailData = draftType === "휴가" ? { startDate, endDate } :
-            draftType === "구매" ? { itemName, quantity } :
-                draftType === "비용" ? { expenseItems, totalAmount } :
-                    draftType === "추가급여" ? {
-                        targetEmployeeId: targetEmployeeId ? Number(targetEmployeeId) : null,
-                        paymentType,
-                        payMonth,
-                        amount: amount === "" ? null : Number(amount)
-                    } : {};
+        const detailData =
+
+            draftType === "휴가" ? { startDate, endDate } :
+                draftType === "구매" ? { itemName, quantity } :
+                    draftType === "비용" ? { expenseItems, totalAmount } :
+                        draftType === "추가급여" ? {
+                            paymentType,
+                            payMonth,
+                            amount: amount === "" ? null : Number(amount)
+                        } : {};
 
         const payload = {
             employeeId, title: title.trim(), documentType: draftType,
@@ -372,25 +372,25 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                                     <option value="상여">상여금</option>
                                 </select>
                             </label>
-
-                            <label>지급 대상 직원
-                                <select name="targetEmployeeId" value={targetEmployeeId} onChange={handleInputChange}>
-                                    <option value="">직원 선택</option>
-                                    {payEmployees.map(employee => (
-                                        <option key={employee.employee_id} value={employee.employee_id}>
-                                            {employee.name} ({employee.department_name})
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
                         </div>
 
+                        <label>상세 분류
+                            <input
+                                type="text"
+                                name="paymentDetail"
+                                value={paymentDetail}
+                                onChange={handleInputChange}
+                                placeholder="예: 야근 수당, 근무 수당, 성과급"
+                                maxLength={50}
+                            />
+                        </label>
+
                         <div className="draft-row">
-                            <label>지급 월
-                                <input type="month" name="payMonth" value={payMonth} onChange={handleInputChange} />
+                            <label>지급 예정일
+                                <input type="date" name="paymentDate" value={paymentDate} onChange={handleInputChange} />
                             </label>
 
-                            <label>지급 금액 (원)
+                            <label>신청 금액 (원)
                                 <input type="number" min="1" step="1" name="amount" value={amount} onChange={handleInputChange} />
                             </label>
                         </div>
