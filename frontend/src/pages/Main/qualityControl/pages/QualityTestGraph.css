@@ -323,3 +323,106 @@
 }
 
 .quality-graph-header h1 { color: var(--color-brand); }
+
+
+/* Quality graph visual polish */
+.quality-graph-page {
+    color: #172b48;
+}
+
+.quality-graph-page .quality-graph-header {
+    padding: 24px 28px;
+    border: 1px solid #dae9fc;
+    border-radius: 18px;
+    background: linear-gradient(115deg, #f0f6ff, #fff 72%);
+}
+
+.quality-graph-page .quality-graph-header h1 {
+    margin: 4px 0 8px;
+    font-size: clamp(1.5rem, 2.3vw, 1.95rem);
+    color: #17355c;
+    letter-spacing: -.045em;
+}
+
+.quality-graph-page .quality-graph-header p {
+    margin: 0;
+    color: #64748b;
+}
+
+.quality-graph-page .graph-summary-card,
+.quality-graph-page .graph-control-card,
+.quality-graph-page .graph-card {
+    border: 1px solid #e2eaf1;
+    border-radius: 17px;
+    background: #fff;
+    box-shadow: 0 6px 24px rgba(25, 55, 90, .05);
+}
+
+.quality-graph-page .graph-summary-card {
+    min-width: 0;
+}
+
+.quality-graph-page .graph-summary-card.is-pass::before {
+    background: #10b981;
+}
+
+.quality-graph-page .graph-summary-card.is-fail::before {
+    background: #ef4444;
+}
+
+.quality-graph-page .graph-summary-card.is-rate::before {
+    background: #2563eb;
+}
+
+.quality-graph-page .graph-control-card {
+    background: #f7faff;
+    align-items: center;
+}
+
+.quality-graph-page .graph-card h2 {
+    color: #172b48;
+    letter-spacing: -.035em;
+}
+
+.quality-graph-page .graph-control select {
+    min-height: 42px;
+    padding: 9px 13px;
+    border: 1px solid #cedae7;
+    border-radius: 10px;
+    background: #fff;
+    color: #172b48;
+}
+
+.quality-graph-page .graph-control select:focus {
+    outline: none;
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, .14);
+}
+
+.quality-graph-page .graph-control select:focus-visible {
+    outline: 3px solid #93c5fd;
+    outline-offset: 2px;
+}
+
+.quality-graph-page .pie-summary-list > div {
+    border-color: #e2eaf1;
+    background: #f8fbff;
+}
+
+.quality-graph-page .summary-dot.is-pass {
+    background: #10b981;
+}
+
+.quality-graph-page .summary-dot.is-fail {
+    background: #ef4444;
+}
+
+.quality-graph-page .summary-dot.is-wait {
+    background: #94a3b8;
+}
+
+@media (max-width: 680px) {
+    .quality-graph-page .quality-graph-header {
+        padding: 21px;
+    }
+}
