@@ -1,3 +1,4 @@
+import FinanceSummaryBox from './FinanceSummaryBox';
 //재무 공통 UI: 계좌·카드·거래 전표의 입출금 이력 표.
 import React, { useState } from 'react';
 
@@ -35,11 +36,11 @@ export default function FinancePaymentHistory({ payments = [], className = '', s
         </label>
         <button type="button" aria-label="다음 월" disabled={allPeriods} onClick={() => changeMonth(1)}>▶</button>
       </div>
-      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', padding: 12, border: '1px solid var(--color-line)', borderRadius: 10 }}>
-        <span>입금 합계: <strong>{totalFor('입금').toLocaleString()} {currency || amountSuffix}</strong></span>
-        <span>출금 합계: <strong>{totalFor('출금').toLocaleString()} {currency || amountSuffix}</strong></span>
-        {currentBalance !== null && <span>현재 잔액: <strong>{Number(currentBalance).toLocaleString()} {currency || amountSuffix}</strong></span>}
-      </div>
+      <FinanceSummaryBox items={[
+        { key: 'income', label: '입금 합계', value: `${totalFor('입금').toLocaleString()} ${currency || amountSuffix}` },
+        { key: 'expense', label: '출금 합계', value: `${totalFor('출금').toLocaleString()} ${currency || amountSuffix}` },
+        ...(currentBalance !== null ? [{ key: 'balance', label: '현재 잔액', value: `${Number(currentBalance).toLocaleString()} ${currency || amountSuffix}` }] : [])
+      ]} />
     </div>}
     <div className={`table-shell ${className}`.trim()} style={enablePeriodFilter ? { overflowX: 'auto' } : undefined}>
     <table style={enablePeriodFilter ? { width: '100%', minWidth: 640, tableLayout: 'auto' } : undefined}>

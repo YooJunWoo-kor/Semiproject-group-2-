@@ -1362,18 +1362,7 @@ function Items({
                           </tr>)}</tbody>
                         </table>
                       </div>}
-                      {deductionData.history.length > 0 && <section style={{
-                marginTop: 12
-              }} aria-label="공제액 납부 이력">
-                        <h4 style={{
-                  margin: '0 0 8px'
-                }}>납부 이력</h4>
-                        {deductionData.history.map(row => <p key={row.payment_id} style={{
-                  fontSize: 13
-                }}>
-                          #{row.payment_id} · {row.payment_date} · {payrollWon(row.amount)}<br />{row.bank_name} · {row.account_name}
-                        </p>)}
-                      </section>}
+                     
                       {Number(deductionData.pending_total) > 0 && payrollCanPay && <form onSubmit={handleDeductionPayment} style={{
                 marginTop: 14
               }}>
