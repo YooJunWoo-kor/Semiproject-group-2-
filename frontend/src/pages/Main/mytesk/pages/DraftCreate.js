@@ -31,7 +31,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
         }
     ]);
 
-    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount } = form;
+    const { title, draftType, content, startDate, endDate, itemName, quantity } = form;
 
     useEffect(() => {
         const loadDepartments = async () => {
@@ -241,6 +241,8 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                             <option>휴가</option>
                             <option>구매</option>
                             <option>비용</option>
+                            <option>수당</option>
+                            <option>상여금</option>
                         </select>
                     </label>
                 </div>

@@ -16,6 +16,9 @@ const payrollPaymentRowsSql = `
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.base_amount')) AS UNSIGNED) AS base_amount,
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.allowance_amount')) AS UNSIGNED) AS allowance_amount,
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.bonus_amount')) AS UNSIGNED) AS bonus_amount,
+    CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.other_payment_amount')) AS UNSIGNED) AS other_payment_amount,
+    CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.income_tax_amount')) AS UNSIGNED) AS income_tax_amount,
+    CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.local_income_tax_amount')) AS UNSIGNED) AS local_income_tax_amount,
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.gross_amount')) AS UNSIGNED) AS gross_amount,
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.deduction_amount')) AS UNSIGNED) AS deduction_amount,
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.net_amount')) AS UNSIGNED) AS net_amount,
@@ -791,7 +794,17 @@ router.post("/items", async (req, res) => {
                 if (!drafts.length) failSource(404, '원본 기안서를 찾을 수 없습니다.');
                 if (drafts[0].status !== 'APPROVED') failSource(409, '최종 승인된 기안서만 거래로 등록할 수 있습니다.');
                 const [payrollRows] = await connection.execute(
-                    'SELECT payroll_id FROM payrolls WHERE draft_id = ? LIMIT 1 FOR UPDATE', [sourceId]);
+                    `SELECT p.payroll_id
+                       FROM payrolls p
+                       INNER JOIN my_draft d ON d.draft_id = ?
+                       WHERE d.document_type = '급여'
+                         AND JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.source')) = 'HR_PAYROLL'
+                         AND JSON_CONTAINS(
+                             JSON_EXTRACT(d.detail_data, '$.payrollIds'),
+                             JSON_ARRAY(p.payroll_id)
+                         )
+                       LIMIT 1
+                       FOR UPDATE`, [sourceId]);
                 if (payrollRows.length) failSource(409, '급여 기안서는 인건비 목록에 자동 표시됩니다. 일반 품목 거래로 중복 등록할 수 없습니다.');
                 const [expenses] = await connection.execute('SELECT amount FROM draft_expense WHERE draft_id = ? FOR UPDATE', [sourceId]);
                 if (expenses.length && expenses.every(row => readAmount(row.amount) !== null)) {
@@ -2779,16 +2792,21 @@ router.get('/payrolls/summary', (req, res) => {
                'APPROVED' AS approval_status,
                COUNT(DISTINCT p.employee_id) AS employee_count,
                COUNT(*) AS payroll_count,
-               SUM(COALESCE(link.base_amount, p.base_salary)) AS base_salary,
-               SUM(COALESCE(link.allowance_amount, p.allowance)) AS allowance,
-               SUM(COALESCE(link.bonus_amount, p.bonus)) AS bonus,
-               SUM(COALESCE(link.gross_amount, p.gross_pay)) AS gross_pay,
-               SUM(COALESCE(link.deduction_amount, p.deduction)) AS deduction,
-               SUM(COALESCE(link.net_amount, p.net_pay)) AS net_pay,
+               SUM(p.base_salary) AS base_salary,
+               SUM(p.allowance) AS allowance,
+               SUM(p.bonus) AS bonus,
+               SUM(p.gross_pay) AS gross_pay,
+               SUM(p.deduction) AS deduction,
+               SUM(p.net_pay) AS net_pay,
                SUM(CASE WHEN p.payment_status = '지급완료' THEN 1 ELSE 0 END) AS paid_count
         FROM payrolls p
-        INNER JOIN my_draft d ON d.draft_id = p.draft_id
-        LEFT JOIN (${payrollPaymentRowsSql}) link ON link.payroll_id = p.payroll_id
+        INNER JOIN my_draft d
+            ON d.document_type = '급여'
+           AND JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.source')) = 'HR_PAYROLL'
+           AND JSON_CONTAINS(
+               JSON_EXTRACT(d.detail_data, '$.payrollIds'),
+               JSON_ARRAY(p.payroll_id)
+           )
         WHERE d.status = 'APPROVED'
           AND p.pay_month REGEXP '^[0-9]{4}-(0[1-9]|1[0-2])$'
           AND NOT EXISTS (
@@ -2820,25 +2838,31 @@ router.get('/payrolls/:month/details', (req, res) => {
     }
     db.query(`
         SELECT p.payroll_id, p.employee_id, e.name,
-               COALESCE(link.base_amount, p.base_salary) AS base_salary,
-               COALESCE(link.allowance_amount, p.allowance) AS allowance,
-               COALESCE(link.bonus_amount, p.bonus) AS bonus,
-               COALESCE(link.deduction_amount, p.deduction) AS deduction,
-               COALESCE(link.gross_amount, p.gross_pay) AS gross_pay,
-               COALESCE(link.net_amount, p.net_pay) AS net_pay,
-               p.payment_status, p.draft_id,
+               p.base_salary AS base_salary,
+               p.allowance AS allowance,
+               p.bonus AS bonus,
+               p.other_payment AS other_payment,
+               p.income_tax AS income_tax,
+               p.local_income_tax AS local_income_tax,
+               p.deduction AS deduction,
+               p.gross_pay AS gross_pay,
+               p.net_pay AS net_pay,
+               p.payment_status, d.draft_id,
                d.title AS draft_title,
-               link.payment_id, link.deduction_status,
-               DATE_FORMAT(paid.payment_date, '%Y-%m-%d') AS registered_payment_date,
-               paid.amount AS registered_payment_amount,
-               account.bank_name AS payment_bank_name,
-               account.account_name AS payment_account_name
+               NULL AS payment_id, NULL AS deduction_status,
+               NULL AS registered_payment_date,
+               NULL AS registered_payment_amount,
+               NULL AS payment_bank_name,
+               NULL AS payment_account_name
         FROM payrolls p
         INNER JOIN employees e ON e.employee_id = p.employee_id
-        INNER JOIN my_draft d ON d.draft_id = p.draft_id
-        LEFT JOIN (${payrollPaymentRowsSql}) link ON link.payroll_id = p.payroll_id
-        LEFT JOIN payments paid ON paid.payment_id = link.payment_id
-        LEFT JOIN bank_accounts account ON account.account_id = paid.account_id
+        INNER JOIN my_draft d
+            ON d.document_type = '급여'
+           AND JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.source')) = 'HR_PAYROLL'
+           AND JSON_CONTAINS(
+               JSON_EXTRACT(d.detail_data, '$.payrollIds'),
+               JSON_ARRAY(p.payroll_id)
+           )
         WHERE p.pay_month = ? AND d.status = 'APPROVED'
           AND NOT EXISTS (
               SELECT 1 FROM trade_transactions t
@@ -2912,10 +2936,13 @@ router.post('/payrolls/:month/payments', async (req, res) => {
             const base = integer(row.base_salary, '기본급');
             const allowance = integer(row.allowance, '수당');
             const bonus = integer(row.bonus, '상여금');
+            const otherPayment = integer(row.other_payment, '기타 지급액');
+            const incomeTax = integer(row.income_tax, '소득세');
+            const localIncomeTax = integer(row.local_income_tax, '지방소득세');
             const gross = integer(row.gross_pay, '세전 급여');
             const deduction = integer(row.deduction, '공제액');
             const net = integer(row.net_pay, '실지급액');
-            if (base + allowance + bonus !== gross || gross - deduction !== net || net <= 0) fail(409, '급여 계산이 일치하지 않거나 실지급액이 0원입니다. 급여를 확인해 주세요.');
+            if (base + allowance + bonus + otherPayment !== gross || incomeTax + localIncomeTax !== deduction || gross - deduction !== net || net <= 0) fail(409, '급여 계산이 일치하지 않거나 실지급액이 0원입니다. 급여를 확인해 주세요.');
             netTotal += net;
             deductionTotal += deduction;
             if (!Number.isSafeInteger(netTotal) || !Number.isSafeInteger(deductionTotal)) fail(409, '급여 합계가 처리 범위를 초과했습니다.');
@@ -2938,6 +2965,8 @@ router.post('/payrolls/:month/payments', async (req, res) => {
             const snapshot = {
                 pay_month: month, employee_id: Number(row.employee_id), draft_id: Number(row.draft_id),
                 base_amount: Number(row.base_salary), allowance_amount: Number(row.allowance), bonus_amount: Number(row.bonus),
+                other_payment_amount: Number(row.other_payment), income_tax_amount: Number(row.income_tax),
+                local_income_tax_amount: Number(row.local_income_tax),
                 gross_amount: Number(row.gross_pay), deduction_amount: Number(row.deduction), net_amount: Number(row.net_pay),
                 deduction_status: '납부대기', registered_by: employeeId
             };
@@ -3129,8 +3158,7 @@ router.get("/approvals", (req, res) => {
         DATE_FORMAT(
           a.created_at, '%Y-%m-%d %H:%i'
         ) AS created_at,
-        p.payment_methods,
-        source_link.transaction_id AS linked_transaction_id
+        p.payment_methods
       FROM approval_documents a
   
       LEFT JOIN employees e
@@ -3153,8 +3181,6 @@ router.get("/approvals", (req, res) => {
       ) p
         ON a.document_id = p.document_id
   
-      LEFT JOIN trade_transactions source_link
-        ON source_link.source_type = 'approval' AND source_link.source_id = a.document_id
       ORDER BY a.created_at DESC, a.document_id DESC
     `;
 
@@ -3174,11 +3200,24 @@ router.get("/approvals", (req, res) => {
         const draftQuery = `
           SELECT m.*,
                  DATE_FORMAT(m.created_at, '%Y-%m-%d %H:%i') AS created_at,
-                 e.name AS requester_name, d.department_name, expense.expense_amount, source_link.transaction_id AS linked_transaction_id,
-                 EXISTS (SELECT 1 FROM payrolls payroll WHERE payroll.draft_id = m.draft_id) AS is_payroll_draft,
-                 (SELECT SUM(payroll.gross_pay) FROM payrolls payroll WHERE payroll.draft_id = m.draft_id) AS payroll_amount,
-                 (SELECT GROUP_CONCAT(DISTINCT payroll.pay_month ORDER BY payroll.pay_month)
-                    FROM payrolls payroll WHERE payroll.draft_id = m.draft_id) AS payroll_months
+                 e.name AS requester_name, d.department_name, expense.expense_amount,
+                 CASE
+                   WHEN m.document_type = '급여'
+                    AND JSON_UNQUOTE(JSON_EXTRACT(m.detail_data, '$.source')) = 'HR_PAYROLL'
+                   THEN 1 ELSE 0
+                 END AS is_payroll_draft,
+                 CASE
+                   WHEN m.document_type = '급여'
+                    AND JSON_UNQUOTE(JSON_EXTRACT(m.detail_data, '$.source')) = 'HR_PAYROLL'
+                   THEN CAST(JSON_UNQUOTE(JSON_EXTRACT(m.detail_data, '$.totalGrossPay')) AS DECIMAL(20, 0))
+                   ELSE NULL
+                 END AS payroll_amount,
+                 CASE
+                   WHEN m.document_type = '급여'
+                    AND JSON_UNQUOTE(JSON_EXTRACT(m.detail_data, '$.source')) = 'HR_PAYROLL'
+                   THEN JSON_UNQUOTE(JSON_EXTRACT(m.detail_data, '$.payMonth'))
+                   ELSE NULL
+                 END AS payroll_months
           FROM my_draft m
           LEFT JOIN employees e ON m.employee_id = e.employee_id
           LEFT JOIN departments d ON e.department_id = d.department_id
@@ -3187,11 +3226,13 @@ router.get("/approvals", (req, res) => {
             FROM draft_expense
             GROUP BY draft_id
           ) expense ON expense.draft_id = m.draft_id
-          LEFT JOIN trade_transactions source_link ON source_link.source_type = 'draft' AND source_link.source_id = m.draft_id
           WHERE m.status IN ('APPROVED', 'PENDING', 'WAITING', 'IN_PROGRESS', 'REJECTED', '승인', '대기', '승인대기', '결재대기', '진행중', '반려')
             AND (m.document_type LIKE '%구매%' OR m.document_type LIKE '%비용%'
                  OR expense.draft_id IS NOT NULL
-                 OR EXISTS (SELECT 1 FROM payrolls payroll WHERE payroll.draft_id = m.draft_id))
+                 OR (
+                      m.document_type = '급여'
+                      AND JSON_UNQUOTE(JSON_EXTRACT(m.detail_data, '$.source')) = 'HR_PAYROLL'
+                    ))
           ORDER BY m.created_at DESC, m.draft_id DESC
         `;
         db.query(draftQuery, (draftError, drafts) => {

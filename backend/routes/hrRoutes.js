@@ -4,8 +4,9 @@ const db = require('../db');
 const hrRouter = express.Router();
 const promiseDb = db.promise();
 const attendanceStatuses = ['정상', '지각', '결근', '휴가', '출장', '휴직', '미출근'];
+// 급여는 작성중 단계에서만 금액을 바꿀 수 있고, 확정 이후에는 이력을 보존합니다.
 const payrollDraftStatuses = ['작성중', '지급대기'];
-const payrollFinalStatuses = ['확정', '지급완료'];
+const payrollFinalStatuses = ['확정', '지급대기', '지급완료'];
 
 // HR API에서 공통으로 사용하는 날짜·이메일·급여월·금액 입력 검증 함수입니다.
 function isDateString(value) {
@@ -31,6 +32,35 @@ function isPayMonthString(value) {
     return typeof value === 'string' && /^(\d{4})-(0[1-9]|1[0-2])$/.test(value);
 }
 
+function currentPayMonth() {
+    const date = new Date();
+
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function nextPayMonth() {
+    const date = new Date();
+    date.setMonth(date.getMonth() + 1);
+
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function normalizeDepartmentName(value) {
+    const name = String(value || '').trim();
+
+    if (!name) {
+        return '';
+    }
+
+    if (name.endsWith('부서')) {
+        return name;
+    }
+
+    return name.endsWith('팀')
+        ? `${name.slice(0, -1)}부서`
+        : `${name}부서`;
+}
+
 function parseNonNegativeInteger(value) {
     if (value === '' || value === null || value === undefined) {
         return null;
@@ -43,6 +73,116 @@ function parseNonNegativeInteger(value) {
         : null;
 }
 
+function parseDetailData(value) {
+    if (!value) {
+        return {};
+    }
+
+    if (typeof value === 'object' && !Array.isArray(value)) {
+        return value;
+    }
+
+    if (typeof value !== 'string') {
+        return {};
+    }
+
+    try {
+        const parsed = JSON.parse(value);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+            ? parsed
+            : {};
+    } catch (error) {
+        return {};
+    }
+}
+
+function positiveInteger(value) {
+    const parsed = parseNonNegativeInteger(value);
+
+    return parsed !== null && parsed > 0 ? parsed : null;
+}
+
+function sumDetailAmounts(items) {
+    if (!Array.isArray(items) || items.length === 0) {
+        return null;
+    }
+
+    const amounts = items.map((item) => positiveInteger(item?.amount));
+
+    return amounts.some((amount) => amount === null)
+        ? null
+        : amounts.reduce((total, amount) => total + amount, 0);
+}
+
+function readDraftPayrollAmount(documentType, detailData) {
+    if (documentType === '비용') {
+        const itemTotal = sumDetailAmounts(detailData.expenseItems);
+
+        if (itemTotal !== null) {
+            return itemTotal;
+        }
+    }
+
+    const amountKeys = documentType === '수당'
+        ? ['allowance', 'allowanceAmount', 'amount', 'totalAmount', 'paymentAmount']
+        : documentType === '상여금'
+            ? ['bonus', 'bonusAmount', 'amount', 'totalAmount', 'paymentAmount']
+            : ['amount', 'totalAmount', 'paymentAmount'];
+
+    for (const key of amountKeys) {
+        const amount = positiveInteger(detailData[key]);
+
+        if (amount !== null) {
+            return amount;
+        }
+    }
+
+    return null;
+}
+
+function payrollFieldForDraftType(documentType) {
+    return {
+        비용: 'other_payment',
+        수당: 'allowance',
+        상여금: 'bonus'
+    }[documentType] || null;
+}
+
+function isEmployeePaymentDraft(detailData) {
+    return detailData.employeePayment === true ||
+        detailData.isEmployeePayment === true ||
+        detailData.payrollEligible === true ||
+        (Number.isSafeInteger(Number(detailData.recipientEmployeeId)) &&
+            Number(detailData.recipientEmployeeId) > 0);
+}
+
+function payrollEmployeeIdForDraft(draft, detailData) {
+    const recipientEmployeeId = Number(detailData.recipientEmployeeId);
+
+    return Number.isSafeInteger(recipientEmployeeId) && recipientEmployeeId > 0
+        ? recipientEmployeeId
+        : Number(draft.employeeId);
+}
+
+function normalizePositiveIds(values) {
+    if (values === undefined) {
+        return null;
+    }
+
+    if (!Array.isArray(values) || values.length === 0) {
+        return undefined;
+    }
+
+    const ids = values.map((value) => Number(value));
+
+    return ids.some((value) => !Number.isSafeInteger(value) || value < 1) ||
+        new Set(ids).size !== ids.length
+        ? undefined
+        : ids;
+}
+
+// 프리랜서 급여 공통 계산식입니다.
+// 총지급액 → 소득세 3% → 지방소득세(소득세의 10%) → 실지급액 순서로 계산합니다.
 function calculateFreelancerPayroll({
     baseSalary,
     allowance,
@@ -69,6 +209,145 @@ function calculateFreelancerPayroll({
     };
 }
 
+function normalizePayrollIds(rawPayrollIds) {
+    if (!Array.isArray(rawPayrollIds) || rawPayrollIds.length === 0) {
+        return null;
+    }
+
+    const payrollIds = rawPayrollIds.map((value) => Number(value));
+
+    return payrollIds.some(
+        (value) => !Number.isSafeInteger(value) || value < 1
+    ) || new Set(payrollIds).size !== payrollIds.length
+        ? null
+        : payrollIds;
+}
+
+async function hasActiveMasterAccount(employeeId) {
+    const [rows] = await promiseDb.query(
+        `SELECT employee_id
+         FROM employee_accounts
+         WHERE employee_id = ?
+           AND role = 'MASTER'
+           AND account_status = 'ACTIVE'`,
+        [employeeId]
+    );
+
+    return rows.length > 0;
+}
+
+function validatePayrollAmounts(row) {
+    const amounts = [
+        row.baseSalary,
+        row.allowance,
+        row.bonus,
+        row.otherPayment,
+        row.incomeTax,
+        row.localIncomeTax,
+        row.deduction,
+        row.grossPay,
+        row.netPay
+    ].map(parseNonNegativeInteger);
+    const [
+        baseSalary,
+        allowance,
+        bonus,
+        otherPayment,
+        incomeTax,
+        localIncomeTax,
+        deduction,
+        grossPay,
+        netPay
+    ] = amounts;
+    const expectedGrossPay =
+        baseSalary === null ||
+        allowance === null ||
+        bonus === null ||
+        otherPayment === null
+            ? null
+            : baseSalary + allowance + bonus + otherPayment;
+    const expectedDeduction =
+        incomeTax === null || localIncomeTax === null
+            ? null
+            : incomeTax + localIncomeTax;
+
+    return {
+        valid: amounts.every((value) => value !== null) &&
+            grossPay === expectedGrossPay &&
+            deduction === expectedDeduction &&
+            netPay === grossPay - deduction,
+        grossPay,
+        deduction,
+        netPay
+    };
+}
+
+async function propagateAnnualSalaryToFutureRecords(
+    employeeId,
+    effectiveMonth,
+    annualSalary
+) {
+    // 연봉 변경월 이후의 연봉 이력도 새 기준으로 맞춰야
+    // 아직 생성되지 않은 다음 달 급여가 새 기본급을 사용합니다.
+    const baseSalary = Math.floor(annualSalary / 12);
+
+    await promiseDb.query(
+        `UPDATE employee_salary_history
+         SET annual_salary = ?
+         WHERE employee_id = ?
+           AND effective_month > ?`,
+        [annualSalary, employeeId, effectiveMonth]
+    );
+
+    const [rows] = await promiseDb.query(
+        `SELECT
+            payroll_id AS payrollId,
+            allowance,
+            bonus,
+            other_payment AS otherPayment
+         FROM payrolls
+         WHERE employee_id = ?
+           AND pay_month > ?
+           AND (
+                payment_status IS NULL
+                OR payment_status IN (?, ?)
+           )
+         ORDER BY pay_month ASC, payroll_id ASC`,
+        [employeeId, effectiveMonth, payrollDraftStatuses[0], payrollDraftStatuses[1]]
+    );
+
+    // 이미 생성된 미래 급여 중 미확정 행만 기본급을 갱신합니다.
+    // 월별 수당·상여금·기타 지급액은 각 월 담당자 입력값을 그대로 보존합니다.
+    for (const row of rows) {
+        const calculation = calculateFreelancerPayroll({
+            baseSalary,
+            allowance: parseNonNegativeInteger(row.allowance) ?? 0,
+            bonus: parseNonNegativeInteger(row.bonus) ?? 0,
+            otherPayment: parseNonNegativeInteger(row.otherPayment) ?? 0
+        });
+
+        await promiseDb.query(
+            `UPDATE payrolls
+             SET base_salary = ?,
+                 income_tax = ?,
+                 local_income_tax = ?,
+                 deduction = ?,
+                 gross_pay = ?,
+                 net_pay = ?
+             WHERE payroll_id = ?`,
+            [
+                baseSalary,
+                calculation.incomeTax,
+                calculation.localIncomeTax,
+                calculation.totalDeduction,
+                calculation.grossPay,
+                calculation.netPay,
+                row.payrollId
+            ]
+        );
+    }
+}
+
 async function departmentExists(departmentId) {
     // 직원 등록·수정 전에 참조할 부서가 실제로 존재하는지 확인합니다.
     const [rows] = await promiseDb.query(
@@ -82,6 +361,7 @@ async function departmentExists(departmentId) {
 // 급여 기준월에 적용할 연봉을 이력에서 찾습니다.
 // 이력 데이터가 없는 오래된 직원은 현재 직원 정보의 연봉을 fallback으로 사용합니다.
 async function getAnnualSalaryForMonth(employeeId, payMonth) {
+    // 급여 기준월 이전에 적용된 가장 최근 연봉 이력을 사용합니다.
     const [historyRows] = await promiseDb.query(
         `SELECT annual_salary AS annualSalary
          FROM employee_salary_history
@@ -111,13 +391,23 @@ async function getAnnualSalaryForMonth(employeeId, payMonth) {
 // 직원별 월 급여가 아직 없으면 기준월의 연봉으로 자동 생성합니다.
 // 이미 저장된 급여는 절대 갱신하지 않아 과거 급여 이력을 보존합니다.
 async function ensurePayrollForMonth(payMonth, employeeId = null) {
+    // 퇴사자는 퇴사월까지만 대상이며, 퇴사 이후 월은 생성하지 않습니다.
     let employeeQuery = `
         SELECT
-            e.employee_id AS employeeId
+            e.employee_id AS employeeId,
+            e.name AS employeeName
         FROM employees e
         WHERE DATE_FORMAT(e.hire_date, '%Y-%m') <= ?
+          AND (
+                e.employment_status IN ('재직', '휴직')
+                OR (
+                    e.employment_status = '퇴사'
+                    AND e.resignation_date IS NOT NULL
+                    AND DATE_FORMAT(e.resignation_date, '%Y-%m') >= ?
+                )
+          )
     `;
-    const employeeValues = [payMonth];
+    const employeeValues = [payMonth, payMonth];
 
     if (employeeId !== null) {
         employeeQuery += ' AND e.employee_id = ?';
@@ -125,14 +415,44 @@ async function ensurePayrollForMonth(payMonth, employeeId = null) {
     }
 
     const [employees] = await promiseDb.query(employeeQuery, employeeValues);
+    const result = {
+        payMonth,
+        generated: [],
+        existing: [],
+        skipped: []
+    };
 
     for (const employee of employees) {
+        const [existingRows] = await promiseDb.query(
+            `SELECT payroll_id AS payrollId
+             FROM payrolls
+             WHERE employee_id = ?
+               AND pay_month = ?
+             LIMIT 1`,
+            [employee.employeeId, payMonth]
+        );
+
+        if (existingRows.length > 0) {
+            result.existing.push({
+                employeeId: employee.employeeId,
+                employeeName: employee.employeeName,
+                payrollId: existingRows[0].payrollId,
+                reason: '해당 월 급여가 이미 등록되어 있습니다.'
+            });
+            continue;
+        }
+
         const annualSalary = await getAnnualSalaryForMonth(
             employee.employeeId,
             payMonth
         );
 
         if (annualSalary === null) {
+            result.skipped.push({
+                employeeId: employee.employeeId,
+                employeeName: employee.employeeName,
+                reason: '적용월 기준 급여 이력과 초기 연봉이 모두 없습니다.'
+            });
             continue;
         }
 
@@ -144,7 +464,7 @@ async function ensurePayrollForMonth(payMonth, employeeId = null) {
             otherPayment: 0
         });
 
-        await promiseDb.query(
+        const [insertResult] = await promiseDb.query(
             `INSERT IGNORE INTO payrolls (
                 employee_id,
                 pay_month,
@@ -172,8 +492,383 @@ async function ensurePayrollForMonth(payMonth, employeeId = null) {
                 calculation.netPay
             ]
         );
+
+        if (insertResult.affectedRows === 1) {
+            result.generated.push({
+                employeeId: employee.employeeId,
+                employeeName: employee.employeeName,
+                baseSalary
+            });
+        } else {
+            result.existing.push({
+                employeeId: employee.employeeId,
+                employeeName: employee.employeeName,
+                reason: '동시에 등록된 기존 급여가 있어 새로 생성하지 않았습니다.'
+            });
+        }
     }
+
+    return result;
 }
+
+// 인사 담당자가 다음 달 급여를 미리 준비합니다.
+// 급여 생성만 수행하며 확정·재무 승인·지급 처리는 실행하지 않습니다.
+hrRouter.post('/payrolls/generate-next-month', async (req, res) => {
+    const actorEmployeeId = Number(req.body.actorEmployeeId);
+
+    if (!Number.isSafeInteger(actorEmployeeId) || actorEmployeeId < 1) {
+        return res.status(400).json({
+            success: false,
+            message: '급여 생성 요청자 정보가 올바르지 않습니다.'
+        });
+    }
+
+    let transactionStarted = false;
+
+    try {
+        if (!(await hasActiveMasterAccount(actorEmployeeId))) {
+            return res.status(403).json({
+                success: false,
+                message: '마스터 권한이 있는 사용자만 다음 달 급여를 생성할 수 있습니다.'
+            });
+        }
+
+        const payMonth = nextPayMonth();
+        await promiseDb.beginTransaction();
+        transactionStarted = true;
+
+        const result = await ensurePayrollForMonth(payMonth);
+
+        await promiseDb.commit();
+        transactionStarted = false;
+
+        return res.json({
+            success: true,
+            data: result,
+            message: `${payMonth} 급여 ${result.generated.length}건을 생성했습니다.`
+        });
+    } catch (error) {
+        if (transactionStarted) {
+            await promiseDb.rollback();
+        }
+
+        console.error('다음 달 급여 생성 오류:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: '다음 달 급여를 생성하지 못했습니다.'
+        });
+    }
+});
+
+// 최종 승인된 비용·수당·상여금 기안을 선택한 급여월에 반영합니다.
+// 별도 연결 컬럼을 추가하지 않고 기존 my_draft.detail_data에 반영 이력을 남깁니다.
+hrRouter.post('/payrolls/apply-approved-drafts', async (req, res) => {
+    const actorEmployeeId = Number(req.body.actorEmployeeId);
+    const payMonth = String(req.body.payMonth || '').trim();
+    const draftIds = normalizePositiveIds(req.body.draftIds);
+
+    if (
+        !Number.isSafeInteger(actorEmployeeId) ||
+        actorEmployeeId < 1 ||
+        !isPayMonthString(payMonth) ||
+        draftIds === undefined
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: '급여월, 실행 사용자 또는 기안서 목록이 올바르지 않습니다.'
+        });
+    }
+
+    let transactionStarted = false;
+
+    try {
+        if (!(await hasActiveMasterAccount(actorEmployeeId))) {
+            return res.status(403).json({
+                success: false,
+                message: '마스터 권한이 있는 사용자만 승인 기안을 급여에 반영할 수 있습니다.'
+            });
+        }
+
+        const queryValues = [];
+        let draftQuery = `
+            SELECT
+                d.draft_id AS draftId,
+                d.employee_id AS employeeId,
+                e.name AS employeeName,
+                d.document_type AS documentType,
+                d.detail_data AS detailData
+            FROM my_draft d
+            LEFT JOIN employees e ON e.employee_id = d.employee_id
+            WHERE d.status = 'APPROVED'
+              AND d.document_type IN ('비용', '수당', '상여금')
+        `;
+
+        if (draftIds !== null) {
+            draftQuery += ` AND d.draft_id IN (${draftIds.map(() => '?').join(', ')})`;
+            queryValues.push(...draftIds);
+        }
+
+        draftQuery += ' ORDER BY d.draft_id ASC FOR UPDATE';
+
+        await promiseDb.beginTransaction();
+        transactionStarted = true;
+
+        const [draftRows] = await promiseDb.query(draftQuery, queryValues);
+        const applied = [];
+        const skipped = [];
+
+        for (const draft of draftRows) {
+            const detailData = parseDetailData(draft.detailData);
+            const employeeName = draft.employeeName || `사원 ${draft.employeeId}`;
+            const payrollField = payrollFieldForDraftType(draft.documentType);
+            const payrollEmployeeId = payrollEmployeeIdForDraft(draft, detailData);
+
+            if (draft.documentType === '비용' && !isEmployeePaymentDraft(detailData)) {
+                skipped.push({
+                    draftId: draft.draftId,
+                    employeeId: payrollEmployeeId,
+                    employeeName,
+                    documentType: draft.documentType,
+                    reason: '직원 지급 대상임을 확인할 수 없어 회사 운영비로 보고 급여에 반영하지 않았습니다.'
+                });
+                continue;
+            }
+
+            if (detailData.hrPayrollApplication) {
+                skipped.push({
+                    draftId: draft.draftId,
+                    employeeId: draft.employeeId,
+                    employeeName,
+                    documentType: draft.documentType,
+                    reason: '이미 급여에 반영된 기안입니다.'
+                });
+                continue;
+            }
+
+            let amount = readDraftPayrollAmount(draft.documentType, detailData);
+
+            // 비용 승인 과정에서 별도 상세 테이블에 저장된 금액도 기존 구조 안에서 지원합니다.
+            if (amount === null && draft.documentType === '비용') {
+                try {
+                    const [expenseRows] = await promiseDb.query(
+                        `SELECT amount
+                         FROM draft_expense
+                         WHERE draft_id = ?
+                         FOR UPDATE`,
+                        [draft.draftId]
+                    );
+                    const expenseTotal = expenseRows.reduce(
+                        (total, row) => total + (positiveInteger(row.amount) || 0),
+                        0
+                    );
+                    amount = expenseTotal > 0 ? expenseTotal : null;
+                } catch (error) {
+                    if (error.code !== 'ER_NO_SUCH_TABLE') {
+                        throw error;
+                    }
+                }
+            }
+
+            if (amount === null) {
+                skipped.push({
+                    draftId: draft.draftId,
+                    employeeId: draft.employeeId,
+                    employeeName,
+                    documentType: draft.documentType,
+                    reason: 'detail_data에서 반영할 금액을 확인할 수 없습니다.'
+                });
+                continue;
+            }
+
+            const ensured = await ensurePayrollForMonth(payMonth, payrollEmployeeId);
+            const [payrollRows] = await promiseDb.query(
+                `SELECT
+                    payroll_id AS payrollId,
+                    employee_id AS employeeId,
+                    payment_status AS paymentStatus,
+                    base_salary AS baseSalary,
+                    allowance,
+                    bonus,
+                    other_payment AS otherPayment
+                 FROM payrolls
+                 WHERE employee_id = ? AND pay_month = ?
+                 LIMIT 1
+                 FOR UPDATE`,
+                [payrollEmployeeId, payMonth]
+            );
+
+            if (payrollRows.length === 0) {
+                const ensuredSkip = ensured.skipped.find(
+                    (item) => Number(item.employeeId) === Number(payrollEmployeeId)
+                );
+                skipped.push({
+                    draftId: draft.draftId,
+                    employeeId: draft.employeeId,
+                    employeeName,
+                    documentType: draft.documentType,
+                    reason: ensuredSkip?.reason || '해당 급여월의 급여 행을 만들 수 없습니다.'
+                });
+                continue;
+            }
+
+            const payroll = payrollRows[0];
+
+            if (payrollFinalStatuses.includes(payroll.paymentStatus)) {
+                skipped.push({
+                    draftId: draft.draftId,
+                    employeeId: draft.employeeId,
+                    employeeName,
+                    documentType: draft.documentType,
+                    reason: `급여가 이미 ${payroll.paymentStatus} 상태라 변경하지 않았습니다.`
+                });
+                continue;
+            }
+
+            const currentAmounts = {
+                baseSalary: parseNonNegativeInteger(payroll.baseSalary),
+                allowance: parseNonNegativeInteger(payroll.allowance),
+                bonus: parseNonNegativeInteger(payroll.bonus),
+                otherPayment: parseNonNegativeInteger(payroll.otherPayment)
+            };
+            const targetField = payrollFieldForDraftType(draft.documentType) === 'allowance'
+                ? 'allowance'
+                : payrollFieldForDraftType(draft.documentType) === 'bonus'
+                    ? 'bonus'
+                    : 'otherPayment';
+
+            if (Object.values(currentAmounts).some((value) => value === null)) {
+                skipped.push({
+                    draftId: draft.draftId,
+                    employeeId: draft.employeeId,
+                    employeeName,
+                    documentType: draft.documentType,
+                    reason: '기존 급여 금액이 올바르지 않아 반영하지 않았습니다.'
+                });
+                continue;
+            }
+
+            const nextAmounts = {
+                ...currentAmounts,
+                [targetField]: currentAmounts[targetField] + amount
+            };
+            const calculation = calculateFreelancerPayroll(nextAmounts);
+
+            if (!calculation) {
+                skipped.push({
+                    draftId: draft.draftId,
+                    employeeId: draft.employeeId,
+                    employeeName,
+                    documentType: draft.documentType,
+                    reason: '급여 금액을 다시 계산할 수 없어 반영하지 않았습니다.'
+                });
+                continue;
+            }
+
+            await promiseDb.query(
+                `UPDATE payrolls
+                 SET allowance = ?,
+                     bonus = ?,
+                     other_payment = ?,
+                     income_tax = ?,
+                     local_income_tax = ?,
+                     deduction = ?,
+                     gross_pay = ?,
+                     net_pay = ?
+                 WHERE payroll_id = ?`,
+                [
+                    nextAmounts.allowance,
+                    nextAmounts.bonus,
+                    nextAmounts.otherPayment,
+                    calculation.incomeTax,
+                    calculation.localIncomeTax,
+                    calculation.totalDeduction,
+                    calculation.grossPay,
+                    calculation.netPay,
+                    payroll.payrollId
+                ]
+            );
+
+            const nextDetailData = {
+                ...detailData,
+                hrPayrollApplication: {
+                    payMonth,
+                    payrollId: payroll.payrollId,
+                    payrollField,
+                    amount,
+                    appliedAt: new Date().toISOString()
+                }
+            };
+            const [draftUpdate] = await promiseDb.query(
+                `UPDATE my_draft
+                 SET detail_data = ?
+                 WHERE draft_id = ? AND status = 'APPROVED'`,
+                [JSON.stringify(nextDetailData), draft.draftId]
+            );
+
+            if (draftUpdate.affectedRows !== 1) {
+                throw new Error(`기안 ${draft.draftId}의 급여 반영 이력을 저장하지 못했습니다.`);
+            }
+
+            await promiseDb.query(
+                `INSERT INTO payroll_change_history (
+                    payroll_id,
+                    employee_id,
+                    action_type,
+                    previous_status,
+                    new_status,
+                    reason,
+                    changed_by
+                 )
+                 VALUES (?, ?, 'DRAFT_PAYROLL_APPLY', ?, ?, ?, ?)`,
+                [
+                    payroll.payrollId,
+                    payroll.employeeId,
+                    payroll.paymentStatus,
+                    payroll.paymentStatus,
+                    `${draft.documentType} 기안 ${draft.draftId} 반영 (${amount}원)`,
+                    actorEmployeeId
+                ]
+            );
+
+            applied.push({
+                draftId: draft.draftId,
+                employeeId: draft.employeeId,
+                employeeName,
+                documentType: draft.documentType,
+                payrollId: payroll.payrollId,
+                payMonth,
+                payrollField,
+                amount
+            });
+        }
+
+        await promiseDb.commit();
+        transactionStarted = false;
+
+        return res.json({
+            success: true,
+            data: {
+                payMonth,
+                applied,
+                skipped,
+                selectedCount: draftRows.length
+            },
+            message: `${applied.length}건의 승인 기안을 급여에 반영했습니다.`
+        });
+    } catch (error) {
+        if (transactionStarted) {
+            await promiseDb.rollback();
+        }
+
+        console.error('승인 기안 급여 반영 오류:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: '승인 기안을 급여에 반영하지 못했습니다.'
+        });
+    }
+});
 
 // 직원 급여 이력 화면에서도 입사월부터 현재월까지 월별 급여를 자동 준비합니다.
 async function ensurePayrollHistory(employeeId) {
@@ -743,7 +1438,7 @@ hrRouter.get('/departments', async (req, res) => {
 // 부서 등록
 // 선택한 직원은 부서장으로 연결하고 부서명 중복을 먼저 확인합니다.
 hrRouter.post('/departments', async (req, res) => {
-    const departmentName = String(req.body.departmentName || '').trim();
+    const departmentName = normalizeDepartmentName(req.body.departmentName);
     const description = String(req.body.description || '').trim();
     const managerIdValue = req.body.managerId;
     const managerId =
@@ -762,6 +1457,9 @@ hrRouter.post('/departments', async (req, res) => {
             message: '부서 등록 정보를 올바르게 입력해 주세요.'
         });
     }
+
+    // 부서 생성과 부서장 직원의 소속 이동을 한 번에 처리합니다.
+    let transactionStarted = false;
 
     try {
         const [duplicateRows] = await promiseDb.query(
@@ -792,6 +1490,9 @@ hrRouter.post('/departments', async (req, res) => {
             }
         }
 
+        await promiseDb.beginTransaction();
+        transactionStarted = true;
+
         const [result] = await promiseDb.query(
             `INSERT INTO departments (
                 department_name,
@@ -801,6 +1502,26 @@ hrRouter.post('/departments', async (req, res) => {
              VALUES (?, ?, ?)`,
             [departmentName, managerId, description || null]
         );
+
+        if (managerId !== null) {
+            await promiseDb.query(
+                `UPDATE departments
+                 SET manager_id = NULL
+                 WHERE manager_id = ?
+                   AND department_id <> ?`,
+                [managerId, result.insertId]
+            );
+
+            await promiseDb.query(
+                `UPDATE employees
+                 SET department_id = ?
+                 WHERE employee_id = ?`,
+                [result.insertId, managerId]
+            );
+        }
+
+        await promiseDb.commit();
+        transactionStarted = false;
 
         return res.status(201).json({
             success: true,
@@ -813,6 +1534,10 @@ hrRouter.post('/departments', async (req, res) => {
             message: '부서가 등록되었습니다.'
         });
     } catch (error) {
+        if (transactionStarted) {
+            await promiseDb.rollback();
+        }
+
         console.error('부서 등록 오류:', error);
 
         if (error.code === 'ER_DUP_ENTRY') {
@@ -933,6 +1658,8 @@ hrRouter.get('/payrolls', async (req, res) => {
             e.initial_annual_salary AS initialAnnualSalary,
             DATE_FORMAT(e.resignation_date, '%Y-%m-%d') AS resignationDate,
             e.employment_status AS employmentStatus,
+            financeDraft.draft_id AS financeDraftId,
+            financeDraft.status AS financeDraftStatus,
             p.pay_month AS payMonth,
             p.base_salary AS baseSalary,
             p.allowance,
@@ -955,17 +1682,31 @@ hrRouter.get('/payrolls', async (req, res) => {
         LEFT JOIN payrolls p
             ON p.employee_id = e.employee_id
             AND p.pay_month = ?
-        WHERE e.employment_status IN ('재직', '휴직')
-           OR (
+        LEFT JOIN my_draft financeDraft
+            ON financeDraft.document_type = '급여'
+            AND JSON_UNQUOTE(JSON_EXTRACT(financeDraft.detail_data, '$.source')) = 'HR_PAYROLL'
+            AND JSON_UNQUOTE(JSON_EXTRACT(financeDraft.detail_data, '$.payMonth')) = p.pay_month
+            AND JSON_CONTAINS(
+                JSON_EXTRACT(financeDraft.detail_data, '$.payrollIds'),
+                JSON_ARRAY(p.payroll_id)
+            )
+        WHERE (
+            e.employment_status IN ('재직', '휴직')
+            OR (
                 e.employment_status = '퇴사'
                 AND e.resignation_date IS NOT NULL
                 AND e.resignation_date >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)
-           )
+            )
+            OR p.payroll_id IS NOT NULL
+        )
         ORDER BY d.department_id, e.employee_id
     `;
 
+    // 과거 급여가 이미 존재하는 퇴사자는 현재 목록 노출 기간과 관계없이 조회합니다.
     try {
-        await ensurePayrollForMonth(payMonth);
+        if (payMonth <= currentPayMonth()) {
+            await ensurePayrollForMonth(payMonth);
+        }
         const [rows] = await promiseDb.query(query, [payMonth]);
 
         return res.json({
@@ -1062,6 +1803,7 @@ hrRouter.post('/payrolls', async (req, res) => {
         });
     }
 
+    // 연봉을 함께 입력한 경우 직원 기본정보·연봉 이력·급여를 하나로 저장합니다.
     let transactionStarted = false;
 
     try {
@@ -1151,6 +1893,12 @@ hrRouter.post('/payrolls', async (req, res) => {
                  ON DUPLICATE KEY UPDATE
                     annual_salary = VALUES(annual_salary)`,
                 [employeeId, annualSalary, payMonth]
+            );
+
+            await propagateAnnualSalaryToFutureRecords(
+                employeeId,
+                payMonth,
+                annualSalary
             );
         }
 
@@ -1244,6 +1992,7 @@ hrRouter.put('/payrolls/:payrollId', async (req, res) => {
         });
     }
 
+    // 현재 월 급여를 수정하고 연봉 변경분은 이후 미확정 월에만 전파합니다.
     let transactionStarted = false;
 
     try {
@@ -1311,6 +2060,13 @@ hrRouter.put('/payrolls/:payrollId', async (req, res) => {
                 annualSalary,
                 existingRows[0].payMonth
             ]
+        );
+
+        // 미래 월의 기본급만 갱신하고 해당 월의 변동 지급항목은 유지합니다.
+        await propagateAnnualSalaryToFutureRecords(
+            existingRows[0].employeeId,
+            existingRows[0].payMonth,
+            annualSalary
         );
 
         const query = `
@@ -1389,16 +2145,7 @@ hrRouter.patch('/payrolls/:payrollId/status', async (req, res) => {
     let transactionStarted = false;
 
     try {
-        const [masterRows] = await promiseDb.query(
-            `SELECT employee_id
-             FROM employee_accounts
-             WHERE employee_id = ?
-               AND role = 'MASTER'
-               AND account_status = 'ACTIVE'`,
-            [actorEmployeeId]
-        );
-
-        if (masterRows.length === 0) {
+        if (!(await hasActiveMasterAccount(actorEmployeeId))) {
             return res.status(403).json({
                 success: false,
                 message: '마스터 권한이 있는 사용자만 급여 상태를 변경할 수 있습니다.'
@@ -1505,6 +2252,396 @@ hrRouter.patch('/payrolls/:payrollId/status', async (req, res) => {
         return res.status(500).json({
             success: false,
             message: '급여 상태를 변경하지 못했습니다.'
+        });
+    }
+});
+
+
+// 선택한 급여를 한 번에 확정합니다.
+// 실제 DB의 급여 금액과 상태를 잠근 뒤 모두 검증하고, 하나라도 실패하면 전체를 롤백합니다.
+hrRouter.post('/payrolls/bulk-confirm', async (req, res) => {
+    const payMonth = String(req.body.payMonth || '').trim();
+    const rawPayrollIds = req.body.payrollIds;
+    const actorEmployeeId = parseNonNegativeInteger(req.body.actorEmployeeId);
+
+    if (
+        !isPayMonthString(payMonth) ||
+        !Array.isArray(rawPayrollIds) ||
+        rawPayrollIds.length === 0 ||
+        actorEmployeeId === null ||
+        actorEmployeeId < 1
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: '급여월, 급여 ID 목록 또는 승인자 정보가 올바르지 않습니다.'
+        });
+    }
+
+    const payrollIds = normalizePayrollIds(rawPayrollIds);
+
+    if (payrollIds === null) {
+        return res.status(400).json({
+            success: false,
+            message: '급여 ID 목록에 중복되거나 올바르지 않은 값이 있습니다.'
+        });
+    }
+
+    let transactionStarted = false;
+
+    try {
+        // 클라이언트가 전달한 role은 사용하지 않고 실제 계정 권한을 확인합니다.
+        if (!(await hasActiveMasterAccount(actorEmployeeId))) {
+            return res.status(403).json({
+                success: false,
+                message: '마스터 권한이 있는 사용자만 급여를 일괄 확정할 수 있습니다.'
+            });
+        }
+
+        await promiseDb.beginTransaction();
+        transactionStarted = true;
+
+        const [rows] = await promiseDb.query(
+            `SELECT
+                payroll_id AS payrollId,
+                employee_id AS employeeId,
+                pay_month AS payMonth,
+                payment_status AS paymentStatus,
+                base_salary AS baseSalary,
+                allowance,
+                bonus,
+                other_payment AS otherPayment,
+                income_tax AS incomeTax,
+                local_income_tax AS localIncomeTax,
+                deduction,
+                gross_pay AS grossPay,
+                net_pay AS netPay
+             FROM payrolls
+             WHERE payroll_id IN (?)
+             FOR UPDATE`,
+            [payrollIds]
+        );
+
+        const rowsById = new Map(
+            rows.map((row) => [Number(row.payrollId), row])
+        );
+
+        if (rows.length !== payrollIds.length) {
+            await promiseDb.rollback();
+            transactionStarted = false;
+            return res.status(404).json({
+                success: false,
+                message: '요청한 급여 기록 중 존재하지 않는 항목이 있습니다.'
+            });
+        }
+
+        const invalidRows = [];
+
+        for (const payrollId of payrollIds) {
+            const row = rowsById.get(payrollId);
+            const previousStatus = row.paymentStatus || '작성중';
+            const payrollAmounts = validatePayrollAmounts(row);
+
+            if (
+                row.payMonth !== payMonth ||
+                !payrollDraftStatuses.includes(previousStatus) ||
+                !payrollAmounts.valid
+            ) {
+                invalidRows.push({
+                    payrollId,
+                    payMonth: row.payMonth,
+                    paymentStatus: previousStatus
+                });
+            }
+        }
+
+        if (invalidRows.length > 0) {
+            await promiseDb.rollback();
+            transactionStarted = false;
+            return res.status(409).json({
+                success: false,
+                message: '급여월, 상태 또는 금액이 일괄 확정 조건과 맞지 않습니다.',
+                data: { invalidPayrolls: invalidRows }
+            });
+        }
+
+        for (const row of rows) {
+            await promiseDb.query(
+                `UPDATE payrolls
+                 SET payment_status = '확정'
+                 WHERE payroll_id = ?`,
+                [row.payrollId]
+            );
+
+            await promiseDb.query(
+                `INSERT INTO payroll_change_history (
+                    payroll_id,
+                    employee_id,
+                    action_type,
+                    previous_status,
+                    new_status,
+                    reason,
+                    changed_by
+                 )
+                 VALUES (?, ?, 'STATUS_CHANGE', ?, '확정', ?, ?)`,
+                [
+                    row.payrollId,
+                    row.employeeId,
+                    row.paymentStatus || '작성중',
+                    '일괄 급여 확정',
+                    actorEmployeeId
+                ]
+            );
+        }
+
+        await promiseDb.commit();
+        transactionStarted = false;
+
+        const summary = rows.reduce(
+            (result, row) => ({
+                grossPay: result.grossPay + Number(row.grossPay || 0),
+                totalDeduction: result.totalDeduction + Number(row.deduction || 0),
+                netPay: result.netPay + Number(row.netPay || 0)
+            }),
+            { grossPay: 0, totalDeduction: 0, netPay: 0 }
+        );
+
+        return res.json({
+            success: true,
+            data: {
+                payMonth,
+                payrollIds,
+                confirmedCount: rows.length,
+                ...summary
+            },
+            message: `${rows.length}건의 급여가 확정되었습니다.`
+        });
+    } catch (error) {
+        if (transactionStarted) {
+            await promiseDb.rollback();
+        }
+
+        console.error('급여 일괄 확정 오류:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: '급여를 일괄 확정하지 못했습니다.'
+        });
+    }
+});
+
+
+// HR에서 확정한 급여를 재무 지급 목록에 연결합니다.
+// 급여 행에는 연결 컬럼을 추가하지 않고 my_draft.detail_data에 원본 급여를 보관합니다.
+// 현재 운영 흐름에서는 HR 마스터 확정을 재무 전달 승인으로 기록합니다.
+hrRouter.post('/payrolls/submit-to-finance', async (req, res) => {
+    const payMonth = String(req.body.payMonth || '').trim();
+    const rawPayrollIds = req.body.payrollIds;
+    const actorEmployeeId = parseNonNegativeInteger(req.body.actorEmployeeId);
+
+    if (
+        !isPayMonthString(payMonth) ||
+        !Array.isArray(rawPayrollIds) ||
+        rawPayrollIds.length === 0 ||
+        actorEmployeeId === null ||
+        actorEmployeeId < 1
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: '급여월, 급여 ID 목록 또는 전달자 정보가 올바르지 않습니다.'
+        });
+    }
+
+    const payrollIds = normalizePayrollIds(rawPayrollIds);
+
+    if (payrollIds === null) {
+        return res.status(400).json({
+            success: false,
+            message: '급여 ID 목록에 중복되거나 올바르지 않은 값이 있습니다.'
+        });
+    }
+
+    let transactionStarted = false;
+
+    try {
+        if (!(await hasActiveMasterAccount(actorEmployeeId))) {
+            return res.status(403).json({
+                success: false,
+                message: '마스터 권한이 있는 사용자만 급여를 재무로 전달할 수 있습니다.'
+            });
+        }
+
+        await promiseDb.beginTransaction();
+        transactionStarted = true;
+
+        const [rows] = await promiseDb.query(
+            `SELECT
+                payroll_id AS payrollId,
+                employee_id AS employeeId,
+                pay_month AS payMonth,
+                payment_status AS paymentStatus,
+                base_salary AS baseSalary,
+                allowance,
+                bonus,
+                other_payment AS otherPayment,
+                income_tax AS incomeTax,
+                local_income_tax AS localIncomeTax,
+                deduction,
+                gross_pay AS grossPay,
+                net_pay AS netPay
+             FROM payrolls
+             WHERE pay_month = ?
+               AND payroll_id IN (?)
+             FOR UPDATE`,
+            [payMonth, payrollIds]
+        );
+
+        if (rows.length !== payrollIds.length) {
+            await promiseDb.rollback();
+            transactionStarted = false;
+            return res.status(404).json({
+                success: false,
+                message: '요청한 급여 기록 중 존재하지 않는 항목이 있습니다.'
+            });
+        }
+
+        const invalidRows = rows.filter((row) => {
+            const payrollAmounts = validatePayrollAmounts(row);
+
+            return (
+                row.payMonth !== payMonth ||
+                row.paymentStatus !== '확정' ||
+                !payrollAmounts.valid
+            );
+        });
+
+        if (invalidRows.length > 0) {
+            await promiseDb.rollback();
+            transactionStarted = false;
+            return res.status(409).json({
+                success: false,
+                message: '확정 상태가 아니거나 이미 재무로 전달된 급여가 포함되어 있습니다.',
+                data: {
+                    invalidPayrollIds: invalidRows.map((row) => row.payrollId)
+                }
+            });
+        }
+
+        const totalGrossPay = rows.reduce(
+            (total, row) => total + Number(row.grossPay),
+            0
+        );
+        const totalDeduction = rows.reduce(
+            (total, row) => total + Number(row.deduction),
+            0
+        );
+        const totalNetPay = rows.reduce(
+            (total, row) => total + Number(row.netPay),
+            0
+        );
+        const detailData = JSON.stringify({
+            source: 'HR_PAYROLL',
+            payMonth,
+            payrollIds,
+            employeeCount: rows.length,
+            totalGrossPay,
+            totalDeduction,
+            totalNetPay,
+            payrolls: rows.map((row) => ({
+                payrollId: row.payrollId,
+                employeeId: row.employeeId,
+                payMonth: row.payMonth,
+                baseSalary: Number(row.baseSalary),
+                allowance: Number(row.allowance),
+                bonus: Number(row.bonus),
+                otherPayment: Number(row.otherPayment),
+                incomeTax: Number(row.incomeTax),
+                localIncomeTax: Number(row.localIncomeTax),
+                deduction: Number(row.deduction),
+                grossPay: Number(row.grossPay),
+                netPay: Number(row.netPay)
+            })),
+            handedOffAt: new Date().toISOString()
+        });
+
+        const [draftResult] = await promiseDb.query(
+            `INSERT INTO my_draft (
+                employee_id,
+                title,
+                document_type,
+                content,
+                detail_data,
+                status
+             )
+             VALUES (?, ?, '급여', ?, ?, 'APPROVED')`,
+            [
+                actorEmployeeId,
+                `${payMonth} 급여 재무 전달`,
+                `${payMonth} 급여 ${rows.length}건을 재무 지급 대상으로 전달합니다.`,
+                detailData
+            ]
+        );
+        const draftId = draftResult.insertId;
+
+        const [updated] = await promiseDb.query(
+            `UPDATE payrolls
+             SET payment_status = '지급대기'
+             WHERE pay_month = ?
+               AND payroll_id IN (?)
+               AND payment_status = '확정'`,
+            [payMonth, payrollIds]
+        );
+
+        if (updated.affectedRows !== payrollIds.length) {
+            throw new Error('재무 전달 직전에 급여 상태가 변경되었습니다. 다시 조회해 주세요.');
+        }
+
+        for (const row of rows) {
+            await promiseDb.query(
+                `INSERT INTO payroll_change_history (
+                    payroll_id,
+                    employee_id,
+                    action_type,
+                    previous_status,
+                    new_status,
+                    reason,
+                    changed_by
+                 )
+                 VALUES (?, ?, 'FINANCE_HANDOFF', '확정', '지급대기', ?, ?)`,
+                [
+                    row.payrollId,
+                    row.employeeId,
+                    `${payMonth} 급여 재무 전달`,
+                    actorEmployeeId
+                ]
+            );
+        }
+
+        await promiseDb.commit();
+        transactionStarted = false;
+
+        return res.status(201).json({
+            success: true,
+            data: {
+                draftId,
+                payMonth,
+                payrollIds,
+                employeeCount: rows.length,
+                totalGrossPay,
+                totalDeduction,
+                totalNetPay
+            },
+            message: `${rows.length}건의 급여가 재무 지급 목록으로 전달되었습니다.`
+        });
+    } catch (error) {
+        if (transactionStarted) {
+            await promiseDb.rollback();
+        }
+
+        console.error('급여 재무 전달 오류:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: '급여를 재무로 전달하지 못했습니다.'
         });
     }
 });
@@ -1714,6 +2851,12 @@ hrRouter.put('/employees/:employeeId', async (req, res) => {
             });
         }
 
+        const previousAnnualSalary = parseNonNegativeInteger(
+            existingEmployees[0].initialAnnualSalary
+        );
+
+        // 직원 정보에서 연봉이 변경된 경우 현재 월 급여가 없으면 준비하고,
+        // 있으면 기본급과 3.3% 계산액만 갱신합니다.
         if (
             employmentStatus === '퇴사' &&
             existingEmployees[0].employmentStatus !== '퇴사'
@@ -1776,8 +2919,7 @@ hrRouter.put('/employees/:employeeId', async (req, res) => {
         }
 
         if (
-            Number(existingEmployees[0].initialAnnualSalary) !==
-            initialAnnualSalary
+            previousAnnualSalary !== initialAnnualSalary
         ) {
             await promiseDb.query(
                 `INSERT INTO employee_salary_history (
@@ -1789,6 +2931,13 @@ hrRouter.put('/employees/:employeeId', async (req, res) => {
                  ON DUPLICATE KEY UPDATE
                     annual_salary = VALUES(annual_salary)`,
                 [employeeId, initialAnnualSalary]
+            );
+
+            await ensurePayrollForMonth(currentPayMonth(), employeeId);
+            await propagateAnnualSalaryToFutureRecords(
+                employeeId,
+                currentPayMonth(),
+                initialAnnualSalary
             );
 
             const [currentPayrollRows] = await promiseDb.query(

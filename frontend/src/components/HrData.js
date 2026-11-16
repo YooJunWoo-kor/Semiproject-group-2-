@@ -102,7 +102,23 @@ export function getHrPayrolls(payMonth) {
   });
 }
 
+// HR에서 다음 달 급여를 연봉 기준으로 미리 생성합니다.
+export function generateNextHrPayrolls(data) {
+  return axios.post(
+    API_BASE_URL + '/hr/payrolls/generate-next-month',
+    data
+  );
+}
+
 // 선택한 직원의 월별 급여 이력을 조회합니다.
+// 최종 승인된 비용·수당·상여금 기안을 선택한 급여월에 반영합니다.
+export function applyApprovedHrDraftsToPayroll(data) {
+  return axios.post(
+    API_BASE_URL + '/hr/payrolls/apply-approved-drafts',
+    data
+  );
+}
+
 export function getHrPayrollHistory(employeeId) {
   return axios.get(
     API_BASE_URL + '/hr/payrolls/employee/' + employeeId + '/history'
@@ -123,6 +139,22 @@ export function updateHrPayroll(payrollId, data) {
 export function updateHrPayrollStatus(payrollId, data) {
   return axios.patch(
     API_BASE_URL + '/hr/payrolls/' + payrollId + '/status',
+    data
+  );
+}
+
+// 선택한 급여를 서버 트랜잭션으로 한 번에 확정합니다.
+export function bulkConfirmHrPayrolls(data) {
+  return axios.post(
+    API_BASE_URL + '/hr/payrolls/bulk-confirm',
+    data
+  );
+}
+
+// HR에서 확정한 급여를 재무 지급 목록으로 전달합니다.
+export function submitHrPayrollsToFinance(data) {
+  return axios.post(
+    API_BASE_URL + '/hr/payrolls/submit-to-finance',
     data
   );
 }
