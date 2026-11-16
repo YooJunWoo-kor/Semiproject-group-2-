@@ -158,41 +158,75 @@ async function applyLeaveAttendance(draftId, employeeId, detailData) {
 }
 
 class Draft {
-    static async getById(draftId) {
-        const hasSteps = await hasDraftApprovalStepsTable();
-        const sql = hasSteps
-            ? `SELECT d.draft_id, d.title, d.document_type, d.content, d.detail_data,
-                      d.status AS draft_status, s.step_order, e.name AS approver_name,
-                      e.position, s.step_status
-                 FROM my_draft d
-                 LEFT JOIN draft_approval_steps s ON d.draft_id = s.draft_id
-                 LEFT JOIN employees e ON s.employee_id = e.employee_id
-                 WHERE d.draft_id = ?
-                 ORDER BY s.step_order ASC`
-            : `SELECT d.draft_id, d.title, d.document_type, d.content, d.detail_data,
-                      d.status AS draft_status,
-                      CASE WHEN d.approver_id IS NULL THEN NULL ELSE 1 END AS step_order,
-                      e.name AS approver_name, e.position,
-                      CASE WHEN d.status = 'APPROVED' THEN 'APPROVED'
-                           WHEN d.status = 'REJECTED' THEN 'REJECTED'
-                           ELSE 'PENDING' END AS step_status
-                 FROM my_draft d
-                 LEFT JOIN employees e ON d.approver_id = e.employee_id
-                 WHERE d.draft_id = ?`;
-        const [rows] = await promiseDb.query(sql, [draftId]);
-        return rows;
+    static getLeaveDrafts() {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                SELECT d.draft_id, d.employee_id, e.name AS employeeName,
+                d.document_type, d.title, d.content,
+                d.detail_data, d.status, d.created_at
+                FROM my_draft d
+                JOIN employees e on d.employee_id = e.employee_id
+                WHERE d.document_type = "휴가"
+                AND d.status != 'DRAFT'
+                ORDER BY d.created_at DESC
+            `
+
+            db.query(sql, (err, rows) => {
+                if(err) return reject(err);
+                
+                resolve(rows);
+            })
+        })
+
+
     }
 
-    static async getByEmployeeId(employeeId) {
-        const [rows] = await promiseDb.query(
-            `SELECT draft_id, employee_id, title, document_type,
-                    content, detail_data, status, created_at
-             FROM my_draft
-             WHERE employee_id = ?
-             ORDER BY created_at DESC, draft_id DESC`,
-            [employeeId]
-        );
-        return rows;
+    static getById(draftId) {
+        return new Promise((resolve, reject) => {
+
+            const sql = `
+                SELECT
+                    d.draft_id,
+                    d.title,
+                    d.document_type,
+                    d.content,
+                    d.detail_data,
+                    d.status AS draft_status,
+                    s.step_order,
+                    e.name AS approver_name,
+                    e.position,
+                    s.step_status
+                FROM my_draft d
+                LEFT JOIN draft_approval_steps s
+                    ON d.draft_id = s.draft_id
+                LEFT JOIN employees e
+                    ON s.employee_id = e.employee_id
+                WHERE d.draft_id = ?
+                ORDER BY s.step_order ASC
+            `;
+
+            db.query(sql, [draftId], (err, rows) => {
+                if (err) {
+                    return reject(err);
+                }
+
+                resolve(rows);
+            })
+            // resolve(rows) : 조회성공 / reject(err) : 오류
+
+        })
+    }
+
+    static getByEmployeeId(employeeId) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+                SELECT draft_id, employee_id, title, document_type, content, detail_data, status, created_at
+                FROM my_draft
+                WHERE employee_id = ?
+                ORDER BY created_at DESC, draft_id DESC
+            `;
+            db.query(sql, [employeeId], (err, rows) => err ? reject(err) : resolve(rows));
+        });
     }
 
     static async getReceivedByEmployeeId(employeeId) {
