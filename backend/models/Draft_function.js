@@ -1,5 +1,8 @@
 const db = require('../db');
 const promiseDb = db.promise();
+const {
+    applyApprovedDraftToPayroll
+} = require('../services/hrPayrollApplication');
 
 async function hasDraftApprovalStepsTable() {
     const [rows] = await promiseDb.query(
@@ -447,6 +450,20 @@ class Draft {
                         await applyLeaveAttendance(draftId, draft.writerEmployeeId, detailData);
                     } else if (draft.documentType === '비용') {
                         await persistExpenseDetail(draftId, draft.documentType, detailData);
+                    } else if (['수당', '상여금', '추가급여'].includes(draft.documentType)) {
+                        await applyApprovedDraftToPayroll({
+                            connection: promiseDb,
+                            draft: {
+                                draftId,
+                                employeeId: draft.writerEmployeeId,
+                                documentType: draft.documentType,
+                                detailData
+                            },
+                            approvedBy: employeeId,
+                            approvedAt: new Date().toISOString(),
+                            payMonth: detailData.payMonth,
+                            strict: true
+                        });
                     }
                 }
 
@@ -535,6 +552,20 @@ class Draft {
                 await applyLeaveAttendance(draftId, draft.writerEmployeeId, detailData);
             } else if (draft.documentType === '비용') {
                 await persistExpenseDetail(draftId, draft.documentType, detailData);
+            } else if (['수당', '상여금', '추가급여'].includes(draft.documentType)) {
+                await applyApprovedDraftToPayroll({
+                    connection: promiseDb,
+                    draft: {
+                        draftId,
+                        employeeId: draft.writerEmployeeId,
+                        documentType: draft.documentType,
+                        detailData
+                    },
+                    approvedBy: employeeId,
+                    approvedAt: new Date().toISOString(),
+                    payMonth: detailData.payMonth,
+                    strict: true
+                });
             }
 
             await promiseDb.query(

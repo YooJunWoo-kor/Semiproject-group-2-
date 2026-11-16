@@ -1359,84 +1359,23 @@
   justify-content: flex-start;
 }
 
-.hr-payroll-action-menu {
-  position: relative;
-}
-
-.hr-payroll-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 30;
-  display: grid;
-  min-width: 190px;
-  padding: 6px;
-  gap: 4px;
-  border: 1px solid var(--color-line);
-  border-radius: 8px;
-  background: var(--color-surface);
-  box-shadow: 0 8px 20px rgba(31, 41, 55, 0.12);
-}
-
-.hr-payroll-menu button {
-  width: 100%;
-  min-height: 34px;
-  padding: 7px 10px;
+.hr-payroll-employee-link {
+  padding: 0;
   border: 0;
-  border-radius: 6px;
   background: transparent;
-  color: var(--color-ink);
-  font-size: 12px;
-  text-align: left;
-  white-space: nowrap;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
-.hr-payroll-menu button:hover:not(:disabled) {
-  background: var(--color-canvas);
+.hr-payroll-employee-link:hover {
   color: var(--color-brand);
-}
-
-.hr-payroll-menu button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.hr-payroll-blocking-notice {
-  margin: 10px 0 0;
-  padding: 8px 10px;
-  border: 1px solid var(--color-line);
-  border-radius: 8px;
-  background: var(--color-canvas);
-  color: var(--color-muted);
-  font-size: 12px;
 }
 
 .hr-payroll-actions button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.hr-payroll-generation-result {
-  margin: 0 0 12px;
-  padding: 10px 12px;
-  color: var(--color-muted);
-  background: var(--color-canvas);
-  border: 1px solid var(--color-line);
-  border-radius: 8px;
-  font-size: 12px;
-}
-
-.hr-payroll-generation-result p {
-  margin: 0;
-}
-
-.hr-payroll-generation-result ul {
-  margin: 8px 0 0;
-  padding-left: 18px;
-}
-
-.hr-payroll-generation-result li + li {
-  margin-top: 4px;
 }
 
 .hr-payroll-history-modal,
@@ -1806,19 +1745,6 @@
   .hr-payroll-actions button {
     flex: 1 1 calc(50% - 8px);
     min-width: 0;
-  }
-
-  .hr-payroll-actions > .hr-payroll-action-menu {
-    flex: 1 1 calc(50% - 8px);
-    min-width: 0;
-  }
-
-  .hr-payroll-action-menu > button {
-    width: 100%;
-  }
-
-  .hr-payroll-menu button {
-    flex: 0 0 auto;
   }
 
   .hr-payroll-statement-heading,
