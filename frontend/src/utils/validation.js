@@ -27,7 +27,7 @@ export function validateEmail(value, { required = false } = {}) {
   const labels = domain.split('.');
   const domainValid = labels.length >= 2 && labels.every(part =>
     /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(part));
-  return localValid && domainValid ? true : false;
+  return localValid && domainValid ;
 }
 
 // 국내 휴대전화·지역번호·070·080 및 대표번호(15xx/16xx/18xx)를 지원합니다.
