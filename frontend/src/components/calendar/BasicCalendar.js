@@ -3,7 +3,7 @@ import './Calendar.css';
 import { TOGLE_COLORS } from '../../utils/authStorage';
 
 
-function BasicCalendar({ schedule = [] }) {
+function BasicCalendar({ schedule = [], readOnly = false }) {
 
   // 현재 보고 있는 연도와 월
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -206,6 +206,7 @@ function BasicCalendar({ schedule = [] }) {
                       const bgColor = TOGLE_COLORS?.[typeId] || '#4A90E2';
                       const titleText =
                         item.title || item.schedule_name || '일정';
+                       const EventElement = readOnly ? 'span' : 'button';
 
                       // 이번 주에 시작하는 일정이면 왼쪽 둥글게(4px), 이전 주에서 넘어왔으면 직각(0px)
                       // 이번 주에 끝나는 일정이면 오른쪽 둥글게(4px), 다음 주로 이어지면 직각(0px)
@@ -214,8 +215,8 @@ function BasicCalendar({ schedule = [] }) {
                       const dynamicRadius = `${leftRadius} ${rightRadius} ${rightRadius} ${leftRadius}`;
 
                       return (
-                        <button
-                          type="button"
+                        <EventElement
+                          type={readOnly ? undefined : 'button'}
                           key={item.schedule_id || evtIndex}
                           className="g-cal-bar"
                           style={{
@@ -226,36 +227,39 @@ function BasicCalendar({ schedule = [] }) {
                             borderRadius: dynamicRadius, // [새로 추가됨] 계산된 모서리 적용
                             marginLeft: evt.isActualStart ? '1px' : '0px', // [새로 추가됨] 이어질 땐 벽에 딱 붙임
                             marginRight: evt.isActualEnd ? '1px' : '0px',
+                             cursor: readOnly ? 'default' : undefined,
                           }}
-                          onClick={() => console.log('선택된 일정:', item)}
+                          onClick={readOnly ? undefined : () => console.log('선택된 일정:', item)}
                           title={titleText}
                         >
                           {titleText}
-                        </button>
+                        </EventElement>
                       );
                     })}
 
                   {/* [새로 추가됨] 3개 이상 넘쳤을 때 표시되는 '+N개 더보기' 버튼 */}
                   {overflowCounts.map((count, dayIdx) => {
                     if (count === 0 || week[dayIdx] === null) return null;
+                    const MoreElement = readOnly ? 'span' : 'button';
 
                     return (
-                      <button
+                      <MoreElement
                         key={`more-${dayIdx}`}
-                        type="button"
+                        type={readOnly ? undefined : 'button'}
                         className="g-cal-more-button"
                         style={{
                           gridColumnStart: dayIdx + 1,
                           gridColumnEnd: dayIdx + 2,
-                          top: '0px' // 2개 막대 아래(20 + 21*2 = 62px)에 고정
+                          gridRowStart: 4,
+                          cursor: readOnly ? 'default' : undefined
                         }}
-                        onClick={() => {
+                        onClick={readOnly ? undefined : () => {
                           const clickedDate = formatDate(week[dayIdx]);
                           alert(`${clickedDate}의 추가 일정 ${count}개가 더 있습니다.`);
                         }}
                       >
                         +{count}개 더보기
-                      </button>
+                      </MoreElement>
                     );
                   })}
                 </div>
