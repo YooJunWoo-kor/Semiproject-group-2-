@@ -5,14 +5,19 @@ import PaginationTable from '../../../../components/PaginationTable';
 import WeeklyCalendar from '../../../../components/weeklycalendar/WeeklyCalendar';
 import { TOGLE_COLORS } from "../../../../utils/authStorage";
 import BasicCalendar from '../../../../components/calendar/BasicCalendar';
-import { getPartners, createPartner, updatePartner, deletePartner } from "../../../../utils/financeService";
-
+import { getPartners, getPartnerBalanceDetails, createPartner, updatePartner, deletePartner } from "../../../../utils/financeService";
 
 // 공용 달력이 이미 지원하는 색상만 선택합니다. 공용 파일은 수정하지 않습니다.
-const partnerCalendarColors = Object.entries(TOGLE_COLORS || {})
-  .filter(([key, color]) => /^(0|[1-9]\d*)$/.test(key) && Number(key) <= 255 && typeof color === "string")
-  .map(([key, color]) => ({ typeId: Number(key), color }));
 
+import "../../../../css/Form.css";
+import "../../../../css/Table.css";
+import "../../../../css/SubMain.css";
+import "../../../../css/ModalPopup.css";
+import "../../../../css/GroupBord.css";
+const partnerCalendarColors = Object.entries(TOGLE_COLORS || {}).filter(([key, color]) => /^(0|[1-9]\d*)$/.test(key) && Number(key) <= 255 && typeof color === "string").map(([key, color]) => ({
+  typeId: Number(key),
+  color
+}));
 function getPartnerCalendarTypeId(partner) {
   const value = partner.calendarTypeId;
   const selected = value === "" || value == null ? null : Number(value);
@@ -38,6 +43,22 @@ const initialPartnerForm = {
   account_number: "",
   account_holder: ""
 };
+// 로컬 날짜로 현재 조회 월을 만듭니다.
+function currentPartnerMonth() {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function shiftPartnerMonth(month, offset) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const next = new Date(year, monthNumber - 1 + offset, 1);
+  if (next.getFullYear() < 1900 || next.getFullYear() > 9999) return month;
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function filterPartnerMonth(rows, month, allPeriods) {
+  return allPeriods ? rows : rows.filter(row => String(row.trade_date || "").slice(0, 7) === month);
+}
 
 function Partners() {
   // 1. 달력 주기 모드 (주간 기본 권장, 필요시 월간 전환)
@@ -45,6 +66,11 @@ function Partners() {
 
   // 2. 선택된 거래처 ID (상세 확인용)
   const [selectedPartnerId, setSelectedPartnerId] = useState(null);
+
+  const [amountDetail, setAmountDetail] = useState(null);
+  const [amountMonth, setAmountMonth] = useState(currentPartnerMonth);
+  const [allAmountPeriods, setAllAmountPeriods] = useState(false);
+  const amountRows = filterPartnerMonth(amountDetail?.rows || [], amountMonth, allAmountPeriods);
 
   // DB에서 가져온 거래처 목록
   const [partnersList, setPartnersList] = useState([]);
@@ -65,7 +91,6 @@ function Partners() {
 
   // null이면 신규 등록, ID가 있으면 해당 거래처 수정
   const [editingPartnerId, setEditingPartnerId] = useState(null);
-
   const [formOpen, setFormOpen] = useState(false);
   const [partnerForm, setPartnerForm] = useState(initialPartnerForm);
   const [saving, setSaving] = useState(false);
@@ -73,14 +98,12 @@ function Partners() {
 
   // 삭제 요청 중인지 확인
   const [deleting, setDeleting] = useState(false);
-
   function handleSearch() {
     setSearchFilter({
       keyword: keyword.trim(),
       tradeType: tradeType
     });
   }
-
 
   // 화면에 처음 들어왔을 때 거래처 목록을 조회
   useEffect(() => {
@@ -89,7 +112,7 @@ function Partners() {
         const data = await getPartners();
 
         // DB 컬럼명을 현재 화면에서 사용하는 이름으로 변환
-        const partners = data.map((item) => ({
+        const partners = data.map(item => ({
           id: item.partner_id,
           name: item.company_name,
           type: item.trade_role || "-",
@@ -99,33 +122,25 @@ function Partners() {
           address: item.company_address || "-",
           companyType: item.company_type || "-",
           memo: item.memo || "-",
-
           // DB 연결
           // 매입은 출금, 매출은 입금으로 표시
-          settlementType:
-            item.trade_role === "매입" ? "출금 마감" :
-              item.trade_role === "매출" ? "입금 마감" : "-",
-
+          settlementType: item.trade_role === "매입" ? "출금 마감" : item.trade_role === "매출" ? "입금 마감" : "-",
           // 매월 정기 마감일
           closingDay: item.closing_day,
           calendarTypeId: item.calendar_type_id == null ? "" : String(item.calendar_type_id),
-
           // 달력용 날짜는 다음 단계에서 연결
           closingDate: "",
-
           // 거래처 계좌정보
           bankInfo: {
             bank: item.bank_name || "-",
             account: item.account_number || "-",
             holder: item.account_holder || "-"
           },
-
           // 백엔드에서 계산한 금액을 숫자로 변환합니다.
           receivableAmount: Number(item.receivable_amount),
           payableAmount: Number(item.payable_amount),
           missingItems: Number(item.missing_items)
         }));
-
         setPartnersList(partners);
       } catch (err) {
         console.error("거래처 조회 오류:", err);
@@ -134,75 +149,58 @@ function Partners() {
         setLoading(false);
       }
     }
-
     loadPartners();
   }, []);
 
   // 테이블 규격 헤더 정의
   const partnerTableTitle = "거래처 목록 (입출금 마감 현황)";
-  const partnerHeaders = [
-    "거래처 ID",
-    "거래처명",
-    "구분",
-    "사업자번호",
-    "대표자/연락처",
-    "마감 구분",
-    "정기 마감일",
-    "받을 금액",
-    "지급할 금액",
-    "관리/선택"
-  ];
+  const partnerHeaders = ["거래처 ID", "거래처명", "받을 금액", "지급할 금액"];
 
   // 검색 조건에 맞는 거래처만 남깁니다.
-  const filteredPartners = partnersList.filter((item) => {
+  const filteredPartners = partnersList.filter(item => {
     const searchText = searchFilter.keyword.toLowerCase();
 
     // 거래처명 또는 사업자번호에 검색어가 포함되는지 확인
-    const matchesKeyword =
-      item.name.toLowerCase().includes(searchText) ||
-      item.bizNumber.toLowerCase().includes(searchText);
+    const matchesKeyword = item.name.toLowerCase().includes(searchText) || item.bizNumber.toLowerCase().includes(searchText);
 
     // DB의 거래 역할 값은 "매입", "매출"입니다.
-    const matchesType =
-      searchFilter.tradeType === "ALL" ||
-      item.type === searchFilter.tradeType;
-
+    const matchesType = searchFilter.tradeType === "ALL" || item.type === searchFilter.tradeType;
     return matchesKeyword && matchesType;
   });
 
   // PaginationTable 규격 데이터 매핑 ({ content: [...] })
-  const tPartnerData = filteredPartners.map((item) => ({
+  const tPartnerData = filteredPartners.map(item => ({
     content: [
       item.id,
-      <strong>{item.name}</strong>,
-      item.type,
-      item.bizNumber,
-      `${item.ceo} (${item.contact})`,
-      <span className={`status-badge ${item.settlementType === '입금 마감' ? 'status-success' : 'status-danger'}`}>
-        {item.settlementType}
-      </span>,
-      <strong>
-        {item.closingDay
-          ? Number(item.closingDay) === 31
-            ? "매월 말일"
-            : `매월 ${item.closingDay}일`
-          : "-"}
-      </strong>,
-      item.missingItems > 0
-        ? "확인 필요"
-        : `${item.receivableAmount.toLocaleString()}원`,
-      item.missingItems > 0
-        ? "확인 필요"
-        : `${item.payableAmount.toLocaleString()}원`,
-      <button
-        type="button"
-        disabled={saving || deleting}
-        onClick={() => openPartnerDetail(item.id)}
-      >
-        선택
-      </button>
+      <button type="button" className="finance-partner-link" disabled={saving || deleting}
+        onClick={() => openPartnerDetail(item.id)}>{item.name}</button>,
+      ...["매출", "매입"].map(type => <button key={type} type="button"
+        className="finance-partner-link" onClick={() => openAmountDetail(item, type)}
+        aria-label={`${item.name} ${type === "매출" ? "받을" : "지급할"} 금액 상세정보`}>
+        {item.missingItems > 0 ? "확인 필요" : `${(type === "매출" ? item.receivableAmount : item.payableAmount).toLocaleString()}원`}
+      </button>)
     ]
   }));
+
+  async function openAmountDetail(partner, type) {
+    setAmountMonth(currentPartnerMonth());
+    setAllAmountPeriods(false);
+    const request = { partner, type, loading: true, rows: [], error: "" };
+    setAmountDetail(request);
+    try {
+      const rows = await getPartnerBalanceDetails(partner.id, type);
+      setAmountDetail(current => current === request ? { ...request, loading: false, rows } : current);
+    } catch (err) {
+      setAmountDetail(current => current === request ? {
+        ...request, loading: false,
+        error: err.response?.status === 404
+          ? "금액 상세 API를 찾지 못했습니다. financeRouters.js 교체 후 백엔드를 재시작해 주세요."
+          : err.response?.data?.message || (err.response
+            ? `금액 상세 조회에 실패했습니다. (HTTP ${err.response.status})`
+            : "백엔드에 연결하지 못했습니다. 서버 실행 상태를 확인해 주세요.")
+      } : current);
+    }
+  }
 
   // 캘린더 이벤트 매핑 (BasicCalendar / WeeklyCalendar 공통 인터페이스 규격)
   // 정기 마감일로 매월 달력 일정을 만듭니다.
@@ -214,8 +212,7 @@ function Partners() {
     for (let month = 0; month < 12; month++) {
       // 해당 월의 마지막 날짜
       const lastDay = new Date(year, month + 1, 0).getDate();
-
-      partnersList.forEach((item) => {
+      partnersList.forEach(item => {
         const closingDay = Number(item.closingDay);
 
         // 마감일이 없거나 잘못된 값이면 건너뜁니다.
@@ -226,11 +223,9 @@ function Partners() {
         // 31은 말일로 처리합니다.
         // 29일, 30일도 해당 월에 없으면 말일로 처리합니다.
         const day = Math.min(closingDay, lastDay);
-
         const mm = String(month + 1).padStart(2, "0");
         const dd = String(day).padStart(2, "0");
         const date = `${year}-${mm}-${dd}`;
-
         calendarEvents.push({
           id: `${item.id}-${date}`,
           title: `[${item.settlementType}] ${item.name}`,
@@ -244,15 +239,13 @@ function Partners() {
   }
 
   // 선택한 거래처의 정보를 찾습니다.
-  const selectedPartner = partnersList.find(
-    (item) => item.id === selectedPartnerId);
+  const selectedPartner = partnersList.find(item => item.id === selectedPartnerId);
 
   // 선택한 거래처를 공통 상세 모달로 표시합니다.
   function openPartnerDetail(partnerId) {
     if (saving || deleting) return;
     setSelectedPartnerId(partnerId);
   }
-
   function closePartnerDetail() {
     if (saving || deleting) return;
     setSelectedPartnerId(null);
@@ -261,15 +254,19 @@ function Partners() {
   // 신규 등록폼 열기
   function openPartnerForm() {
     setEditingPartnerId(null);
-    setPartnerForm({ ...initialPartnerForm });
+    setPartnerForm({
+      ...initialPartnerForm
+    });
     setFormError("");
     setFormOpen(true);
   }
 
   // 입력한 항목의 값을 변경합니다.
   function handlePartnerChange(e) {
-    const { name, value } = e.target;
-
+    const {
+      name,
+      value
+    } = e.target;
     setPartnerForm({
       ...partnerForm,
       [name]: value
@@ -281,7 +278,6 @@ function Partners() {
     function inputValue(value) {
       return value === "-" || value == null ? "" : value;
     }
-
     setEditingPartnerId(partner.id);
 
     // 선택한 거래처 정보를 기존 입력폼에 채웁니다.
@@ -300,7 +296,6 @@ function Partners() {
       account_number: inputValue(partner.bankInfo.account),
       account_holder: inputValue(partner.bankInfo.holder)
     });
-
     setFormError("");
     setFormOpen(true);
   }
@@ -308,16 +303,12 @@ function Partners() {
   // DB에 신규 거래처를 저장합니다.
   async function handlePartnerSubmit(e) {
     e.preventDefault();
-
     if (saving) return;
-
     setSaving(true);
     setFormError("");
-
     try {
       const isEditing = editingPartnerId !== null;
       let result;
-
       if (isEditing) {
         result = await updatePartner(editingPartnerId, partnerForm);
       } else {
@@ -335,64 +326,43 @@ function Partners() {
         address: partnerForm.company_address.trim() || "-",
         companyType: partnerForm.company_type.trim() || "-",
         memo: partnerForm.memo.trim() || "-",
-        settlementType:
-          partnerForm.trade_role === "매입"
-            ? "출금 마감"
-            : "입금 마감",
-        closingDay:
-          partnerForm.closing_day === ""
-            ? null
-            : Number(partnerForm.closing_day),
+        settlementType: partnerForm.trade_role === "매입" ? "출금 마감" : "입금 마감",
+        closingDay: partnerForm.closing_day === "" ? null : Number(partnerForm.closing_day),
         calendarTypeId: partnerForm.calendar_type_id,
         closingDate: "",
         // 수정 시 기존 계산 금액을 유지하고, 신규 등록은 0원입니다.
-        receivableAmount: isEditing
-          ? partnersList.find((item) => item.id === editingPartnerId).receivableAmount
-          : 0,
-        payableAmount: isEditing
-          ? partnersList.find((item) => item.id === editingPartnerId).payableAmount
-          : 0,
-        missingItems: isEditing
-          ? partnersList.find((item) => item.id === editingPartnerId).missingItems
-          : 0,
+        receivableAmount: isEditing ? partnersList.find(item => item.id === editingPartnerId).receivableAmount : 0,
+        payableAmount: isEditing ? partnersList.find(item => item.id === editingPartnerId).payableAmount : 0,
+        missingItems: isEditing ? partnersList.find(item => item.id === editingPartnerId).missingItems : 0,
         bankInfo: {
           bank: partnerForm.bank_name.trim() || "-",
           account: partnerForm.account_number.trim() || "-",
           holder: partnerForm.account_holder.trim() || "-"
         }
       };
-
       if (isEditing) {
         // 수정한 ID의 거래처만 교체합니다.
-        setPartnersList((prev) =>
-          prev.map((item) =>
-            item.id === editingPartnerId ? newPartner : item
-          )
-        );
+        setPartnersList(prev => prev.map(item => item.id === editingPartnerId ? newPartner : item));
       } else {
         // 신규 등록일 때만 행을 추가합니다.
-        setPartnersList((prev) => [newPartner, ...prev]);
+        setPartnersList(prev => [newPartner, ...prev]);
       }
 
       // 검색 조건을 초기화해서 새 거래처가 보이게 합니다.
       setKeyword("");
       setTradeType("ALL");
-      setSearchFilter({ keyword: "", tradeType: "ALL" });
+      setSearchFilter({
+        keyword: "",
+        tradeType: "ALL"
+      });
 
       //거래처 등록+수정
       setSelectedPartnerId(newPartner.id);
       setFormOpen(false);
       setEditingPartnerId(null);
-      alert(
-        isEditing
-          ? "거래처가 수정되었습니다."
-          : "거래처가 등록되었습니다."
-      );
+      alert(isEditing ? "거래처가 수정되었습니다." : "거래처가 등록되었습니다.");
     } catch (err) {
-      setFormError(
-        err.response?.data?.message ||
-        "거래처 저장에 실패했습니다."
-      );
+      setFormError(err.response?.data?.message || "거래처 저장에 실패했습니다.");
     } finally {
       setSaving(false);
     }
@@ -403,22 +373,14 @@ function Partners() {
     if (deleting || saving) return;
 
     // 취소를 누르면 삭제하지 않습니다.
-    const confirmed = window.confirm(
-      `[${partner.id}번] ${partner.name} 거래처를 삭제하시겠습니까?`
-    );
-
+    const confirmed = window.confirm(`[${partner.id}번] ${partner.name} 거래처를 삭제하시겠습니까?`);
     if (!confirmed) return;
-
     setDeleting(true);
-
     try {
       await deletePartner(partner.id);
 
       // DB 삭제 성공 후 화면 목록에서도 제거합니다.
-      setPartnersList((prev) =>
-        prev.filter((item) => item.id !== partner.id)
-      );
-
+      setPartnersList(prev => prev.filter(item => item.id !== partner.id));
       setSelectedPartnerId(null);
 
       // 삭제한 거래처의 수정폼이 열려 있으면 닫습니다.
@@ -428,18 +390,14 @@ function Partners() {
       }
 
       // 삭제 후 목록 첫 페이지로 돌아갑니다.
-      setSearchFilter((prev) => ({
+      setSearchFilter(prev => ({
         ...prev,
         refresh: (prev.refresh || 0) + 1
       }));
-
       alert("거래처가 삭제되었습니다.");
     } catch (err) {
       // 거래 내역이 있어 삭제가 차단된 경우도 표시합니다.
-      alert(
-        err.response?.data?.message ||
-        "거래처 삭제에 실패했습니다."
-      );
+      alert(err.response?.data?.message || "거래처 삭제에 실패했습니다.");
     } finally {
       setDeleting(false);
     }
@@ -450,348 +408,370 @@ function Partners() {
     if (saving) return;
     setFormOpen(false);
   }
+  return <div className="border-container finance-partners">
+    {/* 1. 상단 공통 헤더 */}
+    <header className="dashboard-header">
+      <span className="subtitle">거래처 및 정산 마감 관리</span>
+      <div className="dashboard-top">
+        <button type="button" className="register-btn" onClick={openPartnerForm}>
+          + 신규 거래처 등록
+        </button>
+      </div>
+    </header>
 
-  return (
-    <div className="border-container finance-partners">
-      {/* 1. 상단 공통 헤더 */}
-      <header className="dashboard-header">
-        <span className="subtitle">거래처 및 정산 마감 관리</span>
-        <div className="dashboard-top">
-          <button
-            type="button"
-            className="register-btn"
-            onClick={openPartnerForm}
-          >
-            + 신규 거래처 등록
+    <hr />
+
+    {formOpen && <div className="finance-registration-modal">
+      <ModalBase title={editingPartnerId === null ? "신규 거래처 등록" : "거래처 수정"} onClose={closeRegistrationModal} layout={<form onSubmit={handlePartnerSubmit}>
+
+        {/* 같은 구조의 문자 입력칸은 map으로 만듭니다. */}
+        {[{
+          name: "company_name",
+          label: "거래처명",
+          required: true,
+          max: 100
+        }, {
+          name: "tax_id",
+          label: "사업자번호",
+          max: 30
+        }, {
+          name: "representative_name",
+          label: "대표자",
+          max: 50
+        }, {
+          name: "company_phone",
+          label: "연락처",
+          max: 30
+        }, {
+          name: "company_address",
+          label: "주소",
+          max: 255
+        }, {
+          name: "company_type",
+          label: "업체 유형",
+          max: 30
+        }, {
+          name: "bank_name",
+          label: "은행명",
+          max: 50
+        }, {
+          name: "account_number",
+          label: "계좌번호",
+          max: 50
+        }, {
+          name: "account_holder",
+          label: "예금주",
+          max: 100
+        }].map(field => <div key={field.name}>
+          <label htmlFor={`partner-${field.name}`}>
+            {field.label}{field.required ? " *" : ""}
+          </label>
+          <input id={`partner-${field.name}`} name={field.name} type="text" value={partnerForm[field.name]} onChange={handlePartnerChange} required={field.required} maxLength={field.max} disabled={saving} />
+        </div>)}
+
+        <div>
+          <label htmlFor="partner-trade-role">거래 구분 *</label>
+          <select id="partner-trade-role" name="trade_role" value={partnerForm.trade_role} onChange={handlePartnerChange} disabled={saving}>
+            <option value="매입">매입</option>
+            <option value="매출">매출</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="partner-closing-day">정기 마감일</label>
+          <input id="partner-closing-day" name="closing_day" type="number" min="1" max="31" step="1" placeholder="1~31, 31은 말일" value={partnerForm.closing_day} onChange={handlePartnerChange} disabled={saving} />
+        </div>
+
+        <fieldset className="finance-color-fieldset" disabled={saving}>
+          <legend className="finance-color-legend">일정 색상</legend>
+          <label style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 12,
+            cursor: "pointer"
+          }}>
+            <input type="radio" name="calendar_type_id" value="" checked={partnerForm.calendar_type_id === ""} onChange={handlePartnerChange} className="finance-color-radio" />
+            기본 색상 (입금 / 출금 구분)
+          </label>
+          <div className="finance-color-options">
+            {partnerCalendarColors.map(({
+              typeId,
+              color
+            }, index) => <label key={typeId} title={`색상 ${index + 1}: ${color}`} className="finance-color-option">
+                <input type="radio" name="calendar_type_id" value={String(typeId)} checked={String(partnerForm.calendar_type_id) === String(typeId)} onChange={handlePartnerChange} aria-label={`일정 색상 ${index + 1}`} className="finance-color-radio" />
+                <span aria-hidden="true" className="finance-color-swatch" style={{
+                  backgroundColor: color
+                }} />
+              </label>)}
+          </div>
+          <p className="subtext finance-color-guide">저장하면 이 거래처의 주간·월간 정산 마감 일정에 적용됩니다.</p>
+        </fieldset>
+
+        <div>
+          <label htmlFor="partner-memo">메모</label>
+          <textarea id="partner-memo" name="memo" value={partnerForm.memo} onChange={handlePartnerChange} disabled={saving} />
+        </div>
+
+        {formError && <p role="alert">{formError}</p>}
+
+        <button type="submit" disabled={saving}>
+          {saving ? "저장 중..." : "저장"}
+        </button>
+
+        <button type="button" disabled={saving} onClick={closeRegistrationModal}>
+          취소
+        </button>
+      </form>} />
+    </div>}
+
+    {amountDetail && <div className="finance-partner-amount-modal"
+      onClick={() => setAmountDetail(null)}
+      onKeyDown={event => { if (event.key === "Escape") setAmountDetail(null); }}
+      style={{
+        position: "fixed", inset: 0, zIndex: 1000,
+        background: "rgba(0, 0, 0, 0.5)", padding: "16px",
+        display: "flex", alignItems: "center", justifyContent: "center"
+      }}>
+
+      <div
+        className="modal-boder"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="partner-amount-title"
+        onClick={event => event.stopPropagation()}
+        style={{
+          width: "900px",
+          height: "640px"
+        }}
+      >
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", marginBottom: "20px", flexShrink: 0 }}>
+          <h3 id="partner-amount-title" style={{ margin: 0, fontSize: "18px" }}>
+            {amountDetail.partner.name} · {amountDetail.type === "매출" ? "받을 금액" : "지급할 금액"} 상세
+          </h3>
+          <button type="button" autoFocus aria-label="닫기" onClick={() => setAmountDetail(null)}
+            style={{ cursor: "pointer", border: "none", background: "none", color: "inherit", fontSize: "16px", flexShrink: 0 }}>✕</button>
+        </div>
+        <section className="finance-partner-amount-content" aria-label="금액 상세정보"
+          style={{ flex: "1 1 auto", minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div className="finance-partner-month-filter">
+            <label className="finance-partner-all-periods">
+              <input type="checkbox" checked={allAmountPeriods}
+                onChange={event => setAllAmountPeriods(event.target.checked)} />
+              전체 기간
+            </label>
+            <div className="finance-partner-month-navigation">
+              <button type="button" aria-label="이전 월" disabled={allAmountPeriods}
+                onClick={() => setAmountMonth(month => shiftPartnerMonth(month, -1))}>◀</button>
+              <label htmlFor="partner-amount-month" className="finance-partner-month-label">조회 월</label>
+              <input id="partner-amount-month" type="month" value={amountMonth} disabled={allAmountPeriods}
+                min="1900-01" max="9999-12"
+                onChange={event => {
+                  if (/^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(event.target.value)) {
+                    setAmountMonth(event.target.value);
+                  }
+                }} />
+              <button type="button" aria-label="다음 월" disabled={allAmountPeriods}
+                onClick={() => setAmountMonth(month => shiftPartnerMonth(month, 1))}>▶</button>
+            </div>
+          </div>
+          {amountDetail.loading ? <p role="status">금액 내역을 불러오는 중입니다.</p> :
+            amountDetail.error ? <p role="alert">{amountDetail.error}</p> : <>
+              
+              <div className="table-shell" style={{ flex: "1 1 auto", minHeight: 0, overflow: "auto", scrollbarGutter: "stable" }}>
+                <table style={{ width: "100%", tableLayout: "fixed" }}>
+                  <thead><tr>{["거래 번호", "거래일", "마감일", "거래 총액", "정산 완료액", "남은 금액"].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead>
+                  <tbody>{amountRows.length === 0 ? <tr><td colSpan={6}>선택한 기간의 거래 내역이 없습니다.</td></tr> :
+                    amountRows.map(row => <tr key={row.transaction_id}>
+                      <td>{row.transaction_id}</td><td>{row.trade_date || "-"}</td><td>{row.due_date || "-"}</td>
+                      <td>{row.total_amount == null ? "품목 확인 필요" : `${Number(row.total_amount).toLocaleString()}원`}</td>
+                      <td>{Number(row.paid_amount).toLocaleString()}원</td>
+                      <td>{row.remaining_amount == null ? "확인 필요" : `${Number(row.remaining_amount).toLocaleString()}원`}</td>
+                    </tr>)}</tbody>
+                  <tfoot><tr><th scope="row" colSpan={5}>{allAmountPeriods ? "전체 기간" : "선택 월"} 남은 금액 합계</th><td>
+                    {amountRows.some(row => row.remaining_amount == null) ? "확인 필요" :
+                      `${amountRows.reduce((sum, row) => sum + Number(row.remaining_amount), 0).toLocaleString()}원`}
+                  </td></tr></tfoot>
+                </table></div>
+            </>}
+        </section>
+      </div>
+    </div>}
+
+    {/* 2. 좌우 2단 분할 레이아웃 컨테이너 (테이블 좌측, 달력 우측 상시 노출) */}
+    <div style={{
+      display: 'flex',
+      gap: '24px',
+      alignItems: 'flex-start',
+      marginTop: '16px'
+    }}>
+
+      {/* [좌측 영역] 검색 필터 및 거래처 목록 테이블 (약 62% 너비) */}
+      <div style={{
+        flex: '1 1 62%',
+        minWidth: 0
+      }}>
+        {/* 간이 검색/필터 구역 */}
+        <div className="finance-partner-filters">
+          <label htmlFor="partnerTypeSelect">구분: </label>
+          <select id="partnerTypeSelect" value={tradeType} onChange={e => setTradeType(e.target.value)} style={{
+            width: "180px",
+            flexShrink: 0
+          }}>
+            <option value="ALL">전체 구분</option>
+            <option value="매출">매출처 (입금마감)</option>
+            <option value="매입">매입처 (출금마감)</option>
+          </select>
+
+          <input type="text" placeholder="거래처명, 사업자번호 검색" style={{
+            flex: 1,
+            minWidth: "180px",
+            width: "auto"
+          }} value={keyword} onChange={e => setKeyword(e.target.value)} onKeyDown={e => {
+            // 한글 입력을 확정하는 Enter는 제외합니다.
+            if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+              handleSearch();
+            }
+          }} />
+          <button type="button" className="finance-search-button action-btn" onClick={handleSearch} style={{
+            flexShrink: 0,
+            whiteSpace: "nowrap"
+          }}>
+            조회
           </button>
         </div>
-      </header>
 
-      <hr />
+        {loading && <p>거래처 목록을 불러오는 중입니다.</p>}
+        {error && <p role="alert">{error}</p>}
+        {!loading && !error && filteredPartners.length === 0 && <p>
+          {partnersList.length === 0 ? "등록된 거래처가 없습니다." : "검색 결과가 없습니다."}
+        </p>}
 
-      {formOpen && (
-        <div className="finance-registration-modal">
-          <ModalBase
-            title={editingPartnerId === null ? "신규 거래처 등록" : "거래처 수정"}
-            onClose={closeRegistrationModal}
-
-            layout={(
-              <form onSubmit={handlePartnerSubmit}>
-
-                {/* 같은 구조의 문자 입력칸은 map으로 만듭니다. */}
-                {[
-                  { name: "company_name", label: "거래처명", required: true, max: 100 },
-                  { name: "tax_id", label: "사업자번호", max: 30 },
-                  { name: "representative_name", label: "대표자", max: 50 },
-                  { name: "company_phone", label: "연락처", max: 30 },
-                  { name: "company_address", label: "주소", max: 255 },
-                  { name: "company_type", label: "업체 유형", max: 30 },
-                  { name: "bank_name", label: "은행명", max: 50 },
-                  { name: "account_number", label: "계좌번호", max: 50 },
-                  { name: "account_holder", label: "예금주", max: 100 }
-                ].map((field) => (
-                  <div key={field.name}>
-                    <label htmlFor={`partner-${field.name}`}>
-                      {field.label}{field.required ? " *" : ""}
-                    </label>
-                    <input
-                      id={`partner-${field.name}`}
-                      name={field.name}
-                      type="text"
-                      value={partnerForm[field.name]}
-                      onChange={handlePartnerChange}
-                      required={field.required}
-                      maxLength={field.max}
-                      disabled={saving}
-                    />
-                  </div>
-                ))}
-
-                <div>
-                  <label htmlFor="partner-trade-role">거래 구분 *</label>
-                  <select
-                    id="partner-trade-role"
-                    name="trade_role"
-                    value={partnerForm.trade_role}
-                    onChange={handlePartnerChange}
-                    disabled={saving}
-                  >
-                    <option value="매입">매입</option>
-                    <option value="매출">매출</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="partner-closing-day">정기 마감일</label>
-                  <input
-                    id="partner-closing-day"
-                    name="closing_day"
-                    type="number"
-                    min="1"
-                    max="31"
-                    step="1"
-                    placeholder="1~31, 31은 말일"
-                    value={partnerForm.closing_day}
-                    onChange={handlePartnerChange}
-                    disabled={saving}
-                  />
-                </div>
-
-                <fieldset className="finance-color-fieldset" disabled={saving}>
-                  <legend className="finance-color-legend">일정 색상</legend>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, cursor: "pointer" }}>
-                    <input
-                      type="radio"
-                      name="calendar_type_id"
-                      value=""
-                      checked={partnerForm.calendar_type_id === ""}
-                      onChange={handlePartnerChange}
-                      className="finance-color-radio"
-                    />
-                    기본 색상 (입금 / 출금 구분)
-                  </label>
-                  <div className="finance-color-options">
-                    {partnerCalendarColors.map(({ typeId, color }, index) => (
-                      <label key={typeId} title={`색상 ${index + 1}: ${color}`} className="finance-color-option">
-                        <input
-                          type="radio"
-                          name="calendar_type_id"
-                          value={String(typeId)}
-                          checked={String(partnerForm.calendar_type_id) === String(typeId)}
-                          onChange={handlePartnerChange}
-                          aria-label={`일정 색상 ${index + 1}`}
-                          className="finance-color-radio"
-                        />
-                        <span aria-hidden="true" className="finance-color-swatch" style={{ backgroundColor: color }} />
-                      </label>
-                    ))}
-                  </div>
-                  <p className="subtext finance-color-guide">저장하면 이 거래처의 주간·월간 정산 마감 일정에 적용됩니다.</p>
-                </fieldset>
-
-                <div>
-                  <label htmlFor="partner-memo">메모</label>
-                  <textarea
-                    id="partner-memo"
-                    name="memo"
-                    value={partnerForm.memo}
-                    onChange={handlePartnerChange}
-                    disabled={saving}
-                  />
-                </div>
-
-                {formError && <p role="alert">{formError}</p>}
-
-                <button type="submit" disabled={saving}>
-                  {saving ? "저장 중..." : "저장"}
-                </button>
-
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={closeRegistrationModal}
-                >
-                  취소
-                </button>
-              </form>
-            )}
-          />
+        <div style={{
+          flex: "1 1 62%",
+          minWidth: 0
+        }}>
+          <PaginationTable key={JSON.stringify(searchFilter)} title={partnerTableTitle} th={partnerHeaders} allData={tPartnerData} itemsPerPage={5} />
         </div>
-      )}
 
-      {/* 2. 좌우 2단 분할 레이아웃 컨테이너 (테이블 좌측, 달력 우측 상시 노출) */}
-      <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', marginTop: '16px' }}>
-
-        {/* [좌측 영역] 검색 필터 및 거래처 목록 테이블 (약 62% 너비) */}
-        <div style={{ flex: '1 1 62%', minWidth: 0 }}>
-          {/* 간이 검색/필터 구역 */}
-          <div className="finance-partner-filters">
-            <label htmlFor="partnerTypeSelect">구분: </label>
-            <select
-              id="partnerTypeSelect"
-              value={tradeType}
-              onChange={(e) => setTradeType(e.target.value)}
-              style={{ width: "180px", flexShrink: 0 }}
-            >
-              <option value="ALL">전체 구분</option>
-              <option value="매출">매출처 (입금마감)</option>
-              <option value="매입">매입처 (출금마감)</option>
-            </select>
-
-            <input
-              type="text"
-              placeholder="거래처명, 사업자번호 검색"
-              style={{ flex: 1, minWidth: "180px", width: "auto" }}
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              onKeyDown={(e) => {
-                // 한글 입력을 확정하는 Enter는 제외합니다.
-                if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-                  handleSearch();
-                }
-              }}
-            />
-            <button
-              type="button"
-              className="finance-search-button action-btn"
-              onClick={handleSearch}
-              style={{ flexShrink: 0, whiteSpace: "nowrap" }}
-            >
-              조회
-            </button>
-          </div>
-
-          {loading && <p>거래처 목록을 불러오는 중입니다.</p>}
-          {error && <p role="alert">{error}</p>}
-          {!loading && !error && filteredPartners.length === 0 && (
-            <p>
-              {partnersList.length === 0
-                ? "등록된 거래처가 없습니다."
-                : "검색 결과가 없습니다."}
-            </p>
-          )}
-
-          <div style={{ flex: "1 1 62%", minWidth: 0 }}>
-            <PaginationTable
-              key={JSON.stringify(searchFilter)}
-              title={partnerTableTitle}
-              th={partnerHeaders}
-              allData={tPartnerData}
-              itemsPerPage={5}
-            />
-          </div>
-
-          {/* 상세와 수정 폼은 하나씩 열고, 기존 공통 모달을 사용합니다. */}
-          {selectedPartner && !formOpen && (
-            <div className="finance-registration-modal finance-partner-detail">
-              <ModalBase
-                title="거래처 상세정보"
-                onClose={closePartnerDetail}
-                layout={(
-                  <section aria-label="거래처 상세정보">
-                    <div className="table-shell">
-                      <table>
-                        <tbody>
-                          <tr>
-                            <th scope="row">거래처명</th>
-                            <td>{selectedPartner.name}</td>
-                          </tr>
-                          <tr>
-                            <th scope="row">거래 구분</th>
-                            <td>{selectedPartner.type}</td>
-                          </tr>
-                          <tr>
-                            <th scope="row">업체 유형</th>
-                            <td>{selectedPartner.companyType}</td>
-                          </tr>
-                          <tr>
-                            <th scope="row">사업자번호</th>
-                            <td>{selectedPartner.bizNumber}</td>
-                          </tr>
-                          <tr>
-                            <th scope="row">대표자</th>
-                            <td>{selectedPartner.ceo}</td>
-                          </tr>
-                          <tr>
-                            <th scope="row">연락처</th>
-                            <td>{selectedPartner.contact}</td>
-                          </tr>
-                          <tr>
-                            <th scope="row">주소</th>
-                            <td>{selectedPartner.address}</td>
-                          </tr>
-                          <tr>
-                            <th scope="row">정기 마감일</th>
-                            <td>
-                              {selectedPartner.closingDay
-                                ? Number(selectedPartner.closingDay) === 31
-                                  ? "매월 말일"
-                                  : `매월 ${selectedPartner.closingDay}일`
-                                : "-"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th scope="row">일정 색상</th>
-                            <td>
-                              <span aria-hidden="true" className="finance-color-swatch finance-color-current" style={{ backgroundColor: TOGLE_COLORS?.[getPartnerCalendarTypeId(selectedPartner)] || "var(--color-brand)" }} />
-                              {selectedPartner.calendarTypeId === "" ? "기본 색상" : "선택한 색상"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th scope="row">은행명</th>
-                            <td>{selectedPartner.bankInfo.bank}</td>
-                          </tr>
-                          <tr>
-                            <th scope="row">계좌번호</th>
-                            <td>{selectedPartner.bankInfo.account}</td>
-                          </tr>
-                          <tr>
-                            <th scope="row">예금주</th>
-                            <td>{selectedPartner.bankInfo.holder}</td>
-                          </tr>
-                          <tr>
-                            <th scope="row">메모</th>
-                            <td>{selectedPartner.memo}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                    <div className="finance-detail-actions">
-                      <button type="button" className="erp-primary-button"
-                        disabled={saving || deleting}
-                        onClick={() => openEditPartnerForm(selectedPartner)}>
-                        수정
-                      </button>
-                      <button type="button" className="finance-detail-delete"
-                        disabled={saving || deleting}
-                        onClick={() => handlePartnerDelete(selectedPartner)}>
-                        {deleting ? "삭제 중..." : "삭제"}
-                      </button>
-                    </div>
-                  </section>
-                )}
-              />
+        {/* 상세와 수정 폼은 하나씩 열고, 기존 공통 모달을 사용합니다. */}
+        {selectedPartner && !formOpen && <div className="finance-registration-modal finance-partner-detail">
+          <ModalBase title="거래처 상세정보" onClose={closePartnerDetail} layout={<section aria-label="거래처 상세정보">
+            <div className="table-shell">
+              <table>
+                <tbody>
+                  <tr>
+                    <th scope="row">거래처 번호</th>
+                    <td>{selectedPartner.id}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">거래처명</th>
+                    <td>{selectedPartner.name}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">거래 구분</th>
+                    <td>{selectedPartner.type}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">업체 유형</th>
+                    <td>{selectedPartner.companyType}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">사업자번호</th>
+                    <td>{selectedPartner.bizNumber}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">대표자</th>
+                    <td>{selectedPartner.ceo}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">연락처</th>
+                    <td>{selectedPartner.contact}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">주소</th>
+                    <td>{selectedPartner.address}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">정기 마감일</th>
+                    <td>
+                      {selectedPartner.closingDay ? Number(selectedPartner.closingDay) === 31 ? "매월 말일" : `매월 ${selectedPartner.closingDay}일` : "-"}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">일정 색상</th>
+                    <td>
+                      <span aria-hidden="true" className="finance-color-swatch finance-color-current" style={{
+                        backgroundColor: TOGLE_COLORS?.[getPartnerCalendarTypeId(selectedPartner)] || "var(--color-brand)"
+                      }} />
+                      {selectedPartner.calendarTypeId === "" ? "기본 색상" : "선택한 색상"}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">은행명</th>
+                    <td>{selectedPartner.bankInfo.bank}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">계좌번호</th>
+                    <td>{selectedPartner.bankInfo.account}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">예금주</th>
+                    <td>{selectedPartner.bankInfo.holder}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">메모</th>
+                    <td>{selectedPartner.memo}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
-
-
-        {/* [우측 영역] 상시 노출 마감일 달력 (약 38% 너비) */}
-        <div style={{ flex: '0 0 38%', minWidth: '340px', borderLeft: '1px solid var(--color-line)', paddingLeft: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <h4 className="board-title finance-calendar-title">정산 마감 일정</h4>
-            <ul className="grouplist">
-              <li><button
-                type="button"
-                className={calendarType === 'week' ? 'active' : ''}
-                onClick={() => setCalendarType('week')}
-              >
-                주간
-              </button></li>
-              <li><button
-                type="button"
-                className={calendarType === 'month' ? 'active' : ''}
-                onClick={() => setCalendarType('month')}
-              >
-                월간
-              </button></li>
-            </ul>
-          </div>
-
-
-          {/* 수정된 컴포넌트명 BasicCalendar 및 WeeklyCalendar 적용 */}
-          <div className="calendar-widget-wrapper">
-            {calendarType === "week" ? (
-              <WeeklyCalendar schedule={calendarEvents} />
-            ) : (
-              <BasicCalendar schedule={calendarEvents} />
-            )}
-          </div>
-        </div>
-
+            <div className="finance-detail-actions">
+              <button type="button" className="erp-primary-button" disabled={saving || deleting} onClick={() => openEditPartnerForm(selectedPartner)}>
+                수정
+              </button>
+              <button type="button" className="finance-detail-delete" disabled={saving || deleting} onClick={() => handlePartnerDelete(selectedPartner)}>
+                {deleting ? "삭제 중..." : "삭제"}
+              </button>
+            </div>
+          </section>} />
+        </div>}
       </div>
-    </div>
-  );
-}
 
+
+      {/* [우측 영역] 상시 노출 마감일 달력 (약 38% 너비) */}
+      <div style={{
+        flex: '0 0 38%',
+        minWidth: '340px',
+        borderLeft: '1px solid var(--color-line)',
+        paddingLeft: '20px'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '12px'
+        }}>
+          <h4 className="board-title finance-calendar-title">정산 마감 일정</h4>
+          <ul className="grouplist">
+            <li><button type="button" className={calendarType === 'week' ? 'active' : ''} onClick={() => setCalendarType('week')}>
+              주간
+            </button></li>
+            <li><button type="button" className={calendarType === 'month' ? 'active' : ''} onClick={() => setCalendarType('month')}>
+              월간
+            </button></li>
+          </ul>
+        </div>
+
+
+        {/* 수정된 컴포넌트명 BasicCalendar 및 WeeklyCalendar 적용 */}
+        <div className="calendar-widget-wrapper">
+          {calendarType === "week" ? <WeeklyCalendar schedule={calendarEvents} /> : <BasicCalendar schedule={calendarEvents} />}
+        </div>
+      </div>
+
+    </div>
+  </div>;
+}
 export default Partners;

@@ -12,7 +12,7 @@ function StatisticsCard(props){
         const startedAt = performance.now();
 
         const animate = (currentTime)=>{
-            const progress = Math.min((currentTime - startedAt)) / ANIMATION_DURATION;
+            const progress = Math.min((currentTime - startedAt) / ANIMATION_DURATION, 1);
             const easedProgress = 1 - Math.pow(1-progress,3);
             setDisplayCount(Math.round(targetCount * easedProgress));
             if(progress < 1){
@@ -41,10 +41,10 @@ function StatisticsCard(props){
                     fontVariantNumeric: "tabular-nums" //너비흔들림 방지.
                 }}>{displayCount}</span>
                 {
-                    props.stiyle == 0 ? ("개"):
-                    props.stiyle == 1 ? ("명"):
-                    props.stiyle == 2 ? ("만원") :
-                    props.stiyle == 3 ? ("일") : ("")
+                    props.stiyle === 0 ? ("개"):
+                    props.stiyle === 1 ? ("명"):
+                    props.stiyle === 2 ? ("만원") :
+                    props.stiyle === 3 ? ("일") : ("")
                 }
             </div>
         </div>

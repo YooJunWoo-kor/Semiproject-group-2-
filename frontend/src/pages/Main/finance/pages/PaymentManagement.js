@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BasicTable from '../../../../components/BasicTable';
 import Items from './Items';
@@ -12,29 +12,100 @@ import '../../../../css/Table.css';
 import '../../../../css/GroupBord.css';
 import '../../../../css/Form.css';
 import '../components/Finance.css';
-
-const won = value => `${Number(value || 0).toLocaleString('ko-KR', { maximumFractionDigits: 2 })}원`;
+import ColorTeg from '../../../../components/ColorTeg';
+import { FilterTabs } from '../../../../components/FilterControls';
+import "../../../../css/ModalPopup.css";
+const won = value => `${Number(value || 0).toLocaleString('ko-KR', {
+  maximumFractionDigits: 2
+})}원`;
 function currentMonth() {
-  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit' }).format(new Date());
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit'
+  }).format(new Date());
 }
 function total(rows) {
   return rows.reduce((sum, row) => sum + Math.round(Number(row.amount) * 100), 0) / 100;
 }
-
-export default function PaymentManagement({ embedded = false, onOpenApprovals, onOpenTrades, onBusyChange }) {
+function CategoryDropdown({
+  groups,
+  selectedCodes,
+  onChange,
+  disabled,
+  resetKey
+}) {
+  const [open, setOpen] = useState(false);
+  const [rootElement, setRootElement] = useState(null);
+  const [triggerElement, setTriggerElement] = useState(null);
+  const items = groups.flatMap(group => group.items);
+  const selected = items.filter(item => selectedCodes.includes(item.key));
+  const allSelected = items.length > 0 && selected.length === items.length;
+  useEffect(() => {
+    setOpen(false);
+  }, [resetKey, disabled]);
+  useEffect(() => {
+    if (!open) return undefined;
+    function outside(event) {
+      if (!rootElement?.contains(event.target)) setOpen(false);
+    }
+    function escape(event) {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        triggerElement?.focus();
+      }
+    }
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', outside);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [open, rootElement, triggerElement]);
+  function close() {
+    setOpen(false);
+    triggerElement?.focus();
+  }
+  const label = selected.length === 0 ? '세부 항목 선택' : allSelected ? '전체 항목' : `${selected[0].label}${selected.length > 1 ? ` 외 ${selected.length - 1}개` : ''}`;
+  return <div className="pm-category-dropdown" ref={setRootElement} onBlur={event => {
+    if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+  }}>
+    <button type="button" className="pm-dropdown-trigger" ref={setTriggerElement} disabled={disabled} aria-expanded={open} aria-controls="pm-category-options" aria-label={`세부 항목: ${label}`} onClick={() => setOpen(value => !value)}>
+      <span>{label}</span><span aria-hidden="true">▾</span>
+    </button>
+    {open && <div id="pm-category-options" className="pm-dropdown-popover" role="group" aria-label="세부 항목 선택">
+      <h4>세부 항목 선택</h4>
+      <label className="pm-dropdown-check"><input type="checkbox" ref={element => {
+          if (element) element.indeterminate = selected.length > 0 && !allSelected;
+        }} checked={allSelected} onChange={event => onChange(event.target.checked ? items.map(item => item.key) : [])} />전체 선택</label>
+      <div className="pm-dropdown-options">{groups.map(group => <fieldset key={group.key}>
+        <legend>{group.heading}</legend>
+        {group.items.map(item => <label key={item.key} className="pm-dropdown-check">
+          <input type="checkbox" checked={selectedCodes.includes(item.key)} onChange={event => onChange(event.target.checked ? [...selectedCodes, item.key] : selectedCodes.filter(code => code !== item.key))} />{item.label}
+        </label>)}
+      </fieldset>)}</div>
+      <div className="pm-dropdown-footer"><span>{selected.length}개 선택</span><button type="button" onClick={close}>확인</button></div>
+    </div>}
+  </div>;
+}
+export default function PaymentManagement({
+  embedded = false,
+  onOpenApprovals,
+  onOpenTrades,
+  onBusyChange
+}) {
   const navigate = useNavigate();
   const user = getLoginUser();
   const permitted = user?.role === 'MASTER' || Number(user?.department_id) === 1;
-  const [direction, setDirection] = useState('출금');
+  const direction = '전체';
+  const [tradeType, setTradeType] = useState('ALL');
   const [monthInput, setMonthInput] = useState(currentMonth);
   const [month, setMonth] = useState(currentMonth);
   const [refresh, setRefresh] = useState(0);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [groupId, setGroupId] = useState('');
   const [selectedCodes, setSelectedCodes] = useState([]);
-  const [view, setView] = useState('completed');
   const [selectedRow, setSelectedRow] = useState(null);
   const [classification, setClassification] = useState('unclassified');
   const [password, setPassword] = useState('');
@@ -44,60 +115,114 @@ export default function PaymentManagement({ embedded = false, onOpenApprovals, o
   const [workflowBusy, setWorkflowBusy] = useState(false);
   const [tradeRequest, setTradeRequest] = useState(null);
   const [tradeBusy, setTradeBusy] = useState(false);
-  const allRef = useRef(null);
-  const saveLock = useRef(false);
-  const expenseGroups = useRef([]);
-
+  const [filterReset, setFilterReset] = useState(0);
+  const expenseGroups = data ? data.overview.expense.groups.filter(group => group.id !== 'unclassified') : [];
   useEffect(() => {
     onBusyChange?.(saving || selectedRow !== null || workflowBusy || tradeBusy);
   }, [saving, selectedRow, workflowBusy, tradeBusy, onBusyChange]);
   useEffect(() => () => onBusyChange?.(false), [onBusyChange]);
-
   function openApprovals(options = {}) {
-    if (onOpenApprovals) onOpenApprovals({ ...options, expenseGroups: expenseGroups.current });
-    else setWorkflow(options);
+    if (onOpenApprovals) onOpenApprovals({
+      ...options,
+      expenseGroups: expenseGroups
+    });else setWorkflow(options);
   }
   function openTrades(options = {}) {
-    if (embedded) setTradeRequest({ ...options, requestId: Date.now() });
-    else if (onOpenTrades) onOpenTrades(options);
-    else navigate('/main/finance/items');
+    if (embedded) setTradeRequest({
+      ...options,
+      requestId: Date.now()
+    });else if (onOpenTrades) onOpenTrades(options);else navigate('/main/finance/items');
   }
-
   useEffect(() => {
     if (!permitted || workflow) return undefined;
     let cancelled = false;
     setLoading(true);
     setError('');
-    getPaymentManagement({ month, direction }).then(result => {
+    // 전체 화면은 기존 입금·출금 API의 같은 조회 월 결과를 함께 사용합니다.
+    const request = Promise.all(['출금', '입금'].map(value => getPaymentManagement({
+      month,
+      direction: value
+    }))).then(([expense, income]) => ({
+      range: expense.range,
+      entries: [...expense.entries.map(row => ({
+        ...row,
+        payment_direction: '출금',
+        record_view: 'completed'
+      })), ...income.entries.map(row => ({
+        ...row,
+        payment_direction: '입금',
+        record_view: 'completed'
+      }))],
+      scheduled: [...expense.scheduled.map(row => ({
+        ...row,
+        payment_direction: '출금',
+        record_view: 'scheduled'
+      })), ...income.scheduled.map(row => ({
+        ...row,
+        payment_direction: '입금',
+        record_view: 'scheduled'
+      }))],
+      overview: {
+        expense,
+        income
+      }
+    }));
+    request.then(result => {
       if (cancelled) return;
       setData(result);
-      if (direction === '출금') expenseGroups.current = result.groups.filter(group => group.id !== 'unclassified');
-      setGroupId(previous => result.groups.some(group => group.id === previous) ? previous : result.groups[0]?.id || '');
     }).catch(err => {
-      if (!cancelled) setError(err.response?.data?.message || '결제 관리 정보를 불러오지 못했습니다.');
-    }).finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      if (!cancelled) {
+        setData(null);
+        setError(err.response?.data?.message || '결제 관리 정보를 불러오지 못했습니다.');
+      }
+    }).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [direction, month, refresh, permitted, workflow]);
 
-  const groups = useMemo(() => data?.groups || [], [data]);
-  const group = groups.find(item => item.id === groupId);
-  const categoryCodes = JSON.stringify(group?.items.map(item => item.code) || []);
-  // 분류 구성이나 조회 기간이 바뀔 때만 선택을 초기화합니다.
+  // 선택한 탭에 맞는 세부 항목 목록을 만듭니다.
+  function getFilterGroups() {
+    if (!data) return [];
+    const groups = [];
+    if (tradeType !== 'SALES') {
+      data.overview.expense.groups.forEach(group => {
+        groups.push({
+          ...group,
+          direction: '출금',
+          heading: `지출 · ${group.label}`
+        });
+      });
+    }
+    if (tradeType !== 'PURCHASE') {
+      data.overview.income.groups.forEach(group => {
+        groups.push({
+          ...group,
+          direction: '입금',
+          heading: `수입 · ${group.label}`
+        });
+      });
+    }
+    return groups.map(group => ({
+      ...group,
+      key: `${group.direction}:${group.id}`,
+      items: group.items.map(item => ({
+        ...item,
+        key: `${group.direction}:${item.code}`
+      }))
+    }));
+  }
+  const filterGroups = getFilterGroups();
+  const categoryItems = filterGroups.flatMap(group => group.items);
+  // 선택이 없으면 분류 제한 없이 조회합니다. 처음 열 때 체크박스는 비워 둡니다.
   useEffect(() => {
-    setSelectedCodes(JSON.parse(categoryCodes));
-  }, [groupId, direction, month, categoryCodes]);
-  const allSelected = Boolean(group?.items.length) && selectedCodes.length === group.items.length;
-  useEffect(() => {
-    if (allRef.current) allRef.current.indeterminate = selectedCodes.length > 0 && !allSelected;
-  }, [selectedCodes, allSelected]);
-
-  const records = (view === 'completed' ? data?.entries : data?.scheduled) || [];
-  const summary = data?.summary;
-  const isExpense = direction === '출금';
-  const scheduledLabel = isExpense ? '지급예정' : '수입예정';
-  const difference = summary?.difference || 0;
-  const comparison = data?.range.currentMonth ? '전월 동일 기간 대비' : '전월 대비';
-
+    setSelectedCodes([]);
+    setTradeType('ALL');
+  }, [month]);
+  const selectedItems = categoryItems.filter(item => selectedCodes.includes(item.key));
+  const classificationGroups = data ? selectedRow?.payment_direction === '입금' ? data.overview.income.groups : data.overview.expense.groups : [];
   function openDetail(row) {
     setSelectedRow(row);
     setClassification(row.category_code);
@@ -105,138 +230,149 @@ export default function PaymentManagement({ embedded = false, onOpenApprovals, o
     setSaveError('');
   }
   function closeDetail() {
-    if (saveLock.current) return;
+    if (saving) return;
     setSelectedRow(null);
     setPassword('');
   }
   async function handleClassification(event) {
     event.preventDefault();
-    if (saveLock.current || !selectedRow) return;
-    saveLock.current = true;
+    const form = event.currentTarget;
+    if (saving || form.dataset.saving === 'true' || !selectedRow) return;
+    const employeeId = Number(user?.employee_id ?? user?.employeeKey);
+    if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+      setSaveError('로그인 사원정보를 확인할 수 없습니다. 다시 로그인해 주세요.');
+      return;
+    }
+    if (!password) {
+      setSaveError('로그인 비밀번호를 입력해 주세요.');
+      return;
+    }
+    // 연속 제출을 즉시 막고, 화면 표시는 saving 상태로 처리합니다.
+    form.dataset.saving = 'true';
     setSaving(true);
     setSaveError('');
     try {
-      await savePaymentClassification({ source_type: selectedRow.source_type,
-        source_id: selectedRow.source_id, category_code: classification,
-        employee_id: user.employee_id, password });
+      await savePaymentClassification({
+        source_type: selectedRow.source_type,
+        source_id: selectedRow.source_id,
+        category_code: classification,
+        employee_id: employeeId,
+        password
+      });
       setSelectedRow(null);
       setRefresh(value => value + 1);
     } catch (err) {
       setSaveError(err.response?.data?.message || '분류를 저장하지 못했습니다.');
     } finally {
       setPassword('');
-      saveLock.current = false;
+      delete form.dataset.saving;
       setSaving(false);
     }
   }
-  function switchDirection(next) {
-    if (next === direction) return;
-    setDirection(next);
-    setGroupId('');
-    setSelectedCodes([]);
-    setView('completed');
-  }
-  const listRows = groups.map(item => ({ content: [
-    <button type="button" key={item.id} className="pm-category-button"
-      aria-pressed={item.id === groupId} onClick={() => setGroupId(item.id)}>
-      <span>{item.label}</span><strong>{won(total(records.filter(row => row.group_id === item.id)))}</strong>
-    </button>
-  ] }));
-  const subRows = (group?.items || []).map(item => ({ content: [
-    <label key={item.code} className="pm-checkbox-row" data-selected={selectedCodes.includes(item.code)}>
-      <input type="checkbox" checked={selectedCodes.includes(item.code)}
-        onChange={event => setSelectedCodes(previous => event.target.checked ? [...previous, item.code] : previous.filter(code => code !== item.code))} />
-      <span>{item.label}</span>
-      <strong>{won(total(records.filter(row => row.category_code === item.code)))}</strong>
-    </label>
-  ] }));
-
   if (!permitted) return <div className="border-container"><h2 className="subtitle">결제 관리</h2><p role="alert">재무부 또는 MASTER 계정만 이용할 수 있습니다.</p></div>;
   if (workflow) return <div className="pm-workflow">
     <button type="button" disabled={workflowBusy} onClick={() => setWorkflow(null)}>← 결제 관리로 돌아가기</button>
-    <Approval key={`${workflow.documentId || ''}-${workflow.draft || false}`}
-      initialDocumentId={workflow.documentId} initialDraftOpen={workflow.draft}
-      expenseGroups={expenseGroups.current} onBusyChange={setWorkflowBusy} />
+    <Approval key={`${workflow.documentId || ''}-${workflow.draft}`} initialDocumentId={workflow.documentId} initialDraftOpen={workflow.draft} expenseGroups={expenseGroups} onBusyChange={setWorkflowBusy} />
   </div>;
-
-  return <div className="border-container payment-management">
-    <header className="dashboard-header">
-      <span className="subtitle">{embedded ? "지출·거래 관리" : "결제 관리"}</span>
+  return <div className="border-container payment-management erp-controls">
+    <header className="dashboard-header pm-unified-header">
+      <div className="pm-header-summary">
+        <span className="subtitle">지출·거래 관리</span>
+        {data && <div className="pm-summary-badges" aria-label="입출금 요약">
+          <ColorTeg title={'지급예정'} count={data.overview.expense.summary.scheduled} type={'원'} color={'blue'} />
+          <ColorTeg title={'수입예정'} count={data.overview.income.summary.scheduled} type={'원'} color={'green'} />
+          <ColorTeg title={'입출금 차액'} count={data.overview.income.summary.total - data.overview.expense.summary.total} type={'원'} color={'purple'} />
+        </div>}
+      </div>
       <div className="dashboard-top">
-        <button type="button" onClick={() => openApprovals({})} disabled={loading || tradeBusy}>{embedded ? "기존 결재·이력" : "기안·지급 관리"}</button>
-        <button type="button" className="register-btn" disabled={loading || Boolean(error) || tradeBusy}
-          onClick={() => embedded ? openTrades({ create: true, tradeType: isExpense ? '매입' : '매출' }) : isExpense ? setWorkflow({ draft: true }) : openTrades()}>
-          {isExpense ? '매입·출금 등록' : '매출·입금 등록'}
-        </button>
+        <button type="button" className="register-btn" disabled={loading || Boolean(error) || tradeBusy} onClick={() => openTrades({
+          create: true,
+          tradeType: '매입'
+        })}>매입·매출 등록</button>
       </div>
     </header>
-    <div className="pm-toolbar">
-      <div className="grouborad"><ul className="grouplist" aria-label="입출금 구분">
-        {['출금', '입금'].map(value => <li key={value}><button type="button" aria-pressed={direction === value}
-          className={direction === value ? 'active' : ''} disabled={tradeBusy} onClick={() => switchDirection(value)}>{value === '출금' ? '지출 관리' : '수입 관리'}</button></li>)}
-      </ul></div>
+    <div className="pm-toolbar pm-trade-toolbar">
+      <FilterTabs label="거래 구분" value={tradeType} onChange={value => {
+        setTradeType(value);
+        setSelectedCodes([]);
+      }} disabled={loading || tradeBusy} options={[{
+        value: 'ALL',
+        label: '전체'
+      }, {
+        value: 'SALES',
+        label: '매출(판매)'
+      }, {
+        value: 'PURCHASE',
+        label: '매입(구매)'
+      }]} />
       <form className="form-inputs" onSubmit={event => {
-        event.preventDefault(); setMonth(monthInput); setRefresh(value => value + 1);
+        event.preventDefault();
+        setMonth(monthInput);
+        setRefresh(value => value + 1);
       }}>
         <label htmlFor="pm-month">조회 월</label>
         <input id="pm-month" type="month" min="1000-01" max="9998-12" required value={monthInput} onChange={event => setMonthInput(event.target.value)} />
         <button type="submit" disabled={loading || tradeBusy}>조회</button>
         <button type="button" disabled={loading || tradeBusy} onClick={() => {
-          const now = currentMonth(); setMonthInput(now); setMonth(now); setGroupId('');
-          setView('completed'); setRefresh(value => value + 1);
+          const now = currentMonth();
+          setMonthInput(now);
+          setMonth(now);
+          setSelectedCodes([]);
+          setTradeType('ALL');
+          setFilterReset(value => value + 1);
+          setRefresh(value => value + 1);
         }}>초기화</button>
       </form>
     </div>
     {loading && <p role="status">결제 관리 정보를 불러오는 중입니다.</p>}
     {error && <div role="alert"><p>{error}</p><button type="button" onClick={() => setRefresh(value => value + 1)}>다시 조회</button></div>}
-    {data && <>
-      <section className="stats-section pm-stats" aria-label="기간별 입출금 요약">
-        <article className="content-card"><h3>조회 기간 {isExpense ? '지출총액' : '수입총액'}</h3><strong>{won(summary.total)}</strong>
-          <small>{data.range.start} ~ {data.range.end} · 완료 내역 기준</small></article>
-        <article className="content-card"><h3>{scheduledLabel}</h3><strong>{won(summary.scheduled)}</strong>
-          <small>{month} 마감 · 현재 미정산 잔액</small></article>
-        <article className="content-card"><h3>{comparison}</h3><strong className={difference > 0 ? 'pm-increase' : difference < 0 ? 'pm-decrease' : ''}>
-          {difference > 0 ? '▲ ' : difference < 0 ? '▼ ' : ''}{won(Math.abs(difference))}</strong>
-          <small>{summary.change_percent === null ? (summary.total === 0 ? '비교 기간 실적 없음' : '비교 기간 실적 없음 · 증감률 계산 불가') :
-            difference === 0 ? '변동 없음' : `${Math.abs(summary.change_percent)}% ${difference > 0 ? '증가' : '감소'}`}
-            {' · '}{data.range.previousStart} ~ {data.range.previousEnd}</small></article>
+    {data && <div className="pm-columns pm-unified-columns">
+      <section className="pm-overview-panel" aria-label="지출·수입 분류 요약">
+        {[['expense', '출금', '지출·매입 요약'], ['income', '입금', '수입·매출 요약']].map(([key, value, title]) => {
+          const source = data.overview[key];
+          return <div className="pm-overview-card" key={key}>
+            <div className="pm-panel-heading"><h4>{title}</h4><strong>{won(source.summary.total)}</strong></div>
+            <div className="pm-overview-groups">{source.groups.map(group => {
+                const keys = group.items.map(item => `${value}:${item.code}`);
+                const selected = keys.length === selectedCodes.length && keys.every(code => selectedCodes.includes(code));
+                return <button type="button" key={group.id} className="pm-category-button" aria-pressed={selected} disabled={loading || tradeBusy} onClick={() => {
+                  setTradeType(value === '입금' ? 'SALES' : 'PURCHASE');
+                  setSelectedCodes(selected ? [] : keys);
+                }}>
+                <span>{group.label}</span><strong>{won(total(source.entries.filter(row => row.group_id === group.id)))}</strong>
+              </button>;
+              })}</div>
+          </div>;
+        })}
       </section>
-      <div className="pm-view-tabs grouborad"><ul className="grouplist" aria-label="내역 구분">
-        {['completed', 'scheduled'].map(value => <li key={value}><button type="button" aria-pressed={view === value}
-          className={view === value ? 'active' : ''} disabled={tradeBusy} onClick={() => setView(value)}>{value === 'completed' ? '완료 내역' : `${scheduledLabel} 내역`}</button></li>)}
-      </ul><p>아래 분류별 금액은 {view === 'completed' ? '조회 기간의 완료 금액' : '조회 월 마감 건의 현재 미정산 잔액'}입니다.</p></div>
-      <div className="pm-columns">
-        <section className="pm-list-panel" aria-label="대분류">
-          <BasicTable title={isExpense ? '지출 분류' : '수입 분류'} th={['대분류 / 합계']} td={listRows} />
-          <p>미분류 내역은 상세에서 분류를 지정할 수 있습니다.</p>
-        </section>
-        <section className="pm-list-panel" aria-label="세부 항목">
-          <p className="pm-group-name">{group?.label}</p>
-          <label className="pm-select-all"><input ref={allRef} type="checkbox" checked={allSelected}
-            onChange={event => setSelectedCodes(event.target.checked ? group?.items.map(item => item.code) || [] : [])} />전체 선택</label>
-          <BasicTable title="세부 항목" th={['선택 항목 / 합계']} td={subRows} />
-          <p>체크한 항목의 금액을 합산합니다.</p>
-        </section>
-        <section className="pm-detail-panel" aria-label="선택 항목 내역">
-          <Items embedded compact tradeRequest={tradeRequest} onBusyChange={setTradeBusy}
-            onDataChange={() => setRefresh(value => value + 1)}
-            scope={{ month, direction, view, groupId, selectedCodes, entries: data.entries || [], scheduled: data.scheduled || [], onDirectionChange: switchDirection }}
-            onClassify={openDetail} />
-        </section>
-      </div>
-    </>}
+      <section className="pm-detail-panel" aria-label="선택 항목 내역">
+        <Items embedded compact tradeRequest={tradeRequest} onBusyChange={setTradeBusy} onDataChange={() => setRefresh(value => value + 1)} scope={{
+          month,
+          refresh,
+          direction,
+          tradeType,
+          view: 'all',
+          unified: true,
+          filterReset,
+          groupId: 'all',
+          selectedCodes,
+          entries: data.entries,
+          scheduled: data.scheduled
+        }} categoryFilter={<CategoryDropdown groups={filterGroups} selectedCodes={selectedCodes} onChange={setSelectedCodes} disabled={loading || tradeBusy} resetKey={`${month}-${filterReset}-${tradeType}`} />} categorySummary={selectedItems.length ? <div className="pm-selection-chips">
+            {selectedItems.map(item => <button type="button" key={item.key} disabled={tradeBusy} aria-label={`${item.label} 선택 해제`} onClick={() => setSelectedCodes(previous => previous.filter(code => code !== item.key))}>{item.label} <span aria-hidden="true">×</span></button>)}
+            <button type="button" className="pm-clear-selection" disabled={tradeBusy} onClick={() => setSelectedCodes([])}>선택 해제</button>
+          </div> : null} onClassify={openDetail} />
+      </section>
+    </div>}
     {selectedRow && <div className="finance-registration-modal"><ModalBase title="입출금 상세 및 분류" onClose={closeDetail} layout={<>
-      <BasicTable title={selectedRow.title} th={['항목', '내용']} td={[
-        ['기준일', selectedRow.payment_date], ['금액', won(selectedRow.amount)],
-        ['내역 구분', view === 'completed' ? '완료' : scheduledLabel],
-        ['결제수단', selectedRow.payment_method || '-'], ['현재 분류', `${selectedRow.group_label} / ${selectedRow.category_label}`],
-        ['연결 번호', `${selectedRow.source_type === 'approval' ? '결재 문서' : selectedRow.source_type === 'transaction' ? '매입·매출 거래' : '입출금'} #${selectedRow.source_id}`]
-      ].map(content => ({ content }))} />
+      <BasicTable title={selectedRow.title} th={['항목', '내용']} td={[['기준일', selectedRow.payment_date], ['금액', won(selectedRow.amount)], ['내역 구분', selectedRow.record_view === 'completed' ? '완료' : '입출금 예정'], ['결제수단', selectedRow.payment_method || '-'], ['현재 분류', `${selectedRow.group_label} / ${selectedRow.category_label}`], ['연결 번호', `${selectedRow.source_type === 'approval' ? '결재 문서' : selectedRow.source_type === 'transaction' ? '매입·매출 거래' : '입출금'} #${selectedRow.source_id}`]].map(content => ({
+          content
+        }))} />
       <form className="pm-classification-form" onSubmit={handleClassification}>
         <fieldset disabled={saving}>
           <label htmlFor="pm-classification">분류 변경</label>
           <select id="pm-classification" value={classification} onChange={event => setClassification(event.target.value)} required>
-            {groups.map(item => <optgroup key={item.id} label={item.label}>{item.items.map(sub => <option key={sub.code} value={sub.code}>{sub.label}</option>)}</optgroup>)}
+            {classificationGroups.map(item => <optgroup key={item.id} label={item.label}>{item.items.map(sub => <option key={sub.code} value={sub.code}>{sub.label}</option>)}</optgroup>)}
           </select>
           <p>같은 문서·거래의 분할 입출금에는 동일한 분류가 적용됩니다.</p>
           <label htmlFor="pm-password">로그인 비밀번호 확인</label>
@@ -246,9 +382,19 @@ export default function PaymentManagement({ embedded = false, onOpenApprovals, o
       </form>
       {saveError && <p role="alert">{saveError}</p>}
       {selectedRow.source_type === 'approval' && <button type="button" disabled={saving} onClick={() => {
-        const documentId = Number(selectedRow.source_id); closeDetail(); openApprovals({ documentId });
-      }}>결재 문서 및 지급 관리</button>}
-      {selectedRow.source_type === 'transaction' && <button type="button" disabled={saving} onClick={() => { const transactionId = Number(selectedRow.source_id); closeDetail(); openTrades({ transactionId }); }}>거래 전표 및 정산</button>}
+          const documentId = Number(selectedRow.source_id);
+          closeDetail();
+          openApprovals({
+            documentId
+          });
+        }}>결재 문서 및 지급 관리</button>}
+      {selectedRow.source_type === 'transaction' && <button type="button" disabled={saving} onClick={() => {
+          const transactionId = Number(selectedRow.source_id);
+          closeDetail();
+          openTrades({
+            transactionId
+          });
+        }}>거래 전표 및 정산</button>}
     </>} /></div>}
   </div>;
 }

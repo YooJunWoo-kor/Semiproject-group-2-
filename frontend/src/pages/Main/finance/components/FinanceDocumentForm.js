@@ -1,44 +1,84 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DOCUMENT_TYPES, localDate, currencyDigits, money, calculateRows, calculateTotals, printDocument, saveFinanceDocument, getDocumentPartners } from './financeDocumentUtils';
 import './Finance.css';
 import { getLoginUser } from '../../../../utils/authStorage';
-import { API_BASE_URL } from '../../../../utils/authStorage';
-
+import "../../../../css/Form.css";
+import "../../../../css/Table.css";
+import "../../../../css/SubMain.css";
+import "../../../../css/ModalPopup.css";
 let itemId = 0;
-const newItem = () => ({ id: ++itemId, name: '', description: '', quantity: '1', unitPrice: '', taxRate: '10' });
-const emptyParty = () => ({ name: '', email: '', address: '', city: '', country: '대한민국', phone: '', businessNumber: '' });
-const initialDocument = type => ({
-    business: emptyParty(), customer: emptyParty(),
-    // 확정 번호는 저장 시 서버에서 발급합니다.
-    number: '', partnerId: '',
-    date: localDate(), extraDate: '', method: '계좌이체', currency: 'KRW',
-    account: '', note: '', items: [newItem()],
+const newItem = () => ({
+  id: ++itemId,
+  name: '',
+  description: '',
+  quantity: '1',
+  unitPrice: '',
+  taxRate: '10'
 });
-
-function Field({ label, required, ...props }) {
-    return <label className="fd-field"><span>{label}{required && <b aria-hidden="true"> *</b>}</span><input required={required} {...props} /></label>;
+const emptyParty = () => ({
+  name: '',
+  email: '',
+  address: '',
+  city: '',
+  country: '대한민국',
+  phone: '',
+  businessNumber: ''
+});
+const initialDocument = type => ({
+  business: emptyParty(),
+  customer: emptyParty(),
+  // 확정 번호는 저장 시 서버에서 발급합니다.
+  number: '',
+  partnerId: '',
+  date: localDate(),
+  extraDate: '',
+  method: '계좌이체',
+  currency: 'KRW',
+  account: '',
+  note: '',
+  items: [newItem()]
+});
+function Field({
+  label,
+  required,
+  ...props
+}) {
+  return <label className="fd-field"><span>{label}{required && <b aria-hidden="true"> *</b>}</span><input required={required} {...props} /></label>;
 }
-
-function PartyFields({ title, value, onChange, business = false }) {
-    const field = (name, label, props = {}) => (
-        <Field label={label} value={value[name]} onChange={e => onChange(name, e.target.value)} maxLength={name === 'address' ? 200 : 100} {...props} />
-    );
-    return <section className="fd-card">
+function PartyFields({
+  title,
+  value,
+  onChange,
+  business = false
+}) {
+  const field = (name, label, props = {}) => <Field label={label} value={value[name]} onChange={e => onChange(name, e.target.value)} maxLength={name === 'address' ? 200 : 100} {...props} />;
+  return <section className="fd-card">
         <h3>{title}</h3>
         <div className="fd-grid">
-            {field('name', business ? '회사명 / 이름' : '고객명 / 회사명', { required: true })}
-            {field('email', '이메일', { type: 'email', placeholder: 'example@company.com' })}
+            {field('name', business ? '회사명 / 이름' : '고객명 / 회사명', {
+        required: true
+      })}
+            {field('email', '이메일', {
+        type: 'email',
+        placeholder: 'example@company.com'
+      })}
             {field('address', '주소')}
             {field('city', '도시')}
             {field('country', '국가')}
-            {field('phone', '전화번호', { type: 'tel' })}
-            {field('businessNumber', '사업자등록번호', { placeholder: '000-00-00000' })}
+            {field('phone', '전화번호', {
+        type: 'tel'
+      })}
+            {field('businessNumber', '사업자등록번호', {
+        placeholder: '000-00-00000'
+      })}
         </div>
     </section>;
 }
-
-function PartyPreview({ title, party }) {
-    return <div>
+function PartyPreview({
+  title,
+  party
+}) {
+  return <div>
         <h2>{title}</h2>
         <p className="fdp-name">{party.name || '회사명 / 고객명'}</p>
         {party.businessNumber && <p>사업자번호 {party.businessNumber}</p>}
@@ -47,102 +87,135 @@ function PartyPreview({ title, party }) {
         {party.email && <p>{party.email}</p>}
     </div>;
 }
-
-export default function FinanceDocumentForm({ type = 'receipt', onClose, storedDocument = null, onBusyChange }) {
-    const config = DOCUMENT_TYPES[type] || DOCUMENT_TYPES.receipt;
-    const [savedDocument, setSavedDocument] = useState(storedDocument);
-    const [data, setData] = useState(() => storedDocument
-        ? { ...storedDocument.snapshot_json.data, number: storedDocument.document_number }
-        : initialDocument(DOCUMENT_TYPES[type] ? type : 'receipt'));
-    const [saving, setSaving] = useState(false);
-    const [storageError, setStorageError] = useState('');
-    const [partners, setPartners] = useState([]);
-    const [partnerError, setPartnerError] = useState('');
-    const saveLock = useRef(false);
-    const mounted = useRef(true);
-    const readOnly = Boolean(savedDocument);
-
-    useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-    useEffect(() => {
-        if (readOnly) return;
-        const controller = new AbortController();
-        getDocumentPartners(controller.signal).then(value => {
-            if (!controller.signal.aborted) {
-                if (!Array.isArray(value)) throw new Error('거래처 목록 형식을 확인해주세요.');
-                setPartners(value);
-            }
-        }).catch(error => {
-            if (error.name !== 'AbortError') setPartnerError('거래처 목록을 불러오지 못했습니다. 고객 정보 직접 입력은 가능합니다.');
+export default function FinanceDocumentForm({
+  type = 'receipt',
+  onClose,
+  storedDocument = null,
+  onBusyChange
+}) {
+  const config = DOCUMENT_TYPES[type] || DOCUMENT_TYPES.receipt;
+  const [savedDocument, setSavedDocument] = useState(storedDocument);
+  const [data, setData] = useState(() => storedDocument ? {
+    ...storedDocument.snapshot_json.data,
+    number: storedDocument.document_number
+  } : initialDocument(DOCUMENT_TYPES[type] ? type : 'receipt'));
+  const [saving, setSaving] = useState(false);
+  const [storageError, setStorageError] = useState('');
+  const [partners, setPartners] = useState([]);
+  const [partnerError, setPartnerError] = useState('');
+  const [lifecycle, setLifecycle] = useState(null);
+  const readOnly = Boolean(savedDocument);
+  useEffect(() => {
+    const controller = new AbortController();
+    setLifecycle(controller);
+    return () => controller.abort();
+  }, []);
+  useEffect(() => {
+    if (readOnly) return;
+    const controller = new AbortController();
+    getDocumentPartners(controller.signal).then(value => {
+      if (!controller.signal.aborted) {
+        if (!Array.isArray(value)) throw new Error('거래처 목록 형식을 확인해주세요.');
+        setPartners(value);
+      }
+    }).catch(error => {
+      if (error.name !== 'AbortError') setPartnerError('거래처 목록을 불러오지 못했습니다. 고객 정보 직접 입력은 가능합니다.');
+    });
+    return () => controller.abort();
+  }, [readOnly]);
+  const [formElement, setFormElement] = useState(null);
+  const [previewElement, setPreviewElement] = useState(null);
+  const rows = calculateRows(data.items, data.currency);
+  const totals = calculateTotals(rows, data.currency);
+  const format = value => money(value, data.currency);
+  const update = (key, value) => setData(old => ({
+    ...old,
+    [key]: value
+  }));
+  const updateParty = key => (field, value) => setData(old => ({
+    ...old,
+    [key]: {
+      ...old[key],
+      [field]: value
+    }
+  }));
+  const updateItem = (id, key, value) => setData(old => ({
+    ...old,
+    items: old.items.map(item => item.id === id ? {
+      ...item,
+      [key]: value
+    } : item)
+  }));
+  const loginUser = getLoginUser();
+  const employeeName = savedDocument?.snapshot_json?.author?.name || loginUser?.name || '담당자 미정';
+  const [openedDate] = useState(() => localDate());
+  const nowDate = savedDocument?.snapshot_json?.createdDate || openedDate;
+  async function handleSave() {
+    if (saving || savedDocument || !lifecycle || lifecycle.signal.aborted) return;
+    if (!formElement?.reportValidity()) return;
+    if (!loginUser?.employee_id) {
+      setStorageError('로그인한 사원 정보를 확인할 수 없습니다. 다시 로그인해주세요.');
+      return;
+    }
+    setSaving(true);
+    setStorageError('');
+    onBusyChange?.(true);
+    try {
+      const result = await saveFinanceDocument({
+        document_type: type,
+        employee_id: loginUser.employee_id,
+        partner_id: data.partnerId || null,
+        data
+      });
+      if (lifecycle && !lifecycle.signal.aborted) {
+        setData({
+          ...result.document.snapshot_json.data,
+          number: result.document.document_number
         });
-        return () => controller.abort();
-    }, [readOnly]);
-    const formRef = useRef(null);
-    const previewRef = useRef(null);
-    const rows = calculateRows(data.items, data.currency);
-    const totals = calculateTotals(rows, data.currency);
-    const format = value => money(value, data.currency);
-    const update = (key, value) => setData(old => ({ ...old, [key]: value }));
-    const updateParty = key => (field, value) => setData(old => ({ ...old, [key]: { ...old[key], [field]: value } }));
-    const updateItem = (id, key, value) => setData(old => ({ ...old, items: old.items.map(item => item.id === id ? { ...item, [key]: value } : item) }));
-    const loginUser = getLoginUser();
-    const employeeName = savedDocument?.snapshot_json?.author?.name || loginUser?.name || '담당자 미정';
-    const [openedDate] = useState(() => localDate());
-    const nowDate = savedDocument?.snapshot_json?.createdDate || openedDate;
-
-    async function handleSave() {
-        if (saveLock.current || savedDocument) return;
-        if (!formRef.current.reportValidity()) return;
-        if (!loginUser?.employee_id) { setStorageError('로그인한 사원 정보를 확인할 수 없습니다. 다시 로그인해주세요.'); return; }
-        saveLock.current = true;
-        setSaving(true);
-        setStorageError('');
-        onBusyChange?.(true);
-        try {
-            const result = await saveFinanceDocument({ document_type: type,
-                employee_id: loginUser.employee_id, partner_id: data.partnerId || null, data });
-            if (mounted.current) {
-                setData({ ...result.document.snapshot_json.data, number: result.document.document_number });
-                setSavedDocument(result.document);
-            }
-        } catch (error) {
-            if (mounted.current) setStorageError(`${error.message} 응답을 받지 못한 경우 재시도 전에 저장 문서 목록에서 저장 여부를 확인해주세요.`);
-        } finally {
-            saveLock.current = false;
-            if (mounted.current) setSaving(false);
-            onBusyChange?.(false);
-        }
+        setSavedDocument(result.document);
+      }
+    } catch (error) {
+      if (lifecycle && !lifecycle.signal.aborted) setStorageError(`${error.message} 응답을 받지 못한 경우 재시도 전에 저장 문서 목록에서 저장 여부를 확인해주세요.`);
+    } finally {
+      if (lifecycle && !lifecycle.signal.aborted) setSaving(false);
+      onBusyChange?.(false);
     }
-
-    function handlePrint() {
-        if (!savedDocument || saving) return;
-        try { printDocument(previewRef.current, `${config.title}_${savedDocument.document_number}`); }
-        catch (error) { setStorageError(error.message || '인쇄 창을 열지 못했습니다. 브라우저 설정을 확인해주세요.'); }
+  }
+  function handlePrint() {
+    if (!savedDocument || saving) return;
+    try {
+      printDocument(previewElement, `${config.title}_${savedDocument.document_number}`);
+    } catch (error) {
+      setStorageError(error.message || '인쇄 창을 열지 못했습니다. 브라우저 설정을 확인해주세요.');
     }
-
-    function selectPartner(event) {
-        const id = event.target.value;
-        const partner = partners.find(value => String(value.partner_id) === id);
-        setData(old => ({ ...old, partnerId: id,
-            customer: partner ? { ...emptyParty(), name: partner.company_name || '',
-                address: partner.company_address || '', phone: partner.company_phone || '',
-                businessNumber: partner.tax_id || '' } : old.customer }));
-    }
-
-    return <div className="finance-document-form">
+  }
+  function selectPartner(event) {
+    const id = event.target.value;
+    const partner = partners.find(value => String(value.partner_id) === id);
+    setData(old => ({
+      ...old,
+      partnerId: id,
+      customer: partner ? {
+        ...emptyParty(),
+        name: partner.company_name || '',
+        address: partner.company_address || '',
+        phone: partner.company_phone || '',
+        businessNumber: partner.tax_id || ''
+      } : old.customer
+    }));
+  }
+  return <div className="finance-document-form">
         <header className="fd-header">
             <div><span className="fd-eyebrow">FINANCE DOCUMENT</span><h2>{config.title} {readOnly ? '조회' : '작성'}</h2><p>{readOnly ? '저장 당시의 문서 내용입니다.' : '정보 입력 후 저장하면 문서 번호가 발급됩니다.'}</p></div>
-            {onClose && <button
-                type="button"
-                className="finance-document-close"
-                onClick={onClose}
-                disabled={saving}
-                aria-label="닫기"
-            >
+            {onClose && <button type="button" className="finance-document-close" onClick={onClose} disabled={saving} aria-label="닫기">
                 ✕
             </button>}
         </header>
         <div className="fd-layout">
-            <form ref={formRef} className="fd-editor" onSubmit={e => { e.preventDefault(); handleSave(); }}>
+            <form ref={setFormElement} className="fd-editor" onSubmit={e => {
+        e.preventDefault();
+        handleSave();
+      }}>
                 <fieldset className="fd-storage-fields" disabled={saving || readOnly}>
                 <PartyFields title="01  사업자 정보" value={data.business} onChange={updateParty('business')} business />
                 <section className="fd-card">
@@ -196,11 +269,7 @@ export default function FinanceDocumentForm({ type = 'receipt', onClose, storedD
                     </div>
 
                     <div className="fd-paper-scroll">
-                        <article
-                            className="finance-doc-paper"
-                            ref={previewRef}
-                            aria-label={`${config.title} 미리보기`}
-                        >
+                        <article className="finance-doc-paper" ref={setPreviewElement} aria-label={`${config.title} 미리보기`}>
                             <div className="fdp-head">
                                 <div>
                                     <div className="fdp-muted">{config.en}</div>
@@ -211,23 +280,15 @@ export default function FinanceDocumentForm({ type = 'receipt', onClose, storedD
                                     <strong>{data.number || '저장 전'}</strong>
                                     <p>{config.date} {data.date}</p>
 
-                                    {config.extraDate && (
-                                        <p>
+                                    {config.extraDate && <p>
                                             {config.extraDate} {data.extraDate || '미입력'}
-                                        </p>
-                                    )}
+                                        </p>}
                                 </div>
                             </div>
 
                             <div className="fdp-parties">
-                                <PartyPreview
-                                    title="공급자"
-                                    party={data.business}
-                                />
-                                <PartyPreview
-                                    title={config.party}
-                                    party={data.customer}
-                                />
+                                <PartyPreview title="공급자" party={data.business} />
+                                <PartyPreview title={config.party} party={data.customer} />
                             </div>
 
                             <table>
@@ -242,16 +303,13 @@ export default function FinanceDocumentForm({ type = 'receipt', onClose, storedD
                                 </thead>
 
                                 <tbody>
-                                    {rows.map(item => (
-                                        <tr key={item.id}>
+                                    {rows.map(item => <tr key={item.id}>
                                             <td>
                                                 {item.name || '품목명'}
 
-                                                {item.description && (
-                                                    <div className="fdp-description">
+                                                {item.description && <div className="fdp-description">
                                                         {item.description}
-                                                    </div>
-                                                )}
+                                                    </div>}
                                             </td>
                                             <td>{item.quantity || '0'}</td>
                                             <td>
@@ -259,8 +317,7 @@ export default function FinanceDocumentForm({ type = 'receipt', onClose, storedD
                                             </td>
                                             <td>{item.taxRate || '0'}%</td>
                                             <td>{format(item.total)}</td>
-                                        </tr>
-                                    ))}
+                                        </tr>)}
                                 </tbody>
                             </table>
 
@@ -281,24 +338,18 @@ export default function FinanceDocumentForm({ type = 'receipt', onClose, storedD
                             </div>
 
                             {/* 비고 */}
-                            {data.note && (
-                                <div className="fdp-note">
+                            {data.note && <div className="fdp-note">
                                     <h2>비고</h2>
                                     <p>{data.note}</p>
-                                </div>
-                            )}
+                                </div>}
 
                             {/* 청구서에만 표시 */}
-                            {type === 'invoice' && (
-                                <div>
+                            {type === 'invoice' && <div>
                                     <p>지급 방법: {data.method}</p>
                                     <p>아래 계좌로 입금 부탁드립니다.</p>
 
-                                    {data.account && (
-                                        <p>입금 계좌 / 지급 안내: {data.account}</p>
-                                    )}
-                                </div>
-                            )}
+                                    {data.account && <p>입금 계좌 / 지급 안내: {data.account}</p>}
+                                </div>}
 
                             {/* 모든 문서에 표시 */}
                             <div className="fdp-footer">
@@ -332,12 +383,7 @@ export default function FinanceDocumentForm({ type = 'receipt', onClose, storedD
                     {savedDocument && <p className="fd-storage-success" role="status">저장 완료 · {savedDocument.document_number}</p>}
                     {storageError && <p className="fd-storage-error" role="alert">{storageError}</p>}
 
-                    <button
-                        type="button"
-                        className="fd-primary erp-primary-button"
-                        onClick={handlePrint}
-                        disabled={!readOnly || saving}
-                    >
+                    <button type="button" className="fd-primary erp-primary-button" onClick={handlePrint} disabled={!readOnly || saving}>
                         인쇄 / PDF 저장
                     </button>
 
@@ -347,9 +393,7 @@ export default function FinanceDocumentForm({ type = 'receipt', onClose, storedD
                 </section>
 
                 <p className="fd-draft-note subtext">
-                    {readOnly
-                        ? '저장된 문서는 조회 전용입니다. 문서 목록에서 다시 열어 출력할 수 있습니다.'
-                        : '문서 저장 후 인쇄하거나 PDF로 저장할 수 있습니다.'}
+                    {readOnly ? '저장된 문서는 조회 전용입니다. 문서 목록에서 다시 열어 출력할 수 있습니다.' : '문서 저장 후 인쇄하거나 PDF로 저장할 수 있습니다.'}
                 </p>
             </aside>
         </div>

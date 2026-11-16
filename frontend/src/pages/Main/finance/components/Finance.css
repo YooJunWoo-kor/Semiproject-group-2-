@@ -9,7 +9,7 @@
 
 /* 재무관리 영역 안에서 사용 */
 .finance-page {
-    --finance-font-base: 12px;
+    --finance-font-base: var(--control-font-size, 12px);
     --finance-font-emphasis: 14px;
 
     font-size: var(--finance-font-base);
@@ -1526,7 +1526,7 @@
     background: var(--color-surface);
     color: var(--color-ink);
     padding: 36px;
-    font-size: 12px;
+    font-size: var(--control-font-size, 12px);
     line-height: 1.6;
     font-family: inherit;
     overflow-wrap: anywhere;
@@ -1704,7 +1704,7 @@
 
 /* 거래처 목록 */
 .finance-partners .pagination-table-wrapper :is(table, th, td, button) {
-    font-size: 12px;
+    font-size: var(--control-font-size, 12px);
 }
 
 /* Shared typography comes from index.css / Table.css / SubMain.css / fontSetting.css.
@@ -1790,12 +1790,6 @@
     color: var(--color-danger);
 }
 
-.finance-partners .pagination-table-wrapper table button:not(:disabled):hover {
-    color: var(--color-ink);
-    background-color: var(--color-brand-soft);
-    border-color: var(--color-brand);
-}
-
 /* 거래처 관리 탭의 스크롤바 방지 */
 .finance-partners .grouplist {
     overflow: visible;
@@ -1836,7 +1830,7 @@
     background: var(--color-surface);
     color: var(--color-ink);
 
-    font-size: 12px;
+    font-size: var(--control-font-size, 12px);
     font-weight: 600;
     line-height: 1;
 }
@@ -1910,7 +1904,7 @@
     border-radius: 50%;
     background: var(--color-surface);
     color: var(--color-ink);
-    font-size: 12px;
+    font-size: var(--control-font-size, 12px);
 }
 
 .finance-dashboard .fd-board .attendance-card > div:first-child > button:not(:disabled):hover,
@@ -1983,7 +1977,7 @@
 
 /* 재무 버튼의 글자 크기는 여기서 통일 */
 .finance-module button {
-    font-size: 12px !important;
+    font-size: var(--control-font-size, 12px) !important;
 }
 
 /* 오늘 버튼이 들어갈 공간 확보 */
@@ -2026,7 +2020,7 @@
 /* 매입/매출 품목 목록의 글자 크기 통일 */
 .finance-module .finance-items .pagination-table-wrapper :is(table, th, td),
 .finance-module .finance-items .pagination-table-wrapper .subtext {
-    font-size: 12px;
+    font-size: var(--control-font-size, 12px);
 }
 /* 통합 지출·거래 화면: 공통 컴포넌트 스타일은 변경하지 않습니다. */
 .finance-workspace > .dashboard-header .subtitle { margin: 0; }
@@ -2047,9 +2041,498 @@
 }
 .payment-management .finance-items-compact .finance-item-toolbar { flex-wrap: wrap; gap: 10px; }
 .payment-management .finance-items-compact .finance-item-tabs { flex-wrap: wrap; }
-.payment-management .finance-items-compact .finance-item-toolbar > div { max-width: none !important; flex-basis: 100% !important; }
+.payment-management .finance-items-compact .finance-item-toolbar > .pm-unified-filters { max-width: none; flex-basis: 100%; }
 .payment-management .finance-items-compact .table-shell { overflow-x: auto; }
 .payment-management .finance-items-compact .table-shell th,
 .payment-management .finance-items-compact .table-shell td { padding: 10px 8px; overflow-wrap: anywhere; }
 .payment-management .finance-items-compact .table-shell th:nth-child(3) { text-align: left; }
 .finance-workspace [hidden] { display: none !important; }
+
+
+/* 자금 관리: 요약과 목록에 같은 크기·간격 기준을 적용합니다. */
+.finance-funds { min-width: 0; }
+.finance-funds > .dashboard-header .subtitle { margin: 0; }
+.finance-funds-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 10px 0;
+}
+.finance-funds-summary .content-card {
+    min-width: 0; max-width: none; min-height: 0; height: auto; padding: 10px 16px;
+}
+.finance-funds-summary h3 { margin: 0 0 5px; font-size: 14px; line-height: 1.3; }
+.finance-funds-summary strong {
+    display: block; color: var(--color-brand); font-size: 20px;
+    line-height: 1.3; font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+}
+.finance-funds-summary p { margin: 4px 0 0; font-size: var(--control-font-size, 12px); line-height: 1.3; }
+.finance-funds .finance-workspace-tabs { margin: 12px 0; }
+.finance-funds-panel[hidden] { display: none !important; }
+.finance-funds-panel > .finance-resource {
+    margin: 0; padding: 0; min-width: 0;
+    border: 0; box-shadow: none; background: transparent;
+}
+
+/* 카드·계좌 공통 목록 틀. 공용 컴포넌트와 다른 재무 화면에는 적용하지 않습니다. */
+.finance-resource {
+    --resource-control-height: 34px;
+    --resource-row-height: 46px;
+    min-width: 0;
+    font-size: var(--control-font-size, 12px);
+    font-family: inherit;
+    color: var(--color-ink);
+}
+.finance-resource > .finance-resource-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; min-height: var(--resource-control-height);
+    margin: 0 0 12px; padding: 0; border: 0;
+}
+.finance-resource-header .dashboard-top {
+    display: flex; align-items: center; justify-content: flex-end;
+    width: auto; margin: 0 0 0 auto; padding: 0; gap: 8px;
+}
+.finance-module .finance-resource-header .register-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 86px; width: auto;
+    height: var(--resource-control-height); min-height: var(--resource-control-height);
+    margin: 0; padding: 0 14px; font-size: var(--control-font-size, 12px); line-height: 1;
+}
+.finance-resource-filters { margin: 0 0 16px; padding: 0; }
+.finance-resource .finance-resource-search {
+    display: flex; flex-wrap: nowrap; align-items: center; gap: 8px;
+    min-height: var(--resource-control-height); width: 100%; margin: 0; padding: 0;
+}
+.finance-resource-search > label {
+    flex: 0 0 auto; margin: 0; padding: 0; font-size: var(--control-font-size, 12px);
+    font-weight: 600; line-height: 1.4; white-space: nowrap;
+}
+.finance-resource .finance-resource-search > :is(select, input, button) {
+    box-sizing: border-box; height: var(--resource-control-height);
+    min-height: var(--resource-control-height); margin: 0;
+    font-family: inherit; font-size: var(--control-font-size, 12px); line-height: 1.4; border-radius: 8px;
+}
+.finance-resource-search > select { flex: 0 0 140px; width: 140px; padding: 0 10px; }
+.finance-resource .finance-resource-search > input {
+    flex: 1 1 180px; width: auto; min-width: 100px; padding: 0 12px;
+}
+.finance-resource-search > button { flex: 0 0 52px; width: 52px; padding: 0 10px; }
+.finance-resource-list { min-width: 0; margin: 0; padding: 0; }
+.finance-resource-list :is(.pagination-table-wrapper, .attendance-card) {
+    box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0;
+    min-height: 0; height: auto; margin: 0;
+    padding: 16px 18px; border: 1px solid var(--color-line);
+    border-radius: 12px; background: var(--color-surface); box-shadow: none;
+}
+/* PaginationTable이 두 클래스를 중첩해 사용해도 외곽 박스는 한 번만 표시합니다. */
+.finance-resource-list .pagination-table-wrapper .attendance-card,
+.finance-resource-list .attendance-card .pagination-table-wrapper {
+    padding: 0; border: 0; border-radius: 0; background: transparent;
+}
+.finance-resource-list :is(h2, h3, .subtitle) {
+    margin: 0 0 14px; padding: 0;
+    font-size: 14px; font-weight: 700; line-height: 20px; color: var(--color-ink);
+}
+.finance-resource-list .table-shell { width: 100%; max-width: 100%; margin: 0; overflow-x: auto; }
+.finance-resource-list table { width: 100%; table-layout: fixed; font-family: inherit; font-size: var(--control-font-size, 12px); }
+.finance-resource-list :is(th, td) {
+    box-sizing: border-box; padding: 8px 10px; font-family: inherit;
+    font-size: var(--control-font-size, 12px); line-height: 1.4; vertical-align: middle; text-align: left;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.finance-resource-list th { height: 38px; font-weight: 600; color: var(--color-muted); }
+.finance-resource-list td { height: var(--resource-row-height); color: var(--color-ink); }
+.finance-resource-list td strong { font-size: inherit; font-weight: 600; }
+.finance-resource-list .status-badge { font-size: inherit; line-height: inherit; }
+.finance-resource-list td:last-child { overflow: visible; }
+.finance-resource-list td:last-child > div { align-items: center; flex-wrap: nowrap; gap: 4px; }
+.finance-resource-list td button {
+    height: 30px; min-height: 30px; margin: 0; padding: 0 8px;
+    font-family: inherit; font-size: var(--control-font-size, 12px); line-height: 1; white-space: nowrap; border-radius: 8px;
+}
+.finance-cards .finance-resource-list :is(th, td):last-child { width: 250px; }
+.finance-cards .finance-resource-list :is(th, td):nth-child(2) { width: 17%; }
+.finance-accounts .finance-resource-list :is(th, td):last-child { width: 130px; }
+.finance-accounts .finance-resource-list :is(th, td):nth-child(3) { width: 14%; }
+.finance-accounts .finance-resource-list :is(th, td):nth-child(9) { width: 12%; }
+.finance-resource-list :is(th, td):first-child { width: 70px; }
+.finance-resource-list button:not(:disabled):hover {
+    background: var(--color-brand-soft); color: var(--color-ink);
+    border-color: var(--color-brand); transform: none;
+}
+@media (max-width: 1000px) {
+    .finance-resource .finance-resource-search { flex-wrap: wrap; }
+    .finance-resource .finance-resource-search > input { flex-basis: 220px; }
+    .finance-resource-list table { min-width: 1000px; }
+}
+@media (max-width: 760px) {
+    .finance-funds-summary { grid-template-columns: minmax(0, 1fr); }
+    .finance-resource .finance-resource-search > input { flex-basis: calc(100% - 70px); }
+}
+
+/* 전체 요약 및 분류 패널 정렬 */
+.payment-management .pm-subcategory-card,
+.payment-management .pm-overview-card {
+    min-width: 0;
+    padding: 18px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    box-shadow: var(--card-shadow);
+}
+.payment-management .pm-panel-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.payment-management .pm-panel-heading h4 { margin: 0; }
+.payment-management .pm-panel-heading .pm-group-name {
+    color: var(--color-muted);
+    font-size: var(--control-font-size, 12px);
+    overflow-wrap: anywhere;
+}
+.payment-management .pm-subcategory-card .pm-select-all {
+    display: flex;
+    align-items: center;
+    width: fit-content;
+    margin: 0 0 14px;
+    font-size: var(--control-font-size, 12px);
+    cursor: pointer;
+}
+.payment-management .pm-subcategory-card > .attendance-card {
+    margin: 0;
+    padding: 0 !important;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+.payment-management .pm-subcategory-card > .attendance-card > h4 { display: none; }
+.payment-management .pm-subcategory-card .table-shell { margin-top: 0; }
+.payment-management .pm-subcategory-card .pm-selected-total { padding: 12px; }
+.payment-management .pm-category-button { cursor: pointer; font-size: var(--control-font-size, 12px); }
+.payment-management .pm-category-button:hover { background: var(--color-brand-soft); }
+.payment-management .pm-category-button:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: -3px;
+}
+.payment-management .pm-columns.pm-overview-columns {
+    grid-template-columns: minmax(260px, 1fr) minmax(420px, 2fr);
+}
+.payment-management .pm-overview-panel { display: grid; gap: 12px; }
+.payment-management .pm-overview-card .pm-panel-caption {
+    margin: 0 0 14px;
+    font-size: var(--control-font-size, 12px);
+    color: var(--color-muted);
+}
+.payment-management .pm-overview-groups {
+    overflow: hidden;
+    border: 1px solid var(--color-line);
+    border-radius: 8px;
+}
+.payment-management .pm-overview-groups > button + button { border-top: 1px solid var(--color-line); }
+@media (max-width: 1350px) {
+    .payment-management .pm-columns.pm-overview-columns { grid-template-columns: minmax(0, 1fr); }
+    .payment-management .pm-overview-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+    .payment-management .pm-overview-panel { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* 지출·거래 관리 통합 화면 */
+.payment-management .pm-unified-header { flex-wrap: wrap; gap: 16px; }
+.payment-management .pm-header-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; min-width: 0; }
+/* HR 상단 통계와 같은 한 줄 배지: 제목 13px / 금액 16px */
+.payment-management .pm-summary-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.payment-management .pm-summary-badge {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: baseline;
+    gap: 4px;
+    box-sizing: border-box;
+    min-height: 34px;
+    margin: 0;
+    padding: 3px 15px 6px;
+    border: 1px solid #90caf9;
+    border-color: color-mix(in srgb, var(--color-brand) 45%, var(--color-surface));
+    border-radius: 999px;
+    background: #e3f2fd;
+    background: color-mix(in srgb, var(--color-brand) 10%, var(--color-surface));
+    color: var(--color-brand);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 23px;
+    white-space: nowrap;
+    box-shadow: none;
+}
+.payment-management .pm-summary-badge strong {
+    margin: 0;
+    color: inherit;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: inherit;
+    font-variant-numeric: tabular-nums;
+}
+.payment-management .pm-summary-badge.pm-balance { color: var(--color-brand); }
+.payment-management .pm-columns.pm-unified-columns { grid-template-columns: minmax(240px, 1fr) minmax(0, 2fr); align-items: start; }
+.payment-management .pm-unified-columns > .pm-overview-panel { grid-template-columns: minmax(0, 1fr); }
+.payment-management .pm-unified-columns > .pm-detail-panel { grid-column: auto; min-width: 0; }
+.payment-management .finance-items-compact .finance-item-toolbar > .pm-unified-filters {
+    display: grid !important;
+    grid-template-columns: minmax(160px, 1fr) minmax(140px, .85fr) minmax(180px, 1.6fr);
+    gap: 8px !important;
+    width: 100%;
+    min-width: 0;
+}
+.payment-management .pm-unified-filters > select,
+.payment-management .pm-unified-filters > input { width: 100%; min-width: 0; height: var(--control-height); box-sizing: border-box; }
+.payment-management .pm-category-dropdown { position: relative; min-width: 0; }
+.payment-management .pm-dropdown-trigger {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    width: 100%; min-width: 0; height: var(--control-height); padding: var(--control-padding-y) var(--control-padding-x);
+    border: 1px solid var(--color-line); border-radius: 8px;
+    color: var(--color-ink); background: var(--color-surface); font-size: var(--control-font-size, 12px); text-align: left; cursor: pointer;
+}
+.payment-management .pm-dropdown-trigger > span:first-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.payment-management .pm-dropdown-trigger[aria-expanded='true'] { border-color: var(--color-brand); }
+.payment-management .pm-dropdown-trigger:focus-visible,
+.payment-management .pm-dropdown-check input:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+.payment-management .pm-dropdown-trigger:disabled { opacity: .6; cursor: default; }
+.payment-management .pm-dropdown-popover {
+    position: absolute; z-index: 40; top: calc(100% + 6px); left: 0;
+    width: 310px; max-width: min(310px, 80vw); padding: 14px;
+    box-sizing: border-box; border: 1px solid var(--color-brand); border-radius: 10px;
+    background: var(--color-surface); color: var(--color-ink); box-shadow: 0 8px 24px #17203326;
+}
+.payment-management .pm-dropdown-popover h4 { margin: 0 0 12px; font-size: 14px; }
+.payment-management .pm-dropdown-check { display: flex; align-items: center; gap: 8px; padding: 8px 4px; margin: 0; font-size: var(--control-font-size, 12px); cursor: pointer; }
+.payment-management .pm-dropdown-check:hover { background: var(--color-brand-soft); border-radius: 4px; }
+.payment-management .pm-dropdown-check input { margin: 0; }
+.payment-management .pm-dropdown-options { max-height: min(340px, 45vh); overflow-y: auto; overscroll-behavior: contain; margin-top: 8px; border-top: 1px solid var(--color-line); }
+.payment-management .pm-dropdown-options fieldset { display: block; padding: 0; margin: 12px 0 0; border: 0; min-width: 0; }
+.payment-management .pm-dropdown-options legend { width: 100%; padding: 6px; box-sizing: border-box; background: var(--color-canvas); color: var(--color-muted); font-size: var(--control-font-size, 12px); }
+.payment-management .pm-dropdown-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--color-line); font-size: var(--control-font-size, 12px); }
+.payment-management .pm-dropdown-footer button { padding: 8px 14px; border: 0; border-radius: 6px; background: var(--color-brand); color: var(--color-surface); cursor: pointer; }
+.payment-management .pm-filter-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0; padding: 10px; border-radius: 8px; background: var(--color-canvas); font-size: var(--control-font-size, 12px); }
+.payment-management .pm-selection-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.payment-management .pm-selection-chips button { padding: 6px 9px; border: 1px solid var(--color-line); border-radius: 6px; background: var(--color-surface); color: var(--color-brand); font-size: var(--control-font-size, 12px); cursor: pointer; }
+.payment-management .pm-selection-chips .pm-clear-selection { border-color: transparent; background: transparent; }
+.payment-management .pm-filter-total { margin-left: auto; font-variant-numeric: tabular-nums; }
+.payment-management .pm-filter-total strong { margin-left: 6px; color: var(--color-brand); }
+@media (max-width: 1100px) {
+    .payment-management .pm-columns.pm-unified-columns { grid-template-columns: minmax(0, 1fr); }
+    .payment-management .pm-unified-columns > .pm-overview-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+    .payment-management .pm-unified-columns > .pm-overview-panel { grid-template-columns: minmax(0, 1fr); }
+    .payment-management .finance-items-compact .finance-item-toolbar > .pm-unified-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .payment-management .pm-unified-filters > input { grid-column: 1 / -1; }
+}
+
+/* 재무 통합 화면의 불필요한 최소 높이 해제 */
+.finance-workspace,
+.payment-management,
+.payment-management .finance-items-compact {
+    min-height: 0;
+    height: auto;
+    flex: initial;
+}
+
+/* 오른쪽 목록 박스 여백 축소 */
+.payment-management .pm-detail-panel {
+    padding: 12px;
+}
+
+/* 테이블과 페이지 번호 사이 여백 축소 */
+.payment-management .finance-items-compact .pagination-table-wrapper {
+    flex: initial;
+    gap: 8px;
+}
+
+.payment-management .finance-items-compact .attendance-card {
+    flex: initial;
+    min-height: 0;
+    gap: 10px;
+    padding-bottom: 0 !important;
+}
+
+.payment-management .finance-items-compact .attendance-card > h4 {
+    margin: 0;
+}
+
+/* 표의 행 간격 축소 */
+.payment-management .finance-items-compact .table-shell th,
+.payment-management .finance-items-compact .table-shell td {
+    padding: 6px 8px;
+    line-height: 1.4;
+}
+
+/* 페이지 번호 위아래 여백 축소 */
+.payment-management .finance-items-compact .pagination-container {
+    padding: 6px 0;
+}
+
+/* 재무 화면에는 배치만 지정하고 컨트롤 모양은 FilterControls.css에서 공통 제어합니다. */
+.payment-management .pm-trade-toolbar { align-items: center; gap: var(--control-gap); }
+.payment-management .pm-trade-toolbar .grouplist { flex-wrap: wrap; overflow: visible; }
+.finance-approval-toolbar {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end;
+    gap: calc(var(--control-gap) * 2); margin-left: auto; min-width: 0;
+}
+.finance-trade-filters { display: flex; flex-wrap: wrap; gap: var(--control-gap); width: 100%; }
+.finance-trade-filters > :is(input, select) { flex: 1 1 180px; min-width: 0; }
+.finance-trade-status { display: flex; align-items: flex-start; flex-direction: column; gap: 4px; }
+.finance-trade-status .subtext { font-size: var(--control-font-size); }
+.finance-trade-status .finance-overdue-label { color: var(--color-danger); font-size: var(--control-font-size); }
+.finance-approval-note { font-size: var(--control-font-size); margin: 0 0 var(--control-gap); }
+.finance-trade-status small { margin: 0; }
+
+/* 거래처명과 정산 금액의 상세 조회 링크 */
+.finance-partners .finance-partner-link {
+    padding: 2px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+}
+.finance-partners .finance-partner-link:hover {
+    background: transparent;
+    color: var(--color-brand-dark);
+    text-decoration: underline;
+}
+.finance-partners .finance-partner-link:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 3px;
+}
+
+/* 금액 상세: 거래일 기준 조회 월 */
+.finance-partners .finance-partner-month-filter {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0 0 12px;
+    font-size: 12px;
+}
+.finance-partners .finance-partner-all-periods,
+.finance-partners .finance-partner-month-navigation {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+}
+.finance-partners .finance-partner-all-periods { cursor: pointer; }
+.finance-partners .finance-partner-all-periods input {
+    width: auto;
+    margin: 0;
+}
+.finance-partners .finance-partner-month-label { margin: 0; white-space: nowrap; }
+.finance-partners .finance-partner-month-navigation input[type="month"] {
+    width: 146px;
+    min-width: 0;
+    padding: 6px;
+    margin: 0;
+    border: 1px solid var(--color-line);
+    border-radius: 4px;
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font: inherit;
+}
+.finance-partners .finance-partner-month-navigation button {
+    padding: 6px 8px;
+    border: 1px solid var(--color-line);
+    border-radius: 4px;
+    background: var(--color-surface);
+    color: var(--color-brand);
+    font: inherit;
+    cursor: pointer;
+}
+.finance-partners .finance-partner-month-navigation button:hover:not(:disabled) {
+    background: var(--color-canvas);
+}
+.finance-partners .finance-partner-month-navigation button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+.finance-partners .finance-partner-amount-guide {
+    font-size: 12px;
+    color: var(--color-muted);
+}
+
+/* 조회 건수와 무관하게 금액 상세창의 크기와 위치를 유지합니다. */
+.finance-partner-amount-modal .modal-back {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    overflow: hidden;
+}
+.finance-partner-amount-modal .modal-boder {
+    box-sizing: border-box;
+    width: 620px;
+    height: min(640px, calc(100dvh - 32px));
+    max-height: calc(100dvh - 32px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.finance-partner-amount-modal .modal-header {
+    flex: 0 0 auto;
+}
+.finance-partner-amount-modal .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.finance-partner-amount-modal .finance-partner-amount-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.finance-partner-amount-modal .finance-partner-month-filter,
+.finance-partner-amount-modal .finance-partner-amount-guide {
+    flex: 0 0 auto;
+}
+.finance-partner-amount-modal .finance-partner-amount-content > .table-shell {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    scrollbar-gutter: stable;
+}
+.finance-partner-amount-modal .table-shell table {
+    width: 100%;
+    table-layout: fixed;
+}
+.finance-partner-amount-modal .table-shell th,
+.finance-partner-amount-modal .table-shell td {
+    overflow-wrap: anywhere;
+}
+.finance-partner-amount-modal .table-shell thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--color-surface);
+}
+.finance-partner-amount-modal .table-shell tfoot th,
+.finance-partner-amount-modal .table-shell tfoot td {
+    position: sticky;
+    bottom: 0;
+    background: var(--color-surface);
+}
