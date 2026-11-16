@@ -71,7 +71,8 @@ export default function ProjectModul() {
     selectData = projectData.filter((item) => {
       return item.project_id == currontProjectIndex;
     });
-    selectProjectTitle = selectData[0]?.project_name;
+    selectProjectTitle = selectData[0]?.description;
+    console.log(selectData);
   }
 
   //ColorTeg에 전달할 현재 선택된 상태 및 개수 객체 (ScheduleModul과 동일 구조)

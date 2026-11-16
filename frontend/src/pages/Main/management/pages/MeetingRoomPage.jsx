@@ -123,18 +123,14 @@ function MeetingRoomPage() {
 
     return (
 
-        <div className="meeting-room-page">
-            <div className="meeting-room-filter form-inputs">
-                <label>
-                    예약 날짜
-                    <input type="date" min={getTodayString()} value={selectedDate}
-                        onChange={e => setSelectedDate(e.target.value)} />
-                </label>
-            </div>
-
+        <div className="border-container vertical-box">
             <header className="dashboard-header">
                 <span className="subtitle">회의실 예약</span>
             </header>
+            <input
+                style={{width: '500px'}}
+                type="date" min={getTodayString()} value={selectedDate}
+                onChange={e => setSelectedDate(e.target.value)} />
 
             <div className="meeting-room-grid">
                 {rooms.map(room => {
@@ -278,11 +274,6 @@ function MeetingRoomPage() {
                             <div className="draft-row">
                                 <strong>예약자</strong>
                                 <span>{selectedReservation.reserver_name}</span>
-                            </div>
-
-                            <div className="draft-row">
-                                <strong>이메일</strong>
-                                <span>{selectedReservation.email || "-"}</span>
                             </div>
 
                             <div className="draft-actions">
