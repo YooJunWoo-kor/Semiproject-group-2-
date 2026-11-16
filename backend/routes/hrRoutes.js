@@ -7,6 +7,8 @@ const attendanceStatuses = ['정상', '지각', '결근', '휴가', '출장', '�
 // 급여는 작성중 단계에서만 금액을 바꿀 수 있고, 확정 이후에는 이력을 보존합니다.
 const payrollDraftStatuses = ['작성중', '지급대기'];
 const payrollFinalStatuses = ['확정', '지급대기', '지급완료'];
+const additionalPaymentDocumentTypes = new Set(['수당', '상여금', '추가급여']);
+const payrollEditableStatus = '작성중';
 
 // HR API에서 공통으로 사용하는 날짜·이메일·급여월·금액 입력 검증 함수입니다.
 function isDateString(value) {
@@ -114,6 +116,38 @@ function sumDetailAmounts(items) {
         : amounts.reduce((total, amount) => total + amount, 0);
 }
 
+function paymentTypeForDraft(documentType, detailData = {}) {
+    if (documentType !== '추가급여') {
+        return documentType;
+    }
+
+    if (detailData.paymentType === '수당') {
+        return '수당';
+    }
+
+    if (detailData.paymentType === '상여' || detailData.paymentType === '상여금') {
+        return '상여금';
+    }
+
+    return null;
+}
+
+function isValidPaymentTypeForDraft(documentType, detailData = {}) {
+    if (documentType === '추가급여') {
+        return paymentTypeForDraft(documentType, detailData) !== null;
+    }
+
+    if (!['수당', '상여금'].includes(documentType)) {
+        return true;
+    }
+
+    const detailPaymentType = detailData.paymentType === '상여'
+        ? '상여금'
+        : detailData.paymentType;
+
+    return detailPaymentType === documentType;
+}
+
 function readDraftPayrollAmount(documentType, detailData) {
     if (documentType === '비용') {
         const itemTotal = sumDetailAmounts(detailData.expenseItems);
@@ -123,9 +157,13 @@ function readDraftPayrollAmount(documentType, detailData) {
         }
     }
 
-    const amountKeys = documentType === '수당'
+    const paymentType = paymentTypeForDraft(documentType, detailData);
+    if (!paymentType) {
+        return null;
+    }
+    const amountKeys = paymentType === '수당'
         ? ['allowance', 'allowanceAmount', 'amount', 'totalAmount', 'paymentAmount']
-        : documentType === '상여금'
+        : paymentType === '상여금'
             ? ['bonus', 'bonusAmount', 'amount', 'totalAmount', 'paymentAmount']
             : ['amount', 'totalAmount', 'paymentAmount'];
 
@@ -140,12 +178,26 @@ function readDraftPayrollAmount(documentType, detailData) {
     return null;
 }
 
-function payrollFieldForDraftType(documentType) {
+function payrollFieldForDraftType(documentType, detailData = {}) {
+    const paymentType = paymentTypeForDraft(documentType, detailData);
+
     return {
         비용: 'other_payment',
         수당: 'allowance',
         상여금: 'bonus'
-    }[documentType] || null;
+    }[paymentType] || null;
+}
+
+function isAdditionalPaymentDocument(documentType) {
+    return additionalPaymentDocumentTypes.has(documentType);
+}
+
+function payrollAmountKeyForField(payrollField) {
+    return {
+        allowance: 'allowance',
+        bonus: 'bonus',
+        other_payment: 'otherPayment'
+    }[payrollField] || null;
 }
 
 function isEmployeePaymentDraft(detailData) {
@@ -153,15 +205,31 @@ function isEmployeePaymentDraft(detailData) {
         detailData.isEmployeePayment === true ||
         detailData.payrollEligible === true ||
         (Number.isSafeInteger(Number(detailData.recipientEmployeeId)) &&
-            Number(detailData.recipientEmployeeId) > 0);
+            Number(detailData.recipientEmployeeId) > 0) ||
+        (Number.isSafeInteger(Number(detailData.targetEmployeeId)) &&
+            Number(detailData.targetEmployeeId) > 0);
 }
 
 function payrollEmployeeIdForDraft(draft, detailData) {
-    const recipientEmployeeId = Number(detailData.recipientEmployeeId);
+    const hasValue = (key) => (
+        Object.prototype.hasOwnProperty.call(detailData, key) &&
+        detailData[key] !== null &&
+        detailData[key] !== ''
+    );
+    const hasRecipient = hasValue('recipientEmployeeId');
+    const hasTarget = hasValue('targetEmployeeId');
+    const recipientEmployeeId = hasRecipient ? Number(detailData.recipientEmployeeId) : null;
+    const targetEmployeeId = hasTarget ? Number(detailData.targetEmployeeId) : null;
 
-    return Number.isSafeInteger(recipientEmployeeId) && recipientEmployeeId > 0
-        ? recipientEmployeeId
-        : Number(draft.employeeId);
+    if (
+        (hasRecipient && (!Number.isSafeInteger(recipientEmployeeId) || recipientEmployeeId < 1)) ||
+        (hasTarget && (!Number.isSafeInteger(targetEmployeeId) || targetEmployeeId < 1)) ||
+        (hasRecipient && hasTarget && recipientEmployeeId !== targetEmployeeId)
+    ) {
+        return null;
+    }
+
+    return recipientEmployeeId || targetEmployeeId || Number(draft.employeeId);
 }
 
 function normalizePositiveIds(values) {
@@ -601,7 +669,7 @@ hrRouter.post('/payrolls/apply-approved-drafts', async (req, res) => {
             FROM my_draft d
             LEFT JOIN employees e ON e.employee_id = d.employee_id
             WHERE d.status = 'APPROVED'
-              AND d.document_type IN ('비용', '수당', '상여금')
+              AND d.document_type IN ('비용', '수당', '상여금', '추가급여')
         `;
 
         if (draftIds !== null) {
@@ -621,8 +689,47 @@ hrRouter.post('/payrolls/apply-approved-drafts', async (req, res) => {
         for (const draft of draftRows) {
             const detailData = parseDetailData(draft.detailData);
             const employeeName = draft.employeeName || `사원 ${draft.employeeId}`;
-            const payrollField = payrollFieldForDraftType(draft.documentType);
+            const payrollField = payrollFieldForDraftType(draft.documentType, detailData);
+            const targetAmountKey = payrollAmountKeyForField(payrollField);
             const payrollEmployeeId = payrollEmployeeIdForDraft(draft, detailData);
+            const isAdditionalPayment = isAdditionalPaymentDocument(draft.documentType);
+            const hasPayMonthValue = (
+                Object.prototype.hasOwnProperty.call(detailData, 'payMonth') &&
+                detailData.payMonth !== null &&
+                detailData.payMonth !== ''
+            );
+            const hasDetailPayMonth = isPayMonthString(detailData.payMonth);
+            const draftPayMonth = hasDetailPayMonth ? detailData.payMonth : payMonth;
+            let validationReason = null;
+
+            if (payrollEmployeeId === null) {
+                validationReason = 'targetEmployeeId와 recipientEmployeeId가 없거나 서로 달라 급여에 반영하지 않았습니다.';
+            } else if (hasPayMonthValue && !hasDetailPayMonth) {
+                validationReason = 'detail_data.payMonth 형식이 YYYY-MM이 아니어서 급여에 반영하지 않았습니다.';
+            } else if (
+                isAdditionalPayment &&
+                (!isValidPaymentTypeForDraft(draft.documentType, detailData) || !payrollField)
+            ) {
+                validationReason = 'detail_data.paymentType이 수당 또는 상여금이 아니어서 급여에 반영하지 않았습니다.';
+            } else if (isAdditionalPayment && !hasDetailPayMonth) {
+                validationReason = '수당·상여금 기안의 detail_data.payMonth가 없어 급여에 반영하지 않았습니다.';
+            } else if (
+                (isAdditionalPayment || hasPayMonthValue) &&
+                detailData.payMonth !== payMonth
+            ) {
+                validationReason = 'detail_data.payMonth와 반영 대상 급여월이 달라 급여에 반영하지 않았습니다.';
+            }
+
+            if (validationReason) {
+                skipped.push({
+                    draftId: draft.draftId,
+                    employeeId: payrollEmployeeId || draft.employeeId,
+                    employeeName,
+                    documentType: draft.documentType,
+                    reason: validationReason
+                });
+                continue;
+            }
 
             if (draft.documentType === '비용' && !isEmployeePaymentDraft(detailData)) {
                 skipped.push({
@@ -681,7 +788,7 @@ hrRouter.post('/payrolls/apply-approved-drafts', async (req, res) => {
                 continue;
             }
 
-            const ensured = await ensurePayrollForMonth(payMonth, payrollEmployeeId);
+            const ensured = await ensurePayrollForMonth(draftPayMonth, payrollEmployeeId);
             const [payrollRows] = await promiseDb.query(
                 `SELECT
                     payroll_id AS payrollId,
@@ -695,7 +802,7 @@ hrRouter.post('/payrolls/apply-approved-drafts', async (req, res) => {
                  WHERE employee_id = ? AND pay_month = ?
                  LIMIT 1
                  FOR UPDATE`,
-                [payrollEmployeeId, payMonth]
+                [payrollEmployeeId, draftPayMonth]
             );
 
             if (payrollRows.length === 0) {
@@ -714,13 +821,13 @@ hrRouter.post('/payrolls/apply-approved-drafts', async (req, res) => {
 
             const payroll = payrollRows[0];
 
-            if (payrollFinalStatuses.includes(payroll.paymentStatus)) {
+            if (payroll.paymentStatus !== payrollEditableStatus) {
                 skipped.push({
                     draftId: draft.draftId,
                     employeeId: draft.employeeId,
                     employeeName,
                     documentType: draft.documentType,
-                    reason: `급여가 이미 ${payroll.paymentStatus} 상태라 변경하지 않았습니다.`
+                    reason: `급여 상태가 ${payroll.paymentStatus || '미설정'}라 작성중 급여만 반영할 수 없습니다.`
                 });
                 continue;
             }
@@ -731,13 +838,7 @@ hrRouter.post('/payrolls/apply-approved-drafts', async (req, res) => {
                 bonus: parseNonNegativeInteger(payroll.bonus),
                 otherPayment: parseNonNegativeInteger(payroll.otherPayment)
             };
-            const targetField = payrollFieldForDraftType(draft.documentType) === 'allowance'
-                ? 'allowance'
-                : payrollFieldForDraftType(draft.documentType) === 'bonus'
-                    ? 'bonus'
-                    : 'otherPayment';
-
-            if (Object.values(currentAmounts).some((value) => value === null)) {
+            if (!targetAmountKey || Object.values(currentAmounts).some((value) => value === null)) {
                 skipped.push({
                     draftId: draft.draftId,
                     employeeId: draft.employeeId,
@@ -750,7 +851,7 @@ hrRouter.post('/payrolls/apply-approved-drafts', async (req, res) => {
 
             const nextAmounts = {
                 ...currentAmounts,
-                [targetField]: currentAmounts[targetField] + amount
+                [targetAmountKey]: currentAmounts[targetAmountKey] + amount
             };
             const calculation = calculateFreelancerPayroll(nextAmounts);
 
@@ -792,7 +893,7 @@ hrRouter.post('/payrolls/apply-approved-drafts', async (req, res) => {
             const nextDetailData = {
                 ...detailData,
                 hrPayrollApplication: {
-                    payMonth,
+                    payMonth: draftPayMonth,
                     payrollId: payroll.payrollId,
                     payrollField,
                     amount,
@@ -837,7 +938,7 @@ hrRouter.post('/payrolls/apply-approved-drafts', async (req, res) => {
                 employeeName,
                 documentType: draft.documentType,
                 payrollId: payroll.payrollId,
-                payMonth,
+                payMonth: draftPayMonth,
                 payrollField,
                 amount
             });
