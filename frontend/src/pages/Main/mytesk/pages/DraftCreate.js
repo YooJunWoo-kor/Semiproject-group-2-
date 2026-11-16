@@ -3,7 +3,7 @@ import axios from "axios";
 import ModalBase from "../../../../components/ModalBase";
 import DepEmpList from "../../../../components/DepEmpList";
 
-import { API_BASE_URL, getLoginUser, getEmployeeAccounts } from "../../../../utils/authStorage";
+import { API_BASE_URL, getLoginUser } from "../../../../utils/authStorage";
 
 const emptyForm = {
     title: "", draftType: "일반", content: "",
@@ -26,8 +26,6 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
     const [tempApprover, setTempApprover] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [receiptFile, setReceiptFile] = useState(null);
-
-    const [payEmployees, setPayEmployees] = useState([]);
 
     const [expenseItems, setExpenseItems] = useState([
         {
@@ -70,16 +68,10 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             amount: detail.amount ?? "",
             paymentType: detail.paymentType || "수당",
             payMonth: detail.payMonth || "",
-            targetEmployeeId: detail.targetEmployeeId || ""
         });
         setApprovers(editingDraft.approvers || []);
     }, [editingDraft]);
 
-    useEffect(() => {
-        if (draftType !== '추가급여') return;
-
-        getEmployeeAccounts().then(setPayEmployees).catch(error => console.error("직원 조회 실패", error))  //.then -> promise가 성공적으로 응답을 받았을 때 실행
-    }, [draftType]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -142,18 +134,11 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 }
             }
 
-            if (draftType === "추가급여") {
-                if (
-                    !targetEmployeeId ||
-                    !["수당", "상여"].includes(paymentType) ||
-                    !/^\d{4}-(0[1-9]|1[0-2])$/.test(payMonth) ||
-                    !Number.isSafeInteger(Number(amount)) ||
-                    Number(amount) <= 0
-                ) {
-                    alert("추가급여 정보를 올바르게 입력해주세요.");
-                    return;
-                }
-            }
+            draftType === "추가급여" ? {
+                paymentType,
+                payMonth,
+                amount: amount === "" ? null : Number(amount)
+            } : {};
 
         }
 
@@ -372,17 +357,6 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                                     <option value="상여">상여금</option>
                                 </select>
                             </label>
-
-                            <label>지급 대상 직원
-                                <select name="targetEmployeeId" value={targetEmployeeId} onChange={handleInputChange}>
-                                    <option value="">직원 선택</option>
-                                    {payEmployees.map(employee => (
-                                        <option key={employee.employee_id} value={employee.employee_id}>
-                                            {employee.name} ({employee.department_name})
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
                         </div>
 
                         <div className="draft-row">
@@ -390,7 +364,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                                 <input type="month" name="payMonth" value={payMonth} onChange={handleInputChange} />
                             </label>
 
-                            <label>지급 금액 (원)
+                            <label>신청 금액 (원)
                                 <input type="number" min="1" step="1" name="amount" value={amount} onChange={handleInputChange} />
                             </label>
                         </div>
