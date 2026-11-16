@@ -256,10 +256,10 @@ router.get('/departments', (req, res) => {
 router.get('/leaves', async (req, res) => {
     const { month, year } = req.query;
 
-    if (month !== undefined && (typeof month !== 'string' || !/^\\d{4}-(0[1-9]|1[0-2])$/.test(month))) {
+    if (month !== undefined && (typeof month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month))) {
         return res.status(400).json({ success: false, message: '조회 월은 YYYY-MM 형식이어야 합니다.' });
     }
-    if (year !== undefined && (typeof year !== 'string' || !/^\\d{4}$/.test(year))) {
+    if (year !== undefined && (typeof year !== 'string' || !/^\d{4}$/.test(year))) {
         return res.status(400).json({ success: false, message: '조회 연도는 YYYY 형식이어야 합니다.' });
     }
     if (month && year) {

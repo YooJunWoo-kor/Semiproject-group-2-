@@ -33,13 +33,6 @@ export function getHrLeaves(month) {
   });
 }
 
-// 연차 현황에서 사용할 해당 연도 휴가 기안을 조회합니다.
-export function getHrLeavesByYear(year) {
-  return axios.get(API_BASE_URL + '/drafts/leaves', {
-    params: { year }
-  });
-}
-
 // 출퇴근 시간·근태 상태·수정 사유를 수정합니다.
 export function updateHrAttendance(attendanceId, data) {
   return axios.put(API_BASE_URL + '/hr/attendance/' + attendanceId, data);
