@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Routes, Route, Navigate, NavLink } from 'react-router-dom';
+import { Routes, Route, Navigate, NavLink, useLocation } from 'react-router-dom';
 import ScheduleModul from './ScheduleModul';
 import MeetingRoomPage from "./pages/MeetingRoomPage";
 
@@ -9,6 +9,9 @@ export default function ScheduleHome() {
   const mainUrl = '/main/schedule';
   const cabinetUrl = mainUrl + '/cabinet'
   const [dataType, setDataType] = useState('1');
+
+  const location = useLocation();
+  const isMeetingRoom = location.pathname === cabinetUrl;
 
   return (
     <div className="sub-main-contain">
@@ -26,7 +29,7 @@ export default function ScheduleHome() {
             marginTop: "30px"
           }}/>
 
-          {/* 버튼 클릭하면, 들어온 데이터들 필터링 */}
+         {!isMeetingRoom && (
           <form
             onChange={(e)=>{
               setDataType(e.target.value);
@@ -56,6 +59,8 @@ export default function ScheduleHome() {
             </label>
             
           </form>
+         )}
+
       </div>
       <Routes>
         <Route path='/' element={<ScheduleModul dataType={dataType}/>} />
