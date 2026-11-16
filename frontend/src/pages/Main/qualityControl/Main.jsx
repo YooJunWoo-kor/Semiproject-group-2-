@@ -60,7 +60,7 @@ function Main() {
     }
 
     return (
-        <div className="quality-dashboard-page">
+        <div className="border-container">
             <header className="dashboard-header">
                 <span className="subtitle">품질관리 대시보드</span>
                 <div className="dashboard-top">

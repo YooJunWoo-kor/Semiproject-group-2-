@@ -44,7 +44,8 @@ function StatisticsCard(props){
                     props.stiyle === 0 ? ("개"):
                     props.stiyle === 1 ? ("명"):
                     props.stiyle === 2 ? ("만원") :
-                    props.stiyle === 3 ? ("일") : ("")
+                    props.stiyle === 3 ? ("일") :
+                    props.stiyle === 4 ? ("%") : ("")
                 }
             </div>
         </div>

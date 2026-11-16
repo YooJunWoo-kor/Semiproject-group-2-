@@ -21,8 +21,8 @@ const COLOR_THEMES = {
       text: '#e65100',
       border: '#ffcc80',
     },
+    bg: '#f3e5f5',
     purple: {
-      bg: '#f3e5f5',
       text: '#7b1fa2',
       border: '#ce93d8',
     },

@@ -23,7 +23,7 @@ function MainApp() {
         <div className="main-sell" data-theme='light'>
             <HeaderNav />
             {/* 실제 화면 라우팅 연결 영역 */}
-            <MotionBanner />
+            {/* <MotionBanner /> */}
             <Routes>
                 <Route path="/" element={<MainModule />} />
                 <Route path="/finance/*" element={<FinanceHome />} />

@@ -295,15 +295,15 @@
 
 .quality-product-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 18px;
 }
 
 .quality-product-card {
     display: flex;
     flex-direction: column;
-    min-width: 0;
     overflow: hidden;
+    height: 500px;
     background: var(--color-surface);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-card);
