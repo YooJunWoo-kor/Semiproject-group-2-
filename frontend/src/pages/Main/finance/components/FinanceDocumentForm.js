@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { DOCUMENT_TYPES, localDate, currencyDigits, money, calculateRows, calculateTotals, printDocument, saveFinanceDocument, getDocumentPartners } from './financeDocumentUtils';
 import './Finance.css';
+import { validateEmail, validatePhone, validateBusinessNumber, validateLength, validateDateRange } from '../../../../utils/validation';
 import { getLoginUser } from '../../../../utils/authStorage';
 import "../../../../css/Form.css";
 import "../../../../css/Table.css";
 import "../../../../css/SubMain.css";
 import "../../../../css/ModalPopup.css";
+
 let itemId = 0;
 const newItem = () => ({
   id: ++itemId,
@@ -41,10 +43,44 @@ const initialDocument = type => ({
 function Field({
   label,
   required,
+  validation,
+  dateRole,
   ...props
 }) {
-  return <label className="fd-field"><span>{label}{required && <b aria-hidden="true"> *</b>}</span><input required={required} {...props} /></label>;
+  return <label className="fd-field"><span>{label}{required && <b aria-hidden="true"> *</b>}</span><input data-validation={validation} data-date-role={dateRole} data-label={label} required={required} {...props} /></label>;
 }
+
+// 이전 customValidity는 매번 초기화해 수정된 값이나 거래처 자동입력에 남지 않게 합니다.
+function refreshValidity(form) {
+  const fields = Array.from(form.querySelectorAll('input, textarea, select'));
+  for (const input of fields) {
+    input.setCustomValidity('');
+    if (input.disabled || input.readOnly || input.tagName === 'SELECT') continue;
+    const label = input.dataset.label || '입력값';
+    const textField = input.tagName === 'TEXTAREA' || ['text', 'email', 'tel'].includes(input.type);
+    let result = { valid: true, message: '' };
+    if (textField) {
+      result = validateLength(input.value, {
+        required: input.required,
+        max: input.maxLength >= 0 ? input.maxLength : Infinity,
+        label
+      });
+    }
+    const validators = { email: validateEmail, phone: validatePhone, businessNumber: validateBusinessNumber };
+    const validator = validators[input.dataset.validation];
+    if (result.valid && validator) result = validator(input.value, { required: input.required, label });
+    if (!result.valid) input.setCustomValidity(result.message);
+  }
+  const start = form.querySelector('[data-date-role="start"]');
+  const end = form.querySelector('[data-date-role="end"]');
+  if (start && end) {
+    const result = validateDateRange(start.value, end.value, {
+      required: true, startLabel: start.dataset.label, endLabel: end.dataset.label
+    });
+    if (!result.valid) (start.value ? end : start).setCustomValidity(result.message);
+  }
+}
+
 function PartyFields({
   title,
   value,
@@ -60,20 +96,24 @@ function PartyFields({
       })}
             {field('email', '이메일', {
         type: 'email',
+        validation: 'email',
         placeholder: 'example@company.com'
       })}
             {field('address', '주소')}
             {field('city', '도시')}
             {field('country', '국가')}
             {field('phone', '전화번호', {
-        type: 'tel'
+        type: 'tel',
+        validation: 'phone'
       })}
             {field('businessNumber', '사업자등록번호', {
-        placeholder: '000-00-00000'
+        placeholder: '000-00-00000',
+        validation: 'businessNumber'
       })}
         </div>
     </section>;
 }
+
 function PartyPreview({
   title,
   party
@@ -87,6 +127,7 @@ function PartyPreview({
         {party.email && <p>{party.email}</p>}
     </div>;
 }
+
 export default function FinanceDocumentForm({
   type = 'receipt',
   onClose,
@@ -147,13 +188,18 @@ export default function FinanceDocumentForm({
     } : item)
   }));
   const loginUser = getLoginUser();
+  // 공통 로그인 정보는 employeeKey를 사용합니다. 기존 employee_id도 지원합니다.
+  const employeeId = loginUser?.employee_id ?? loginUser?.employeeKey;
   const employeeName = savedDocument?.snapshot_json?.author?.name || loginUser?.name || '담당자 미정';
   const [openedDate] = useState(() => localDate());
   const nowDate = savedDocument?.snapshot_json?.createdDate || openedDate;
   async function handleSave() {
     if (saving || savedDocument || !lifecycle || lifecycle.signal.aborted) return;
-    if (!formElement?.reportValidity()) return;
-    if (!loginUser?.employee_id) {
+    setStorageError('');
+    if (!formElement) return;
+    refreshValidity(formElement);
+    if (!formElement.reportValidity()) return;
+    if (!employeeId) {
       setStorageError('로그인한 사원 정보를 확인할 수 없습니다. 다시 로그인해주세요.');
       return;
     }
@@ -163,7 +209,7 @@ export default function FinanceDocumentForm({
     try {
       const result = await saveFinanceDocument({
         document_type: type,
-        employee_id: loginUser.employee_id,
+        employee_id: employeeId,
         partner_id: data.partnerId || null,
         data
       });
@@ -181,6 +227,7 @@ export default function FinanceDocumentForm({
       onBusyChange?.(false);
     }
   }
+
   function handlePrint() {
     if (!savedDocument || saving) return;
     try {
@@ -189,7 +236,9 @@ export default function FinanceDocumentForm({
       setStorageError(error.message || '인쇄 창을 열지 못했습니다. 브라우저 설정을 확인해주세요.');
     }
   }
+  
   function selectPartner(event) {
+    setStorageError('');
     const id = event.target.value;
     const partner = partners.find(value => String(value.partner_id) === id);
     setData(old => ({
@@ -212,7 +261,17 @@ export default function FinanceDocumentForm({
             </button>}
         </header>
         <div className="fd-layout">
-            <form ref={setFormElement} className="fd-editor" onSubmit={e => {
+            <form ref={setFormElement} className="fd-editor" noValidate
+        onChangeCapture={event => {
+          setStorageError('');
+          refreshValidity(event.currentTarget);
+        }}
+        onBlurCapture={event => {
+          const input = event.target;
+          if (!input.matches('input, textarea, select') || input.disabled || input.readOnly) return;
+          refreshValidity(event.currentTarget);
+        }}
+        onSubmit={e => {
         e.preventDefault();
         handleSave();
       }}>
@@ -236,8 +295,8 @@ export default function FinanceDocumentForm({
                     <h3>03  {config.title} 상세</h3>
                     <div className="fd-grid">
                         <Field label={`${config.title} 번호`} value={data.number} readOnly placeholder="저장 시 자동 발급" />
-                        <Field label={config.date} type="date" required value={data.date} onChange={e => update('date', e.target.value)} />
-                        {config.extraDate && <Field label={config.extraDate} type="date" min={data.date} required value={data.extraDate} onChange={e => update('extraDate', e.target.value)} />}
+                        <Field label={config.date} dateRole="start" type="date" required value={data.date} onChange={e => update('date', e.target.value)} />
+                        {config.extraDate && <Field label={config.extraDate} dateRole="end" type="date" min={data.date} required value={data.extraDate} onChange={e => update('extraDate', e.target.value)} />}
                         <label className="fd-field"><span>통화</span><select value={data.currency} onChange={e => update('currency', e.target.value)}><option value="KRW">KRW — 원</option><option value="USD">USD — 달러</option><option value="EUR">EUR — 유로</option><option value="JPY">JPY — 엔</option></select></label>
                         {type !== 'estimate' && <label className="fd-field"><span>{type === 'receipt' ? '결제 방법' : '지급 방법'}</span><select value={data.method} onChange={e => update('method', e.target.value)}><option>계좌이체</option><option>카드</option><option>현금</option><option>기타</option></select></label>}
                         {type === 'invoice' && <Field label="입금 계좌 / 지급 안내" value={data.account} maxLength={200} onChange={e => update('account', e.target.value)} />}
@@ -258,7 +317,7 @@ export default function FinanceDocumentForm({
                     </div>)}
                     <button type="button" className="fd-secondary" disabled={data.items.length >= 50} onClick={() => update('items', [...data.items, newItem()])}>＋ 품목 추가</button>
                 </section>
-                <section className="fd-card"><h3>05  비고</h3><label className="fd-field"><span>안내 사항 / 추가 메모</span><textarea rows={4} maxLength={2000} value={data.note} onChange={e => update('note', e.target.value)} placeholder="거래 조건, 감사 인사 등을 입력해주세요." /></label></section>
+                <section className="fd-card"><h3>05  비고</h3><label className="fd-field"><span>안내 사항 / 추가 메모</span><textarea data-label="비고" rows={4} maxLength={2000} value={data.note} onChange={e => update('note', e.target.value)} placeholder="거래 조건, 감사 인사 등을 입력해주세요." /></label></section>
                 </fieldset>
             </form>
             <aside className="fd-side">

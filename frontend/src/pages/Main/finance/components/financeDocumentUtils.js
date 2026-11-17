@@ -1,4 +1,6 @@
+import { validateEmail, validatePhone, validateBusinessNumber, validateLength, validateDateRange } from '../../../../utils/validation';
 import { API_BASE_URL } from '../../../../utils/authStorage';
+
 export const DOCUMENT_TYPES = {
   receipt: {
     title: '영수증',
@@ -28,6 +30,7 @@ export const DOCUMENT_TYPES = {
     total: '총 견적 금액'
   }
 };
+
 export function localDate(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -64,6 +67,7 @@ function previewScaled(value, digits) {
   }
   return window.BigInt(whole) * 10n ** window.BigInt(digits) + window.BigInt(fraction.padEnd(digits, '0') || '0');
 }
+
 export function calculateRows(items, currency) {
   const digits = currencyDigits(currency);
   const scale = 10 ** digits;
@@ -83,6 +87,7 @@ export function calculateRows(items, currency) {
     };
   });
 }
+
 export function calculateTotals(rows, currency) {
   const supplyMinor = rows.reduce((sum, row) => sum + window.BigInt(row.supplyMinor), 0n);
   const taxMinor = rows.reduce((sum, row) => sum + window.BigInt(row.taxMinor), 0n);
@@ -110,6 +115,7 @@ function collectDocumentStyles(ownerDocument) {
       return '';
     }
   }
+
   function fromRules(rules) {
     return Array.from(rules || []).map(rule => {
       if (rule.styleSheet) return fromSheet(rule.styleSheet);
@@ -132,6 +138,7 @@ function collectDocumentStyles(ownerDocument) {
   }
   return styles;
 }
+
 export function printDocument(paper, title) {
   if (!paper) {
     throw new Error('인쇄할 문서를 찾을 수 없습니다.');
@@ -193,6 +200,7 @@ export function printDocument(paper, title) {
     `;
   document.body.appendChild(frame);
 }
+
 const DOCUMENT_API = `${API_BASE_URL}/finance/documents`;
 async function documentRequest(url, options = {}) {
   const response = await fetch(url, options);
@@ -207,6 +215,7 @@ async function documentRequest(url, options = {}) {
   }
   return result;
 }
+
 export function saveFinanceDocument(payload) {
   return documentRequest(DOCUMENT_API, {
     method: 'POST',
@@ -216,6 +225,7 @@ export function saveFinanceDocument(payload) {
     body: JSON.stringify(payload)
   });
 }
+
 export function getFinanceDocuments({
   page = 1,
   type = '',
@@ -232,13 +242,50 @@ export function getFinanceDocuments({
     signal
   });
 }
+
 export function getFinanceDocument(id, signal) {
   return documentRequest(`${DOCUMENT_API}/${encodeURIComponent(id)}`, {
     signal
   });
 }
+
 export function getDocumentPartners(signal) {
   return documentRequest(`${API_BASE_URL}/finance/partners`, {
     signal
   });
+}
+
+// 문서별 필수 항목/길이 정책만 여기서 관리하고, 검사 규칙은 공통 함수를 사용합니다.
+export function validateFinanceDocument(data, type = 'receipt') {
+  const config = DOCUMENT_TYPES[type] || DOCUMENT_TYPES.receipt;
+  for (const [key, title] of [['business', '사업자'], ['customer', config.party]]) {
+    const party = data[key];
+    const checks = [
+      validateLength(party.name, { required: true, max: 100, label: `${title} 이름` }),
+      validateEmail(party.email, { label: `${title} 이메일` }),
+      validatePhone(party.phone, { label: `${title} 전화번호` }),
+      validateBusinessNumber(party.businessNumber, { label: `${title} 사업자등록번호` })
+    ];
+    const failed = checks.find(result => !result.valid);
+    if (failed) return failed;
+    for (const [field, label] of [['email', '이메일'], ['address', '주소'], ['city', '도시'], ['country', '국가'], ['phone', '전화번호'], ['businessNumber', '사업자등록번호']]) {
+      const result = validateLength(party[field], { max: field === 'address' ? 200 : 100, label: `${title} ${label}` });
+      if (!result.valid) return result;
+    }
+  }
+  const dates = validateDateRange(data.date, config.extraDate ? data.extraDate : data.date, {
+    required: true, startLabel: config.date, endLabel: config.extraDate || config.date
+  });
+  if (!dates.valid) return dates;
+  for (const [index, item] of data.items.entries()) {
+    const name = validateLength(item.name, { required: true, max: 150, label: `품목 ${index + 1} 이름` });
+    if (!name.valid) return name;
+    const description = validateLength(item.description, { max: 300, label: `품목 ${index + 1} 설명` });
+    if (!description.valid) return description;
+  }
+  if (type === 'invoice') {
+    const account = validateLength(data.account, { max: 200, label: '입금 계좌 / 지급 안내' });
+    if (!account.valid) return account;
+  }
+  return validateLength(data.note, { max: 2000, label: '비고' });
 }

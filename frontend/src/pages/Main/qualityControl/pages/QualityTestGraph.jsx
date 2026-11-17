@@ -14,6 +14,8 @@ import {
     Tooltip,
     Legend
 } from "chart.js";
+import StatisticsCard from "../../../../components/StatisticsCard";
+import ColorTeg from "../../../../components/ColorTeg";
 
 ChartJS.register(
     CategoryScale,
@@ -291,130 +293,77 @@ function QualityTestGraph() {
     }
 
     return (
-        <div className="quality-graph-page">
-            <div className="page-header quality-graph-header">
-                <div>
-                    <span className="eyebrow">QUALITY ANALYTICS</span>
-                    <h1>품질검사 분석</h1>
-                    <p>품질검사 결과와 통과 비율을 한눈에 확인합니다.</p>
-                </div>
+        <div className="border-container vertical-box" style={{gap:"10px"}}>
+            <header className="dashboard-header">
+                <span className="subtitle">품질검사 분석</span>
+            </header>
+
+            <div className="horizontal-box">
+                <StatisticsCard title={"전체"} count={notTestedCount} stiyle={0} />
+                <StatisticsCard title={"통과"} count={passCount} stiyle={0} />
+                <StatisticsCard title={"불합격"} count={failCount} stiyle={0} />
+                <StatisticsCard title={"통과율"} count={passRate} stiyle={4} />
             </div>
 
-            <div className="graph-summary" aria-live="polite">
-                <div className="graph-summary-card">
-                    <span>전체 제품</span>
-                    <strong>{animatedValues.total}</strong>
-                    <small>등록 제품 기준</small>
+            <div className="horizontal-box size-fill" >
+                <div className="boder vertical-box size-fill"
+                    style={{padding:"30px", paddingBottom:"80px", height:"500px"}}
+                >
+                    <div className="horizontal-box">
+                        <h2>검사 결과 현황</h2>
+                        <ColorTeg title={"총"} count={products.length} type={'개'}/>
+                    </div>
+
+                    <div className="quality-chart">
+                        <Bar
+                            data={resultData}
+                            options={barOptions}
+                            plugins={[barValuePlugin]}
+                        />
+                    </div>
                 </div>
+                <div className="vertical-box boder size-fill"
+                    style={{padding:"30px", paddingBottom:"80px", height:"500px"}}
+                >
+                    <div className="horizontal-box">
+                        <h2>품질검사 통과 비율</h2>
+                        <ColorTeg title={""} count={animatedValues.rate} type={'%'}/>
+                    </div>
 
-                <div className="graph-summary-card is-pass">
-                    <span>통과</span>
-                    <strong>{animatedValues.pass}</strong>
-                    <small>검사 통과 제품</small>
-                </div>
-
-                <div className="graph-summary-card is-fail">
-                    <span>불합격</span>
-                    <strong>{animatedValues.fail}</strong>
-                    <small>재검토 필요 제품</small>
-                </div>
-
-                <div className="graph-summary-card is-rate">
-                    <span>통과율</span>
-                    <strong>{animatedValues.rate}%</strong>
-                    <small>검사 완료 제품 기준</small>
-                </div>
-            </div>
-
-            <div className="graph-control-card">
-                <div>
-                    <strong>분석 그래프</strong>
-                    <p>확인할 지표를 선택하면 그래프와 수치가 다시 애니메이션됩니다.</p>
-                </div>
-
-                <label className="graph-control">
-                    <span>그래프 선택</span>
-                    <select
-                        value={graphType}
-                        onChange={handleGraphChange}
-                    >
-                        <option value="result">검사 결과 현황</option>
-                        <option value="passRate">품질검사 통과 비율</option>
-                    </select>
-                </label>
-            </div>
-
-            <div className="graph-card">
-                {graphType === "result" && (
-                    <>
-                        <div className="graph-card-heading">
-                            <div>
-                                <span className="graph-card-kicker">RESULT STATUS</span>
-                                <h2>검사 결과 현황</h2>
-                            </div>
-                            <span className="graph-card-badge">총 {products.length}개 제품</span>
-                        </div>
-
-                        <div className="quality-chart">
-                            <Bar
-                                data={resultData}
-                                options={barOptions}
-                                plugins={[barValuePlugin]}
+                    <div className="pie-layout">
+                        <div className="pie-chart">
+                            <Pie
+                                key={`pie-${animationKey}`}
+                                data={passRateData}
+                                options={pieOptions}
                             />
                         </div>
-                    </>
-                )}
 
-                {graphType === "passRate" && (
-                    <>
-                        <div className="pass-rate-header">
+                        <div className="pie-summary-list">
                             <div>
-                                <span className="graph-card-kicker">PASS RATE</span>
-                                <h2>품질검사 통과 비율</h2>
-                                <p>검사가 완료된 제품을 기준으로 계산합니다.</p>
-                            </div>
-
-                            <div className="pass-rate-number">
-                                <strong>{animatedValues.rate}%</strong>
-                                <span>통과율</span>
-                            </div>
-                        </div>
-
-                        <div className="pie-layout">
-                            <div className="pie-chart">
-                                <Pie
-                                    key={`pie-${animationKey}`}
-                                    data={passRateData}
-                                    options={pieOptions}
-                                />
-                            </div>
-
-                            <div className="pie-summary-list">
+                                <span className="summary-dot is-pass" />
                                 <div>
-                                    <span className="summary-dot is-pass" />
-                                    <div>
-                                        <small>통과</small>
-                                        <strong>{passCount}개</strong>
-                                    </div>
+                                    <small>통과</small>
+                                    <strong>{passCount}개</strong>
                                 </div>
+                            </div>
+                            <div>
+                                <span className="summary-dot is-fail" />
                                 <div>
-                                    <span className="summary-dot is-fail" />
-                                    <div>
-                                        <small>불합격</small>
-                                        <strong>{failCount}개</strong>
-                                    </div>
+                                    <small>불합격</small>
+                                    <strong>{failCount}개</strong>
                                 </div>
+                            </div>
+                            <div>
+                                <span className="summary-dot is-wait" />
                                 <div>
-                                    <span className="summary-dot is-wait" />
-                                    <div>
-                                        <small>미실시</small>
-                                        <strong>{notTestedCount}개</strong>
-                                    </div>
+                                    <small>미실시</small>
+                                    <strong>{notTestedCount}개</strong>
                                 </div>
                             </div>
                         </div>
-                    </>
-                )}
+                    </div>
+                </div>
             </div>
         </div>
     );

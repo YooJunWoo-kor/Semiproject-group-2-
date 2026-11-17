@@ -263,11 +263,10 @@ export async function decideApproval(documentId, decisionData) {
 }
 
 // 결재 문서에 증빙파일 첨부
-export async function uploadApprovalAttachment(documentId, file, employeeId, password) {
+export async function uploadApprovalAttachment(documentId, file, employeeId) {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("employee_id", employeeId);
-    formData.append("password", password);
     const response = await axios.post(
         `${FINANCE_API_URL}/approvals/${documentId}/attachments`, formData
     );

@@ -26,10 +26,10 @@ export function getHrAttendance(params) {
   return axios.get(API_BASE_URL + '/hr/attendance', { params });
 }
 
-// 기존 결재 초안과 휴가 기간 데이터를 조합한 휴가 신청 목록을 조회합니다.
+// 전자결재 휴가 기안을 월별로 조회합니다.
 export function getHrLeaves(month) {
-  return axios.get(API_BASE_URL + '/hr/leaves', {
-    params: month ? { month } : {}
+  return axios.get(API_BASE_URL + '/drafts/leaves', {
+    params: { month }
   });
 }
 
