@@ -132,7 +132,7 @@ function ADBord({dataSet, btnStl}){
                 {/* 3. 누적 근무 시간 태그 (소프트 블루) */}
                 <div className="attendance-tag tag-blue">
                     <span className="tag-label">근무 시간</span>
-                    <span className="tag-value">{(summary.workingMinutes / 60).toFixed(1)}</span>
+                    <span className="tag-value">{Math.floor(summary.workingMinutes / 60)}</span>
                 </div>
 
                 {/* 4. 지각/이상 태그 (뮤트 레드) */}
