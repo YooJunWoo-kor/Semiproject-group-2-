@@ -53,13 +53,14 @@ router.get('/payment-management', async (req, res) => {
             const [deductions] = await connection.execute(queries.selectSummary(payrollPaymentRowsSql), [range.start.slice(0, 7)]);
             scheduled.push(...deductions);
         }
+        // [급여 흐름 수정] 추가급여 기안은 직접 지급대기로 만들지 않고 HR 급여에 합산합니다.
         scheduled = scheduled.map(decorate);
         const totals = summary(entries, previousEntries, scheduled);
         await connection.commit();
         return res.json({ range, groups: groups(direction), entries, scheduled, summary: totals });
     } catch (error) {
         if (connection) { try { await connection.rollback(); } catch (rollbackError) { console.error(rollbackError.code); } }
-        console.error('결제 관리 조회 실패:', error.code || error.message);
+        console.error('결제 관리 조회 실패:', error);
         return res.status(error.status || 500).json({
             message: error.status ? error.message :
                 '결제 관리 조회에 실패했습니다. 분류 테이블 SQL 적용 여부와 DB 연결을 확인해 주세요.'

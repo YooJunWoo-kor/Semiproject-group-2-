@@ -14,7 +14,7 @@ const emptyForm = {
     paymentType: "수당",
     payMonth: "",
     paymentDate: "",
-    paymentDetail : ""
+    paymentDetail: ""
 
 };
 
@@ -69,7 +69,9 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             amount: detail.amount ?? "",
             paymentType: detail.paymentType || "수당",
             payMonth: detail.payMonth || "",
-            paymentDetail : detail.paymentDetail || "",
+            // [재무 연동 추가] 임시저장 기안서를 다시 열 때 지급 예정일을 복원합니다.
+            paymentDate: detail.paymentDate || "",
+            paymentDetail: detail.paymentDetail || "",
         });
         setApprovers(editingDraft.approvers || []);
     }, [editingDraft]);
@@ -109,7 +111,8 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             return;
         }
 
-        if(!paymentDetail.trim()){
+        // [수정] 추가급여 문서에만 상세 분류를 필수로 검사합니다.
+        if (draftType === "추가급여" && !paymentDetail.trim()) {
             alert("상세 내용을 입력해주세요");
             return;
         }
@@ -170,6 +173,9 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                         draftType === "추가급여" ? {
                             paymentType,
                             payMonth,
+                            // [재무 연동 추가] 지급 예정일과 상세 분류를 원본 기안서에 함께 저장합니다.
+                            paymentDate,
+                            paymentDetail,
                             amount: amount === "" ? null : Number(amount)
                         } : {};
 
@@ -363,6 +369,8 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                     <div className="draft-box">
                         <div className="draft-row">
                             <h4>추가급여 지급 정보</h4>
+                            {/* [재무 연동 추가] 기존 급여월 검증에 필요한 입력란입니다. */}
+                            <label>급여월<input type="month" name="payMonth" value={payMonth} onChange={handleInputChange} /></label>
                         </div>
 
                         <div className="draft-row">

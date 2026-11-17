@@ -14,9 +14,9 @@ function selectPayrolls(value0) {
                SUM(COALESCE(link.net_amount, p.net_pay)) AS net_pay,
                SUM(CASE WHEN p.payment_status = '지급완료' THEN 1 ELSE 0 END) AS paid_count
         FROM payrolls p
-        INNER JOIN my_draft d ON d.draft_id = p.draft_id
+        LEFT JOIN my_draft d ON d.draft_id = p.draft_id
         LEFT JOIN (${value0}) link ON link.payroll_id = p.payroll_id
-        WHERE d.status IN ('APPROVED', '승인')
+        WHERE p.payment_status IN ('확정', '승인', '지급대기', '지급완료') AND (p.draft_id IS NULL OR d.status IN ('APPROVED', '승인'))
           AND p.pay_month REGEXP '^[0-9]{4}-(0[1-9]|1[0-2])$'
           AND NOT EXISTS (
               SELECT 1 FROM trade_transactions linked_trade
@@ -33,6 +33,7 @@ function selectPayrolls2(value0) {
                COALESCE(link.base_amount, p.base_salary) AS base_salary,
                COALESCE(link.allowance_amount, p.allowance) AS allowance,
                COALESCE(link.bonus_amount, p.bonus) AS bonus,
+               COALESCE(link.other_payment_amount, p.other_payment) AS other_payment,
                COALESCE(link.deduction_amount, p.deduction) AS deduction,
                COALESCE(link.gross_amount, p.gross_pay) AS gross_pay,
                COALESCE(link.net_amount, p.net_pay) AS net_pay,
@@ -45,11 +46,12 @@ function selectPayrolls2(value0) {
                account.account_name AS payment_account_name
         FROM payrolls p
         INNER JOIN employees e ON e.employee_id = p.employee_id
-        INNER JOIN my_draft d ON d.draft_id = p.draft_id
+        LEFT JOIN my_draft d ON d.draft_id = p.draft_id
         LEFT JOIN (${value0}) link ON link.payroll_id = p.payroll_id
         LEFT JOIN payments paid ON paid.payment_id = link.payment_id
         LEFT JOIN bank_accounts account ON account.account_id = paid.account_id
-        WHERE d.status IN ('APPROVED', '승인')
+        WHERE p.payment_status IN ('확정', '승인', '지급대기', '지급완료') AND (p.draft_id IS NULL OR d.status IN ('APPROVED', '승인'))
+          AND p.pay_month = ?
           AND NOT EXISTS (
               SELECT 1 FROM trade_transactions t
               WHERE t.source_type = 'draft' AND t.source_id = d.draft_id
@@ -63,8 +65,9 @@ const selectEmployees = `SELECT e.department_id, ea.role
             WHERE e.employee_id = ? AND ea.password_hash = ? AND ea.account_status = 'ACTIVE'`;
 
 const selectPayrolls3 = `SELECT p.*, d.status AS approval_status
-            FROM payrolls p INNER JOIN my_draft d ON d.draft_id = p.draft_id
-            WHERE d.status IN ('APPROVED', '승인')
+            FROM payrolls p LEFT JOIN my_draft d ON d.draft_id = p.draft_id
+            WHERE p.payment_status IN ('확정', '승인', '지급대기', '지급완료') AND (p.draft_id IS NULL OR d.status IN ('APPROVED', '승인'))
+          AND p.pay_month = ?
             ORDER BY p.payroll_id FOR UPDATE`;
 
 const selectPayments = 'SELECT payroll_id FROM payments WHERE payroll_id = ? FOR UPDATE';
@@ -83,7 +86,7 @@ const insertPayments = `INSERT INTO payments
 
 const updatePayrolls = `UPDATE payrolls
                 SET payment_status = '지급완료', payment_date = ?
-                WHERE payroll_id = ? AND payment_status = '지급대기'`;
+                WHERE payroll_id = ? AND payment_status IN ('확정', '승인', '지급대기')`;
 
 const selectPayments2 = `SELECT salary.payment_id, salary.payroll_id, salary.amount, salary.payroll_snapshot,
         DATE_FORMAT(salary.payment_date, '%Y-%m-%d') AS source_payment_date,

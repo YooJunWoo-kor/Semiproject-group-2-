@@ -375,6 +375,7 @@ async function applyApprovedDraftToPayroll({
     dryRun = false,
     strict = false
 }) {
+    // [급여 흐름 수정] 추가급여도 아래의 급여월·유형 검증과 중복 방지 절차로 반영합니다.
     const detailData = parseDetailData(draft.detailData);
     const employeeName = draft.employeeName || `사원 ${draft.employeeId}`;
     const payrollField = payrollFieldForDraftType(draft.documentType, detailData);
@@ -428,6 +429,21 @@ async function applyApprovedDraftToPayroll({
             applied: null,
             skipped: applicationSkipped(draft, payrollEmployeeId, '이미 급여에 반영된 기안입니다.')
         };
+    }
+
+    // [급여 흐름 수정] 기존 방식으로 이미 지급한 추가급여는 월 급여에 중복 합산하지 않습니다.
+    if (isAdditionalPayment) {
+        const [paidRows] = await connection.query(
+            `SELECT payment_id FROM payments
+             WHERE payment_direction = '출금' AND payment_status = '완료'
+               AND JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.entry_type')) = 'additional_payroll'
+               AND JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.additional_draft_id')) = ?
+             LIMIT 1`,
+            [String(draft.draftId)]
+        );
+        if (paidRows.length > 0) {
+            return { applied: null, skipped: applicationSkipped(draft, payrollEmployeeId, '이미 재무에서 별도 지급한 추가급여입니다.') };
+        }
     }
 
     let amount = readDraftPayrollAmount(draft.documentType, detailData);
@@ -549,7 +565,7 @@ async function applyApprovedDraftToPayroll({
         const [draftUpdate] = await connection.query(
             `UPDATE my_draft
              SET detail_data = ?
-             WHERE draft_id = ? AND status IN ('PENDING', 'APPROVED')`,
+             WHERE draft_id = ? AND status IN ('PENDING', 'APPROVED', '승인')`,
             [JSON.stringify(nextDetailData), draft.draftId]
         );
 

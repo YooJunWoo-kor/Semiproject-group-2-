@@ -6,15 +6,17 @@ function selectPayments(value0) {
     return `SELECT p.payment_id, p.document_id, p.transaction_id,
             DATE_FORMAT(p.payment_date, '%Y-%m-%d') AS payment_date,
             p.amount, p.payment_method, p.payment_status,
-            COALESCE(a.title, t.company_name, CONCAT(payroll_link.pay_month, ' 월급 (인건비)'), CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'payroll_deduction' THEN CONCAT(JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.pay_month')), ' 급여 공제액 납부') END, '연결 문서 없는 입출금') AS title,
-            CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'payroll_deduction' THEN 'payroll_deduction'
+            COALESCE(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'additional_payroll' THEN CONCAT(JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.pay_month')), ' 추가급여') END, a.title, t.company_name, CONCAT(payroll_link.pay_month, ' 월급 (인건비)'), CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'payroll_deduction' THEN CONCAT(JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.pay_month')), ' 급여 공제액 납부') END, '연결 문서 없는 입출금') AS title,
+            CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'additional_payroll' THEN 'additional_payroll'
+                 WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'payroll_deduction' THEN 'payroll_deduction'
                  WHEN payroll_link.payroll_id IS NOT NULL THEN 'payroll'
                  WHEN p.document_id IS NOT NULL THEN 'approval'
                  WHEN p.transaction_id IS NOT NULL THEN 'transaction' ELSE 'payment' END AS source_type,
-            CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'payroll_deduction' THEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.pay_month'))
+            CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'additional_payroll' THEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.additional_draft_id'))
+                 WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'payroll_deduction' THEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.pay_month'))
                  WHEN payroll_link.payroll_id IS NOT NULL THEN payroll_link.pay_month
                  ELSE COALESCE(p.document_id, p.transaction_id, p.payment_id) END AS source_id,
-            CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'payroll_deduction' OR payroll_link.payroll_id IS NOT NULL THEN 'expense_administration_1'
+            CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'additional_payroll' OR JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'payroll_deduction' OR payroll_link.payroll_id IS NOT NULL THEN 'expense_administration_1'
                  ELSE c.category_code END AS category_code
             FROM payments p
             LEFT JOIN (${value0}) payroll_link ON payroll_link.payment_id = p.payment_id
@@ -61,8 +63,9 @@ const selectPayrolls = `
                     SUM(p.gross_pay) AS amount,
                     'expense_administration_1' AS category_code
                 FROM payrolls p
-                INNER JOIN my_draft d ON d.draft_id = p.draft_id
-                WHERE d.status IN ('APPROVED', '승인')
+                LEFT JOIN my_draft d ON d.draft_id = p.draft_id
+                -- [급여 흐름 수정] HR에서 재무로 전달한 급여만 매입 목록에 표시합니다.
+                WHERE p.payment_status = '지급대기' AND (p.draft_id IS NULL OR d.status IN ('APPROVED', '승인'))
                   AND p.pay_month = ?
                   AND COALESCE(p.payment_status, '') <> '지급완료'
                   AND NOT EXISTS (

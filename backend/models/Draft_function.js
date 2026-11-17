@@ -1,8 +1,8 @@
 const db = require('../db');
 const promiseDb = db.promise();
 const {
-    applyApprovedDraftToPayroll
-} = require('../services/hrPayrollApplication');
+    validateAdditionalPayroll
+} = require('../services/additionalPayroll');
 
 async function hasDraftApprovalStepsTable() {
     const [rows] = await promiseDb.query(
@@ -451,18 +451,13 @@ class Draft {
                     } else if (draft.documentType === '비용') {
                         await persistExpenseDetail(draftId, draft.documentType, detailData);
                     } else if (['수당', '상여금', '추가급여'].includes(draft.documentType)) {
-                        await applyApprovedDraftToPayroll({
-                            connection: promiseDb,
+                        validateAdditionalPayroll({
                             draft: {
                                 draftId,
                                 employeeId: draft.writerEmployeeId,
                                 documentType: draft.documentType,
                                 detailData
-                            },
-                            approvedBy: employeeId,
-                            approvedAt: new Date().toISOString(),
-                            payMonth: detailData.payMonth,
-                            strict: true
+                            }
                         });
                     }
                 }
@@ -553,18 +548,13 @@ class Draft {
             } else if (draft.documentType === '비용') {
                 await persistExpenseDetail(draftId, draft.documentType, detailData);
             } else if (['수당', '상여금', '추가급여'].includes(draft.documentType)) {
-                await applyApprovedDraftToPayroll({
-                    connection: promiseDb,
+                validateAdditionalPayroll({
                     draft: {
                         draftId,
                         employeeId: draft.writerEmployeeId,
                         documentType: draft.documentType,
                         detailData
-                    },
-                    approvedBy: employeeId,
-                    approvedAt: new Date().toISOString(),
-                    payMonth: detailData.payMonth,
-                    strict: true
+                    }
                 });
             }
 

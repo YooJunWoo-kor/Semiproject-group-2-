@@ -61,8 +61,9 @@ async function applyApprovedDraftsHandler(
                 d.detail_data AS detailData
             FROM my_draft d
             LEFT JOIN employees e ON e.employee_id = d.employee_id
-            WHERE d.status = 'APPROVED'
-              AND d.document_type IN ('비용', '수당', '상여금', '추가급여')
+            -- [급여 흐름 수정] 최종 승인된 추가급여를 비용과 함께 HR 급여에 반영합니다.
+            WHERE d.status IN ('APPROVED', '승인')
+              AND d.document_type IN ('비용', '추가급여', '수당', '상여금')
         `;
 
         if (draftIds !== null) {

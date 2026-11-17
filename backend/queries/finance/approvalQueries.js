@@ -63,6 +63,7 @@ const selectPayrolls = `
           ) expense ON expense.draft_id = m.draft_id
           LEFT JOIN trade_transactions source_link ON source_link.source_type = 'draft' AND source_link.source_id = m.draft_id
           WHERE m.status IN ('APPROVED', 'PENDING', 'WAITING', 'IN_PROGRESS', 'REJECTED', '승인', '대기', '승인대기', '결재대기', '진행중', '반려')
+            AND m.document_type NOT IN ('추가급여', '수당', '상여금')
             AND (m.document_type LIKE '%구매%' OR m.document_type LIKE '%비용%'
                  OR expense.draft_id IS NOT NULL
                  OR EXISTS (SELECT 1 FROM payrolls payroll WHERE payroll.draft_id = m.draft_id))

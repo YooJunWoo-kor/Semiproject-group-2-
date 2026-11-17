@@ -2,10 +2,8 @@
 // 역할: 직원·부서·근태 등 인사관리의 기본 조회와 변경 API를 제공합니다.
 
 const express = require('express');
-<<<<<<< HEAD
 const db = require('../db');
 const { attendanceStatus } = require('../models/Attendance');
-=======
 const {
     promiseDb,
     attendanceStatuses,
@@ -20,7 +18,6 @@ const {
     ensurePayrollForMonth,
     calculateFreelancerPayroll
 } = require('../services/hrCommon');
->>>>>>> origin/kkb
 
 const hrRouter = express.Router();
 
@@ -32,11 +29,8 @@ hrRouter.post('/attendance', async (req, res) => {
     const checkOut = String(req.body.checkOut || '').trim() || null;
     let status = String(req.body.status || '').trim();
     const memo = String(req.body.memo || '').trim();
-<<<<<<< HEAD
     const allowedStatuses = ['정상', '근무중', '지각', '조퇴', '야근', '지각·조퇴', '지각·야근', '결근', '휴가', '출장', '휴직', '미출근'];
 
-=======
->>>>>>> origin/kkb
     if (
         !Number.isInteger(employeeId) ||
         employeeId < 1 ||
@@ -220,11 +214,8 @@ hrRouter.put('/attendance/:attendanceId', async (req, res) => {
     const checkOut = String(req.body.checkOut || '').trim() || null;
     let status = String(req.body.status || '').trim();
     const memo = String(req.body.memo || '').trim();
-<<<<<<< HEAD
     const allowedStatuses = ['정상', '근무중', '지각', '조퇴', '야근', '지각·조퇴', '지각·야근', '결근', '휴가', '출장', '휴직', '미출근'];
 
-=======
->>>>>>> origin/kkb
     if (
         !Number.isInteger(attendanceId) ||
         attendanceId < 1 ||

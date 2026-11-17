@@ -120,49 +120,7 @@ hrFinanceRouter.post('/payrolls/submit-to-finance', async (req, res) => {
             (total, row) => total + Number(row.netPay),
             0
         );
-        const detailData = JSON.stringify({
-            source: 'HR_PAYROLL',
-            payMonth,
-            payrollIds,
-            employeeCount: rows.length,
-            totalGrossPay,
-            totalDeduction,
-            totalNetPay,
-            payrolls: rows.map((row) => ({
-                payrollId: row.payrollId,
-                employeeId: row.employeeId,
-                payMonth: row.payMonth,
-                baseSalary: Number(row.baseSalary),
-                allowance: Number(row.allowance),
-                bonus: Number(row.bonus),
-                otherPayment: Number(row.otherPayment),
-                incomeTax: Number(row.incomeTax),
-                localIncomeTax: Number(row.localIncomeTax),
-                deduction: Number(row.deduction),
-                grossPay: Number(row.grossPay),
-                netPay: Number(row.netPay)
-            })),
-            handedOffAt: new Date().toISOString()
-        });
-
-        const [draftResult] = await promiseDb.query(
-            `INSERT INTO my_draft (
-                employee_id,
-                title,
-                document_type,
-                content,
-                detail_data,
-                status
-             )
-             VALUES (?, ?, '급여', ?, ?, 'APPROVED')`,
-            [
-                actorEmployeeId,
-                `${payMonth} 급여 재무 전달`,
-                `${payMonth} 급여 ${rows.length}건을 재무 지급 대상으로 전달합니다.`,
-                detailData
-            ]
-        );
-        const draftId = draftResult.insertId;
+        const draftId = null;
 
         const [updated] = await promiseDb.query(
             `UPDATE payrolls

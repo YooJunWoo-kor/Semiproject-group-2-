@@ -1,3 +1,4 @@
+import AdditionalPayrollPayment from '../components/AdditionalPayrollPayment';
 import { FinanceAttachments } from '../components/FinanceApproval';
 import { FinancePaymentHistory } from '../components/FinanceFunds';
 import { FinanceDetailRows } from '../components/FinanceDetailUI';
@@ -97,6 +98,9 @@ function Items({
   const [approvedDocuments, setApprovedDocuments] = useState([]);
   const [approvalsLoading, setApprovalsLoading] = useState(true);
   const [approvalsError, setApprovalsError] = useState('');
+  const [additionalPayrolls, setAdditionalPayrolls] = useState([]);
+  const [additionalError, setAdditionalError] = useState('');
+  const [additionalBusy, setAdditionalBusy] = useState(false);
   const [payrollSummaries, setPayrollSummaries] = useState([]);
   const [payrollLoading, setPayrollLoading] = useState(true);
   const [payrollError, setPayrollError] = useState('');
@@ -145,7 +149,15 @@ function Items({
     closingDay: null
   }])).values()];
   const payrollItems = toPayrollPurchaseRows(payrollSummaries);
-  const itemList = [...payrollDeductionRows, ...payrollItems, ...toApprovedTradeRows(approvedDocuments, payrollItems.map(row => row.date)), ...storedItemList];
+  const additionalItems = additionalPayrolls.map(row => ({
+    id: `additional-payroll-${row.draft_id}`, isAdditionalPayroll: true, additional: row,
+    transactionId: null, type: 'PURCHASE', date: row.payment_date, dueDate: row.payment_date,
+    itemName: row.title, customer: row.employee_name || `사원 ${row.employee_id}`,
+    spec: `추가급여 · ${row.pay_month}`, quantity: null, unitPrice: null,
+    supplyAmount: row.amount, vat: 0, totalAmount: row.amount, status: row.payment_status,
+    approvalStatus: 'APPROVED', linkedSourceType: 'additional_payroll', linkedSourceId: row.draft_id
+  }));
+  const itemList = [...additionalItems, ...payrollDeductionRows, ...payrollItems, ...toApprovedTradeRows(approvedDocuments, payrollItems.map(row => row.date)), ...storedItemList];
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -247,8 +259,8 @@ function Items({
   }, [tradeRequest, loading, storedItemList, handledRequestId]);
   const [initialTransactionOpened, setInitialTransactionOpened] = useState(false);
   useEffect(() => {
-    onBusyChange?.(saving || paymentSaving || attachmentBusy || payrollPaymentSaving || deductionSaving || Boolean(deductionMonth) || formOpen || paymentTarget !== null || selectedItemId !== null);
-  }, [saving, paymentSaving, attachmentBusy, payrollPaymentSaving, deductionSaving, deductionMonth, formOpen, paymentTarget, selectedItemId, onBusyChange]);
+    onBusyChange?.(saving || paymentSaving || attachmentBusy || payrollPaymentSaving || additionalBusy || deductionSaving || Boolean(deductionMonth) || formOpen || paymentTarget !== null || selectedItemId !== null);
+  }, [saving, paymentSaving, attachmentBusy, payrollPaymentSaving, additionalBusy, deductionSaving, deductionMonth, formOpen, paymentTarget, selectedItemId, onBusyChange]);
   useEffect(() => () => onBusyChange?.(false), [onBusyChange]);
   useEffect(() => {
     if (loading || initialTransactionOpened || initialTransactionId == null) return;
@@ -297,7 +309,17 @@ function Items({
     loadItems();
   }, []);
 
-  // 최종 승인된 기안서에 연결된 월 급여만 조회합니다.
+  useEffect(() => {
+    const controller = new AbortController();
+    setAdditionalError('');
+    fetch(`${API_BASE_URL}/finance/additional-payrolls`, { signal: controller.signal })
+      .then(async response => { const rows = await response.json();
+        if (!response.ok || !Array.isArray(rows)) throw new Error(rows.message || '추가급여를 불러오지 못했습니다.');
+        if (!controller.signal.aborted) setAdditionalPayrolls(rows);
+      }).catch(error => { if (!controller.signal.aborted) setAdditionalError(error.message); });
+    return () => controller.abort();
+  }, [payrollRefresh, scope?.refresh]);
+  // 인사에서 승인(확정)한 월 급여를 조회합니다.
   useEffect(() => {
     const controller = new AbortController();
     async function loadPayrollSummaries() {
@@ -374,7 +396,7 @@ function Items({
     if (scope.direction !== '전체' && scope.direction === '입금' !== (item.type === 'SALES')) return false;
     const rows = matchingRecords(item, scopeRecordSource);
     if (rows.length) return rows.some(row => categoryMatches(row, item));
-    if (item.isPayroll) return false;
+    if (item.isPayroll || item.isAdditionalPayroll) return false;
     if (item.isApprovalDocument) {
       // 미승인 문서는 지급 일정이 없으므로 작성 월을 기준으로 표시합니다.
       const date = item.createdAt;
@@ -500,7 +522,7 @@ function Items({
       <div>
           <strong>{item.itemName}</strong>
           <div className="subtext">
-            {item.isPayroll ? item.spec : item.isApprovalDocument ? "품목·수량 미등록" : `${item.spec} · ${item.quantity}개`}
+            {item.isPayroll || item.isAdditionalPayroll ? item.spec : item.isApprovalDocument ? "품목·수량 미등록" : `${item.spec} · ${item.quantity}개`}
           </div>
         </div>,
       // 5. 총 합계금액 (공급가/부가세는 덜어내고 최종 금액만 강조)
@@ -515,7 +537,7 @@ function Items({
         </div>,
       // 7. 관리 버튼
       <button type="button" disabled={saving || paymentSaving || attachmentBusy || payrollPaymentSaving || deductionSaving} title={item.isPayrollDeduction ? "급여 공제액 납부 내역" : item.isPayroll ? "직원별 급여 상세" : undefined} onClick={() => openVoucher(item.id)}>
-          {item.isPayrollDeduction ? "상세" : item.isPayroll ? "상세" : item.isApprovalDocument ? "상세" : "전표"}
+          {item.isPayrollDeduction ? "상세" : item.isPayroll || item.isAdditionalPayroll ? "상세" : item.isApprovalDocument ? "상세" : "전표"}
         </button>]
     };
   });
@@ -1406,6 +1428,11 @@ function Items({
                   </section>} />
             </div>}
 
+          {additionalError && <p role="alert">{additionalError}</p>}
+          {selectedItem?.isAdditionalPayroll && <AdditionalPayrollPayment key={selectedItem.id}
+            row={selectedItem.additional} accounts={paymentAccounts} canPay={payrollCanPay}
+            onBusyChange={setAdditionalBusy} onClose={closeVoucher}
+            onPaid={() => { setPayrollRefresh(value => value + 1); onDataChange?.(); closeVoucher(); }} />}
           {selectedItem?.isPayroll && !selectedItem.isPayrollDeduction && !formOpen && !paymentTarget && <div className="finance-registration-modal finance-voucher-detail">
               <ModalBase className="finance-payroll-modal" title={`${payrollMonth} 급여 상세`} onClose={closeVoucher} layout={<section style={{
             width: '100%',
@@ -1561,7 +1588,7 @@ function Items({
                   </section>} />
             </div>}
 
-          {selectedItem && !selectedItem.isPayroll && !formOpen && !paymentTarget && <div className="finance-registration-modal finance-voucher-detail">
+          {selectedItem && !selectedItem.isPayroll && !selectedItem.isAdditionalPayroll && !formOpen && !paymentTarget && <div className="finance-registration-modal finance-voucher-detail">
               <ModalBase title={selectedItem.isApprovalDocument ? "결재·기안서 상세" : "매입·매출 전표"} onClose={closeVoucher} layout={<section aria-label="거래 전표 상세정보">
                     <DetailSummary title={selectedItem.itemName} amount={selectedItem.totalAmount == null ? '미등록' : payrollWon(selectedItem.totalAmount)} status={selectedItem.isApprovalDocument ? getTradeApprovalStatus(selectedItem, approvedDocuments) === 'APPROVED' ? '승인' : '미승인' : getSettlementLabel(selectedItem.status)} />
 

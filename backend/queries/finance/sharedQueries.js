@@ -8,6 +8,7 @@ const selectPayments = `
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.base_amount')) AS UNSIGNED) AS base_amount,
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.allowance_amount')) AS UNSIGNED) AS allowance_amount,
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.bonus_amount')) AS UNSIGNED) AS bonus_amount,
+    CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.other_payment_amount')) AS UNSIGNED) AS other_payment_amount,
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.gross_amount')) AS UNSIGNED) AS gross_amount,
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.deduction_amount')) AS UNSIGNED) AS deduction_amount,
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.net_amount')) AS UNSIGNED) AS net_amount,

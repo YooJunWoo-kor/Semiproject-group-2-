@@ -184,6 +184,7 @@ router.post("/items", async (req, res) => {
                 const [drafts] = await connection.execute(
                     queries.selectMyDraft, [sourceId]);
                 if (!drafts.length) failSource(404, '원본 기안서를 찾을 수 없습니다.');
+                if (['추가급여', '수당', '상여금'].includes(drafts[0].document_type)) failSource(409, '추가급여는 추가급여 지급 화면에서 처리해주세요.');
                 if (drafts[0].status !== 'APPROVED') failSource(409, '최종 승인된 기안서만 거래로 등록할 수 있습니다.');
                 const [payrollRows] = await connection.execute(
                     queries.selectPayrolls, [sourceId]);

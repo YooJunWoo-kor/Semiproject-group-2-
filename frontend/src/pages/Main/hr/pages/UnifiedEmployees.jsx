@@ -101,8 +101,9 @@ function money(value) {
 
 function payrollStatusLabel(status) {
   return {
-    확정: "급여 확정",
-    지급대기: "재무 전달 완료",
+    // [급여 흐름 수정] 기안 승인과 급여확정을 구분합니다.
+    확정: "확정",
+    지급대기: "지급대기",
     지급완료: "지급완료"
   }[status] || status || "-";
 }
@@ -1468,7 +1469,8 @@ export default function UnifiedEmployees() {
 
       const preview = previewResponse.data.data;
       const confirmMessage = [
-        `${payMonth} 급여를 확정하시겠습니까?`,
+        // [급여 흐름 수정] 급여확정 후 재무 전달은 별도 버튼으로 처리합니다.
+        `${payMonth} 승인된 추가급여를 반영하고 급여를 확정하시겠습니까?`,
         `선택 인원: ${preview.targetCount}명`,
         `총지급액: ${money(preview.grossPay)}`,
         `총공제액: ${money(preview.totalDeduction)}`,
@@ -2154,6 +2156,7 @@ export default function UnifiedEmployees() {
                               <strong>{payrollSummary.missingCount}명</strong>
                             </div>
                             <div className="hr-payroll-summary-item">
+                              {/* [급여 흐름 수정] 급여확정 인원입니다. */}
                               <span>확정</span>
                               <strong>{payrollSummary.confirmedCount}명</strong>
                             </div>
@@ -2225,6 +2228,12 @@ export default function UnifiedEmployees() {
                                         >
                                           {row.employeeName} ({row.employeeNumber})
                                         </button>
+                                        {/* [급여 흐름 추가] 최종 승인된 추가급여 원본과 HR 반영 여부를 표시합니다. */}
+                                        {row.additionalPayrollDrafts?.map(draft => (
+                                          <div key={draft.draftId}>
+                                            <small>추가급여 #{draft.draftId} · {draft.title} · {draft.applied ? "급여 반영완료" : "승인 · 확정 시 반영"}</small>
+                                          </div>
+                                        ))}
                                       </td>
                                       <td>{row.departmentName || "-"}</td>
                                       <td>
@@ -2262,7 +2271,8 @@ export default function UnifiedEmployees() {
                               saving
                             }
                           >
-                            급여 확정
+                            {/* [급여 흐름 수정] 확정 후 별도로 재무에 전달합니다. */}
+                            급여확정
                           </button>
                           <button
                             type="button"
@@ -2274,7 +2284,8 @@ export default function UnifiedEmployees() {
                               saving
                             }
                           >
-                            재무로 전달
+                            {/* [재무 연동 수정] 승인 후 자동 조회되므로 기존 전달 버튼의 문구를 보완합니다. */}
+                            재무 전달 확인
                           </button>
                         </div>
                       </>

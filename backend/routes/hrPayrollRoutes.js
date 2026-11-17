@@ -256,10 +256,33 @@ hrPayrollRouter.get('/payrolls', async (req, res) => {
             await ensurePayrollForMonth(payMonth);
         }
         const [rows] = await promiseDb.query(query, [payMonth]);
-
+        // [급여 흐름 추가] 원본 기안서를 이동/삭제하지 않고 승인된 추가급여를 HR 화면에 함께 제공합니다.
+        // 조회에서는 급여 금액을 변경하지 않으며, 급여확정 시 기존 반영 이력으로 중복을 방지합니다.
+        const [additionalDrafts] = await promiseDb.query(
+            `SELECT d.draft_id AS draftId, d.employee_id AS employeeId,
+                    d.title, d.detail_data AS detailData
+             FROM my_draft d
+             WHERE d.status IN ('APPROVED', '승인')
+               AND d.document_type IN ('추가급여', '수당', '상여금')
+               AND JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.payMonth')) = ?
+             ORDER BY d.draft_id`,
+            [payMonth]
+        );
+        for (const draft of additionalDrafts) {
+            const detail = typeof draft.detailData === 'string'
+                ? JSON.parse(draft.detailData) : draft.detailData || {};
+            draft.payrollEmployeeId = Number(detail.recipientEmployeeId || detail.targetEmployeeId || draft.employeeId);
+            draft.applied = Boolean(detail.hrPayrollApplication);
+        }
         return res.json({
             success: true,
-            data: rows
+            data: rows.map(row => ({
+                ...row,
+                additionalPayrollDrafts: additionalDrafts.filter(draft =>
+                    draft.payrollEmployeeId === Number(row.employeeId)).map(draft => ({
+                        draftId: draft.draftId, title: draft.title, applied: draft.applied
+                    }))
+            }))
         });
     } catch (error) {
         console.error('급여 목록 조회 오류:', error);
@@ -706,6 +729,7 @@ hrPayrollRouter.patch('/payrolls/:payrollId/status', async (req, res) => {
             `SELECT
                 payroll_id AS payrollId,
                 employee_id AS employeeId,
+                pay_month AS payMonth,
                 payment_status AS paymentStatus
              FROM payrolls
              WHERE payroll_id = ?
@@ -733,6 +757,15 @@ hrPayrollRouter.patch('/payrolls/:payrollId/status', async (req, res) => {
                 message: '작성중 급여만 확정할 수 있습니다.'
             });
         }
+
+        // [급여 흐름 추가] 단건 확정도 승인 기안을 먼저 반영한 뒤 확정합니다.
+        const draftResult = await applyApprovedDraftsHandler(
+            { body: { payMonth: rows[0].payMonth, payrollIds: [payrollId],
+                employeeIds: [Number(rows[0].employeeId)], actorEmployeeId } },
+            { status() { return this; }, json(value) { return value; } },
+            { manageTransaction: false, returnResult: true }
+        );
+        if (!draftResult.success) throw new Error(draftResult.message);
 
         await promiseDb.query(
             `UPDATE payrolls

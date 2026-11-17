@@ -36,7 +36,7 @@ const selectApprovalDocuments = 'SELECT amount, approval_status FROM approval_do
 
 const selectPayments = "SELECT payment_id FROM payments WHERE document_id = ? LIMIT 1 FOR UPDATE";
 
-const selectMyDraft = 'SELECT status FROM my_draft WHERE draft_id = ? FOR UPDATE';
+const selectMyDraft = 'SELECT status, document_type FROM my_draft WHERE draft_id = ? FOR UPDATE';
 
 const selectPayrolls = 'SELECT payroll_id FROM payrolls WHERE draft_id = ? LIMIT 1 FOR UPDATE';
 
