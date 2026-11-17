@@ -496,10 +496,16 @@ function Partners() {
             marginBottom: 12,
             cursor: "pointer"
           }}>
-            <input type="radio" name="calendar_type_id" value="" checked={partnerForm.calendar_type_id === ""} onChange={handlePartnerChange} className="finance-color-radio" />
-            기본 색상 (입금 / 출금 구분)
           </label>
-          <div className="finance-color-options">
+          <div
+            className="finance-color-options"
+            style={{
+              display: "flex",
+              flexWrap: "nowrap",
+              gap: 6,
+              overflowX: "auto"
+            }}
+          >
             {partnerCalendarColors.map(({
               typeId,
               color
@@ -510,7 +516,6 @@ function Partners() {
                 }} />
               </label>)}
           </div>
-          <p className="subtext finance-color-guide">저장하면 이 거래처의 주간·월간 정산 마감 일정에 적용됩니다.</p>
         </fieldset>
 
         <div>
@@ -533,52 +538,52 @@ function Partners() {
     {amountDetail && <FinanceResourceModal
       title={`${amountDetail.partner.name} · ${amountDetail.type === "매출" ? "받을 금액" : "지급할 금액"} 상세`}
       onClose={() => setAmountDetail(null)}>
-        <section className="finance-partner-amount-content" aria-label="금액 상세정보"
-          style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-            <label style={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: 4, margin: 0, whiteSpace: 'nowrap' }}>
-              <input type="checkbox" checked={allAmountPeriods}
-                onChange={event => setAllAmountPeriods(event.target.checked)} />
-              전체 기간
-            </label>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              <button type="button" aria-label="이전 월" disabled={allAmountPeriods}
-                onClick={() => setAmountMonth(month => shiftPartnerMonth(month, -1))}>◀</button>
-              <label htmlFor="partner-amount-month" style={{ margin: 0, whiteSpace: 'nowrap' }}>조회 월</label>
-              <input style={{ width: 145, margin: 0, boxSizing: 'border-box' }} id="partner-amount-month" type="month" value={amountMonth} disabled={allAmountPeriods}
-                min="1900-01" max="9999-12"
-                onChange={event => {
-                  if (/^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(event.target.value)) {
-                    setAmountMonth(event.target.value);
-                  }
-                }} />
-              <button type="button" aria-label="다음 월" disabled={allAmountPeriods}
-                onClick={() => setAmountMonth(month => shiftPartnerMonth(month, 1))}>▶</button>
-            </div>
+      <section className="finance-partner-amount-content" aria-label="금액 상세정보"
+        style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <label style={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: 4, margin: 0, whiteSpace: 'nowrap' }}>
+            <input type="checkbox" checked={allAmountPeriods}
+              onChange={event => setAllAmountPeriods(event.target.checked)} />
+            전체 기간
+          </label>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <button type="button" aria-label="이전 월" disabled={allAmountPeriods}
+              onClick={() => setAmountMonth(month => shiftPartnerMonth(month, -1))}>◀</button>
+            <label htmlFor="partner-amount-month" style={{ margin: 0, whiteSpace: 'nowrap' }}>조회 월</label>
+            <input style={{ width: 145, margin: 0, boxSizing: 'border-box' }} id="partner-amount-month" type="month" value={amountMonth} disabled={allAmountPeriods}
+              min="1900-01" max="9999-12"
+              onChange={event => {
+                if (/^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(event.target.value)) {
+                  setAmountMonth(event.target.value);
+                }
+              }} />
+            <button type="button" aria-label="다음 월" disabled={allAmountPeriods}
+              onClick={() => setAmountMonth(month => shiftPartnerMonth(month, 1))}>▶</button>
           </div>
-          {amountDetail.loading ? <p role="status">금액 내역을 불러오는 중입니다.</p> :
-            amountDetail.error ? <p role="alert">{amountDetail.error}</p> : <>
-              
-              <FinanceSummaryBox items={[{
-                key: 'remaining',
-                label: `${allAmountPeriods ? "전체 기간" : "선택 월"} 남은 금액 합계`,
-                value: amountRows.some(row => row.remaining_amount == null) ? "확인 필요" :
-                  `${amountRows.reduce((sum, row) => sum + Number(row.remaining_amount), 0).toLocaleString()}원`
-              }]} />
-              <div className="table-shell" style={{ overflowX: "auto", border: "1px solid var(--color-line)", borderRadius: 12 }}>
-                <table style={{ width: "100%", minWidth: 640, tableLayout: "fixed" }}>
-                  <thead><tr>{["거래 번호", "거래일", "마감일", "거래 총액", "정산 완료액", "남은 금액"].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead>
-                  <tbody>{amountRows.length === 0 ? <tr><td colSpan={6}>선택한 기간의 거래 내역이 없습니다.</td></tr> :
-                    amountRows.map(row => <tr key={row.transaction_id}>
-                      <td>{row.transaction_id}</td><td>{row.trade_date || "-"}</td><td>{row.due_date || "-"}</td>
-                      <td>{row.total_amount == null ? "품목 확인 필요" : `${Number(row.total_amount).toLocaleString()}원`}</td>
-                      <td>{Number(row.paid_amount).toLocaleString()}원</td>
-                      <td>{row.remaining_amount == null ? "확인 필요" : `${Number(row.remaining_amount).toLocaleString()}원`}</td>
-                    </tr>)}</tbody>
+        </div>
+        {amountDetail.loading ? <p role="status">금액 내역을 불러오는 중입니다.</p> :
+          amountDetail.error ? <p role="alert">{amountDetail.error}</p> : <>
 
-                </table></div>
-            </>}
-        </section>
+            <FinanceSummaryBox items={[{
+              key: 'remaining',
+              label: `${allAmountPeriods ? "전체 기간" : "선택 월"} 남은 금액 합계`,
+              value: amountRows.some(row => row.remaining_amount == null) ? "확인 필요" :
+                `${amountRows.reduce((sum, row) => sum + Number(row.remaining_amount), 0).toLocaleString()}원`
+            }]} />
+            <div className="table-shell" style={{ overflowX: "auto", border: "1px solid var(--color-line)", borderRadius: 12 }}>
+              <table style={{ width: "100%", minWidth: 640, tableLayout: "fixed" }}>
+                <thead><tr>{["거래 번호", "거래일", "마감일", "거래 총액", "정산 완료액", "남은 금액"].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead>
+                <tbody>{amountRows.length === 0 ? <tr><td colSpan={6}>선택한 기간의 거래 내역이 없습니다.</td></tr> :
+                  amountRows.map(row => <tr key={row.transaction_id}>
+                    <td>{row.transaction_id}</td><td>{row.trade_date || "-"}</td><td>{row.due_date || "-"}</td>
+                    <td>{row.total_amount == null ? "품목 확인 필요" : `${Number(row.total_amount).toLocaleString()}원`}</td>
+                    <td>{Number(row.paid_amount).toLocaleString()}원</td>
+                    <td>{row.remaining_amount == null ? "확인 필요" : `${Number(row.remaining_amount).toLocaleString()}원`}</td>
+                  </tr>)}</tbody>
+
+              </table></div>
+          </>}
+      </section>
     </FinanceResourceModal>}
 
     {/* 2. 좌우 2단 분할 레이아웃 컨테이너 (테이블 좌측, 달력 우측 상시 노출) */}
@@ -632,7 +637,7 @@ function Partners() {
         {/* 상세와 수정 폼은 하나씩 열고, 기존 공통 모달을 사용합니다. */}
         {selectedPartner && !formOpen && <div className="finance-registration-modal finance-partner-detail">
           <ModalBase title="거래처 상세정보" onClose={closePartnerDetail} layout={<section aria-label="거래처 상세정보">
-            <div className="table-shell">
+            <div className="table-shell" >
               <table>
                 <tbody>
                   {/* [공통화] 거래처·카드·결재·품목 상세 행 재사용 */}

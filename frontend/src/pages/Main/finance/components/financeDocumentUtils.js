@@ -255,37 +255,26 @@ export function getDocumentPartners(signal) {
   });
 }
 
-// 문서별 필수 항목/길이 정책만 여기서 관리하고, 검사 규칙은 공통 함수를 사용합니다.
+// 문서별 필수 항목/길이 정책을 검사하고 boolean을 반환합니다.
 export function validateFinanceDocument(data, type = 'receipt') {
   const config = DOCUMENT_TYPES[type] || DOCUMENT_TYPES.receipt;
-  for (const [key, title] of [['business', '사업자'], ['customer', config.party]]) {
-    const party = data[key];
-    const checks = [
-      validateLength(party.name, { required: true, max: 100, label: `${title} 이름` }),
-      validateEmail(party.email, { label: `${title} 이메일` }),
-      validatePhone(party.phone, { label: `${title} 전화번호` }),
-      validateBusinessNumber(party.businessNumber, { label: `${title} 사업자등록번호` })
-    ];
-    const failed = checks.find(result => !result.valid);
-    if (failed) return failed;
-    for (const [field, label] of [['email', '이메일'], ['address', '주소'], ['city', '도시'], ['country', '국가'], ['phone', '전화번호'], ['businessNumber', '사업자등록번호']]) {
-      const result = validateLength(party[field], { max: field === 'address' ? 200 : 100, label: `${title} ${label}` });
-      if (!result.valid) return result;
+  for (const party of [data.business, data.customer]) {
+    if (!validateLength(party.name, { required: true, max: 100 })) return false;
+    if (!validateEmail(party.email)) return false;
+    if (!validatePhone(party.phone)) return false;
+    if (!validateBusinessNumber(party.businessNumber)) return false;
+    if (!validateLength(party.address, { max: 200 })) return false;
+    for (const field of ['email', 'city', 'country', 'phone', 'businessNumber']) {
+      if (!validateLength(party[field], { max: 100 })) return false;
     }
   }
-  const dates = validateDateRange(data.date, config.extraDate ? data.extraDate : data.date, {
-    required: true, startLabel: config.date, endLabel: config.extraDate || config.date
-  });
-  if (!dates.valid) return dates;
-  for (const [index, item] of data.items.entries()) {
-    const name = validateLength(item.name, { required: true, max: 150, label: `품목 ${index + 1} 이름` });
-    if (!name.valid) return name;
-    const description = validateLength(item.description, { max: 300, label: `품목 ${index + 1} 설명` });
-    if (!description.valid) return description;
+  let endDate = data.date;
+  if (config.extraDate) endDate = data.extraDate;
+  if (!validateDateRange(data.date, endDate, { required: true })) return false;
+  for (const item of data.items) {
+    if (!validateLength(item.name, { required: true, max: 150 })) return false;
+    if (!validateLength(item.description, { max: 300 })) return false;
   }
-  if (type === 'invoice') {
-    const account = validateLength(data.account, { max: 200, label: '입금 계좌 / 지급 안내' });
-    if (!account.valid) return account;
-  }
-  return validateLength(data.note, { max: 2000, label: '비고' });
+  if (type === 'invoice' && !validateLength(data.account, { max: 200 })) return false;
+  return validateLength(data.note, { max: 2000 });
 }

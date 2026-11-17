@@ -151,23 +151,37 @@ function BankAccount({
   }
 
   // 적용된 조건에 맞는 계좌만 표시합니다.
-  const filteredAccounts = accountList.filter(acc => {
-    const matchesBank = searchFilter.bank === "ALL" || acc.bankName === searchFilter.bank;
-    const matchesType = searchFilter.type === "ALL" || acc.accountType === searchFilter.type;
-    const keyword = searchFilter.keyword.toLowerCase();
-    const matchesKeyword = acc.accountName.toLowerCase().includes(keyword) || acc.accountNumber.toLowerCase().includes(keyword);
-    return matchesBank && matchesType && matchesKeyword;
+  const filteredAccounts = accountList.filter(account => {
+    const { bank, type, keyword } = searchFilter;
+    const searchText = keyword.toLowerCase();
+  
+    // 전체 은행이거나 선택한 은행인지 확인
+    const bankMatches =
+      bank === "ALL" || account.bankName === bank;
+  
+    // 전체 용도이거나 선택한 용도인지 확인
+    const typeMatches =
+      type === "ALL" || account.accountType === type;
+  
+    // 계좌명 또는 계좌번호에 검색어가 있는지 확인
+    const nameMatches =
+      account.accountName.toLowerCase().includes(searchText);
+  
+    const numberMatches =
+      account.accountNumber.toLowerCase().includes(searchText);
+  
+    return bankMatches && typeMatches && (nameMatches || numberMatches);
   });
 
   // 목록 수정은 이 배열에서만 합니다.
   // width: 열 너비 / label: 제목 / field: 표시할 계좌 데이터 / render: 버튼·배지 등 별도 표시
   // 항목을 이동하거나 삭제하면 제목과 내용이 함께 변경됩니다.
   const accountColumns = [
-    { key: 'id', width: '50px', label: 'ID', field: 'id' },
-    { key: 'bank', width: '130px', label: '은행명', render: acc => <strong>{acc.bankName}</strong> },
-    { key: 'number', width: '210px', label: '계좌번호', field: 'accountNumber' },
-    { key: 'manager', width: '110px', label: '관리자', field: 'managerName' },
-    { key: 'name', width: 'auto', label: '계좌명', render: acc => <span title={acc.accountName}>{acc.accountName}</span> },
+    { key: 'id', label: 'ID', field: 'id' },
+    { key: 'bank', label: '은행명', render: acc => <strong>{acc.bankName}</strong> },
+    { key: 'number', label: '계좌번호', field: 'accountNumber' },
+    { key: 'manager', label: '관리자', field: 'managerName' },
+    { key: 'name', label: '계좌명', render: acc => <span title={acc.accountName}>{acc.accountName}</span> },
     {
       key: 'status', width: '80px', label: '상태',
       render: acc => <FinanceStatusBadge tone={acc.status === "STOP" || acc.status.includes("동결") ? "status-danger" : "status-success"}>
@@ -538,25 +552,25 @@ function BankAccount({
       title={accountView === "detail" ? "회사계좌 상세정보" : "회사계좌 거래내역"}
       onClose={closeAccountHistory} busy={saving || accountStatusSaving}
       actions={<>
-          {accountView === "detail" && <button type="button" disabled={saving || accountStatusSaving} onClick={() => openAccountHistory(selectedAccount.id)}>거래내역</button>}
-          <button type="button" className="erp-primary-button" disabled={saving || accountStatusSaving} onClick={() => openEditAccountForm(selectedAccount)}>수정</button>
-          {accountView === "detail" && <button type="button" disabled={saving || accountStatusSaving || !["사용", "ACTIVE", "STOP"].includes(selectedAccount.status)} onClick={() => handleAccountStatusChange(selectedAccount)}>
-            {accountStatusSaving ? "변경 중..." : selectedAccount.status === "STOP" ? "사용 재개" : "사용 중지"}
-          </button>}
+        {accountView === "detail" && <button type="button" disabled={saving || accountStatusSaving} onClick={() => openAccountHistory(selectedAccount.id)}>거래내역</button>}
+        <button type="button" className="erp-primary-button" disabled={saving || accountStatusSaving} onClick={() => openEditAccountForm(selectedAccount)}>수정</button>
+        {accountView === "detail" && <button type="button" disabled={saving || accountStatusSaving || !["사용", "ACTIVE", "STOP"].includes(selectedAccount.status)} onClick={() => handleAccountStatusChange(selectedAccount)}>
+          {accountStatusSaving ? "변경 중..." : selectedAccount.status === "STOP" ? "사용 재개" : "사용 중지"}
+        </button>}
       </>}>
       {accountView === "detail" ? <FinanceResourceDetails rows={[
-                  ["계좌 ID", selectedAccount.id], ["은행명", selectedAccount.bankName],
-                  ["계좌번호", selectedAccount.accountNumber], ["계좌명", selectedAccount.accountName],
-                  ["용도 구분", selectedAccount.accountType],
-                  ["현재 잔액", `${selectedAccount.balance.toLocaleString()} ${selectedAccount.currency}`],
-                  ["통화", selectedAccount.currency], ["담당자", selectedAccount.managerName],
-                  ["최근 거래일시", selectedAccount.lastTransactionDate],
-                  ["상태", selectedAccount.status === "ACTIVE" ? "사용" : selectedAccount.status === "STOP" ? "사용 중지" : selectedAccount.status]
-                ]} /> : <>
-            <div style={{ marginBottom: 8, overflowWrap: 'anywhere' }}>
-              <p style={{ margin: 0 }}>계좌번호: {selectedAccount.accountNumber}</p>
-            </div>
-            {paymentsLoading ? <p>거래내역을 불러오는 중입니다.</p> : paymentsError ? <p role="alert">{paymentsError}</p> : <FinancePaymentHistory className="finance-account-history" payments={accountPayments} showPartner amountSuffix="" statusLabel="상태" enablePeriodFilter currency={selectedAccount.currency} currentBalance={selectedAccount.balance} />}
+        ["계좌 ID", selectedAccount.id], ["은행명", selectedAccount.bankName],
+        ["계좌번호", selectedAccount.accountNumber], ["계좌명", selectedAccount.accountName],
+        ["용도 구분", selectedAccount.accountType],
+        ["현재 잔액", `${selectedAccount.balance.toLocaleString()} ${selectedAccount.currency}`],
+        ["통화", selectedAccount.currency], ["담당자", selectedAccount.managerName],
+        ["최근 거래일시", selectedAccount.lastTransactionDate],
+        ["상태", selectedAccount.status === "ACTIVE" ? "사용" : selectedAccount.status === "STOP" ? "사용 중지" : selectedAccount.status]
+      ]} /> : <>
+        <div style={{ marginBottom: 8, overflowWrap: 'anywhere' }}>
+          <p style={{ margin: 0 }}>계좌번호: {selectedAccount.accountNumber}</p>
+        </div>
+        {paymentsLoading ? <p>거래내역을 불러오는 중입니다.</p> : paymentsError ? <p role="alert">{paymentsError}</p> : <FinancePaymentHistory className="finance-account-history" payments={accountPayments} showPartner amountSuffix="" statusLabel="상태" enablePeriodFilter currency={selectedAccount.currency} currentBalance={selectedAccount.balance} />}
       </>}
       {accountStatusError && <p role="alert">{accountStatusError}</p>}
     </FinanceResourceModal>}

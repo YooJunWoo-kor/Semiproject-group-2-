@@ -58,26 +58,25 @@ function refreshValidity(form) {
     if (input.disabled || input.readOnly || input.tagName === 'SELECT') continue;
     const label = input.dataset.label || '입력값';
     const textField = input.tagName === 'TEXTAREA' || ['text', 'email', 'tel'].includes(input.type);
-    let result = { valid: true, message: '' };
-    if (textField) {
-      result = validateLength(input.value, {
-        required: input.required,
-        max: input.maxLength >= 0 ? input.maxLength : Infinity,
-        label
-      });
+    if (textField && !validateLength(input.value, {
+      required: input.required,
+      max: input.maxLength >= 0 ? input.maxLength : Infinity
+    })) {
+      input.setCustomValidity(`${label}의 필수 입력 여부와 글자 수를 확인해주세요.`);
+      continue;
     }
     const validators = { email: validateEmail, phone: validatePhone, businessNumber: validateBusinessNumber };
     const validator = validators[input.dataset.validation];
-    if (result.valid && validator) result = validator(input.value, { required: input.required, label });
-    if (!result.valid) input.setCustomValidity(result.message);
+    if (validator && !validator(input.value, { required: input.required })) {
+      input.setCustomValidity(`${label} 형식을 확인해주세요.`);
+    }
   }
   const start = form.querySelector('[data-date-role="start"]');
   const end = form.querySelector('[data-date-role="end"]');
-  if (start && end) {
-    const result = validateDateRange(start.value, end.value, {
-      required: true, startLabel: start.dataset.label, endLabel: end.dataset.label
-    });
-    if (!result.valid) (start.value ? end : start).setCustomValidity(result.message);
+  if (start && end && !validateDateRange(start.value, end.value, { required: true })) {
+    let target = end;
+    if (!start.value) target = start;
+    target.setCustomValidity(`${start.dataset.label}과 ${end.dataset.label}의 입력값과 날짜 순서를 확인해주세요.`);
   }
 }
 
