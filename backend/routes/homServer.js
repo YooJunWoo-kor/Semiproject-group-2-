@@ -69,4 +69,38 @@ router.get('/attendance/summary', async(req, res) => {
     }
 })
 
+router.get('/attendance/leave', async (req, res) => {
+    try {
+        const employeeId = Number(req.query.employeeId);
+
+        if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: '올바른 직원 ID가 필요합니다.'
+            });
+        }
+
+        const [earnedLeaveDays, usedLeaveDays] = await Promise.all([
+            Draft.getEarnedLeaveDays(employeeId),
+            Draft.getUsedLeaveDays(employeeId)
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                earnedLeaveDays,
+                usedLeaveDays
+            }
+        });
+
+    } catch (err) {
+        console.error('연차 조회 실패:', err);
+
+        return res.status(500).json({
+            success: false,
+            message: '연차 조회 실패'
+        });
+    }
+});
+
 module.exports = router;
