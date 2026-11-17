@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../db');
+const { attendanceStatus } = require('../models/Attendance');
 
 const hrRouter = express.Router();
 const promiseDb = db.promise();
@@ -58,9 +59,9 @@ hrRouter.post('/attendance', async (req, res) => {
     const workDate = String(req.body.workDate || '').trim();
     const checkIn = String(req.body.checkIn || '').trim() || null;
     const checkOut = String(req.body.checkOut || '').trim() || null;
-    const status = String(req.body.status || '').trim();
+    let status = String(req.body.status || '').trim();
     const memo = String(req.body.memo || '').trim();
-    const allowedStatuses = ['정상', '지각', '결근', '휴가', '출장', '휴직', '미출근'];
+    const allowedStatuses = ['정상', '근무중', '지각', '조퇴', '야근', '지각·조퇴', '지각·야근', '결근', '휴가', '출장', '휴직', '미출근'];
 
     if (
         !Number.isInteger(employeeId) ||
@@ -68,6 +69,7 @@ hrRouter.post('/attendance', async (req, res) => {
         !isDateString(workDate) ||
         (checkIn !== null && !isTimeString(checkIn)) ||
         (checkOut !== null && !isTimeString(checkOut)) ||
+        (checkOut !== null && checkIn === null) ||
         (checkIn !== null && checkOut !== null && checkOut < checkIn) ||
         !allowedStatuses.includes(status) ||
         memo.length === 0 ||
@@ -78,6 +80,8 @@ hrRouter.post('/attendance', async (req, res) => {
             message: '직원, 근무일, 출퇴근 시간, 근태 상태와 수정 사유를 올바르게 입력해 주세요.'
         });
     }
+
+    status = attendanceStatus(checkIn, checkOut, status);
 
     try {
         const [employeeRows] = await promiseDb.query(
@@ -331,15 +335,16 @@ hrRouter.put('/attendance/:attendanceId', async (req, res) => {
     const attendanceId = Number(req.params.attendanceId);
     const checkIn = String(req.body.checkIn || '').trim() || null;
     const checkOut = String(req.body.checkOut || '').trim() || null;
-    const status = String(req.body.status || '').trim();
+    let status = String(req.body.status || '').trim();
     const memo = String(req.body.memo || '').trim();
-    const allowedStatuses = ['정상', '지각', '결근', '휴가', '출장', '휴직', '미출근'];
+    const allowedStatuses = ['정상', '근무중', '지각', '조퇴', '야근', '지각·조퇴', '지각·야근', '결근', '휴가', '출장', '휴직', '미출근'];
 
     if (
         !Number.isInteger(attendanceId) ||
         attendanceId < 1 ||
         (checkIn !== null && !isTimeString(checkIn)) ||
         (checkOut !== null && !isTimeString(checkOut)) ||
+        (checkOut !== null && checkIn === null) ||
         (checkIn !== null && checkOut !== null && checkOut < checkIn) ||
         !allowedStatuses.includes(status) ||
         memo.length === 0 ||
@@ -350,6 +355,8 @@ hrRouter.put('/attendance/:attendanceId', async (req, res) => {
             message: '출퇴근 시간, 근태 상태와 수정 사유를 올바르게 입력해 주세요.'
         });
     }
+
+    status = attendanceStatus(checkIn, checkOut, status);
 
     try {
         const [existingRows] = await promiseDb.query(
