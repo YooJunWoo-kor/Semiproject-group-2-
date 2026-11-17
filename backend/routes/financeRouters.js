@@ -2809,10 +2809,6 @@ router.get('/payrolls/summary', (req, res) => {
            )
         WHERE d.status = 'APPROVED'
           AND p.pay_month REGEXP '^[0-9]{4}-(0[1-9]|1[0-2])$'
-          AND NOT EXISTS (
-              SELECT 1 FROM trade_transactions linked_trade
-              WHERE linked_trade.source_type = 'draft' AND linked_trade.source_id = d.draft_id
-          )
         GROUP BY p.pay_month
         ORDER BY p.pay_month DESC
     `;
@@ -2864,10 +2860,6 @@ router.get('/payrolls/:month/details', (req, res) => {
                JSON_ARRAY(p.payroll_id)
            )
         WHERE p.pay_month = ? AND d.status = 'APPROVED'
-          AND NOT EXISTS (
-              SELECT 1 FROM trade_transactions t
-              WHERE t.source_type = 'draft' AND t.source_id = d.draft_id
-          )
         ORDER BY p.employee_id, p.payroll_id
     `, [month], (error, rows) => {
         if (error) {
@@ -2915,9 +2907,19 @@ router.post('/payrolls/:month/payments', async (req, res) => {
         if (Number(users[0].department_id) !== 1 && users[0].role !== 'MASTER') fail(403, '재무부 또는 MASTER만 급여를 지급 등록할 수 있습니다.');
         await connection.beginTransaction();
         transactionOpen = true;
-        const [rows] = await connection.execute(`SELECT p.*, d.status AS approval_status
-            FROM payrolls p INNER JOIN my_draft d ON d.draft_id = p.draft_id
-            WHERE p.pay_month = ? AND d.status = 'APPROVED'
+        const [rows] = await connection.execute(`SELECT p.*, d.status AS approval_status, d.draft_id
+            FROM payrolls p
+            INNER JOIN my_draft d
+                ON d.document_type = '급여'
+               AND d.status = 'APPROVED'
+               AND JSON_UNQUOTE(
+                   JSON_EXTRACT(d.detail_data, '$.source')
+               ) = 'HR_PAYROLL'
+               AND JSON_CONTAINS(
+                   JSON_EXTRACT(d.detail_data, '$.payrollIds'),
+                   JSON_ARRAY(p.payroll_id)
+               )
+            WHERE p.pay_month = ?
             ORDER BY p.payroll_id FOR UPDATE`, [month]);
         const unpaid = rows.filter(row => row.payment_status !== '지급완료');
         if (!unpaid.length) fail(409, '지급할 승인 급여가 없거나 이미 모두 지급 등록되었습니다. 새로고침해 주세요.');
@@ -2948,8 +2950,6 @@ router.post('/payrolls/:month/payments', async (req, res) => {
             if (!Number.isSafeInteger(netTotal) || !Number.isSafeInteger(deductionTotal)) fail(409, '급여 합계가 처리 범위를 초과했습니다.');
             const [links] = await connection.execute('SELECT payroll_id FROM payments WHERE payroll_id = ? FOR UPDATE', [row.payroll_id]);
             if (links.length) fail(409, '이미 지급 이력이 있는 급여입니다. 다시 지급할 수 없습니다.');
-            const [trades] = await connection.execute("SELECT transaction_id FROM trade_transactions WHERE source_type = 'draft' AND source_id = ? FOR UPDATE", [row.draft_id]);
-            if (trades.length) fail(409, '이미 일반 거래로 연결된 기안서입니다. 기존 거래의 지급 이력을 확인해 주세요.');
         }
         if (netTotal !== expected) fail(409, '조회 후 급여 금액이나 지급 상태가 변경되었습니다. 새로고침 후 다시 확인해 주세요.');
         const [accounts] = await connection.execute('SELECT balance, currency, account_status FROM bank_accounts WHERE account_id = ? FOR UPDATE', [accountId]);
@@ -3130,8 +3130,10 @@ router.post('/payroll-deductions/:month/payments', async (req, res) => {
         }
         await connection.commit();
         transactionOpen = false;
-        return res.status(201).json({ message: '공제액 납부 내역이 등록되었습니다.', payment_id: receipt.insertId,
-            amount: total, account_balance: balance - total, payment_date });
+        return res.status(201).json({
+            message: '공제액 납부 내역이 등록되었습니다.', payment_id: receipt.insertId,
+            amount: total, account_balance: balance - total, payment_date
+        });
     } catch (error) {
         if (transactionOpen) { try { await connection.rollback(); } catch { console.error('공제액 납부 롤백 실패'); } }
         if (!error.status) console.error('공제액 납부 실패:', error.code || error.message);
@@ -4276,6 +4278,21 @@ router.get('/payment-management', async (req, res) => {
         });
         await connection.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
         await connection.beginTransaction();
+        const [classificationTables] = await connection.query(
+            `SELECT 1
+             FROM information_schema.tables
+             WHERE table_schema = DATABASE()
+               AND table_name = 'finance_payment_classifications'
+             LIMIT 1`
+        );
+        const hasClassificationTable = classificationTables.length > 0;
+        const classificationJoin = hasClassificationTable
+            ? `LEFT JOIN finance_payment_classifications c ON c.source_type =
+                 CASE WHEN p.document_id IS NOT NULL THEN 'approval'
+                      WHEN p.transaction_id IS NOT NULL THEN 'transaction' ELSE 'payment' END
+                 AND c.source_id = COALESCE(p.document_id, p.transaction_id, p.payment_id)`
+            : '';
+        const classificationCategory = hasClassificationTable ? 'c.category_code' : 'NULL';
         // 품목과 직접 조인하지 않아, 품목 수에 따라 지급 금액이 중복 합산되지 않습니다.
         const [rows] = await connection.execute(`SELECT p.payment_id, p.document_id, p.transaction_id,
             DATE_FORMAT(p.payment_date, '%Y-%m-%d') AS payment_date,
@@ -4288,16 +4305,13 @@ router.get('/payment-management', async (req, res) => {
             CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'payroll_deduction' THEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.pay_month'))
                  WHEN payroll_link.payroll_id IS NOT NULL THEN payroll_link.pay_month
                  ELSE COALESCE(p.document_id, p.transaction_id, p.payment_id) END AS source_id,
-            CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'payroll_deduction' OR payroll_link.payroll_id IS NOT NULL THEN 'expense_administration_1'
-                 ELSE c.category_code END AS category_code
+             CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'payroll_deduction' OR payroll_link.payroll_id IS NOT NULL THEN 'expense_administration_1'
+                  ELSE ${classificationCategory} END AS category_code
             FROM payments p
             LEFT JOIN (${payrollPaymentRowsSql}) payroll_link ON payroll_link.payment_id = p.payment_id
             LEFT JOIN approval_documents a ON a.document_id = p.document_id
             LEFT JOIN trade_transactions t ON t.transaction_id = p.transaction_id
-            LEFT JOIN finance_payment_classifications c ON c.source_type =
-                CASE WHEN p.document_id IS NOT NULL THEN 'approval'
-                     WHEN p.transaction_id IS NOT NULL THEN 'transaction' ELSE 'payment' END
-                AND c.source_id = COALESCE(p.document_id, p.transaction_id, p.payment_id)
+             ${classificationJoin}
             WHERE p.payment_direction = ? AND p.payment_status = '완료'
               AND p.payment_date >= ? AND p.payment_date < ?
             ORDER BY p.payment_date DESC, p.payment_id DESC`,
@@ -4315,27 +4329,27 @@ router.get('/payment-management', async (req, res) => {
         if (direction === '출금') {
             const [documents] = await connection.execute(`SELECT a.document_id AS source_id, 'approval' AS source_type,
                 a.title, DATE_FORMAT(COALESCE(a.due_date, a.created_at), '%Y-%m-%d') AS payment_date,
-                GREATEST(a.amount - COALESCE(p.paid, 0), 0) AS amount, c.category_code
+                GREATEST(a.amount - COALESCE(p.paid, 0), 0) AS amount, ${hasClassificationTable ? 'c.category_code' : 'NULL'} AS category_code
                 FROM approval_documents a
                 LEFT JOIN (SELECT document_id, SUM(amount) AS paid FROM payments
                     WHERE payment_status = '완료' AND payment_direction = '출금' GROUP BY document_id) p
                     ON p.document_id = a.document_id
-                LEFT JOIN finance_payment_classifications c ON c.source_type = 'approval' AND c.source_id = a.document_id
-                WHERE a.approval_status = '승인' AND NOT EXISTS (SELECT 1 FROM trade_transactions link WHERE link.source_type = 'approval' AND link.source_id = a.document_id) AND COALESCE(a.due_date, a.created_at) >= ?
+                ${hasClassificationTable ? "LEFT JOIN finance_payment_classifications c ON c.source_type = 'approval' AND c.source_id = a.document_id" : ''}
+                WHERE a.approval_status = '승인' AND COALESCE(a.due_date, a.created_at) >= ?
                     AND COALESCE(a.due_date, a.created_at) < ?
                 HAVING amount > 0`, [range.start, range.monthEndExclusive]);
             scheduled.push(...documents);
         }
         const [trades] = await connection.execute(`SELECT t.transaction_id AS source_id, 'transaction' AS source_type,
             t.company_name AS title, DATE_FORMAT(COALESCE(t.due_date, t.trade_date), '%Y-%m-%d') AS payment_date,
-            GREATEST(i.total - COALESCE(p.paid, 0), 0) AS amount, c.category_code
+            GREATEST(i.total - COALESCE(p.paid, 0), 0) AS amount, ${hasClassificationTable ? 'c.category_code' : 'NULL'} AS category_code
             FROM trade_transactions t
             INNER JOIN (SELECT transaction_id, SUM(supply_price + vat) AS total FROM trade_items GROUP BY transaction_id) i
                 ON i.transaction_id = t.transaction_id
             LEFT JOIN (SELECT transaction_id, SUM(amount) AS paid FROM payments
                 WHERE payment_status = '완료' AND payment_direction = ? GROUP BY transaction_id) p
                 ON p.transaction_id = t.transaction_id
-            LEFT JOIN finance_payment_classifications c ON c.source_type = 'transaction' AND c.source_id = t.transaction_id
+            ${hasClassificationTable ? "LEFT JOIN finance_payment_classifications c ON c.source_type = 'transaction' AND c.source_id = t.transaction_id" : ''}
             WHERE t.trade_type = ? AND COALESCE(t.due_date, t.trade_date) >= ?
                 AND COALESCE(t.due_date, t.trade_date) < ? HAVING amount > 0`,
             [direction, direction === '출금' ? '매입' : '매출', range.start, range.monthEndExclusive]);
@@ -4349,14 +4363,19 @@ router.get('/payment-management', async (req, res) => {
                     SUM(p.gross_pay) AS amount,
                     'expense_administration_1' AS category_code
                 FROM payrolls p
-                INNER JOIN my_draft d ON d.draft_id = p.draft_id
+                INNER JOIN my_draft d
+                    ON d.document_type = '급여'
+                   AND d.status = 'APPROVED'
+                   AND JSON_UNQUOTE(
+                       JSON_EXTRACT(d.detail_data, '$.source')
+                   ) = 'HR_PAYROLL'
+                   AND JSON_CONTAINS(
+                       JSON_EXTRACT(d.detail_data, '$.payrollIds'),
+                       JSON_ARRAY(p.payroll_id)
+                   )
                 WHERE d.status = 'APPROVED'
                   AND p.pay_month = ?
                   AND COALESCE(p.payment_status, '') <> '지급완료'
-                  AND NOT EXISTS (
-                      SELECT 1 FROM trade_transactions t
-                      WHERE t.source_type = 'draft' AND t.source_id = d.draft_id
-                  )
                 GROUP BY p.pay_month
                 HAVING SUM(p.gross_pay) > 0
             `, [range.start.slice(0, 7)]);
