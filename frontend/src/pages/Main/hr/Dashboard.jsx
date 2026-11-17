@@ -218,7 +218,7 @@ export default function Dashboard() {
     }, [today, selectedDepartmentId]);
 
     return (
-        <div className="border-container hr-dashboard-page">
+        <div className="border-container">
             <header className="dashboard-header">
                 <span className="subtitle">인사관리 대시보드</span>
             </header>
