@@ -2,29 +2,31 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-router.get('/getproject', async (req, res) =>{
+// 프로젝트가 0건이어도 정상 조회로 처리한다.
+router.get('/getproject', (req, res) => {
     const query = `
-        select project_id, project_name as schedule_name, start_date as 'start', end_date as 'end', employee_id, description, visible, typeId
-        from project
-        where visible = 1
-        order by start_date
-    `
-    db.query(query, (err, data) => {
-        if(err){
-            console.log('스케줄 전체 공개 데이터 불러오기 DB오류');
-            return res.status(500).json({status:'false', massage: data})
+        SELECT project_id, project_name AS schedule_name,
+               start_date AS start, end_date AS end,
+               employee_id, description, visible, typeId
+        FROM project
+        WHERE visible = 1
+        ORDER BY start_date
+    `;
+    db.query(query, (err, rows) => {
+        if (err) {
+            console.error('프로젝트 목록 조회 DB 오류:', err);
+            return res.status(500).json({
+                status: false,
+                message: '프로젝트 목록을 불러오지 못했습니다.',
+                code: err.code
+            });
         }
-
-        if(data && data.length > 0){
-            console.log('전체 스케쥴 불러오기 성공', data);
-            return res.status(200).json({status:'succeced', data: data})
-        }
-        else{
-            console.log('전체공개 대이터 조회 실패', data);
-            return res.status(400).json({status:'false', massage: data})
-        }
-    })
-})
+        return res.status(200).json({
+            status: 'succeeded',
+            data: Array.isArray(rows) ? rows : []
+        });
+    });
+});
 
 router.post('/setProject', async (req, res) => {
     const requst = req.body;
@@ -72,6 +74,15 @@ router.post('/setProject', async (req, res) => {
                 VALUES ?
             `;
 
+            // 참석자와 리더가 모두 비어 있으면 빈 VALUES INSERT를 실행하지 않는다.
+            if (memberID.length === 0) {
+                return res.status(200).json({
+                    status: 'succesed',
+                    data,
+                    memberData: { affectedRows: 0 }
+                });
+            }
+
             db.query(setMemberProjectQR, [memberID], (memberErr, memberData) => {
                 if (memberErr) {
                     console.log('프로젝트 멤버 리스트 DB에러', memberErr);
@@ -113,7 +124,7 @@ router.post('/get_employee', async(req, res)=>{
             return res.status(500).json({status:false, massage: err});
         }
         
-        if(data, data.length > 0){
+        if (data && data.length > 0){
             console.log(data);
             return res.status(200).json({status:true, data: data});
         }
