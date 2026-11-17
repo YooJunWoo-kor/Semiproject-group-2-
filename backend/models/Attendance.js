@@ -55,7 +55,7 @@ class Attendance{
           where 
             employee_id = ?
             AND work_date = CURDATE()
-            AND check_in_at IS NOT NULL,
+            AND check_in_at IS NOT NULL
             AND check_out_at IS NULL
         `;
         db.query(query,[employee_id],(err, results)=>{
@@ -78,29 +78,25 @@ class Attendance{
     static getAttendanceSummary(employee_id){
       return new Promise((resolve, reject) => {
         const query = `
-          SELECT COUNT(CASE WHEN TIME(check_in_at) > '09:00:00')
-          THEN 1
-          END) AS lateCount,
-
-          COUNT(CASE WHEN TIME(check_out_at) >= '19:00:00'
-            WHEN TIME(check_out_at) >= '19:00:00'
-            THEN 1
-          END) AS overtimeCount ,
-
-          COALESCE(
-            SUM(
-              TIMESTAMPDIFF (
-                MINUTE,
-                check_in_at,
-                check_out_at
-              )
-            ), 0
-          ) AS workingMinutes
-          
+          SELECT
+            COUNT(CASE
+              WHEN TIME(check_in_at) > '09:00:00' THEN 1
+            END) AS lateCount,
+            COUNT(CASE
+              WHEN TIME(check_out_at) >= '19:00:00' THEN 1
+            END) AS overtimeCount,
+            COALESCE(
+              SUM(TIMESTAMPDIFF(MINUTE, check_in_at, check_out_at)),
+              0
+            ) AS workingMinutes
           FROM attendance
           WHERE employee_id = ?
-        `
-      })
+        `;
+        db.query(query, [employee_id], (err, results) => {
+          if (err) return reject(err);
+          resolve(results[0]);
+        });
+      });
     }
 }
 
