@@ -6,7 +6,6 @@ import axios from "axios";
 
 //출근데이터 생성
 async function setAttendens(){
-
     const userInfo = localStorage.getItem(LOGIN_USER_KEY);
     const userID = JSON.parse(userInfo).employeeKey;
     const response = await axios.post(API_BASE_URL + '/AD/setAttendenc', { userID });
@@ -38,6 +37,7 @@ function ADBord({dataSet, btnStl}){
         overtimeCount : 0,
         workingMinutes : 0,
     })
+    const [remainingLeave, setRemainingLeave] = useState(null);
 
     useEffect(() => {
         if (btnStl != null) {
@@ -47,6 +47,7 @@ function ADBord({dataSet, btnStl}){
 
     useEffect(() => {
         loadSummary();
+        loadLeave();
     }, [])
 
     const loadSummary = async () => {
@@ -64,6 +65,28 @@ function ADBord({dataSet, btnStl}){
         }
         catch (err){
             console.error('근태 통계 조회 실패:', err);
+        }
+    }
+
+    const loadLeave = async () => {
+        try{
+            const employeeId = Number(getLoginUser()?.employeeKey);
+
+            const response = await axios.get(`${API_BASE_URL}/AD/attendance/leave`,
+                {
+                    params: { employeeId }
+                }
+
+            );
+
+            const { earnedLeaveDays, usedLeaveDays } = response.data.data;
+
+            setRemainingLeave(
+                Number(earnedLeaveDays) - Number(usedLeaveDays)
+            );
+        }
+        catch(err){
+            console.error("연차 조회 실패", err);
         }
     }
 
@@ -120,7 +143,9 @@ function ADBord({dataSet, btnStl}){
                 {/* 1. 잔여 연차 태그 (소프트 에메랄드) */}
                 <div className="attendance-tag tag-emerald">
                     <span className="tag-label">잔여 연차</span>
-                    <span className="tag-value">12.5</span>
+                    <span className="tag-value">
+                        {remainingLeave === null ? "-" : remainingLeave}
+                    </span>
                 </div>
 
                 {/* 2. 전체 누적 야근 태그 (소프트 앰버) */}

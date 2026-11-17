@@ -1,6 +1,7 @@
 const express =  require('express');
 const router = express.Router();
 const Attendance = require('../models/Attendance')
+const Draft = require('../models/Draft_function');
 
 //출근버튼 클릭시
 router.post('/setAttendenc', async(req, res) =>{
