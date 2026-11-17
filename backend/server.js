@@ -18,6 +18,10 @@ const DraftServer = require('./routes/drafts');
 const communityRouter = require('./routes/community');
 const financeRouter = require('./routes/financeRouters'); // main 재무 라우터
 const hrRouter = require('./routes/hrRoutes'); // main 인사 라우터
+const hrLeaveRouter = require('./routes/hrLeaveRoutes');
+const hrPayrollRouter = require('./routes/hrPayrollRoutes');
+const hrDraftRouter = require('./routes/hrDraftRoutes');
+const hrFinanceRouter = require('./routes/hrFinanceRoutes');
 const Attendance = require('./models/Attendance');
 const project = require('./routes/project');
 const mrRoutes = require('./routes/mrRoutes');
@@ -35,6 +39,10 @@ app.use((req, res, next) => {
 
 // API 연결
 app.use('/api/hr', hrRouter);
+app.use('/api/hr', hrLeaveRouter);
+app.use('/api/hr', hrPayrollRouter);
+app.use('/api/hr', hrDraftRouter);
+app.use('/api/hr', hrFinanceRouter);
 app.use('/api/finance', financeRouter);
 app.use('/api/drafts', DraftServer);
 app.use('/api/AD', homSurver);

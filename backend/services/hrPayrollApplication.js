@@ -1,3 +1,6 @@
+// HR 급여 적용 서비스
+// 역할: 승인된 기안의 금액을 급여에 반영하고 급여 변경 이력을 기록합니다.
+
 const db = require('../db');
 
 const defaultConnection = db.promise();
