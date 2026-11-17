@@ -201,6 +201,7 @@ hrRouter.get('/attendance', async (req, res) => {
 });
 
 
+// 근태 시간·상태·수정 사유를 수정합니다.
 hrRouter.put('/attendance/:attendanceId', async (req, res) => {
     const attendanceId = Number(req.params.attendanceId);
     const checkIn = String(req.body.checkIn || '').trim() || null;

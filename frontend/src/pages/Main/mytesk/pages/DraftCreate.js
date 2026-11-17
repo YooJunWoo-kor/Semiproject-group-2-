@@ -13,8 +13,7 @@ const emptyForm = {
 
     paymentType: "수당",
     payMonth: "",
-    paymentDate: "",
-    paymentDetail : ""
+    paymentDetail: ""
 
 };
 
@@ -37,7 +36,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
         }
     ]);
 
-    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount, paymentType, payMonth, paymentDate, paymentDetail } = form;
+    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount, paymentType, payMonth, paymentDetail } = form;
 
     useEffect(() => {
         const loadDepartments = async () => {
@@ -113,7 +112,6 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             alert("상세 내용을 입력해주세요");
             return;
         }
-
         if (saveType === "submit") {
             if (!content.trim() || approvers.length === 0) {
                 alert("내용을 입력하고 결재자를 한 명 이상 선택해주세요.");
@@ -143,6 +141,10 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             }
 
             if (draftType === "추가급여") {
+                if (!paymentDetail.trim()) {
+                    alert("상세 분류를 입력해주세요.");
+                    return;
+                }
                 if (
                     !["수당", "상여"].includes(paymentType) ||
                     !/^\d{4}-(0[1-9]|1[0-2])$/.test(payMonth) ||
@@ -170,6 +172,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                         draftType === "추가급여" ? {
                             paymentType,
                             payMonth,
+                            paymentDetail: paymentDetail.trim(),
                             amount: amount === "" ? null : Number(amount)
                         } : {};
 
@@ -362,41 +365,67 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 )}
 
                 {draftType === "추가급여" && (
-                    <div className="draft-box">
-                        <div className="draft-row">
-                            <h4>추가급여 지급 정보</h4>
+                    <section className="draft-box additional-pay-form" aria-labelledby="additional-pay-title">
+                        <div className="additional-pay-heading">
+                            <div>
+                                <span className="additional-pay-eyebrow">PAYMENT REQUEST</span>
+                                <h4 id="additional-pay-title">추가급여 지급 정보</h4>
+                                <p>지급 구분과 대상 월, 신청 금액을 입력해 주세요.</p>
+                            </div>
                         </div>
 
-                        <div className="draft-row">
-                            <label>지급 구분
+                        <div className="additional-pay-grid">
+                            <label>
+                                <span>지급 구분</span>
                                 <select name="paymentType" value={paymentType} onChange={handleInputChange}>
                                     <option value="수당">수당</option>
                                     <option value="상여">상여금</option>
                                 </select>
                             </label>
-                        </div>
 
-                        <label>상세 분류
-                            <input
-                                type="text"
-                                name="paymentDetail"
-                                value={paymentDetail}
-                                onChange={handleInputChange}
-                                placeholder="예: 야근 수당, 근무 수당, 성과급"
-                                maxLength={50}
-                            />
-                        </label>
-
-                        <div className="draft-row">
-                            <label>지급 예정일
-                                <input type="date" name="paymentDate" value={paymentDate} onChange={handleInputChange} />
+                            <label>
+                                <span>지급 대상 월</span>
+                                <input
+                                    type="month"
+                                    name="payMonth"
+                                    value={payMonth}
+                                    onChange={handleInputChange}
+                                />
                             </label>
 
-                            <label>신청 금액 (원)
-                                <input type="number" min="1" step="1" name="amount" value={amount} onChange={handleInputChange} />
+                            <label>
+                                <span>상세 분류</span>
+                                <input
+                                    type="text"
+                                    name="paymentDetail"
+                                    value={paymentDetail}
+                                    onChange={handleInputChange}
+                                    placeholder="예: 야근 수당, 근무 수당, 성과급"
+                                    maxLength={50}
+                                />
+                            </label>
+
+                            <label>
+                                <span>신청 금액 (원)</span>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    name="amount"
+                                    value={amount}
+                                    onChange={handleInputChange}
+                                    placeholder="금액을 입력해 주세요"
+                                />
                             </label>
                         </div>
-                    </div>
+
+                        <div className="additional-pay-summary" aria-live="polite">
+                            <span>신청 금액</span>
+                            <strong>{amount !== "" && Number.isFinite(Number(amount))
+                                ? Number(amount).toLocaleString("ko-KR")
+                                : "0"}<small>원</small></strong>
+                        </div>
+                    </section>
                 )}
 
                 <label>내용
