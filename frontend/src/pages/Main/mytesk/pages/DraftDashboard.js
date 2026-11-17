@@ -45,7 +45,7 @@ function DraftDashboard({
     }));
 
     return (
-        <div className="draft-box">
+        <div className="draft-box draft-dashboard-page">
             <header className="dashboard-header">
                 <span className="subtitle">전자결재 대시보드</span>
                 <div className="dashboard-top">
