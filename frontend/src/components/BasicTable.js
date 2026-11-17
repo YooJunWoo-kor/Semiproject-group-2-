@@ -13,11 +13,13 @@ function BasicTable({ title, th, td = [] }) {
             <h4 style={{ marginBottom: "0px" }}>{title ?? "테이블제목"}</h4>
             <div className="table-shell">
                 <table>
-                    <tr>
-                        {th.map((item)=>(
-                            <th>{item}</th>
-                        ))}
-                    </tr>
+                    <thead>
+                        <tr>
+                            {th.map((item, index)=>(
+                                <th key={index}>{item}</th>
+                            ))}
+                        </tr>
+                    </thead>
 
                     {!td ?
                         <tr

@@ -18,6 +18,10 @@ const DraftServer = require('./routes/drafts');
 const communityRouter = require('./routes/community');
 const financeRouter = require('./routes/financeRouters'); // main 재무 라우터
 const hrRouter = require('./routes/hrRoutes'); // main 인사 라우터
+const hrLeaveRouter = require('./routes/hrLeaveRoutes');
+const hrPayrollRouter = require('./routes/hrPayrollRoutes');
+const hrDraftRouter = require('./routes/hrDraftRoutes');
+const hrFinanceRouter = require('./routes/hrFinanceRoutes');
 const Attendance = require('./models/Attendance');
 const project = require('./routes/project');
 const mrRoutes = require('./routes/mrRoutes');
@@ -26,14 +30,27 @@ const mrRoutes = require('./routes/mrRoutes');
 const qualityRoutes = require('./routes/quality');
 
 
+// 모든 HTTP 요청 확인
+app.use((req, res, next) => {
+    console.log("요청 도착:", req.method, req.url);
+    next();
+});
 
-// 실제 실행 중인 서버가 이 ERP 백엔드인지 확인하는 점검 API
+// 서버 점검 API
 app.get('/api/health', (req, res) => {
-    res.json({ success: true, service: 'semiproject-group-2-backend', message: 'ERP API 서버 정상 작동' });
+    res.json({
+        success: true,
+        service: 'semiproject-group-2-backend',
+        message: 'ERP API 서버 정상 작동'
+    });
 });
 
 // API 연결
 app.use('/api/hr', hrRouter);
+app.use('/api/hr', hrLeaveRouter);
+app.use('/api/hr', hrPayrollRouter);
+app.use('/api/hr', hrDraftRouter);
+app.use('/api/hr', hrFinanceRouter);
 app.use('/api/finance', financeRouter);
 app.use('/api/drafts', DraftServer);
 app.use('/api/AD', homSurver);

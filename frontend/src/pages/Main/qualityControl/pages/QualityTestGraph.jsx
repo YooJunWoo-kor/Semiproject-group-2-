@@ -188,8 +188,8 @@ function QualityTestGraph() {
                     animatedValues.pass,
                     animatedValues.fail
                 ],
-                backgroundColor: ["#8aa4b8", "#1685c5", "#c0394b"],
-                borderColor: ["#6f8798", "#0c4485", "#9f2f3f"],
+                backgroundColor: ["#94a3b8", "#10b981", "#ef4444"],
+                borderColor: ["#64748b", "#059669", "#dc2626"],
                 borderWidth: 1,
                 borderRadius: 8,
                 maxBarThickness: 72
@@ -203,7 +203,7 @@ function QualityTestGraph() {
             {
                 label: "검사 제품 수",
                 data: [passCount, failCount],
-                backgroundColor: ["#1685c5", "#c0394b"],
+                backgroundColor: ["#10b981", "#ef4444"],
                 borderColor: ["#ffffff", "#ffffff"],
                 borderWidth: 4,
                 hoverOffset: 10

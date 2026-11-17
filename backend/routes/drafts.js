@@ -227,7 +227,9 @@ router.post('/:draftId/decision', async (req, res) => {
         return res.json({ message: decision === 'approve' ? '승인 완료' : '반려 완료' });
     } catch (error) {
         console.error('결재 처리 오류:', error);
-        return res.status(500).json({ message: '결재 처리 실패' });
+        return res.status(error.status || 500).json({
+            message: error.status ? error.message : '결재 처리 실패'
+        });
     }
 });
 
@@ -252,6 +254,17 @@ router.get('/departments', (req, res) => {
         res.json(data);
     })
 })
+
+router.get('/leaves', async (req, res) => {
+    try {
+        const leaves = await Draft.getLeaveDrafts();
+        res.json(leaves);
+    }
+    catch (error) {
+        console.error("휴가 조회 오류 : ", error);
+        res.status(500).json({ message : '휴가 조회 실패' })
+    }
+});
 
 router.post("/:draftId/receipt", receiptUpload.single("receipt"), (req, res) => {
     const draftId = Number(req.params.draftId);
