@@ -29,7 +29,7 @@ class Attendance{
       return new Promise((resolve,reject)=>{
         const query=`
           insert into attendance (employee_id, work_date, check_in_at, check_out_at, attendance_status, memo)
-          VALUES (?, CURDATE(), NOW(),	CURDATE(), '근무중', null)
+          VALUES (?, CURDATE(), NOW(),	null, '근무중', null)
         `;
         db.query(query,[employee_id],(err, results)=>{
           if(err){
@@ -48,10 +48,15 @@ class Attendance{
           update attendance
           set
             check_out_at = now(),
-            attendance_status = '정상'
+            attendance_status = CASE
+            WHEN TIME(check_in_at) > '09:00:00' THEN '지각'
+            ELSE '정상'
+            END
           where 
             employee_id = ?
-            and work_date = CURDATE()
+            AND work_date = CURDATE()
+            AND check_in_at IS NOT NULL,
+            AND check_out_at IS NULL
         `;
         db.query(query,[employee_id],(err, results)=>{
           if(err){
@@ -59,12 +64,46 @@ class Attendance{
             return reject(err);
           }
           else{
+            if(results.affectedRows === 0){
+              return reject(new Error("퇴근 가능한 출근 기록이 없습니다"));
+            }
+
             console.log("퇴근처리 완료");
             return resolve(results);
           }
         })
       });
     }
+
+    static getAttendanceSummary(employee_id){
+      return new Promise((resolve, reject) => {
+        const query = `
+          SELECT COUNT(CASE WHEN TIME(check_in_at) > '09:00:00')
+          THEN 1
+          END) AS lateCount,
+
+          COUNT(CASE WHEN TIME(check_out_at) >= '19:00:00'
+            WHEN TIME(check_out_at) >= '19:00:00'
+            THEN 1
+          END) AS overtimeCount ,
+
+          COALESCE(
+            SUM(
+              TIMESTAMPDIFF (
+                MINUTE,
+                check_in_at,
+                check_out_at
+              )
+            ), 0
+          ) AS workingMinutes
+          
+          FROM attendance
+          WHERE employee_id = ?
+        `
+      })
+    }
 }
+
+
 
 module.exports = Attendance;

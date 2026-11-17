@@ -6,12 +6,12 @@ const Attendance = require('../models/Attendance')
 router.post('/setAttendenc', async(req, res) =>{
     try{
         const userid = req.body.userID;
-        Attendance.setNewDate(userid);
+        await Attendance.setNewDate(userid);
         return res.status(200).json({ success: true, message: '출근 완료' });
     }
     catch(err){
-        console.log('useriderr')
-        return res.status(500).json({ success: true, message: '출근처리 실패' });
+        console.err('출근 처리 실패', err);
+        return res.status(500).json({ success: false, message: '출근처리 실패' });
     }
 })
 
@@ -19,12 +19,12 @@ router.post('/setAttendenc', async(req, res) =>{
 router.post('/updateAttendens', async(req, res) =>{
     try{
         const userid = req.body.userID;
-        Attendance.updateDate(userid);
+        await Attendance.updateDate(userid);
         return res.status(200).json({ success: true, message: '퇴근 완료' });
     }
     catch(err){
-        console.log('useriderr')
-        return res.status(200).json({ success: true, message: '퇴근처리 실패' });
+        console.err('퇴근 처리 실패')
+        return res.status(200).json({ success: false, message: '퇴근처리 실패' });
     }
 })
 
@@ -43,5 +43,29 @@ router.post('/attendance', async (req, res) =>{
         }
     }
 )
+
+router.get('/attendance/summary', async(res, req) => {
+    try {
+        const employeeId = Number(req.query.employeeId) // url ?뒤 값 
+
+        if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: '올바른 직원 ID가 필요합니다.'
+            });
+        }
+
+        const summary = await Attendance.getAttendanceSummary(employeeId)
+
+        return res.status(200).json({
+            success:true,
+            data: summary
+        })
+
+    }
+    catch(err){
+        console.error('근태 통계 조회 실패 : ', err);
+    }
+})
 
 module.exports = router;

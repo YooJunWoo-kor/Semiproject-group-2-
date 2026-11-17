@@ -6,6 +6,7 @@ import axios from "axios";
 
 //출근데이터 생성
 async function setAttendens(){
+
     const userInfo = localStorage.getItem(LOGIN_USER_KEY);
     const userID = JSON.parse(userInfo).employeeKey;
     try {
@@ -33,11 +34,39 @@ function ADBord({dataSet, btnStl}){
     const userName = user?.name;
     const [isAttend, setAttend] = useState(setStyle);
 
+    const [summary, setSummary] = useState({
+        lateCount : 0,
+        overtimeCount : 0,
+        workingMinutes : 0,
+    })
+
     useEffect(() => {
         if (btnStl != null) {
             setAttend(Number(btnStl));
         }
     }, [btnStl]);
+
+    useEffect(() => {
+        loadSummary();
+    }, [])
+
+    const loadSummary = async () => {
+        try{
+            const employeeId = Number(getLoginUser()?.employeeKey)
+
+            const response = await axios.get(
+                `${API_BASE_URL}/AD/attendance/summary`,
+                {
+                    params : {employeeId}
+                }
+            );
+
+            setSummary(response.data.data);
+        }
+        catch (err){
+
+        }
+    }
 
     return (
         <div className="attendance-card" style={{maxWidth: '250px'}}>
@@ -63,6 +92,7 @@ function ADBord({dataSet, btnStl}){
                         onClick = {async()=>{
                             await setAttendens();
                             await dataSet();
+                            await loadSummary();
                             setAttend(1);
                         }}
                     >출근하기</button>:
@@ -72,6 +102,7 @@ function ADBord({dataSet, btnStl}){
                         onClick = {async()=>{
                             await updateAttendens();
                             await dataSet();
+                            await loadSummary();
                             setAttend(2);
                         }}
                     >퇴근하기</button>:
@@ -88,19 +119,19 @@ function ADBord({dataSet, btnStl}){
                 {/* 2. 이번 달 야근 태그 (소프트 앰버) */}
                 <div className="attendance-tag tag-amber">
                     <span className="tag-label">야근 횟수</span>
-                    <span className="tag-value">3</span>
+                    <span className="tag-value">{summary.overtimeCount}</span>
                 </div>
 
                 {/* 3. 누적 근무 시간 태그 (소프트 블루) */}
                 <div className="attendance-tag tag-blue">
                     <span className="tag-label">근무 시간</span>
-                    <span className="tag-value">168</span>
+                    <span className="tag-value">{Math.floor(summary.workingMinutes / 60)}</span>
                 </div>
 
                 {/* 4. 지각/이상 태그 (뮤트 레드) */}
                 <div className="attendance-tag tag-red">
                     <span className="tag-label">지각 횟수</span>
-                    <span className="tag-value">0</span>
+                    <span className="tag-value">{summary.lateCount}</span>
                 </div>
             </div>
             {
