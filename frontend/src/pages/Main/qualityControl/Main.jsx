@@ -108,7 +108,7 @@ function Main() {
             </header>
             
             <div className="horizontal-box">
-                <section className="boder size-fill" style={{padding:'30px'}}>
+                <section className="boder size-fill" style={{padding:'30px', alignSelf:"stretch"}}>
                     <div className="horizontal-box" style={{fontSize:"13px"}}>
                         <h2>품질검사 날짜</h2>
                         <select
@@ -133,9 +133,10 @@ function Main() {
                             />
                         </div>
                     </div>
-                    <BasicCalendar schedule={calendarSchedules} readOnly />
+                    <BasicCalendar schedule={calendarSchedules} />
                 </section>
 
+                {/* 우측카드 */}
                 <div className="vertical-box size-fill" style={{alignSelf:"stretch"}}>
                     <div className="horizontal-box">
                         <StatisticsCard title={"전체제품"} count ={products.length} stiyle={0}/>
@@ -145,7 +146,7 @@ function Main() {
                     </div>
                     <section className="quality-panel">
                         <h2>최근 품질검사</h2>
-                        <div className="table-shell">
+                        <div className="table-shell" style={{overflow:"hidden", maxHeight:"200px", overflowY:"auto"}}>
                             <table>
                                 <thead>
                                     <tr>
@@ -190,7 +191,7 @@ function Main() {
                         {failedProducts.length === 0 ? (
                             <p className="no-data">현재 불합격 제품이 없습니다.</p>
                         ) : (
-                            <div className="quality-issue-list">
+                            <div className="quality-issue-list" style={{overflow:"hidden", maxHeight:"200px", overflowY:"auto"}}>
                                 {failedProducts.map(product => (
                                     <article className="quality-issue-item" key={product.id}>
                                         <div className="quality-issue-top">

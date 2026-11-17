@@ -49,8 +49,8 @@ function ProjectProgress({ start, end }) {
         </div>
   
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "var(--color-muted)" }}>
-          <span>시작일: {start}</span>
-          <span>마감일: {end}</span>
+          <span>{start}</span>
+          <span>{end}</span>
         </div>
       </div>
     );
