@@ -5,8 +5,10 @@ export function toPayrollPurchaseRows(summaries) {
     if (payroll.approval_status !== 'APPROVED') return [];
     const month = String(payroll.pay_month || '');
     const gross = Number(payroll.gross_pay);
+    const net = Number(payroll.net_pay);
+    const deduction = Number(payroll.deduction);
     const count = Number(payroll.employee_count);
-    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month) || seen.has(month) || !Number.isSafeInteger(gross) || gross < 0 || !Number.isSafeInteger(count) || count <= 0) return [];
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month) || seen.has(month) || !Number.isSafeInteger(gross) || gross < 0 || !Number.isSafeInteger(net) || net < 0 || !Number.isSafeInteger(deduction) || deduction < 0 || !Number.isSafeInteger(count) || count <= 0) return [];
     seen.add(month);
     const duplicateNote = Number(payroll.payroll_count) > count ? ' · 중복 급여 확인 필요' : '';
     return [{
@@ -18,7 +20,7 @@ export function toPayrollPurchaseRows(summaries) {
       dueDate: '',
       itemName: `${month.slice(0, 4)}년 ${Number(month.slice(5))}월 월급 (인건비)`,
       customer: '임직원',
-      spec: `${count}명 · 급여 승인 완료${duplicateNote}`,
+      spec: `${count}명 · 총 ${gross.toLocaleString()}원 · 실지급 ${net.toLocaleString()}원 · 공제 ${deduction.toLocaleString()}원${duplicateNote}`,
       quantity: null,
       unitPrice: null,
       supplyAmount: gross,

@@ -735,7 +735,7 @@ function Items({
     loadPayrollDetail();
     return () => controller.abort();
   }, [payrollMonth, payrollRefresh]);
-  const payrollMoneyKeys = ['base_salary', 'allowance', 'bonus', 'deduction', 'gross_pay', 'net_pay'];
+  const payrollMoneyKeys = ['base_salary', 'allowance', 'bonus', 'other_payment', 'deduction', 'gross_pay', 'net_pay'];
   const payrollWon = value => `${Number(value || 0).toLocaleString('ko-KR')}원`;
   const payrollUnpaidRows = payrollRows.filter(row => row.payment_status !== '지급완료');
   const payrollNetPending = payrollUnpaidRows.reduce((sum, row) => sum + Number(row.net_pay || 0), 0);
@@ -1498,14 +1498,14 @@ function Items({
                 }}>
                               <strong style={{
                     fontSize: 14
-                  }}>{row.name}</strong>
+                  }}>{row.name} <span className="subtext">({row.employee_number || '사번 미등록'})</span></strong>
                               <span className="subtext" style={{
                     fontSize: 12
-                  }} title={row.draft_title}>기안서 #{row.draft_id} · {row.payment_status || '미등록'}</span>
+                  }} title={row.draft_title}>{row.department_name || '부서 미등록'} · 기안서 #{row.draft_id} · {row.payment_status || '미등록'}</span>
                             </div>
                             <dl className="payroll-employee-values">
                               {payrollMoneyKeys.map((key, index) => <div key={key}>
-                                  <dt>{['기본급', '수당', '상여금', '공제액', '세전 급여', '실지급액'][index]}</dt>
+                                  <dt>{['기본급', '수당', '상여금', '기타 지급액', '공제액', '세전 급여', '실지급액'][index]}</dt>
                                   <dd>{payrollWon(row[key])}</dd>
                                 </div>)}
                             </dl>

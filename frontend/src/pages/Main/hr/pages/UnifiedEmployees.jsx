@@ -99,7 +99,14 @@ function money(value) {
     : `${Number(value).toLocaleString("ko-KR")}원`;
 }
 
-function payrollStatusLabel(status) {
+function payrollStatusLabel(status, financeDraftId = true) {
+  if (
+    status === "지급대기" &&
+    (financeDraftId === null || financeDraftId === undefined)
+  ) {
+    return "재무 전달 필요";
+  }
+
   return {
     확정: "급여 확정",
     지급대기: "재무 전달 완료",
@@ -1002,7 +1009,10 @@ export default function UnifiedEmployees() {
       payrolls.filter(
         (row) =>
           payrollIdValue(row) !== null &&
-          payrollSelectionStatuses.includes(row.paymentStatus)
+          (payrollSelectionStatuses.includes(row.paymentStatus) ||
+            (row.paymentStatus === "지급대기" &&
+              (row.financeDraftId === null ||
+                row.financeDraftId === undefined)))
       ),
     [payrolls]
   );
@@ -1033,7 +1043,10 @@ export default function UnifiedEmployees() {
       selectedActionPayrolls.filter(
         (row) =>
           payrollIdValue(row) !== null &&
-          row.paymentStatus === "\uD655\uC815"
+          (row.paymentStatus === "\uD655\uC815" ||
+            (row.paymentStatus === "지급대기" &&
+              (row.financeDraftId === null ||
+                row.financeDraftId === undefined)))
       ),
     [selectedActionPayrolls]
   );
@@ -2242,7 +2255,12 @@ export default function UnifiedEmployees() {
                                           ? "-"
                                           : money(row.netPay)}
                                       </td>
-                                      <td>{payrollStatusLabel(row.paymentStatus)}</td>
+                                      <td>
+                                        {payrollStatusLabel(
+                                          row.paymentStatus,
+                                          row.financeDraftId
+                                        )}
+                                      </td>
                                     </tr>
                                   );
                                 })}
@@ -2296,7 +2314,10 @@ export default function UnifiedEmployees() {
                         <div className="hr-employee-detail-fields">
                           <DetailRow
                             title="급여 상태"
-                            value={payrollStatusLabel(payroll.paymentStatus)}
+                            value={payrollStatusLabel(
+                              payroll.paymentStatus,
+                              payroll.financeDraftId
+                            )}
                           />
                           <DetailRow
                             title="기본급"

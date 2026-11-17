@@ -586,7 +586,32 @@ router.get("/item-categories", (req, res) => {
 
 // [재무관리] 매입·매출 거래 품목 목록 조회
 router.get("/items", (req, res) => {
-    const query = `
+    const schemaQuery = `
+SELECT
+    MAX(CASE WHEN table_name = 'finance_payment_classifications' THEN 1 ELSE 0 END) AS has_classification_table,
+    SUM(CASE WHEN table_name = 'trade_transactions' AND column_name IN ('source_type', 'source_id') THEN 1 ELSE 0 END) AS trade_source_column_count
+FROM information_schema.columns
+WHERE table_schema = DATABASE()
+  AND table_name IN ('finance_payment_classifications', 'trade_transactions')
+`;
+    db.query(schemaQuery, (schemaError, schemaRows) => {
+        if (schemaError) {
+            console.error("재무 품목 조회용 스키마 확인 오류:", schemaError);
+            return res.status(500).json({ message: "거래 품목 목록을 불러오지 못했습니다." });
+        }
+        const hasClassificationTable = Number(schemaRows[0]?.has_classification_table) === 1;
+        const hasTradeSourceColumns = Number(schemaRows[0]?.trade_source_column_count) === 2;
+        const linkedSourceSelect = hasTradeSourceColumns
+            ? "t.source_type AS linked_source_type, t.source_id AS linked_source_id"
+            : "NULL AS linked_source_type, NULL AS linked_source_id";
+        const categorySelect = hasClassificationTable
+            ? "CASE WHEN c.category_code = 'expense_other_1' THEN 'unclassified' ELSE COALESCE(c.category_code, 'unclassified') END"
+            : "'unclassified'";
+        const categoryJoin = hasClassificationTable
+            ? `LEFT JOIN finance_payment_classifications c
+ON c.source_type = 'transaction' AND c.source_id = t.transaction_id`
+            : '';
+        const query = `
 SELECT
 i.item_id,
 i.transaction_id,
@@ -604,29 +629,27 @@ i.supply_price,
 i.vat,
 (i.supply_price + i.vat) AS total_amount,
 p.closing_day,
-t.source_type AS linked_source_type,
-t.source_id AS linked_source_id,
-CASE WHEN c.category_code = 'expense_other_1' THEN 'unclassified'
-     ELSE COALESCE(c.category_code, 'unclassified') END AS category_code
+${linkedSourceSelect},
+${categorySelect} AS category_code
 FROM trade_items i
 INNER JOIN trade_transactions t
 ON i.transaction_id=t.transaction_id
 INNER JOIN partners p
 ON t.partner_id=p.partner_id
-LEFT JOIN finance_payment_classifications c
-ON c.source_type = 'transaction' AND c.source_id = t.transaction_id
+${categoryJoin}
 ORDER BY t.trade_date DESC, t.transaction_id DESC, i.item_id DESC
 `;
-    db.query(query, (err, rows) => {
-        if (err) {
-            console.error("거래 품목 조회 오류:", err);
+        db.query(query, (err, rows) => {
+            if (err) {
+                console.error("거래 품목 조회 오류:", err);
 
-            return res.status(500).json({
-                message: "거래 품목 목록을 불러오지 못했습니다."
-            });
-        }
+                return res.status(500).json({
+                    message: "거래 품목 목록을 불러오지 못했습니다."
+                });
+            }
 
-        res.json(rows);
+            res.json(rows);
+        });
     });
 });
 
@@ -2800,14 +2823,17 @@ router.get('/payrolls/summary', (req, res) => {
                SUM(p.net_pay) AS net_pay,
                SUM(CASE WHEN p.payment_status = '지급완료' THEN 1 ELSE 0 END) AS paid_count
         FROM payrolls p
-        INNER JOIN my_draft d
-            ON d.document_type = '급여'
-           AND JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.source')) = 'HR_PAYROLL'
-           AND JSON_CONTAINS(
-               JSON_EXTRACT(d.detail_data, '$.payrollIds'),
-               JSON_ARRAY(p.payroll_id)
-           )
-        WHERE d.status = 'APPROVED'
+        WHERE EXISTS (
+            SELECT 1
+            FROM my_draft d
+            WHERE d.document_type = '급여'
+              AND d.status = 'APPROVED'
+              AND JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.source')) = 'HR_PAYROLL'
+              AND JSON_CONTAINS(
+                  JSON_EXTRACT(d.detail_data, '$.payrollIds'),
+                  JSON_ARRAY(p.payroll_id)
+              )
+        )
           AND p.pay_month REGEXP '^[0-9]{4}-(0[1-9]|1[0-2])$'
         GROUP BY p.pay_month
         ORDER BY p.pay_month DESC
@@ -2833,7 +2859,8 @@ router.get('/payrolls/:month/details', (req, res) => {
         return res.status(400).json({ message: '급여월을 확인해 주세요.' });
     }
     db.query(`
-        SELECT p.payroll_id, p.employee_id, e.name,
+        SELECT p.payroll_id, p.employee_id, e.employee_number, e.name,
+               dep.department_name,
                p.base_salary AS base_salary,
                p.allowance AS allowance,
                p.bonus AS bonus,
@@ -2845,13 +2872,15 @@ router.get('/payrolls/:month/details', (req, res) => {
                p.net_pay AS net_pay,
                p.payment_status, d.draft_id,
                d.title AS draft_title,
-               NULL AS payment_id, NULL AS deduction_status,
-               NULL AS registered_payment_date,
-               NULL AS registered_payment_amount,
-               NULL AS payment_bank_name,
-               NULL AS payment_account_name
+               pay.payment_id,
+               JSON_UNQUOTE(JSON_EXTRACT(pay.payroll_snapshot, '$.deduction_status')) AS deduction_status,
+               DATE_FORMAT(pay.payment_date, '%Y-%m-%d') AS registered_payment_date,
+               pay.amount AS registered_payment_amount,
+               ba.bank_name AS payment_bank_name,
+               ba.account_name AS payment_account_name
         FROM payrolls p
         INNER JOIN employees e ON e.employee_id = p.employee_id
+        LEFT JOIN departments dep ON dep.department_id = e.department_id
         INNER JOIN my_draft d
             ON d.document_type = '급여'
            AND JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.source')) = 'HR_PAYROLL'
@@ -2859,6 +2888,22 @@ router.get('/payrolls/:month/details', (req, res) => {
                JSON_EXTRACT(d.detail_data, '$.payrollIds'),
                JSON_ARRAY(p.payroll_id)
            )
+           AND d.draft_id = (
+               SELECT MIN(d2.draft_id)
+               FROM my_draft d2
+               WHERE d2.document_type = '급여'
+                 AND d2.status = 'APPROVED'
+                 AND JSON_UNQUOTE(JSON_EXTRACT(d2.detail_data, '$.source')) = 'HR_PAYROLL'
+                 AND JSON_CONTAINS(
+                     JSON_EXTRACT(d2.detail_data, '$.payrollIds'),
+                     JSON_ARRAY(p.payroll_id)
+                 )
+           )
+        LEFT JOIN payments pay
+            ON pay.payroll_id = p.payroll_id
+           AND pay.payment_status = '완료'
+           AND pay.payment_direction = '출금'
+        LEFT JOIN bank_accounts ba ON ba.account_id = pay.account_id
         WHERE p.pay_month = ? AND d.status = 'APPROVED'
         ORDER BY p.employee_id, p.payroll_id
     `, [month], (error, rows) => {
@@ -2918,6 +2963,17 @@ router.post('/payrolls/:month/payments', async (req, res) => {
                AND JSON_CONTAINS(
                    JSON_EXTRACT(d.detail_data, '$.payrollIds'),
                    JSON_ARRAY(p.payroll_id)
+               )
+               AND d.draft_id = (
+                   SELECT MIN(d2.draft_id)
+                   FROM my_draft d2
+                   WHERE d2.document_type = '급여'
+                     AND d2.status = 'APPROVED'
+                     AND JSON_UNQUOTE(JSON_EXTRACT(d2.detail_data, '$.source')) = 'HR_PAYROLL'
+                     AND JSON_CONTAINS(
+                         JSON_EXTRACT(d2.detail_data, '$.payrollIds'),
+                         JSON_ARRAY(p.payroll_id)
+                     )
                )
             WHERE p.pay_month = ?
             ORDER BY p.payroll_id FOR UPDATE`, [month]);
@@ -4363,17 +4419,17 @@ router.get('/payment-management', async (req, res) => {
                     SUM(p.gross_pay) AS amount,
                     'expense_administration_1' AS category_code
                 FROM payrolls p
-                INNER JOIN my_draft d
-                    ON d.document_type = '급여'
-                   AND d.status = 'APPROVED'
-                   AND JSON_UNQUOTE(
-                       JSON_EXTRACT(d.detail_data, '$.source')
-                   ) = 'HR_PAYROLL'
-                   AND JSON_CONTAINS(
-                       JSON_EXTRACT(d.detail_data, '$.payrollIds'),
-                       JSON_ARRAY(p.payroll_id)
-                   )
-                WHERE d.status = 'APPROVED'
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM my_draft d2
+                    WHERE d2.document_type = '급여'
+                      AND d2.status = 'APPROVED'
+                      AND JSON_UNQUOTE(JSON_EXTRACT(d2.detail_data, '$.source')) = 'HR_PAYROLL'
+                      AND JSON_CONTAINS(
+                          JSON_EXTRACT(d2.detail_data, '$.payrollIds'),
+                          JSON_ARRAY(p.payroll_id)
+                      )
+                )
                   AND p.pay_month = ?
                   AND COALESCE(p.payment_status, '') <> '지급완료'
                 GROUP BY p.pay_month
