@@ -31,7 +31,7 @@ function GetPopover({value, layout}){
           {isClick ?
             <div className='boder' style={{
               left: 'calc(100% + 5px)',
-              top: '0',
+              bottom: '-150px',
               minWidth: '300px',
               position: 'absolute',
             }} >

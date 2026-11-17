@@ -263,11 +263,10 @@ export async function decideApproval(documentId, decisionData) {
 }
 
 // 결재 문서에 증빙파일 첨부
-export async function uploadApprovalAttachment(documentId, file, employeeId, password) {
+export async function uploadApprovalAttachment(documentId, file, employeeId) {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("employee_id", employeeId);
-    formData.append("password", password);
     const response = await axios.post(
         `${FINANCE_API_URL}/approvals/${documentId}/attachments`, formData
     );
@@ -313,5 +312,30 @@ export async function getApprovalPayments(documentId) {
 // 승인된 결재 문서의 지급 등록
 export async function createApprovalPayment(documentId, paymentData) {
     const response = await axios.post(`${FINANCE_API_URL}/approvals/${documentId}/payments`, paymentData);
+    return response.data;
+}
+
+// 결제 관리의 기간별 입출금, 미정산 잔액, 분류 목록
+export async function getPaymentManagement(params) {
+    const response = await axios.get(`${FINANCE_API_URL}/payment-management`, { params });
+    return response.data;
+}
+
+export async function savePaymentClassification(data) {
+    const response = await axios.put(`${FINANCE_API_URL}/payment-management/classification`, data);
+    return response.data;
+}
+
+// 거래처 금액을 구성하는 거래별 총액·정산액·잔액
+export async function getPartnerBalanceDetails(partnerId, tradeType) {
+    const response = await axios.get(`${FINANCE_API_URL}/partners/${partnerId}/balance-details`, {
+        params: { trade_type: tradeType }
+    });
+    return response.data;
+}
+
+// 거래 등록·수정에서 사용하는 공통 분류 목록
+export async function getItemCategories() {
+    const response = await axios.get(`${FINANCE_API_URL}/item-categories`);
     return response.data;
 }

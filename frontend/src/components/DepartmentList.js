@@ -31,8 +31,8 @@ function DepartmentList({listset, onClose}){
         <div style={{display:"flex", fontSize: "13px", gap: "5px"}}>
           <div style={{display: 'flex', flexFlow: 'column', gap: '5px', minWidth: '110px'}}>
             <p>부서</p>
-            {departList.map((item)=>(
-              <button type='button' onClick={()=>{
+            {departList.map((item, index)=>(
+              <button type='button' key={index} onClick={()=>{
                 setCurrntDf(item.department_name);
                 console.log(currntDf);
                 }}>
@@ -56,6 +56,7 @@ function DepartmentList({listset, onClose}){
           {/* 상단 엑스버튼이랑 동기화 시키려면 조금 복잡해질 수 있어서 일단 보류 */}
           {/* <button onClick={()=>{close()}}>완료</button>  */}
         </div>
+        
       </div>
     )
   }

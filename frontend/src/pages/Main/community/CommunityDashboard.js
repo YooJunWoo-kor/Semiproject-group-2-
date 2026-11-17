@@ -1,15 +1,15 @@
-// [수정] 샘플 데이터 대신 통합 DB 게시글을 조회합니다.
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import StatisticsCard from "../../../components/StatisticsCard.js";
 import BasicTable from "../../../components/BasicTable.js";
+import ModalBase from "../../../components/ModalBase";
+import SetNewBoardLayout from "./pages/SetNewBoardLayout";
 
-// [추가] 통합게시판 조회 API
-import { getCommunityPosts } from "../../../utils/communityApi";
+import { getCommunityBoards, getCommunityPosts } from "../../../utils/communityApi";
 
-export function CommunityDashboard() {
-    // ===== [추가] DB 목록과 조회 상태 =====
+export function CommunityDashboard({ onRefreshBoards }) {
+    const [boards, setBoards] = useState([]);
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -17,20 +17,24 @@ export function CommunityDashboard() {
     useEffect(() => {
         let active = true;
 
-        const fetchPosts = async () => {
+        const fetchDashboardData = async () => {
             try {
-                const rows = await getCommunityPosts();
+                // 게시판 목록과 전체 게시글을 병렬로 동시 조회
+                const [boardRows, postRows] = await Promise.all([
+                    getCommunityBoards(),
+                    getCommunityPosts()
+                ]);
 
-                if (!Array.isArray(rows)) {
-                    throw new Error("게시글 목록 형식이 올바르지 않습니다.");
+                if (!Array.isArray(boardRows) || !Array.isArray(postRows)) {
+                    throw new Error("데이터 형식이 올바르지 않습니다.");
                 }
 
                 if (active) {
-                    setItems(rows);
+                    setBoards(boardRows);
+                    setItems(postRows);
                 }
-            } catch (error) {
-                console.error("통합게시판 조회 실패:", error);
-
+            } catch (err) {
+                console.error("통합게시판 조회 실패:", err);
                 if (active) {
                     setError("통합게시판 목록을 불러오지 못했습니다.");
                 }
@@ -41,83 +45,27 @@ export function CommunityDashboard() {
             }
         };
 
-        fetchPosts();
+        fetchDashboardData();
 
         return () => {
             active = false;
         };
     }, []);
 
-    // ===== [수정] 게시판 번호로 목록 구분 =====
-    // 1: 자유게시판 / 2: 공지사항 / 3: 업무자료실
-    // 4: Q&A / 5: 개선 건의
-    const freePosts = items.filter(
-        item => String(item.board_type) === "1"
-    );
-
-    const notices = items.filter(
-        item => String(item.board_type) === "2"
-    );
-
-    const resources = items.filter(
-        item => String(item.board_type) === "3"
-    );
-
-    const questions = items.filter(
-        item => String(item.board_type) === "4"
-    );
-
-    const suggestions = items.filter(
-        item => String(item.board_type) === "5"
-    );
-
-    // [추가] 날짜 표시
-    const formatDate = value => {
+    const formatDate = (value) => {
         if (!value) return "-";
-
         return new Date(value).toLocaleDateString("sv-SE", {
             timeZone: "Asia/Seoul"
         });
     };
 
-    // ===== [수정] 실제 DB 게시글 수 표시 =====
-    // 답변·검토 상태는 현재 DB에서 관리하지 않으므로 전체 글 수입니다.
-    const boardStatus = [
-        {
-            title: "공지사항",
-            count: notices.length,
-            url: "/main/community/notice"
-        },
-        {
-            title: "자유게시판",
-            count: freePosts.length,
-            url: "/main/community/free"
-        },
-        {
-            title: "업무자료실",
-            count: resources.length,
-            url: "/main/community/tech"
-        },
-        {
-            title: "Q&A",
-            count: questions.length,
-            url: "/main/community/qa"
-        },
-        {
-            title: "개선 건의",
-            count: suggestions.length,
-            url: "/main/community/suggestion"
-        }
-    ];
+    // api_path('/free-posts' 등)를 프론트 라우트 경로('/main/community/free-posts' 등)로 변환
+    // 만약 기존 URL(/free, /notice 등)을 유지하려면 DB에 front_path 컬럼을 두거나 그대로 api_path를 통일해 쓰면 깔끔합니다.
+    const getBoardUrl = (board) => `/main/community${board.api_path}`;
 
-    // ===== [추가] 최신 글 목록을 표 형식으로 변환 =====
-    // API가 최신순으로 반환한 목록 중 5개만 표시합니다.
-    // 표시 번호와 실제 DB의 post_id는 별도로 사용합니다.
     const makeTableData = (posts, boardPath, showCategory = false) => {
         return posts.slice(0, 5).map((item, index) => {
-            const cells = [
-                posts.length - index
-            ];
+            const cells = [posts.length - index];
 
             if (showCategory) {
                 cells.push(item.category || "-");
@@ -131,152 +79,118 @@ export function CommunityDashboard() {
                 >
                     {item.title}
                 </Link>,
-
                 item.employee_name || "작성자 미확인",
-
                 formatDate(item.created_at),
-
                 Number(item.comment_count ?? 0)
             );
 
-            return {
-                content: cells
-            };
+            return { content: cells };
         });
     };
 
-    // ===== [수정] DB 컬럼을 사용하는 최신 글 표 =====
-    const freeHeaders = [
-        "번호",
-        "제목",
-        "작성자",
-        "작성일",
-        "댓글수"
-    ];
+    const basicHeaders = ["번호", "제목", "작성자", "작성일", "댓글수"];
+    const categoryHeaders = ["번호", "분류", "제목", "작성자", "작성일", "댓글수"];
 
-    const categoryHeaders = [
-        "번호",
-        "분류",
-        "제목",
-        "작성자",
-        "작성일",
-        "댓글수"
-    ];
+    // 대시보드 하단 최신 글 테이블에 노출할 게시판 (예: 공지사항 제외 나머지 전부, 혹은 전체)
+    // 나중에 게시판이 6번, 7번으로 늘어나도 자동으로 테이블이 추가됩니다!
+    const tableBoards = boards.filter((b) => String(b.board_type) !== "2");
 
-    const freeBoardData = makeTableData(
-        freePosts,
-        "/main/community/free"
-    );
-
-    const techData = makeTableData(
-        resources,
-        "/main/community/tech",
-        true
-    );
-
-    const qaData = makeTableData(
-        questions,
-        "/main/community/qa",
-        true
-    );
-
-    const suggestionData = makeTableData(
-        suggestions,
-        "/main/community/suggestion",
-        true
-    );
+    //게시판 추가 모달
+    const [isBoardModal, setIsBoardModal] = useState(false);
+    const handleBoardCreated = () => {
+        setIsBoardModal(false);
+        if (onRefreshBoards) onRefreshBoards(); // 좌측 내비게이션 + 대시보드 즉시 갱신
+    };
 
     return (
         <div className="border-container">
             <header className="dashboard-header">
-                <span className="subtitle">
-                    통합게시판 대시보드
-                </span>
-
-                <span className="subtext">
-                    게시판별 현황과 최신 게시글을 확인하세요.
-                </span>
+                <span className="subtitle">통합게시판 대시보드</span>
+                <div className="dashboard-top">
+                    <button
+                    type="button"
+                    className="register-btn"
+                    onClick={() => setIsBoardModal(true)}
+                    >
+                    + 게시판 등록
+                    </button>
+                </div>
             </header>
 
-            {/* ===== [추가] 조회 중·오류 안내 ===== */}
-            {loading && (
-                <p className="no-data">
-                    통합게시판 목록을 불러오는 중입니다.
-                </p>
-            )}
-
-            {error && (
-                <p role="alert">
-                    {error}
-                </p>
-            )}
+            {loading && <p className="no-data">통합게시판 목록을 불러오는 중입니다.</p>}
+            {error && <p role="alert">{error}</p>}
 
             {!loading && !error && (
                 <>
-                    {/* ===== [수정] 게시판별 실제 글 수 ===== */}
+                    {/* 1. 상단 통계 카드: DB에 있는 게시판 수만큼 자동 생성 */}
                     <section className="stats-section">
-                        {boardStatus.map(board => (
-                            <Link
-                                key={board.title}
-                                to={board.url}
-                                style={{
-                                    textDecoration: "none",
-                                    color: "inherit"
-                                }}
-                            >
-                                <StatisticsCard
-                                    title={board.title}
-                                    count={board.count}
-                                    stiyle={0}
-                                />
-                            </Link>
-                        ))}
+                        {boards.map((board) => {
+                            const count = items.filter(
+                                (item) => String(item.board_type) === String(board.board_type)
+                            ).length;
+
+                            return (
+                                <Link
+                                    key={board.board_type}
+                                    to={getBoardUrl(board)}
+                                    style={{ textDecoration: "none", color: "inherit" }}
+                                >
+                                    <StatisticsCard
+                                        title={board.board_name}
+                                        count={count}
+                                        stiyle={0}
+                                    />
+                                </Link>
+                            );
+                        })}
                     </section>
 
                     <hr />
 
-                    {/* 자유게시판·업무자료실 최신 글 */}
-                    <section className="stats-section">
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <BasicTable
-                                title="최신 자유게시판"
-                                th={freeHeaders}
-                                td={freeBoardData}
-                            />
-                        </div>
-
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <BasicTable
-                                title="최신 업무자료실"
-                                th={categoryHeaders}
-                                td={techData}
-                            />
-                        </div>
-                    </section>
-
-                    {/* Q&A·개선 건의 최신 글 */}
+                    {/* 2. 하단 최신 글 테이블: 2열 그리드로 자동 배치 */}
                     <section
-                        className="stats-section"
-                        style={{ marginTop: "16px" }}
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                            gap: "16px"
+                        }}
                     >
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <BasicTable
-                                title="최신 Q&A"
-                                th={categoryHeaders}
-                                td={qaData}
-                            />
-                        </div>
+                        {tableBoards.map((board) => {
+                            const boardPosts = items.filter(
+                                (item) => String(item.board_type) === String(board.board_type)
+                            );
+                            // default_category가 null이 아니면 '분류' 컬럼 표시
+                            const hasCategory = board.default_category !== null;
 
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <BasicTable
-                                title="최신 개선 건의"
-                                th={categoryHeaders}
-                                td={suggestionData}
-                            />
-                        </div>
+                            return (
+                                <div key={board.board_type} style={{ minWidth: 0 }}>
+                                    <BasicTable
+                                        title={`최신 ${board.board_name}`}
+                                        th={hasCategory ? categoryHeaders : basicHeaders}
+                                        td={makeTableData(
+                                            boardPosts,
+                                            getBoardUrl(board),
+                                            hasCategory
+                                        )}
+                                    />
+                                </div>
+                            );
+                        })}
                     </section>
                 </>
             )}
+            {isBoardModal && (
+                <ModalBase
+                    title={"게시판 등록"}
+                    onClose={() => setIsBoardModal(false)}
+                    layout={
+                    <SetNewBoardLayout
+                        onSuccess={handleBoardCreated}
+                        onClose={() => setIsBoardModal(false)}
+                    />
+                    }
+                />
+                )}
         </div>
     );
 }

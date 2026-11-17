@@ -8,37 +8,43 @@ function BasicTable({ title, th, td = [] }) {
     return (
         <div className="attendance-card" style={{
             maxWidth: "100%",
-            paddingBottom: "30px"
+            paddingBottom: "30px",
+            minHeight: "300px"
         }}>
             <h4 style={{ marginBottom: "0px" }}>{title ?? "테이블제목"}</h4>
             <div className="table-shell">
                 <table>
                     <thead>
                         <tr>
-                            {headers.map((heading, index) => (
-                                <th key={index}>{heading}</th>
+                            {th.map((item, index)=>(
+                                <th key={index}>{item}</th>
                             ))}
                         </tr>
                     </thead>
-                    <tbody>
-                        {rows.length === 0 ? (
-                            <tr style={{ height: "200px" }}>
-                                <td colSpan={headers.length} style={{ textAlign: "center" }}>
-                                    등록된 정보가 없습니다.
-                                </td>
-                            </tr>
-                        ) : (
-                            rows.map((row, rowIndex) => (
-                                <tr key={row.id ?? rowIndex}>
-                                    {(row.content || []).map((cell, cellIndex) => (
-                                        <td key={cellIndex} style={{ fontSize: "13px" }}>
-                                            {cell}
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
+
+                    {!td ?
+                        <tr
+                            style={{
+                                height:'200px'
+                            }}
+                        ><td
+                            colSpan={th.length}
+                            style={{
+                                textAlign: 'center'
+
+                            }}
+                        >등록된 정보가 없습니다.</td></tr>
+
+                            : td.map((item)=>{
+                                return <tr>{item.content.map((item, index)=>(
+                                    <td
+                                        key={index}
+                                        style={{
+                                            fontSize:"13"
+                                    }}>{item}</td>
+                                ))}</tr>
+                        })}
+
                 </table>
             </div>
         </div>

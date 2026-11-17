@@ -152,3 +152,52 @@ export const getCommunityPosts = async () => {
     return response.data;
 };
 // ===== [추가] 통합게시판 목록 조회 끝 =====
+
+
+// 게시판 설정 목록 조회
+export const getCommunityBoards = async () => {
+    const response = await axios.get(`${API_BASE_URL}/community/boards`);
+    return response.data;
+};
+
+// ===== 동적 통합 게시판 API =====
+export const getBoardPosts = async (apiPath) => {
+    const response = await axios.get(`${API_BASE_URL}/community${apiPath}`);
+    return response.data;
+  };
+  
+  export const addBoardPost = async (apiPath, post) => {
+    const response = await axios.post(`${API_BASE_URL}/community${apiPath}`, post);
+    return response.data;
+  };
+  
+  export const updateBoardPost = async (apiPath, postId, post) => {
+    const response = await axios.put(`${API_BASE_URL}/community${apiPath}/${postId}`, post);
+    return response.data;
+  };
+  
+  export const deleteBoardPost = async (apiPath, postId) => {
+    const response = await axios.delete(`${API_BASE_URL}/community${apiPath}/${postId}`);
+    return response.data;
+  };
+  
+  export const addBoardComment = async (apiPath, postId, comment) => {
+    const response = await axios.post(`${API_BASE_URL}/community${apiPath}/${postId}/comments`, comment);
+    return response.data;
+  };
+  
+  export const updateBoardComment = async (apiPath, postId, commentId, comment) => {
+    const response = await axios.put(`${API_BASE_URL}/community${apiPath}/${postId}/comments/${commentId}`, comment);
+    return response.data;
+  };
+  
+  export const deleteBoardComment = async (apiPath, postId, commentId) => {
+    const response = await axios.delete(`${API_BASE_URL}/community${apiPath}/${postId}/comments/${commentId}`);
+    return response.data;
+  };
+
+  // 새 게시판 등록
+export const addCommunityBoard = async (boardData) => {
+    const response = await axios.post(`${API_BASE_URL}/community/boards`, boardData);
+    return response.data;
+  };
