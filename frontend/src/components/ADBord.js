@@ -50,13 +50,13 @@ function ADBord({ dataSet, btnStl }) {
 
         if (type === '출근') {
             result.push('출근');
-            if (time >= 9 * 3600 + 1) result.push('지각'); 
+            if (time > 9 * 3600) result.push('지각'); 
         }
 
         if (type === '퇴근') {
             if (time < 18 * 3600) result.push('조퇴'); 
             if (time > 18 * 3600) result.push('퇴근');
-            if (time >= 19 * 3600) result.push('야근');
+            if (time > 19 * 3600) result.push('야근');
         }
 
         return result;
