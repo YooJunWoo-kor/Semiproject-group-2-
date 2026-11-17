@@ -10,7 +10,7 @@ router.post('/setAttendenc', async(req, res) =>{
         return res.status(200).json({ success: true, message: '출근 완료' });
     }
     catch(err){
-        console.err('출근 처리 실패', err);
+        console.error('출근 처리 실패', err);
         return res.status(500).json({ success: false, message: '출근처리 실패' });
     }
 })
@@ -23,8 +23,8 @@ router.post('/updateAttendens', async(req, res) =>{
         return res.status(200).json({ success: true, message: '퇴근 완료' });
     }
     catch(err){
-        console.err('퇴근 처리 실패')
-        return res.status(200).json({ success: false, message: '퇴근처리 실패' });
+        console.error('퇴근 처리 실패', err)
+        return res.status(500).json({ success: false, message: '퇴근처리 실패' });
     }
 })
 
@@ -44,7 +44,7 @@ router.post('/attendance', async (req, res) =>{
     }
 )
 
-router.get('/attendance/summary', async(res, req) => {
+router.get('/attendance/summary', async(req, res) => {
     try {
         const employeeId = Number(req.query.employeeId) // url ?뒤 값 
 
@@ -65,6 +65,7 @@ router.get('/attendance/summary', async(res, req) => {
     }
     catch(err){
         console.error('근태 통계 조회 실패 : ', err);
+        return res.status(500).json({ success: false, message: '근태 통계 조회 실패' });
     }
 })
 
