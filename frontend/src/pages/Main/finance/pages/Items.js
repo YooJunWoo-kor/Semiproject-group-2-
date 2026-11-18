@@ -63,17 +63,29 @@ export function isTradeOverdue(item, today) {
   return /^\d{4}-\d{2}-\d{2}$/.test(dueDate) && dueDate < today && getSettlementLabel(item.status) !== '완료';
 }
 // [최신순 정렬 추가] 날짜가 없는 항목은 뒤로 보내고, 급여 월은 해당 월 1일로 비교합니다.
+// [최신순 정렬 수정] 원본 item.date는 건드리지 않고, 정렬 비교 시에만 급여 월(YYYY-MM)을 오늘 날짜(또는 월말)로 계산합니다.
 export function compareTradeNewest(left, right) {
+  const todayStr = koreaDate(); // 예: '2026-11-18'
   const dateKey = item => {
     const value = String(item.date || item.createdAt || '').slice(0, 10);
-    if (/^\d{4}-\d{2}$/.test(value)) return value + '-01';
+    if (/^\d{4}-\d{2}$/.test(value)) {
+      // 이번 달 급여(예: '2026-11')라면 오늘 날짜('2026-11-18')로 취급해 최상단에 배치
+      return value === todayStr.slice(0, 7) ? todayStr : `${value}-31`;
+    }
     return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '';
   };
+
   const dateOrder = dateKey(right).localeCompare(dateKey(left));
   if (dateOrder) return dateOrder;
+
+  // 같은 날짜(예: 오늘 등록한 급여 vs 오늘 날짜의 일반 거래/기안서)라면 급여 항목을 맨 위로 우선 배치
+  if (Boolean(right.isPayroll) !== Boolean(left.isPayroll)) {
+    return right.isPayroll ? 1 : -1;
+  }
+
   const createdOrder = String(right.createdAt || '').localeCompare(String(left.createdAt || ''));
   if (createdOrder) return createdOrder;
-  // 같은 날짜/작성시각이면 등록 번호 내림차순, 최종적으로 ID로 순서를 고정합니다.
+
   const number = item => Number(String(item.id ?? '').match(/\d+$/)?.[0] || 0);
   return number(right) - number(left) || String(right.id ?? '').localeCompare(String(left.id ?? ''));
 }
@@ -165,14 +177,42 @@ function Items({
   }])).values()];
   const payrollItems = toPayrollPurchaseRows(payrollSummaries);
   const additionalItems = additionalPayrolls.map(row => ({
-    id: `additional-payroll-${row.draft_id}`, isAdditionalPayroll: true, additional: row,
-    transactionId: null, type: 'PURCHASE', date: row.payment_date, dueDate: row.payment_date,
-    itemName: row.title, customer: row.employee_name || `사원 ${row.employee_id}`,
-    spec: `추가급여 · ${row.pay_month}`, quantity: null, unitPrice: null,
-    supplyAmount: row.amount, vat: 0, totalAmount: row.amount, status: row.payment_status,
-    approvalStatus: 'APPROVED', linkedSourceType: 'additional_payroll', linkedSourceId: row.draft_id
+    id: `additional-payroll-${row.draft_id}`
+    , isAdditionalPayroll: true
+    , additional: row
+    , transactionId: null
+    , type: 'PURCHASE'
+    , date: row.payment_date
+    , dueDate: row.payment_date
+    , itemName: row.title
+    , customer: row.employee_name || `사원 ${row.employee_id}`
+    , spec: `추가급여 · ${row.pay_month}`
+    , quantity: null
+    , unitPrice: null
+    , supplyAmount: row.amount
+    , vat: 0
+    , totalAmount: row.amount
+    , status: row.payment_status
+    , approvalStatus: 'APPROVED'
+    , linkedSourceType: 'additional_payroll'
+    , linkedSourceId: row.draft_id
   }));
-  const itemList = [...additionalItems, ...payrollDeductionRows, ...payrollItems, ...toApprovedTradeRows(approvedDocuments, payrollItems.map(row => row.date)), ...storedItemList].sort(compareTradeNewest);
+
+  // 오늘 날짜를 'YYYY-MM-DD' 형식으로 생성 (koreaDate() 활용 가능)
+  const todayStr = koreaDate(); // 예: '2026-11-18'
+
+  // 전체 매입매출 합
+  const itemList = [
+    ...additionalItems,
+    ...payrollDeductionRows,
+    ...payrollItems,
+    ...toApprovedTradeRows(
+      approvedDocuments,
+      payrollItems.map(row => row.date)
+    ),
+    ...storedItemList
+  ].sort(compareTradeNewest);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -334,6 +374,7 @@ function Items({
       }).catch(error => { if (!controller.signal.aborted) setAdditionalError(error.message); });
     return () => controller.abort();
   }, [payrollRefresh, scope?.refresh]);
+  
   // 인사에서 승인(확정)한 월 급여를 조회합니다.
   useEffect(() => {
     const controller = new AbortController();
@@ -514,6 +555,9 @@ function Items({
 
   // PaginationTable 규격에 맞춘 데이터 매핑 ({ content: [...] })
   const tItemData = filteredList.map(item => {
+    const newDate = new Date();
+    const setDate = newDate.getMonth()+1 + '-' + newDate.getDate();
+
     const isSales = item.type === 'SALES';
     return {
       content: [
@@ -526,7 +570,7 @@ function Items({
           <div>{item.date}</div>
           {/* 이번 거래의 실제 정산 마감일 */}
           <div>
-            {item.isPayroll ? "급여 대상 월" : item.isApprovalDocument ? "처리 마감" : "정산 마감"}: {item.isPayroll ? item.date : item.dueDate || "미등록"}
+            {item.isPayroll ? "급여 대상 월" : item.isApprovalDocument ? "처리 마감" : "정산 마감"}: {item.isPayroll ? setDate : "미등록"}
           </div>
           <small className="subtext">
             {item.isPayrollDeduction ? "(급여 공제액 · 별도 납부)" : item.isPayroll ? scope?.view === "completed" ? "(급여 실지급액)" : "(인건비 · 세전 급여 합계)" : item.closingDay ? Number(item.closingDay) === 31 ? "(정기 마감: 매월 말일)" : `(정기 마감: 매월 ${item.closingDay}일)` : "(정기 마감일 미등록)"}
