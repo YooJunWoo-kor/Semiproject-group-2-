@@ -419,11 +419,15 @@ class Draft {
     }
 
     static async submit(employeeId, title, documentType, content, approverIds, detailData = {}) {
+        if (!Array.isArray(approverIds) || approverIds.length === 0) {
+            throw new Error('결재자를 선택해주세요.');
+        }
         const hasSteps = await hasDraftApprovalStepsTable();
         if (!hasSteps && approverIds.length !== 1) {
             throw new Error('현재 DB에는 단일 결재자만 저장할 수 있습니다. 결재자를 1명 선택해주세요.');
         }
 
+        // 병합 수정: 상신과 순차 결재 등록을 하나의 트랜잭션으로 처리합니다.
         await promiseDb.beginTransaction();
         try {
             const [result] = await promiseDb.query(
@@ -431,32 +435,23 @@ class Draft {
                     employee_id, approver_id, title, document_type,
                     content, detail_data, status
                  ) VALUES (?, ?, ?, ?, ?, ?, 'PENDING')`,
-                [
-                    employeeId,
-                    approverIds[0],
-                    title,
-                    documentType,
-                    content,
-                    JSON.stringify(detailData)
-                ]
+                [employeeId, approverIds[0], title, documentType,
+                    content, JSON.stringify(detailData)]
             );
             const draftId = result.insertId;
 
             if (hasSteps) {
-                const values = approverIds.map((id, index) => [
-                    draftId,
-                    id,
-                    index + 1,
-                    index === 0 ? 'PENDING' : 'WAITING'
+                const steps = approverIds.map((id, index) => [
+                    draftId, id, index + 1, index === 0 ? 'PENDING' : 'WAITING'
                 ]);
                 await promiseDb.query(
                     `INSERT INTO draft_approval_steps
-                        (draft_id, employee_id, step_order, step_status)
-                     VALUES ?`,
-                    [values]
+                        (draft_id, employee_id, step_order, step_status) VALUES ?`,
+                    [steps]
                 );
             }
 
+            // 기존 휴가 상세 저장도 같은 트랜잭션에서 처리합니다.
             await ensureLeaveDetail(draftId, documentType, detailData);
             await promiseDb.commit();
             return draftId;
@@ -466,154 +461,105 @@ class Draft {
         }
     }
 
-    static async decide(draftId, employeeId, decision) {
-        const hasSteps = await hasDraftApprovalStepsTable();
-        await promiseDb.beginTransaction();
-
-        try {
-            if (!hasSteps) {
-                const [draftRows] = await promiseDb.query(
-                    `SELECT employee_id AS writerEmployeeId,
-                            document_type AS documentType,
-                            detail_data AS detailData
-                     FROM my_draft
-                     WHERE draft_id = ? AND approver_id = ? AND status = 'PENDING'
-                     FOR UPDATE`,
-                    [draftId, employeeId]
-                );
-                if (draftRows.length !== 1) {
-                    await promiseDb.rollback();
-                    return false;
+    static getUsedLeaveDays(employeeId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT
+                    DATE_FORMAT(e.hire_date, '%Y-%m-%d') AS hireDate,
+                    JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.startDate')) AS startDate,
+                    JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.endDate')) AS endDate
+                FROM employees e
+                LEFT JOIN my_draft d
+                    ON e.employee_id = d.employee_id
+                    AND d.document_type = '휴가'
+                    AND d.status = 'APPROVED'
+                WHERE e.employee_id = ?
+            `;
+    
+            db.query(query, [employeeId], (err, rows) => {
+                if (err) return reject(err);
+    
+                if (rows.length === 0 || !rows[0].hireDate) {
+                    return reject(new Error("직원 또는 입사일 정보가 없습니다."));
                 }
-
-                const draft = draftRows[0];
-                if (decision === 'approve') {
-                    const detailData = parseDetailData(draft.detailData);
-                    if (draft.documentType === '휴가') {
-                        await applyLeaveAttendance(draftId, draft.writerEmployeeId, detailData);
-                    } else if (draft.documentType === '비용') {
-                        await persistExpenseDetail(draftId, draft.documentType, detailData);
-                    } else if (['수당', '상여금', '추가급여'].includes(draft.documentType)) {
-                        validateAdditionalPayroll({
-                            draft: {
-                                draftId,
-                                employeeId: draft.writerEmployeeId,
-                                documentType: draft.documentType,
-                                detailData
-                            }
-                        });
-                    }
-                }
-
-                await promiseDb.query(
-                    `UPDATE my_draft
-                     SET status = ?, processed_at = CURRENT_TIMESTAMP
-                     WHERE draft_id = ? AND status = 'PENDING'`,
-                    [decision === 'approve' ? 'APPROVED' : 'REJECTED', draftId]
-                );
-                await promiseDb.commit();
-                return true;
-            }
-
-            const [stepRows] = await promiseDb.query(
-                `SELECT step_order
-                 FROM draft_approval_steps
-                 WHERE draft_id = ? AND employee_id = ? AND step_status = 'PENDING'
-                 FOR UPDATE`,
-                [draftId, employeeId]
-            );
-            if (stepRows.length !== 1) {
-                await promiseDb.rollback();
-                return false;
-            }
-
-            const order = stepRows[0].step_order;
-            await promiseDb.query(
-                `UPDATE draft_approval_steps
-                 SET step_status = ?
-                 WHERE draft_id = ? AND employee_id = ? AND step_status = 'PENDING'`,
-                [decision === 'approve' ? 'APPROVED' : 'REJECTED', draftId, employeeId]
-            );
-
-            if (decision === 'reject') {
-                await promiseDb.query(
-                    `UPDATE my_draft
-                     SET status = 'REJECTED', processed_at = CURRENT_TIMESTAMP
-                     WHERE draft_id = ? AND status = 'PENDING'`,
-                    [draftId]
-                );
-                await promiseDb.commit();
-                return true;
-            }
-
-            const [nextRows] = await promiseDb.query(
-                `SELECT employee_id AS employeeId
-                 FROM draft_approval_steps
-                 WHERE draft_id = ? AND step_order = ? AND step_status = 'WAITING'
-                 LIMIT 1
-                 FOR UPDATE`,
-                [draftId, order + 1]
-            );
-
-            if (nextRows.length === 1) {
-                await promiseDb.query(
-                    `UPDATE draft_approval_steps
-                     SET step_status = 'PENDING'
-                     WHERE draft_id = ? AND step_order = ? AND step_status = 'WAITING'`,
-                    [draftId, order + 1]
-                );
-                await promiseDb.query(
-                    `UPDATE my_draft SET approver_id = ? WHERE draft_id = ?`,
-                    [nextRows[0].employeeId, draftId]
-                );
-                await promiseDb.commit();
-                return true;
-            }
-
-            const [draftRows] = await promiseDb.query(
-                `SELECT employee_id AS writerEmployeeId,
-                        document_type AS documentType,
-                        detail_data AS detailData
-                 FROM my_draft
-                 WHERE draft_id = ? AND status = 'PENDING'
-                 FOR UPDATE`,
-                [draftId]
-            );
-            if (draftRows.length !== 1) {
-                await promiseDb.rollback();
-                return false;
-            }
-
-            const draft = draftRows[0];
-            const detailData = parseDetailData(draft.detailData);
-            if (draft.documentType === '휴가') {
-                await applyLeaveAttendance(draftId, draft.writerEmployeeId, detailData);
-            } else if (draft.documentType === '비용') {
-                await persistExpenseDetail(draftId, draft.documentType, detailData);
-            } else if (['수당', '상여금', '추가급여'].includes(draft.documentType)) {
-                validateAdditionalPayroll({
-                    draft: {
-                        draftId,
-                        employeeId: draft.writerEmployeeId,
-                        documentType: draft.documentType,
-                        detailData
+    
+                const hireDate = rows[0].hireDate;
+    
+                let usedLeaveDays = 0;
+    
+                rows.forEach(row => {
+                    if (!row.startDate || !row.endDate) return;
+    
+                    const startDate = row.startDate.slice(0, 10); // 날짜만 추출
+                    const endDate = row.endDate.slice(0, 10);
+    
+                    // 입사일 이전과 오늘 이후 날짜는 제외
+                    const start = startDate < hireDate ? hireDate : startDate;
+                    const end = endDate;
+    
+                    if (start <= end) {
+                        usedLeaveDays += calculateLeaveDays(start, end);
                     }
                 });
-            }
-
-            await promiseDb.query(
-                `UPDATE my_draft
-                 SET status = 'APPROVED', approver_id = ?, processed_at = CURRENT_TIMESTAMP
-                 WHERE draft_id = ? AND status = 'PENDING'`,
-                [employeeId, draftId]
-            );
-            await promiseDb.commit();
-            return true;
-        } catch (error) {
-            await promiseDb.rollback();
-            throw error;
-        }
+    
+                resolve(usedLeaveDays);
+            });
+        });
     }
-}
+       
 
+    // 승인된 휴가를 조회 / 사용한 연차를 계산
+
+    static getEarnedLeaveDays(employeeId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT
+                    GREATEST(
+                        0,
+                        TIMESTAMPDIFF(MONTH, hire_date, CURDATE())
+                    ) AS earnedLeaveDays
+                FROM employees
+                WHERE employee_id = ?
+            `;
+    
+            db.query(query, [employeeId], (err, rows) => {
+                if (err) {
+                    return reject(err);
+                }
+    
+                if (rows.length === 0 || rows[0].earnedLeaveDays === null) {
+                    return reject(new Error("직원 또는 입사일 정보가 없습니다."));
+                }
+    
+                resolve(Number(rows[0].earnedLeaveDays));
+            });
+        });
+    }
+    // 고용일로부터 현재 날짜까지 월마다 1일의 연차를 부과하는 로직
+
+}
 module.exports = Draft;
+
+function calculateLeaveDays(startDate, endDate) {
+    let count = 0;
+
+    const current = new Date(startDate + "T00:00:00Z");
+    const end = new Date(endDate + "T00:00:00Z");
+
+    if (isNaN(current.getTime()) || isNaN(end.getTime())) {
+        return 0;
+    }
+
+    while (current <= end) {
+        const day = current.getUTCDay();
+
+        if (day !== 0 && day !== 6) { // 토요일 또는 일요일이 아니라면
+            count++;
+        }
+
+        current.setUTCDate(current.getUTCDate() + 1);
+    }
+
+    return count;
+}
+// 날짜간의 계산해서 토요일과 일요일을 제외하는 로직

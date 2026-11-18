@@ -2,29 +2,33 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-router.get('/getproject', async (req, res) =>{
+// 프로젝트가 0건이어도 정상 조회로 처리한다.
+router.get('/getproject', (req, res) => {
     const query = `
-        select project_id, project_name as schedule_name, start_date as 'start', end_date as 'end', employee_id, description, visible, typeId
-        from project
-        where visible = 1
-        order by start_date
-    `
-    db.query(query, (err, data) => {
-        if(err){
-            console.log('스케줄 전체 공개 데이터 불러오기 DB오류');
-            return res.status(500).json({status:'false', massage: data})
+        SELECT project_id, project_name AS schedule_name,
+               start_date AS start, end_date AS end,
+               employee_id, description, visible, typeId
+        FROM project
+        WHERE visible = 1
+        ORDER BY start_date
+    `;
+    db.query(query, (err, rows) => {
+        if (err) {
+            console.error('프로젝트 목록 조회 DB 오류:', err);
+            return res.status(500).json({
+                status: false,
+                message: '프로젝트 목록을 불러오지 못했습니다.',
+                code: err.code
+            });
         }
-
-        if(data && data.length > 0){
-            console.log('전체 스케쥴 불러오기 성공', data);
-            return res.status(200).json({status:'succeced', data: data})
-        }
-        else{
-            console.log('전체공개 대이터 조회 실패', data);
-            return res.status(400).json({status:'false', massage: data})
-        }
-    })
-})
+        return res.status(200).json({
+            // 기존 main 응답 계약 유지: 구버전 클라이언트의 상태값 비교 지원
+            status: 'succeced',
+            success: true,
+            data: Array.isArray(rows) ? rows : []
+        });
+    });
+});
 
 router.post('/setProject', async (req, res) => {
     const requst = req.body;
@@ -72,6 +76,15 @@ router.post('/setProject', async (req, res) => {
                 VALUES ?
             `;
 
+            // 참석자와 리더가 모두 비어 있으면 빈 VALUES INSERT를 실행하지 않는다.
+            if (memberID.length === 0) {
+                return res.status(200).json({
+                    status: 'succesed',
+                    data,
+                    memberData: { affectedRows: 0 }
+                });
+            }
+
             db.query(setMemberProjectQR, [memberID], (memberErr, memberData) => {
                 if (memberErr) {
                     console.log('프로젝트 멤버 리스트 DB에러', memberErr);
@@ -113,7 +126,7 @@ router.post('/get_employee', async(req, res)=>{
             return res.status(500).json({status:false, massage: err});
         }
         
-        if(data, data.length > 0){
+        if (data && data.length > 0){
             console.log(data);
             return res.status(200).json({status:true, data: data});
         }
@@ -160,7 +173,8 @@ router.post('/new-worklist', async (req, res) => {
         start_time,
         end_time,
         content,
-        employee_id
+        employee_id,
+        project_id // 프론트에서 보낸 키 이름(project_id)과 일치시킴
     } = req.body;
 
     if (!title || !start_day || !end_day || !employee_id) {
@@ -172,8 +186,8 @@ router.post('/new-worklist', async (req, res) => {
     try {
         const sql = `
             INSERT INTO worklist 
-            (title, type_id, start_day, end_day, start_time, end_time, content, employee_id) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (title, type_id, start_day, end_day, start_time, end_time, content, employee_id, project_id) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         const params = [
@@ -184,10 +198,10 @@ router.post('/new-worklist', async (req, res) => {
             start_time || null,
             end_time || null,
             content || null,
-            employee_id
+            employee_id,
+            project_id || null // 값이 없을 때를 대비해 null 처리
         ];
 
-        // db.query -> db.promise().query 로 수정
         const [result] = await db.promise().query(sql, params);
 
         return res.status(201).json({
@@ -200,6 +214,7 @@ router.post('/new-worklist', async (req, res) => {
             end_time: end_time || null,
             content: content || null,
             employee_id,
+            project_id: project_id || null,
             is_completed: 0
         });
 
@@ -212,12 +227,21 @@ router.post('/new-worklist', async (req, res) => {
     }
 });
 
-// GET /api/project/worklist
-router.get('/worklist', async (req, res) => {
+// POST /api/project/worklist
+router.post('/worklist', async (req, res) => {
     try {
+        // 프론트에서 보낸 projectID 꺼내기
+        const { projectID } = req.body;
+        console.log("백엔드가 받은 projectID:", projectID);
+
+        if (!projectID) {
+            return res.status(400).json({ message: 'projectID가 전달되지 않았습니다.' });
+        }
+
         const sql = `
             SELECT 
                 w.worklist_id,
+                w.project_id,
                 w.title,
                 w.type_id,
                 w.content,
@@ -231,10 +255,11 @@ router.get('/worklist', async (req, res) => {
                 (SELECT COUNT(*) FROM worklist_comments c WHERE c.worklist_id = w.worklist_id) AS comment_count
             FROM worklist w
             LEFT JOIN employees e ON w.employee_id = e.employee_id
+            WHERE w.project_id = ?
             ORDER BY w.worklist_id DESC
         `;
 
-        const [rows] = await db.promise().query(sql);
+        const [rows] = await db.promise().query(sql, [projectID]);
         return res.status(200).json(rows);
 
     } catch (error) {
@@ -341,6 +366,45 @@ router.post('/worklist/:id/comments', async (req, res) => {
     } catch (error) {
         console.error('댓글 등록 오류:', error);
         return res.status(500).json({ message: '댓글 등록 실패', error: error.message });
+    }
+});
+
+// PATCH /api/project/worklist/:id/status
+router.patch('/worklist/:id/status', async (req, res) => {
+    const { id } = req.params;
+    const { is_completed } = req.body;
+
+    // TINYINT(1) 유효성 검증 (0 또는 1만 허용)
+    const statusValue = Number(is_completed);
+    if (statusValue !== 0 && statusValue !== 1) {
+        return res.status(400).json({
+            message: 'is_completed 값은 0 또는 1이어야 합니다.'
+        });
+    }
+
+    try {
+        const sql = `
+            UPDATE worklist
+            SET is_completed = ?
+            WHERE worklist_id = ?
+        `;
+        const [result] = await db.promise().query(sql, [statusValue, id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: '해당 할 일을 찾을 수 없습니다.' });
+        }
+
+        return res.status(200).json({
+            message: '상태가 변경되었습니다.',
+            worklist_id: Number(id),
+            is_completed: statusValue
+        });
+    } catch (error) {
+        console.error('할 일 상태 변경 DB 오류:', error);
+        return res.status(500).json({
+            message: '상태 변경 중 서버 오류가 발생했습니다.',
+            error: error.message
+        });
     }
 });
 

@@ -7,6 +7,7 @@ import axios from 'axios';
 import { formatDateToYYYYMMDD, API_BASE_URL, getLoginUser, getTodayString } from '../../../utils/authStorage';
 import ColorTeg from '../../../components/ColorTeg';
 import EmployeeTag from '../../../components/EmployeeTag'
+import ProjectProgress from '../../../components/ProjectProgress';
 
 function ScheduleModul({dataType = 1}) {
     //로그인 유저 정보 get
@@ -209,23 +210,26 @@ function ScheduleModul({dataType = 1}) {
                     onClose={closeScheduleDetail}
                     title={selectedSchedule.title || "일정 상세"}
                     layout={
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minWidth: '320px' }}>
-                            <div>
-
-                                <p style={{ margin: '4px 0 0', fontSize:'13px'}}>
-                                    {selectedSchedule.start === selectedSchedule.end
-                                        ? selectedSchedule.start
-                                        : `${selectedSchedule.start} ~ ${selectedSchedule.end}`}
-                                </p>
-                            </div>
-                            <hr />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minWidth: '320px', marginBottom:'50px' }}>
                             <div>
                                 <EmployeeTag id = {selectedSchedule.employee_id}/>
-                                <strong>일정 상세</strong>
-                                <p style={{ margin: '6px 0 0', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-                                    {selectedSchedule.description || "등록된 상세 내용이 없습니다."}
-                                </p>
+                                <ProjectProgress start={selectedSchedule.start} end={selectedSchedule.end}/>
                             </div>
+                            <div
+                                style={{
+                                    backgroundColor: '#efefef'
+                                    ,padding: '30px'
+                                    ,minWidth: '450px'
+                                    ,height: '500px'
+                                    ,borderRadius: '10px'
+                                    ,overflowY:'auto'
+                                }}
+                            >
+                                {selectedSchedule.description || "등록된 상세 내용이 없습니다."}
+                            </div>
+                            <button style={{fontSize:"13px", width:'100px', marginLeft:'auto'}}
+                                onClick = {closeScheduleDetail}
+                            >닫기</button>
                         </div>
                     }
                 />

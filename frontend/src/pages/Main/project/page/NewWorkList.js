@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { TOGLE_COLORS, getLoginUser, API_BASE_URL } from "../../../../utils/authStorage"; // getLoginUser 위치에 맞게 임포트
 
-function NewWorkList({ onAddSuccess }) {
+function NewWorkList({ projectID, onAddSuccess }) {
     const [title, setTitle] = useState("");
     const [typeId, setTypeId] = useState(0);
     const [startDay, setStartDay] = useState("");
@@ -40,7 +40,8 @@ function NewWorkList({ onAddSuccess }) {
             start_day: startDay,
             end_day: endDay,
             content: content.trim(),
-            employee_id: employeeId
+            employee_id: employeeId,
+            project_id: projectID
         };
 
         try {
