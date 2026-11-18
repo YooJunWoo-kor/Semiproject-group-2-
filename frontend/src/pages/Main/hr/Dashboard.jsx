@@ -53,10 +53,9 @@ export default function Dashboard() {
         (attendance) => attendance.clockIn || attendance.status === '정상' || attendance.status === '지각'
     ).length;
 
-
     useEffect(() => {
         loadLeave();
-    }, [])
+    }, []);
 
 
     const loadLeave = async () => {
@@ -266,7 +265,7 @@ export default function Dashboard() {
             <section className="stats-section">
                 <StatisticsCard title="전체직원" count={String(employees.length)} stiyle={1} />
                 <StatisticsCard title="오늘출근" count={String(todayWorkingCount)} stiyle={1} />
-                <StatisticsCard title="휴가사용" count={String(leaveCount)} stiyle={1} />
+                <StatisticsCard title="사용한 연차" count={String(leaveCount)} stiyle={3} />
                 <StatisticsCard title="운용부서" count={String(departments.length)} stiyle={0} />
             </section>
 

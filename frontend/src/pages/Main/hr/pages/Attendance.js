@@ -12,6 +12,8 @@ import {
   deleteHrAttendance,
   updateHrAttendance
 } from "../../../../components/HrData";
+import axios from "axios";
+import { API_BASE_URL } from "../../../../utils/authStorage";
 
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -267,13 +269,33 @@ function AttendanceStatistics({ records, month }) {
   const clockedInCount = monthRecords.filter((item) => item.clockIn).length;
   const normalCount = monthRecords.filter((item) => item.status === "정상").length;
   const lateCount = monthRecords.filter((item) => item.status === "지각").length;
-  const leaveCount = monthRecords.filter((item) => item.status === "휴가").length;
+  const [leaveCount, setLeaveCount] = useState(0);
   const businessTripCount = monthRecords.filter((item) => item.status === "출장").length;
   const absenceCount = monthRecords.filter((item) => item.status === "미출근").length;
   const expectedWorkMinutes = clockedInCount * 8 * 60;
   const workTimeRate = expectedWorkMinutes
     ? (workMinutes / expectedWorkMinutes) * 100
     : 0;
+
+    const loadLeave = async () => {
+      try{
+          const employeeId = Number(getLoginUser()?.employeeKey);
+
+          const response = await axios.get(`${API_BASE_URL}/AD/attendance/leave`,
+              {
+                  params: { employeeId }
+              }
+
+          );
+
+          const usedLeaveDays  = response.data.data.usedLeaveDays;
+
+          setLeaveCount(Number(usedLeaveDays));
+      }
+      catch(err){
+          console.error("연차 조회 실패", err);
+      }
+  }
 
   return (
     <div className="attendance-subview">
