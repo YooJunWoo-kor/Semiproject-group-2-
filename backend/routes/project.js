@@ -171,7 +171,8 @@ router.post('/new-worklist', async (req, res) => {
         start_time,
         end_time,
         content,
-        employee_id
+        employee_id,
+        project_id // 프론트에서 보낸 키 이름(project_id)과 일치시킴
     } = req.body;
 
     if (!title || !start_day || !end_day || !employee_id) {
@@ -183,8 +184,8 @@ router.post('/new-worklist', async (req, res) => {
     try {
         const sql = `
             INSERT INTO worklist 
-            (title, type_id, start_day, end_day, start_time, end_time, content, employee_id) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (title, type_id, start_day, end_day, start_time, end_time, content, employee_id, project_id) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         const params = [
@@ -195,10 +196,10 @@ router.post('/new-worklist', async (req, res) => {
             start_time || null,
             end_time || null,
             content || null,
-            employee_id
+            employee_id,
+            project_id || null // 값이 없을 때를 대비해 null 처리
         ];
 
-        // db.query -> db.promise().query 로 수정
         const [result] = await db.promise().query(sql, params);
 
         return res.status(201).json({
@@ -211,6 +212,7 @@ router.post('/new-worklist', async (req, res) => {
             end_time: end_time || null,
             content: content || null,
             employee_id,
+            project_id: project_id || null,
             is_completed: 0
         });
 
@@ -223,12 +225,21 @@ router.post('/new-worklist', async (req, res) => {
     }
 });
 
-// GET /api/project/worklist
-router.get('/worklist', async (req, res) => {
+// POST /api/project/worklist
+router.post('/worklist', async (req, res) => {
     try {
+        // 프론트에서 보낸 projectID 꺼내기
+        const { projectID } = req.body;
+        console.log("백엔드가 받은 projectID:", projectID);
+
+        if (!projectID) {
+            return res.status(400).json({ message: 'projectID가 전달되지 않았습니다.' });
+        }
+
         const sql = `
             SELECT 
                 w.worklist_id,
+                w.project_id,
                 w.title,
                 w.type_id,
                 w.content,
@@ -242,10 +253,11 @@ router.get('/worklist', async (req, res) => {
                 (SELECT COUNT(*) FROM worklist_comments c WHERE c.worklist_id = w.worklist_id) AS comment_count
             FROM worklist w
             LEFT JOIN employees e ON w.employee_id = e.employee_id
+            WHERE w.project_id = ?
             ORDER BY w.worklist_id DESC
         `;
 
-        const [rows] = await db.promise().query(sql);
+        const [rows] = await db.promise().query(sql, [projectID]);
         return res.status(200).json(rows);
 
     } catch (error) {
@@ -352,6 +364,45 @@ router.post('/worklist/:id/comments', async (req, res) => {
     } catch (error) {
         console.error('댓글 등록 오류:', error);
         return res.status(500).json({ message: '댓글 등록 실패', error: error.message });
+    }
+});
+
+// PATCH /api/project/worklist/:id/status
+router.patch('/worklist/:id/status', async (req, res) => {
+    const { id } = req.params;
+    const { is_completed } = req.body;
+
+    // TINYINT(1) 유효성 검증 (0 또는 1만 허용)
+    const statusValue = Number(is_completed);
+    if (statusValue !== 0 && statusValue !== 1) {
+        return res.status(400).json({
+            message: 'is_completed 값은 0 또는 1이어야 합니다.'
+        });
+    }
+
+    try {
+        const sql = `
+            UPDATE worklist
+            SET is_completed = ?
+            WHERE worklist_id = ?
+        `;
+        const [result] = await db.promise().query(sql, [statusValue, id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: '해당 할 일을 찾을 수 없습니다.' });
+        }
+
+        return res.status(200).json({
+            message: '상태가 변경되었습니다.',
+            worklist_id: Number(id),
+            is_completed: statusValue
+        });
+    } catch (error) {
+        console.error('할 일 상태 변경 DB 오류:', error);
+        return res.status(500).json({
+            message: '상태 변경 중 서버 오류가 발생했습니다.',
+            error: error.message
+        });
     }
 });
 

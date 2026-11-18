@@ -34,7 +34,7 @@ function ProjectDetail({ project, onClose }) {
     },[]);
 
     return (
-      <div>
+      <div  style={{width: '400px'}}>
         <header className="horizontal-box" style={{marginBottom:'20px', marginTop:'10px'}}>
           <div>
             {/* 스케쥴 상태 스테이터스 */}
@@ -104,7 +104,7 @@ function ProjectDetail({ project, onClose }) {
                 <ProjectWorkDetail
                   projectID={selectTask}
                 />:
-                <NewWorkList />
+                <NewWorkList projectID = {project.project_id}/>
               }
             </div>
           </section>

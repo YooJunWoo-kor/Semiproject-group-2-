@@ -10,7 +10,7 @@ function ProjectWorkDetail({ projectID, onBack, onTaskUpdated }) {
     const [replyTarget, setReplyTarget] = useState(null); // 대댓글 대상 { comment_id, author_name }
     const [loading, setLoading] = useState(false);
 
-    // 1. projectID(할 일 ID)가 바뀌거나 들어올 때마다 상세 정보 & 댓글 조회
+    // 1. 상세 정보 & 댓글 조회
     useEffect(() => {
         if (!projectID) {
             setTaskDetail(null);
@@ -39,7 +39,7 @@ function ProjectWorkDetail({ projectID, onBack, onTaskUpdated }) {
         fetchDetailAndComments();
     }, [projectID]);
 
-    // 댓글만 새로고침할 때 쓰는 함수
+    // 댓글만 새로고침
     const fetchComments = async (worklistId) => {
         try {
             const res = await axios.get(`${API_BASE_URL}/project/worklist/${worklistId}/comments`);
@@ -49,10 +49,12 @@ function ProjectWorkDetail({ projectID, onBack, onTaskUpdated }) {
         }
     };
 
-    // 2. 완료 / 진행중 상태 토글 핸들러
+    // 2. 완료(1) / 진행중(0) 상태 토글 핸들러 (TINYINT(1) 대응)
     const toggleTaskStatus = async () => {
         if (!taskDetail) return;
-        const nextStatus = taskDetail.is_completed ? 0 : 1;
+
+        const currentCompleted = Number(taskDetail.is_completed) === 1;
+        const nextStatus = currentCompleted ? 0 : 1; // TINYINT(1)에 저장될 0 또는 1
 
         try {
             await axios.patch(`${API_BASE_URL}/project/worklist/${taskDetail.worklist_id}/status`, {
@@ -100,7 +102,7 @@ function ProjectWorkDetail({ projectID, onBack, onTaskUpdated }) {
         }
     };
 
-    const isCompleted = taskDetail?.is_completed === 1;
+    const isCompleted = Number(taskDetail?.is_completed) === 1;
     const tagColor = TOGLE_COLORS?.[taskDetail?.type_id] || "var(--color-brand)";
 
     return (
