@@ -6,9 +6,6 @@ import axios from 'axios';
 import { API_BASE_URL, formatDateToYYYYMMDD, getTodayString, getLoginUser, saveLoginUser } from '../../../utils/authStorage';
 
 
-
-
-
 function MyPage() {
 
     const [employee, setEmployee] = useState({
@@ -191,31 +188,48 @@ function MyPage() {
     }
 
 
-    function handleImageChange(event) {
+    async function handleImageChange(event) {
         const file = event.target.files[0];
-
-        if (!file) {
-            return;
-        }
-
+    
+        if (!file) return;
+    
         if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
             setMessage('JPG, PNG, WEBP 사진만 등록할 수 있습니다.');
             return;
         }
-
+    
         if (file.size > 2 * 1024 * 1024) {
             setMessage('2MB 이하의 사진을 등록해주세요.');
             return;
         }
-
-        const reader = new FileReader();
-
-        reader.onload = function () {
-            setProfileImage(reader.result);
+    
+        const employeeId = Number(getLoginUser()?.employeeKey);
+    
+        if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+            setMessage('로그인 정보를 확인해주세요.');
+            return;
+        }
+    
+        const formData = new FormData();
+        formData.append('image', file);
+    
+        try {
+            const response = await axios.patch(
+                `${API_BASE_URL}/hr/employees/${employeeId}/image`, // 이미지 변경요청 employeeId에 맞게 프로필 사진이 나와야되기 때문에 url 파라미터로 넘김, 변경사항 -> patch
+                formData
+            );
+    
+            setProfileImage(response.data.imageUrl);
             setMessage('프로필 사진이 등록되었습니다.');
-        };
-
-        reader.readAsDataURL(file);
+    
+        } catch (error) {
+            console.error('프로필 사진 업로드 오류:', error);
+            setMessage(
+                error.response?.data?.message ||
+                '프로필 사진 등록에 실패했습니다.'
+            );
+        }
+    
         event.target.value = '';
     }
 

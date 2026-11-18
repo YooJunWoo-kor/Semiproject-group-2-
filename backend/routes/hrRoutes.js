@@ -1,6 +1,9 @@
 const express = require('express');
 const db = require('../db');
 
+const createImageUpload = require('../middleware/imageUpload');
+const upload = createImageUpload('Images');
+
 const hrRouter = express.Router();
 const promiseDb = db.promise();
 
