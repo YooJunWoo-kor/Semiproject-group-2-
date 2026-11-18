@@ -139,7 +139,7 @@ export default function Dashboard() {
                 <StatisticsCard title="전체직원" count={String(employeesCount)} stiyle={1} />
                 <StatisticsCard title="오늘출근" count={String(todayWorkingCount)} stiyle={1} />
                 <StatisticsCard title="사용한 연차" count={String(leaveCount)} stiyle={3} />
-                <StatisticsCard title="운용부서" count={String(departments.length)} stiyle={0} />
+                <StatisticsCard title="운용부서" count={String(departments)} stiyle={0} />
             </section>
 
             {/* 분리된 부서 출결현황 컴포넌트 */}
