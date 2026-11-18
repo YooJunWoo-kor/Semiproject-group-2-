@@ -1,4 +1,5 @@
 const queries = require("../../queries/finance/documentQueries");
+const companyQueries = require("../../queries/finance/companyQueries");
 const express = require("express");
 const db = require("../../db");
 const financeMysql = require("mysql2/promise");
@@ -67,22 +68,21 @@ function financeDocumentParty(value, label) {
     return party;
 }
 
-// 회사 기본정보는 backend/.env에서 한 번 설정하고 새 문서에 자동 반영합니다.
-function documentBusiness() {
-    const business = {};
-    for (const [field, env] of Object.entries({ name: 'NAME', email: 'EMAIL', address: 'ADDRESS', country: 'COUNTRY', phone: 'PHONE', businessNumber: 'BUSINESS_NUMBER' })) {
-        business[field] = process.env[`FINANCE_COMPANY_${env}`] || (field === 'country' ? '대한민국' : '');
-    }
-    if (!business.name.trim()) financeDocumentFail(400, '서버에 회사 기본정보를 먼저 등록해주세요. (FINANCE_COMPANY_NAME)');
-    return financeDocumentParty(business, '회사 기본정보');
+// [회사 정보 DB 연동] 새 문서의 공급자 정보는 company_info에서 조회합니다.
+async function documentBusiness() {
+    const rows = await new Promise((resolve, reject) => {
+        db.query(companyQueries.selectDocumentBusiness, [], (error, rows) => error ? reject(error) : resolve(rows));
+    });
+    if (!rows.length) financeDocumentFail(400, 'company_info 테이블에 회사 기본정보를 먼저 등록해주세요.');
+    return financeDocumentParty(rows[0], '회사 기본정보');
 }
 
-router.get('/document-business', (req, res) => {
-    try { return res.json(documentBusiness()); }
+router.get('/document-business', async (req, res) => {
+    try { return res.json(await documentBusiness()); }
     catch (error) { return financeDocumentError(res, error); }
 });
 
-function financeDocumentPayload(body) {
+function financeDocumentPayload(body, business) {
     if (!body || typeof body !== 'object' || Array.isArray(body)) financeDocumentFail(400, '문서 입력값을 확인해주세요.');
     const type = body.document_type;
     if (!Object.prototype.hasOwnProperty.call(financeDocumentTypes, type)) financeDocumentFail(400, '문서 종류를 확인해주세요.');
@@ -123,7 +123,7 @@ function financeDocumentPayload(body) {
     return {
         type, partnerId: financeDocumentId(body.partner_id, '거래처 ID', true),
         data: {
-            business: documentBusiness(), customer: financeDocumentParty(raw.customer, '고객 정보'),
+            business, customer: financeDocumentParty(raw.customer, '고객 정보'),
             date, extraDate: extraDate || '', currency, method,
             account: financeDocumentText(raw.account, '입금 계좌 안내', 200),
             note: financeDocumentText(raw.note, '비고', 2000), items
@@ -142,6 +142,9 @@ function financeDocumentDecode(row) {
 
 function financeDocumentError(res, error) {
     if (error.status) return res.status(error.status).json({ message: error.message });
+    if (error.code === 'ER_NO_SUCH_TABLE' && /company_info/.test(error.sqlMessage || error.message || '')) {
+        return res.status(500).json({ message: 'company_info 테이블이 없습니다. 회사 정보 테이블을 먼저 생성해주세요.' });
+    }
     console.error('재무 문서 보관 오류:', error);
     return res.status(500).json({ message: '문서를 처리하지 못했습니다. finance_documents 테이블과 서버 연결을 확인해주세요.' });
 }
@@ -185,7 +188,8 @@ router.get('/documents/:docId', (req, res) => {
 router.post('/documents', async (req, res) => {
     let connection;
     try {
-        const payload = financeDocumentPayload(req.body);
+        // [회사 정보 DB 연동] 클라이언트의 공급자 값 대신 DB 값을 문서에 저장합니다.
+        const payload = financeDocumentPayload(req.body, await documentBusiness());
         // 제공된 기존 API와 동일한 사원 ID 전달 방식입니다.
         // 서버 인증 미들웨어가 있다면 인증된 req.user.employee_id를 우선 사용합니다.
         const employeeId = financeDocumentId(req.user?.employee_id ?? req.body.employee_id, '작성 사원 ID');
