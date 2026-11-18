@@ -124,7 +124,10 @@ function getEmployeeDisplayStatus(employee) {
     return employmentStatus;
   }
 
-  return Number(employee.isOnLeaveToday) === 1 ? "휴가" : employmentStatus;
+  const onLeave = employee.isOnLeaveToday === true ||
+    Number(employee.isOnLeaveToday) === 1 ||
+    String(employee.isOnLeaveToday).toLowerCase() === "true";
+  return onLeave ? "휴가" : employmentStatus;
 }
 
 function getEmployeeStatusBadgeClass(status) {

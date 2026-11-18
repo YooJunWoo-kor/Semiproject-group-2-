@@ -18,8 +18,9 @@ function parsePartnerCalendarTypeId(value) {
 function partnerDatabaseError(err, fallback) {
     if (err.code === "ER_BAD_FIELD_ERROR") {
         const column = /Unknown column '([^']+)'/.exec(err.sqlMessage || "")?.[1];
-        return column === "calendar_type_id"
-            ? "일정 색상 저장 컬럼이 없습니다. 동봉된 01_partner_calendar_column.sql을 실행해 주세요."
+        const requiredPartnerColumns = ["calendar_type_id", "bank_name", "account_number", "account_holder"];
+        return requiredPartnerColumns.includes(column)
+            ? `거래처 테이블에 ${column} 컬럼이 없습니다. backend/db/migrations/20261118_kws_partner_fields.sql을 실행한 뒤 다시 등록해 주세요.`
             : `DB 컬럼을 확인해 주세요${column ? `: ${column}` : ""}. 백엔드 터미널의 오류 내용을 확인해 주세요.`;
     }
     if (err.code === "ER_NO_SUCH_TABLE") {

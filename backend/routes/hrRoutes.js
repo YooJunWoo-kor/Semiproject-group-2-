@@ -20,6 +20,19 @@ const {
 
 const hrRouter = express.Router();
 
+function seoulToday() {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(new Date()).reduce((values, part) => {
+        if (part.type !== 'literal') values[part.type] = part.value;
+        return values;
+    }, {});
+    return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 // 근태관리: 출퇴근 기록 등록·조회·수정·삭제와 부서별 현황을 처리합니다.
 hrRouter.post('/attendance', async (req, res) => {
     const employeeId = Number(req.body.employeeId);
@@ -408,14 +421,21 @@ hrRouter.get('/employees', async (req, res) => {
             CASE WHEN EXISTS (
                 SELECT 1 FROM attendance leave_att
                 WHERE leave_att.employee_id = e.employee_id
-                  AND leave_att.work_date = CURRENT_DATE
+                  AND leave_att.work_date = ?
                   AND leave_att.attendance_status = '휴가'
             ) OR EXISTS (
                 SELECT 1 FROM draft_leave leave_detail
                 JOIN my_draft leave_draft ON leave_draft.draft_id = leave_detail.draft_id
                 WHERE leave_draft.employee_id = e.employee_id
                   AND leave_draft.status IN ('APPROVED', '승인', '완료')
-                  AND CURRENT_DATE BETWEEN leave_detail.start_date AND leave_detail.end_date
+                  AND ? BETWEEN leave_detail.start_date AND leave_detail.end_date
+            ) OR EXISTS (
+                SELECT 1 FROM my_draft leave_draft
+                WHERE leave_draft.employee_id = e.employee_id
+                  AND leave_draft.document_type = '휴가'
+                  AND leave_draft.status IN ('APPROVED', '승인', '완료')
+                  AND JSON_UNQUOTE(JSON_EXTRACT(leave_draft.detail_data, '$.startDate')) <= ?
+                  AND JSON_UNQUOTE(JSON_EXTRACT(leave_draft.detail_data, '$.endDate')) >= ?
             ) THEN 1 ELSE 0 END AS isOnLeaveToday,
             DATE_FORMAT(e.hire_date, '%Y-%m-%d') AS hireDate,
             e.initial_annual_salary AS initialAnnualSalary,
@@ -432,7 +452,8 @@ hrRouter.get('/employees', async (req, res) => {
     `;
 
     try {
-        const [rows] = await promiseDb.query(query);
+        const today = seoulToday();
+        const [rows] = await promiseDb.query(query, [today, today, today, today]);
 
         return res.json({
             success: true,

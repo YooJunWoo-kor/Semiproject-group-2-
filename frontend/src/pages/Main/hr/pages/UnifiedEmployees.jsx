@@ -100,7 +100,10 @@ function getEmployeeDisplayStatus(employee) {
     return employmentStatus;
   }
 
-  return Number(employee.isOnLeaveToday) === 1 ? "휴가" : employmentStatus;
+  const onLeave = employee.isOnLeaveToday === true ||
+    Number(employee.isOnLeaveToday) === 1 ||
+    String(employee.isOnLeaveToday).toLowerCase() === "true";
+  return onLeave ? "휴가" : employmentStatus;
 }
 
 function getEmployeeStatusBadgeClass(status) {
@@ -813,10 +816,20 @@ export default function UnifiedEmployees() {
       }
     }
 
+    function reloadWhenVisible() {
+      if (document.visibilityState === "visible" && active) {
+        load();
+      }
+    }
+
     load();
+    window.addEventListener("focus", reloadWhenVisible);
+    document.addEventListener("visibilitychange", reloadWhenVisible);
 
     return () => {
       active = false;
+      window.removeEventListener("focus", reloadWhenVisible);
+      document.removeEventListener("visibilitychange", reloadWhenVisible);
     };
   }, []);
 
@@ -2062,14 +2075,14 @@ export default function UnifiedEmployees() {
                     </div>
 
                     <span
-                      className={`status-tag ${selected.employmentStatus === "재직"
+                      className={`status-tag ${getEmployeeDisplayStatus(selected) === "재직"
                         ? "working"
-                        : selected.employmentStatus === "휴직"
+                        : ["휴직", "휴가"].includes(getEmployeeDisplayStatus(selected))
                           ? "leave"
                           : "off"
                         }`}
                     >
-                      {selected.employmentStatus}
+                      {getEmployeeDisplayStatus(selected)}
                     </span>
                   </div>
                 )}

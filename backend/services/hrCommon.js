@@ -148,11 +148,25 @@ function validatePayrollAmounts(row) {
             ? null
             : incomeTax + localIncomeTax;
 
+    // The original kws payroll form stored a single freely entered deduction.
+    // After merging ghy, newly added tax-detail columns default to zero.
+    // Preserve historical totals rather than inventing a tax split or changing
+    // a finalized employee's payment amount. New payrolls use the strict rule.
+    const legacyDeductionWithoutTaxDetails =
+        incomeTax === 0 &&
+        localIncomeTax === 0 &&
+        deduction !== null &&
+        deduction > 0 &&
+        deduction !== expectedDeduction;
+    const valid = amounts.every((value) => value !== null) &&
+        Number.isSafeInteger(expectedGrossPay) &&
+        grossPay === expectedGrossPay &&
+        (deduction === expectedDeduction || legacyDeductionWithoutTaxDetails) &&
+        netPay === grossPay - deduction;
+
     return {
-        valid: amounts.every((value) => value !== null) &&
-            grossPay === expectedGrossPay &&
-            deduction === expectedDeduction &&
-            netPay === grossPay - deduction,
+        valid,
+        legacyDeductionWithoutTaxDetails: valid && legacyDeductionWithoutTaxDetails,
         grossPay,
         deduction,
         netPay
