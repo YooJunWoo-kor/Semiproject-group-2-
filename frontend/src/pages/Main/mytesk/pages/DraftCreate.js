@@ -381,6 +381,17 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
 
 
                             <label>
+                                <span>지급 대상 월</span>
+                                <input
+                                    type="month"
+                                    name="payMonth"
+                                    value={payMonth}
+                                    onChange={handleInputChange}
+                                    required
+                                />
+                            </label>
+
+                            <label>
                                 <span>상세 분류</span>
                                 <input
                                     type="text"
