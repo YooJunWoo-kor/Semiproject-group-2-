@@ -6,7 +6,7 @@ import GetPopover from '../../../components/GetPopover';
 import DepartmentList from "../../../components/DepartmentList";
 
 
-function ScheduleModalPopup({onClose}){
+function ScheduleModalPopup({onClose, setSubmit}){
     //오늘날짜 가져오기
     let today = getTodayString();
   
@@ -87,6 +87,8 @@ function ScheduleModalPopup({onClose}){
           alert('요청중 에러가 발생했습니다.')
         }
       }
+
+      setSubmit();
     };
     
     return (
