@@ -12,7 +12,6 @@ const emptyForm = {
     useDate: "", amount: "",
 
     paymentType: "수당",
-    payMonth: "",
     paymentDetail: ""
 
 };
@@ -36,7 +35,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
         }
     ]);
 
-    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount, paymentType, payMonth, paymentDetail } = form;
+    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount, paymentType, paymentDetail } = form;
 
     useEffect(() => {
         const loadDepartments = async () => {
@@ -67,7 +66,6 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             useDate: detail.useDate || "",
             amount: detail.amount ?? "",
             paymentType: detail.paymentType || "수당",
-            payMonth: detail.payMonth || "",
             paymentDetail : detail.paymentDetail || "",
         });
         setApprovers(editingDraft.approvers || []);
@@ -143,7 +141,6 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 }
                 if (
                     !["수당", "상여"].includes(paymentType) ||
-                    !/^\d{4}-(0[1-9]|1[0-2])$/.test(payMonth) ||
                     amount === "" ||
                     !Number.isSafeInteger(Number(amount)) ||
                     Number(amount) <= 0
@@ -167,7 +164,6 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                     draftType === "비용" ? { expenseItems, totalAmount } :
                         draftType === "추가급여" ? {
                             paymentType,
-                            payMonth,
                             paymentDetail: paymentDetail.trim(),
                             amount: amount === "" ? null : Number(amount)
                         } : {};
@@ -366,7 +362,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                             <div>
                                 <span className="additional-pay-eyebrow">PAYMENT REQUEST</span>
                                 <h4 id="additional-pay-title">추가급여 지급 정보</h4>
-                                <p>지급 구분과 대상 월, 신청 금액을 입력해 주세요.</p>
+                                <p>지급 구분과 신청 금액을 입력해 주세요.</p>
                             </div>
                         </div>
 
@@ -379,17 +375,6 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                                 </select>
                             </label>
 
-
-                            <label>
-                                <span>지급 대상 월</span>
-                                <input
-                                    type="month"
-                                    name="payMonth"
-                                    value={payMonth}
-                                    onChange={handleInputChange}
-                                    required
-                                />
-                            </label>
 
                             <label>
                                 <span>상세 분류</span>
