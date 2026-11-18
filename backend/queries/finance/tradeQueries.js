@@ -18,17 +18,15 @@ i.supply_price,
 i.vat,
 (i.supply_price + i.vat) AS total_amount,
 p.closing_day,
+/* [비용 연동 추가] 새로고침 후에도 원본 연결 유지 */
 t.source_type AS linked_source_type,
 t.source_id AS linked_source_id,
-CASE WHEN c.category_code = 'expense_other_1' THEN 'unclassified'
-     ELSE COALESCE(c.category_code, 'unclassified') END AS category_code
+'unclassified' AS category_code
 FROM trade_items i
 INNER JOIN trade_transactions t
 ON i.transaction_id=t.transaction_id
-INNER JOIN partners p
+LEFT JOIN partners p
 ON t.partner_id=p.partner_id
-LEFT JOIN finance_payment_classifications c
-ON c.source_type = 'transaction' AND c.source_id = t.transaction_id
 ORDER BY t.trade_date DESC, t.transaction_id DESC, i.item_id DESC
 `;
 
@@ -36,9 +34,16 @@ const selectApprovalDocuments = 'SELECT amount, approval_status FROM approval_do
 
 const selectPayments = "SELECT payment_id FROM payments WHERE document_id = ? LIMIT 1 FOR UPDATE";
 
-const selectMyDraft = 'SELECT status FROM my_draft WHERE draft_id = ? FOR UPDATE';
+const selectMyDraft = 'SELECT status, document_type, detail_data FROM my_draft WHERE draft_id = ? FOR UPDATE';
 
-const selectPayrolls = 'SELECT payroll_id FROM payrolls WHERE draft_id = ? LIMIT 1 FOR UPDATE';
+const selectPayrolls = `SELECT p.payroll_id
+        FROM payrolls p
+        INNER JOIN my_draft d
+          ON d.draft_id = ?
+         AND d.document_type = '급여'
+         AND JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.source')) = 'HR_PAYROLL'
+         AND JSON_CONTAINS(JSON_EXTRACT(d.detail_data, '$.payrollIds'), JSON_ARRAY(p.payroll_id))
+        LIMIT 1 FOR UPDATE`;
 
 const selectDraftExpense = 'SELECT amount FROM draft_expense WHERE draft_id = ? FOR UPDATE';
 

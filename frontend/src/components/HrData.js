@@ -33,6 +33,13 @@ export function getHrLeaves(month) {
   });
 }
 
+// 연차 사용량 집계에 필요한 해당 연도의 휴가 신청 데이터를 조회합니다.
+export function getHrLeavesByYear(year) {
+  return axios.get(API_BASE_URL + '/hr/leaves', {
+    params: { year }
+  });
+}
+
 // 기존 전자결재 API로 휴가 기안의 승인·반려를 처리합니다.
 export function decideHrLeave(draftId, employeeId, decision) {
   return axios.post(API_BASE_URL + '/drafts/' + draftId + '/decision', {

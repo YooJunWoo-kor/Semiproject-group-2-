@@ -8,6 +8,7 @@ const selectPayments = `
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.base_amount')) AS UNSIGNED) AS base_amount,
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.allowance_amount')) AS UNSIGNED) AS allowance_amount,
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.bonus_amount')) AS UNSIGNED) AS bonus_amount,
+    CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.other_payment_amount')) AS UNSIGNED) AS other_payment_amount,
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.gross_amount')) AS UNSIGNED) AS gross_amount,
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.deduction_amount')) AS UNSIGNED) AS deduction_amount,
     CAST(JSON_UNQUOTE(JSON_EXTRACT(payroll_snapshot, '$.net_amount')) AS UNSIGNED) AS net_amount,
@@ -28,5 +29,6 @@ const selectPayments2 = `
 
 module.exports = {
     selectPayments,
-    selectPayments2
+    selectPayments2: `SELECT document_id, amount FROM payments
+        WHERE document_id IS NOT NULL AND payment_status = '완료' AND payment_direction = '출금'`
 };

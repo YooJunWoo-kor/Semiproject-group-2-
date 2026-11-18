@@ -14,14 +14,22 @@ function selectPayrolls(value0) {
                SUM(COALESCE(link.net_amount, p.net_pay)) AS net_pay,
                SUM(CASE WHEN p.payment_status = '지급완료' THEN 1 ELSE 0 END) AS paid_count
         FROM payrolls p
-        INNER JOIN my_draft d ON d.draft_id = p.draft_id
+        INNER JOIN my_draft d
+          ON d.document_type = '급여'
+         AND d.status IN ('APPROVED', '승인')
+         AND JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.source')) = 'HR_PAYROLL'
+         AND JSON_CONTAINS(JSON_EXTRACT(d.detail_data, '$.payrollIds'), JSON_ARRAY(p.payroll_id))
+         AND d.draft_id = (
+             SELECT MIN(d2.draft_id)
+             FROM my_draft d2
+             WHERE d2.document_type = '급여'
+               AND d2.status IN ('APPROVED', '승인')
+               AND JSON_UNQUOTE(JSON_EXTRACT(d2.detail_data, '$.source')) = 'HR_PAYROLL'
+               AND JSON_CONTAINS(JSON_EXTRACT(d2.detail_data, '$.payrollIds'), JSON_ARRAY(p.payroll_id))
+         )
         LEFT JOIN (${value0}) link ON link.payroll_id = p.payroll_id
-        WHERE d.status IN ('APPROVED', '승인')
+        WHERE p.payment_status IN ('확정', '승인', '지급대기', '지급완료') AND (p.draft_id IS NULL OR d.status IN ('APPROVED', '승인'))
           AND p.pay_month REGEXP '^[0-9]{4}-(0[1-9]|1[0-2])$'
-          AND NOT EXISTS (
-              SELECT 1 FROM trade_transactions linked_trade
-              WHERE linked_trade.source_type = 'draft' AND linked_trade.source_id = d.draft_id
-          )
         GROUP BY p.pay_month
         ORDER BY p.pay_month DESC
     `;
@@ -33,10 +41,11 @@ function selectPayrolls2(value0) {
                COALESCE(link.base_amount, p.base_salary) AS base_salary,
                COALESCE(link.allowance_amount, p.allowance) AS allowance,
                COALESCE(link.bonus_amount, p.bonus) AS bonus,
+               COALESCE(link.other_payment_amount, p.other_payment) AS other_payment,
                COALESCE(link.deduction_amount, p.deduction) AS deduction,
                COALESCE(link.gross_amount, p.gross_pay) AS gross_pay,
                COALESCE(link.net_amount, p.net_pay) AS net_pay,
-               p.payment_status, p.draft_id,
+               p.payment_status, d.draft_id,
                d.title AS draft_title,
                link.payment_id, link.deduction_status,
                DATE_FORMAT(paid.payment_date, '%Y-%m-%d') AS registered_payment_date,
@@ -45,15 +54,25 @@ function selectPayrolls2(value0) {
                account.account_name AS payment_account_name
         FROM payrolls p
         INNER JOIN employees e ON e.employee_id = p.employee_id
-        INNER JOIN my_draft d ON d.draft_id = p.draft_id
+        INNER JOIN my_draft d
+          ON d.document_type = '급여'
+         AND d.status IN ('APPROVED', '승인')
+         AND JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.source')) = 'HR_PAYROLL'
+         AND JSON_CONTAINS(JSON_EXTRACT(d.detail_data, '$.payrollIds'), JSON_ARRAY(p.payroll_id))
+         AND d.draft_id = (
+             SELECT MIN(d2.draft_id)
+             FROM my_draft d2
+             WHERE d2.document_type = '급여'
+               AND d2.status IN ('APPROVED', '승인')
+               AND JSON_UNQUOTE(JSON_EXTRACT(d2.detail_data, '$.source')) = 'HR_PAYROLL'
+               AND JSON_CONTAINS(JSON_EXTRACT(d2.detail_data, '$.payrollIds'), JSON_ARRAY(p.payroll_id))
+         )
         LEFT JOIN (${value0}) link ON link.payroll_id = p.payroll_id
         LEFT JOIN payments paid ON paid.payment_id = link.payment_id
         LEFT JOIN bank_accounts account ON account.account_id = paid.account_id
-        WHERE d.status IN ('APPROVED', '승인')
-          AND NOT EXISTS (
-              SELECT 1 FROM trade_transactions t
-              WHERE t.source_type = 'draft' AND t.source_id = d.draft_id
-          )
+        -- [수정] 직원별 상세 조회를 선택한 급여월로 제한합니다.
+        WHERE p.pay_month = ?
+          AND d.status IN ('APPROVED', '승인')
         ORDER BY p.employee_id, p.payroll_id
     `;
 }
@@ -62,14 +81,29 @@ const selectEmployees = `SELECT e.department_id, ea.role
             FROM employees e INNER JOIN employee_accounts ea ON ea.employee_id = e.employee_id
             WHERE e.employee_id = ? AND ea.password_hash = ? AND ea.account_status = 'ACTIVE'`;
 
-const selectPayrolls3 = `SELECT p.*, d.status AS approval_status
-            FROM payrolls p INNER JOIN my_draft d ON d.draft_id = p.draft_id
-            WHERE d.status IN ('APPROVED', '승인')
+const selectPayrolls3 = `SELECT p.*, d.status AS approval_status, d.draft_id
+            FROM payrolls p
+            INNER JOIN my_draft d
+              ON d.document_type = '급여'
+             AND d.status IN ('APPROVED', '승인')
+             AND JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.source')) = 'HR_PAYROLL'
+             AND JSON_CONTAINS(JSON_EXTRACT(d.detail_data, '$.payrollIds'), JSON_ARRAY(p.payroll_id))
+             AND d.draft_id = (
+                 SELECT MIN(d2.draft_id)
+                 FROM my_draft d2
+                 WHERE d2.document_type = '급여'
+                   AND d2.status IN ('APPROVED', '승인')
+                   AND JSON_UNQUOTE(JSON_EXTRACT(d2.detail_data, '$.source')) = 'HR_PAYROLL'
+                   AND JSON_CONTAINS(JSON_EXTRACT(d2.detail_data, '$.payrollIds'), JSON_ARRAY(p.payroll_id))
+             )
+            -- [수정] 일괄 지급 잠금·대상을 선택한 급여월로 제한합니다.
+            WHERE p.pay_month = ?
             ORDER BY p.payroll_id FOR UPDATE`;
 
 const selectPayments = 'SELECT payroll_id FROM payments WHERE payroll_id = ? FOR UPDATE';
 
-const selectTradeTransactions = "SELECT transaction_id FROM trade_transactions WHERE source_type = 'draft' AND source_id = ? FOR UPDATE";
+// 급여 지출은 payrolls/payments를 원본으로 사용합니다. 별도 거래 연결 테이블은 사용하지 않습니다.
+const selectTradeTransactions = 'SELECT 0 AS transaction_id WHERE 1 = 0';
 
 const selectBankAccounts = 'SELECT balance, currency, account_status FROM bank_accounts WHERE account_id = ? FOR UPDATE';
 
@@ -83,7 +117,7 @@ const insertPayments = `INSERT INTO payments
 
 const updatePayrolls = `UPDATE payrolls
                 SET payment_status = '지급완료', payment_date = ?
-                WHERE payroll_id = ? AND payment_status = '지급대기'`;
+                WHERE payroll_id = ? AND payment_status IN ('확정', '승인', '지급대기')`;
 
 const selectPayments2 = `SELECT salary.payment_id, salary.payroll_id, salary.amount, salary.payroll_snapshot,
         DATE_FORMAT(salary.payment_date, '%Y-%m-%d') AS source_payment_date,

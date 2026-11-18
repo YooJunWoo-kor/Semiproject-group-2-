@@ -106,7 +106,7 @@ function Main() {
             <header className="dashboard-header">
                 <span className="subtitle">품질관리 대시보드</span>
             </header>
-            
+
             <div className="horizontal-box">
                 <section className="boder size-fill" style={{padding:'30px', alignSelf:"stretch"}}>
                     <div className="horizontal-box" style={{fontSize:"13px"}}>

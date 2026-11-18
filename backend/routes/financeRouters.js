@@ -11,4 +11,5 @@ router.use(require("./finance/dashboardRoutes"));
 router.use(require("./finance/documentRoutes"));
 router.use(require("./finance/paymentManagementRoutes"));
 
+router.use(require('./finance/additionalPayrollRoutes'));
 module.exports = router;
