@@ -5,6 +5,10 @@ import {
     getHrDepartmentAttendance,
     getHrOrganization
 } from '../../../components/HrData';
+import axios from 'axios';
+import { API_BASE_URL } from '../../../utils/authStorage';
+
+import { getLoginUser } from '../../../utils/authStorage';
 
 function formatDate(date) {
     const year = date.getFullYear();
@@ -33,8 +37,10 @@ export default function Dashboard() {
     const [departmentError, setDepartmentError] = useState('');
 
     const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
+    const [leaveCount, setLeaveCount] = useState(0);
 
     const today = formatDate(new Date());
+
 
     const selectedDepartment = departments.find(
         (department) => department.departmentId === selectedDepartmentId
@@ -46,9 +52,32 @@ export default function Dashboard() {
     const todayWorkingCount = todayAttendance.filter(
         (attendance) => attendance.clockIn || attendance.status === '정상' || attendance.status === '지각'
     ).length;
-    const todayLeaveCount = todayAttendance.filter(
-        (attendance) => attendance.status === '휴가'
-    ).length;
+
+
+    useEffect(() => {
+        loadLeave();
+    }, [])
+
+
+    const loadLeave = async () => {
+        try{
+            const employeeId = Number(getLoginUser()?.employeeKey);
+
+            const response = await axios.get(`${API_BASE_URL}/AD/attendance/leave`,
+                {
+                    params: { employeeId }
+                }
+
+            );
+
+            const usedLeaveDays  = response.data.data.usedLeaveDays;
+
+            setLeaveCount(Number(usedLeaveDays));
+        }
+        catch(err){
+            console.error("연차 조회 실패", err);
+        }
+    }
 
     useEffect(() => {
         let ignore = false;
@@ -237,7 +266,7 @@ export default function Dashboard() {
             <section className="stats-section">
                 <StatisticsCard title="전체직원" count={String(employees.length)} stiyle={1} />
                 <StatisticsCard title="오늘출근" count={String(todayWorkingCount)} stiyle={1} />
-                <StatisticsCard title="휴가사용" count={String(todayLeaveCount)} stiyle={1} />
+                <StatisticsCard title="휴가사용" count={String(leaveCount)} stiyle={1} />
                 <StatisticsCard title="운용부서" count={String(departments.length)} stiyle={0} />
             </section>
 
