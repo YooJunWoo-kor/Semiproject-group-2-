@@ -29,10 +29,6 @@ function ProjectDetailWorkList({ projectID, onOpenNewModal, click }) {
         fetchWorkList();
     }, [projectID]);
 
-    useEffect(() => {
-        fetchWorkList();
-    }, [projectID]);
-
     // 할 일 등록 버튼 함수 (부모에서 모달/입력창 여는 함수를 넘겨받은 경우 호출)
     const handleCreateTask = () => {
         if (onOpenNewModal) {
