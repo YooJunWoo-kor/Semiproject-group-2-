@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import ModalBase from "../../../../components/ModalBase";
 import DepEmpList from "../../../../components/DepEmpList";
@@ -18,6 +19,7 @@ const emptyForm = {
 };
 
 function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftChanged }) {
+    const [searchParams] = useSearchParams();
     const [form, setForm] = useState(emptyForm);
     const [departments, setDepartments] = useState([]);
     const [approvers, setApprovers] = useState([]);
@@ -37,6 +39,16 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
     ]);
 
     const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount, paymentType, payMonth, paymentDetail } = form;
+
+    useEffect(() => {
+        if (editingDraft || searchParams.get("type") !== "leave") return;
+
+        setForm((current) => ({
+            ...current,
+            title: current.title || "휴가 신청",
+            draftType: "휴가"
+        }));
+    }, [editingDraft, searchParams]);
 
     useEffect(() => {
         const loadDepartments = async () => {
