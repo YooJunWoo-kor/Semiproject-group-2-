@@ -253,7 +253,7 @@ function AttendanceProgressBar({ label, percent, value, detail, tone = "brand" }
   );
 }
 
-function AttendanceStatistics({ records, month }) {
+function AttendanceStatistics({ records, month, leaveCount }) {
   const monthRecords = records.filter((attendance) =>
     String(attendance.attendanceDate || "").startsWith(month)
   );
@@ -269,7 +269,6 @@ function AttendanceStatistics({ records, month }) {
   const clockedInCount = monthRecords.filter((item) => item.clockIn).length;
   const normalCount = monthRecords.filter((item) => item.status === "정상").length;
   const lateCount = monthRecords.filter((item) => item.status === "지각").length;
-  const [leaveCount, setLeaveCount] = useState(0);
   const businessTripCount = monthRecords.filter((item) => item.status === "출장").length;
   const absenceCount = monthRecords.filter((item) => item.status === "미출근").length;
   const expectedWorkMinutes = clockedInCount * 8 * 60;
@@ -277,25 +276,9 @@ function AttendanceStatistics({ records, month }) {
     ? (workMinutes / expectedWorkMinutes) * 100
     : 0;
 
-    const loadLeave = async () => {
-      try{
-          const employeeId = Number(getLoginUser()?.employeeKey);
+    
 
-          const response = await axios.get(`${API_BASE_URL}/AD/attendance/leave`,
-              {
-                  params: { employeeId }
-              }
-
-          );
-
-          const usedLeaveDays  = response.data.data.usedLeaveDays;
-
-          setLeaveCount(Number(usedLeaveDays));
-      }
-      catch(err){
-          console.error("연차 조회 실패", err);
-      }
-  }
+  
 
   return (
     <div className="attendance-subview">
@@ -589,6 +572,31 @@ export default function Attendance() {
   const [selectedAttendanceRecord, setSelectedAttendanceRecord] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [leaveCount, setLeaveCount] = useState(0);
+
+  useEffect(() => {
+    loadLeave();
+  }, [selectedEmployeeId]);
+
+  const loadLeave = async () => {
+    try{
+        const employeeId = Number(selectedEmployeeId);
+
+        const response = await axios.get(`${API_BASE_URL}/AD/attendance/leave`,
+            {
+                params: { employeeId }
+            }
+
+        );
+
+        const temp = response.data.data.usedLeaveDays;
+
+        setLeaveCount(Number(temp));
+    }
+    catch(err){
+        console.error("연차 조회 실패", err);
+    }
+}
 
   useEffect(() => {
     let ignore = false;
@@ -771,9 +779,7 @@ export default function Attendance() {
   const lateCount = selectedAttendance.filter(
     (item) => item.status === "지각"
   ).length;
-  const leaveCount = selectedAttendance.filter(
-    (item) => item.status === "휴가"
-  ).length;
+
   const tableHeaders = [
     "날짜",
     "요일",
@@ -1289,8 +1295,10 @@ export default function Attendance() {
                       <div className="summary-item">
                         <span>지각</span><strong>{lateCount}</strong>
                       </div>
+
                       <div className="summary-item">
-                        <span>사용한 연차</span><strong>{leaveCount}</strong>
+                        <span>사용한 연차</span>
+                        <strong>{leaveCount}일</strong>
                       </div>
                     </div>
                   )}
@@ -1329,6 +1337,7 @@ export default function Attendance() {
                 <AttendanceStatistics
                   records={selectedAttendance}
                   month={selectedMonth}
+                  leaveCount={ leaveCount }
                 />
               )
             ) : leaveLoading ? (
