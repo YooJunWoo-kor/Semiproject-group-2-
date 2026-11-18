@@ -70,7 +70,9 @@ function selectPayrolls2(value0) {
         LEFT JOIN (${value0}) link ON link.payroll_id = p.payroll_id
         LEFT JOIN payments paid ON paid.payment_id = link.payment_id
         LEFT JOIN bank_accounts account ON account.account_id = paid.account_id
-        WHERE d.status IN ('APPROVED', '승인')
+        -- [수정] 직원별 상세 조회를 선택한 급여월로 제한합니다.
+        WHERE p.pay_month = ?
+          AND d.status IN ('APPROVED', '승인')
         ORDER BY p.employee_id, p.payroll_id
     `;
 }
@@ -94,6 +96,8 @@ const selectPayrolls3 = `SELECT p.*, d.status AS approval_status, d.draft_id
                    AND JSON_UNQUOTE(JSON_EXTRACT(d2.detail_data, '$.source')) = 'HR_PAYROLL'
                    AND JSON_CONTAINS(JSON_EXTRACT(d2.detail_data, '$.payrollIds'), JSON_ARRAY(p.payroll_id))
              )
+            -- [수정] 일괄 지급 잠금·대상을 선택한 급여월로 제한합니다.
+            WHERE p.pay_month = ?
             ORDER BY p.payroll_id FOR UPDATE`;
 
 const selectPayments = 'SELECT payroll_id FROM payments WHERE payroll_id = ? FOR UPDATE';

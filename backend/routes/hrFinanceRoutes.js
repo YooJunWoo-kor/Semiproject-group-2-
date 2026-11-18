@@ -2,8 +2,8 @@
 // 역할: 확정된 HR 급여를 재무 지급 흐름으로 전달하고 상태를 관리합니다.
 
 const express = require('express');
+const mysql = require('mysql2/promise');
 const {
-    promiseDb,
     isPayMonthString,
     parseNonNegativeInteger,
     normalizePayrollIds,
@@ -43,6 +43,7 @@ hrFinanceRouter.post('/payrolls/submit-to-finance', async (req, res) => {
     }
 
     let transactionStarted = false;
+    let connection;
 
     try {
         if (!(await hasActiveMasterAccount(actorEmployeeId))) {
@@ -52,10 +53,16 @@ hrFinanceRouter.post('/payrolls/submit-to-finance', async (req, res) => {
             });
         }
 
-        await promiseDb.beginTransaction();
+        // [재무 연동 수정] 요청별 연결에서 급여 잠금·연결 기안·이력을 함께 저장합니다.
+        connection = await mysql.createConnection({
+            host: process.env.DB_HOST, port: Number(process.env.DB_PORT || 3306),
+            user: process.env.DB_USER, password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME
+        });
+        await connection.beginTransaction();
         transactionStarted = true;
 
-        const [rows] = await promiseDb.query(
+        const [rows] = await connection.query(
             `SELECT
                 payroll_id AS payrollId,
                 employee_id AS employeeId,
@@ -69,20 +76,7 @@ hrFinanceRouter.post('/payrolls/submit-to-finance', async (req, res) => {
                 local_income_tax AS localIncomeTax,
                 deduction,
                 gross_pay AS grossPay,
-                net_pay AS netPay,
-                EXISTS (
-                    SELECT 1
-                    FROM my_draft financeDraft
-                    WHERE financeDraft.document_type = '급여'
-                      AND financeDraft.status = 'APPROVED'
-                      AND JSON_UNQUOTE(
-                          JSON_EXTRACT(financeDraft.detail_data, '$.source')
-                      ) = 'HR_PAYROLL'
-                      AND JSON_CONTAINS(
-                          JSON_EXTRACT(financeDraft.detail_data, '$.payrollIds'),
-                          JSON_ARRAY(payrolls.payroll_id)
-                      )
-                ) AS financeHandoffExists
+                net_pay AS netPay
              FROM payrolls
              WHERE pay_month = ?
                AND payroll_id IN (?)
@@ -91,7 +85,7 @@ hrFinanceRouter.post('/payrolls/submit-to-finance', async (req, res) => {
         );
 
         if (rows.length !== payrollIds.length) {
-            await promiseDb.rollback();
+            await connection.rollback();
             transactionStarted = false;
             return res.status(404).json({
                 success: false,
@@ -99,28 +93,52 @@ hrFinanceRouter.post('/payrolls/submit-to-finance', async (req, res) => {
             });
         }
 
-        const invalidRows = rows.filter((row) => {
+        // [재무 연동 수정] 급여 행 잠금 후 연결 여부를 조회해 동시 재전달도 차단합니다.
+        const [linkedRows] = await connection.query(
+            `SELECT DISTINCT p.payroll_id AS payrollId
+             FROM payrolls p
+             INNER JOIN my_draft d
+                 ON d.document_type = '급여'
+                AND d.status IN ('APPROVED', '승인')
+                AND JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.source')) = 'HR_PAYROLL'
+                AND JSON_CONTAINS(JSON_EXTRACT(d.detail_data, '$.payrollIds'), JSON_ARRAY(p.payroll_id))
+             WHERE p.payroll_id IN (?)`,
+            [payrollIds]
+        );
+        const linkedIds = new Set(linkedRows.map((row) => Number(row.payrollId)));
+
+        // [수정] 상태 오류와 금액 오류를 구분해 전달 거부 사유를 표시합니다.
+        // 기존 전달 허용 조건과 금액 검증은 유지합니다.
+        const invalidRows = rows.map((row) => {
             const payrollAmounts = validatePayrollAmounts(row);
-            const hasFinanceHandoff = Number(row.financeHandoffExists) === 1;
+            const hasFinanceHandoff = linkedIds.has(Number(row.payrollId));
             const recoverableOrphan =
                 row.paymentStatus === '지급대기' && !hasFinanceHandoff;
+            const reasons = [];
 
-            return (
-                row.payMonth !== payMonth ||
-                (row.paymentStatus !== '확정' && !recoverableOrphan) ||
-                hasFinanceHandoff ||
-                !payrollAmounts.valid
-            );
-        });
+            if (row.payMonth !== payMonth) reasons.push('조회 월과 급여월이 다릅니다');
+            if (row.paymentStatus !== '확정' && !recoverableOrphan) {
+                reasons.push(`전달할 수 없는 상태입니다 (${row.paymentStatus || '미설정'})`);
+            }
+            if (hasFinanceHandoff) reasons.push('이미 승인된 재무 연결 기안서가 있습니다');
+            if (!payrollAmounts.valid) {
+                reasons.push('금액 검증 실패: 기본급·수당·상여·기타지급 합계, 소득세·지방소득세 합계 또는 실지급액을 확인해주세요');
+            }
+
+            return { payrollId: row.payrollId, reasons };
+        }).filter((row) => row.reasons.length > 0);
 
         if (invalidRows.length > 0) {
-            await promiseDb.rollback();
+            await connection.rollback();
             transactionStarted = false;
             return res.status(409).json({
                 success: false,
-                message: '확정 상태가 아니거나 이미 재무로 전달된 급여가 포함되어 있습니다.',
+                message: invalidRows.map((row) =>
+                    `급여 #${row.payrollId}: ${row.reasons.join(' / ')}`
+                ).join(' · '),
                 data: {
-                    invalidPayrollIds: invalidRows.map((row) => row.payrollId)
+                    invalidPayrollIds: invalidRows.map((row) => row.payrollId),
+                    invalidPayrolls: invalidRows
                 }
             });
         }
@@ -137,7 +155,21 @@ hrFinanceRouter.post('/payrolls/submit-to-finance', async (req, res) => {
             (total, row) => total + Number(row.netPay),
             0
         );
-        const draftId = null;
+        // [재무 연동 수정] HR 확정·전달을 완료한 급여의 승인 연결 문서를 생성합니다.
+        // 개인 추가급여 기안의 승인 절차와는 별개이며, 재무의 기존 조회 조건을 사용합니다.
+        const detailData = {
+            source: 'HR_PAYROLL', payMonth, payrollIds,
+            employeeCount: rows.length, totalGrossPay, totalDeduction, totalNetPay,
+            handedOffBy: actorEmployeeId
+        };
+        const [draft] = await connection.query(
+            `INSERT INTO my_draft
+                (employee_id, title, document_type, content, detail_data, status)
+             VALUES (?, ?, '급여', ?, ?, 'APPROVED')`,
+            [actorEmployeeId, `${payMonth} 급여 재무 전달`,
+                `HR 급여 확정 및 재무 전달 확인 (${rows.length}명)`, JSON.stringify(detailData)]
+        );
+        const draftId = draft.insertId;
 
         const confirmedRows = rows.filter(
             (row) => row.paymentStatus === '확정'
@@ -147,7 +179,7 @@ hrFinanceRouter.post('/payrolls/submit-to-finance', async (req, res) => {
             const confirmedPayrollIds = confirmedRows.map(
                 (row) => row.payrollId
             );
-            const [updated] = await promiseDb.query(
+            const [updated] = await connection.query(
                 `UPDATE payrolls
                  SET payment_status = '지급대기'
                  WHERE pay_month = ?
@@ -164,6 +196,7 @@ hrFinanceRouter.post('/payrolls/submit-to-finance', async (req, res) => {
         for (const row of rows) {
             const recoveringOrphan = row.paymentStatus === '지급대기';
             await recordPayrollChange({
+                connection,
                 payrollId: row.payrollId,
                 employeeId: row.employeeId,
                 actionType: recoveringOrphan
@@ -178,7 +211,7 @@ hrFinanceRouter.post('/payrolls/submit-to-finance', async (req, res) => {
             });
         }
 
-        await promiseDb.commit();
+        await connection.commit();
         transactionStarted = false;
 
         return res.status(201).json({
@@ -196,7 +229,7 @@ hrFinanceRouter.post('/payrolls/submit-to-finance', async (req, res) => {
         });
     } catch (error) {
         if (transactionStarted) {
-            await promiseDb.rollback();
+            try { await connection.rollback(); } catch { console.error('급여 재무 전달 롤백 실패'); }
         }
 
         console.error('급여 재무 전달 오류:', error);
@@ -205,6 +238,10 @@ hrFinanceRouter.post('/payrolls/submit-to-finance', async (req, res) => {
             success: false,
             message: '급여를 재무로 전달하지 못했습니다.'
         });
+    } finally {
+        if (connection) {
+            try { await connection.end(); } catch { console.error('급여 재무 전달 DB 연결 종료 실패'); }
+        }
     }
 });
 
