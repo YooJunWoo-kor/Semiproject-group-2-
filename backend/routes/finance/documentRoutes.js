@@ -67,6 +67,21 @@ function financeDocumentParty(value, label) {
     return party;
 }
 
+// 회사 기본정보는 backend/.env에서 한 번 설정하고 새 문서에 자동 반영합니다.
+function documentBusiness() {
+    const business = {};
+    for (const [field, env] of Object.entries({ name: 'NAME', email: 'EMAIL', address: 'ADDRESS', country: 'COUNTRY', phone: 'PHONE', businessNumber: 'BUSINESS_NUMBER' })) {
+        business[field] = process.env[`FINANCE_COMPANY_${env}`] || (field === 'country' ? '대한민국' : '');
+    }
+    if (!business.name.trim()) financeDocumentFail(400, '서버에 회사 기본정보를 먼저 등록해주세요. (FINANCE_COMPANY_NAME)');
+    return financeDocumentParty(business, '회사 기본정보');
+}
+
+router.get('/document-business', (req, res) => {
+    try { return res.json(documentBusiness()); }
+    catch (error) { return financeDocumentError(res, error); }
+});
+
 function financeDocumentPayload(body) {
     if (!body || typeof body !== 'object' || Array.isArray(body)) financeDocumentFail(400, '문서 입력값을 확인해주세요.');
     const type = body.document_type;
@@ -84,10 +99,11 @@ function financeDocumentPayload(body) {
     let taxMinor = 0n;
     const items = raw.items.map((item, index) => {
         if (!item || typeof item !== 'object' || Array.isArray(item)) financeDocumentFail(400, '품목 정보를 확인해주세요.');
-        const quantity = financeDocumentScaled(item.quantity, 3, '수량', 1000000, false);
+        if (!/^[1-9]\d*$/.test(String(item.quantity))) financeDocumentFail(400, '수량은 1 이상의 정수로 입력해주세요.');
+        const quantity = financeDocumentScaled(item.quantity, 0, '수량', 1000000, false);
         const price = financeDocumentScaled(item.unitPrice, digits, '단가', 1000000000);
         const rate = financeDocumentScaled(item.taxRate, 2, '세율', 100);
-        const supply = (quantity * price + 500n) / 1000n;
+        const supply = quantity * price;
         const tax = (supply * rate + 5000n) / 10000n;
         supplyMinor += supply;
         taxMinor += tax;
@@ -95,7 +111,7 @@ function financeDocumentPayload(body) {
             id: index + 1,
             name: financeDocumentText(item.name, '품목명', 150, true),
             description: financeDocumentText(item.description, '품목 설명', 300),
-            quantity: financeDocumentDecimal(quantity, 3),
+            quantity: financeDocumentDecimal(quantity, 0),
             unitPrice: financeDocumentDecimal(price, digits),
             taxRate: financeDocumentDecimal(rate, 2)
         };
@@ -107,7 +123,7 @@ function financeDocumentPayload(body) {
     return {
         type, partnerId: financeDocumentId(body.partner_id, '거래처 ID', true),
         data: {
-            business: financeDocumentParty(raw.business, '사업자 정보'), customer: financeDocumentParty(raw.customer, '고객 정보'),
+            business: documentBusiness(), customer: financeDocumentParty(raw.customer, '고객 정보'),
             date, extraDate: extraDate || '', currency, method,
             account: financeDocumentText(raw.account, '입금 계좌 안내', 200),
             note: financeDocumentText(raw.note, '비고', 2000), items
@@ -184,6 +200,19 @@ router.post('/documents', async (req, res) => {
         if (payload.partnerId !== null) {
             const [partners] = await connection.execute(queries.selectPartners, [payload.partnerId]);
             if (!partners.length) financeDocumentFail(400, '선택한 거래처가 없습니다. 거래처 목록을 다시 불러오거나 직접 입력으로 변경해주세요.');
+        }
+        // 저장 직전에도 계좌 상태를 확인하여 중지 계좌 선택을 차단합니다.
+        if (payload.type === 'invoice' && payload.data.method === '계좌이체') {
+            const accountId = financeDocumentId(req.body.data.accountId, '입금 계좌');
+            const [accounts] = await connection.execute(
+                'SELECT bank_name, account_number, account_name FROM bank_accounts WHERE account_id = ? AND account_status IN (?, ?) FOR UPDATE',
+                [accountId, '사용', 'ACTIVE']);
+            if (!accounts.length) financeDocumentFail(400, '사용 가능한 입금 계좌를 다시 선택해주세요.');
+            const account = accounts[0];
+            payload.data.accountId = accountId;
+            payload.data.account = [account.bank_name, account.account_number, account.account_name].filter(Boolean).join(' / ');
+        } else {
+            payload.data.account = '';
         }
         const createdDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
         const snapshot = {

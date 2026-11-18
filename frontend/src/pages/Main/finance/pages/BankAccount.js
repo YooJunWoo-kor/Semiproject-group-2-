@@ -1,6 +1,5 @@
 import { FinanceResourceModal, FinanceResourceDetails, FinanceSearchForm, FinanceStatusBadge } from '../components/FinanceDetailUI';
 import { useFinanceHistory, FinancePaymentHistory } from '../components/FinanceFunds';
-// [공통화 추가] 재무 전용 공통 컴포넌트·함수 재사용 (상위 공용 파일 수정 없음)
 import { getFinanceError } from '../components/financeUtils';
 import React, { useEffect, useState, useRef } from 'react';
 import { getBankAccounts, getBankAccountPayments, createBankAccount, updateBankAccount, getFinanceEmployees, updateBankAccountStatus } from "../../../../utils/financeService";

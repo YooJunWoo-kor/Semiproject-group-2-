@@ -2,7 +2,6 @@ import AdditionalPayrollPayment from '../components/AdditionalPayrollPayment';
 import { FinanceAttachments } from '../components/FinanceApproval';
 import { FinancePaymentHistory } from '../components/FinanceFunds';
 import { FinanceDetailRows } from '../components/FinanceDetailUI';
-// [공통화 추가] 재무 전용 공통 컴포넌트·함수 재사용 (상위 공용 파일 수정 없음)
 import { getFinanceError, koreaDate, toApprovedTradeRows, normalizeApprovalStatus, toPayrollPurchaseRows } from '../components/financeUtils';
 import React, { useEffect, useState } from 'react';
 import { getItems, getItemCategories, getApprovals, getPartners, createItem, updateItem, deleteItem, createPayment, getTransactionPayments, getBankAccounts, getCorporateCards } from "../../../../utils/financeService";

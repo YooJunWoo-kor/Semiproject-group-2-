@@ -51,17 +51,10 @@ export function validatePhone(value, { required = false } = {}) {
 
 // 국내 사업자등록번호 10자리 및 검증번호 검사. 실제 등록/휴폐업 조회는 아닙니다.
 export function validateBusinessNumber(value, { required = false } = {}) {
-  if (isEmpty(value)) return required ? false : true;
-  if (!isText(value) || !/^(?:\d{10}|\d{3}-\d{2}-\d{5})$/.test(value.trim())) {
-    return false;
-  }
-  const digits = value.trim().replace(/-/g, '').split('').map(Number);
-  if (digits.every(digit => digit === 0)) return false;
-  const weights = [1, 3, 7, 1, 3, 7, 1, 3, 5];
-  const sum = weights.reduce((total, weight, index) => total + digits[index] * weight, 0)
-    + Math.floor(digits[8] * 5 / 10);
-  return (10 - sum % 10) % 10 === digits[9]
-    ? true : false;
+  if (isEmpty(value)) return !required;
+
+  return isText(value)
+    && /^(?:\d{10}|\d{3}-\d{2}-\d{5})$/.test(value.trim());
 }
 
 // 기본적으로 공백을 포함합니다. trim: true이면 앞뒤 공백을 제외합니다.

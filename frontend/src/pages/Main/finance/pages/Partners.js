@@ -1,6 +1,4 @@
 import { FinanceSummaryBox, FinanceResourceModal, FinanceDetailRows, FinanceTwoColumn, FinanceLayoutColumn } from '../components/FinanceDetailUI';
-// [공통화 추가] 거래처 상세정보 행 재사용
-// [공통화 추가] 재무 전용 공통 컴포넌트·함수 재사용 (상위 공용 파일 수정 없음)
 import { FilterTabs } from '../../../../components/FilterControls';
 import { getFinanceError } from '../components/financeUtils';
 import React, { useEffect, useState } from "react";
@@ -11,14 +9,12 @@ import WeeklyCalendar from '../../../../components/weeklycalendar/WeeklyCalendar
 import { TOGLE_COLORS } from "../../../../utils/authStorage";
 import BasicCalendar from '../../../../components/calendar/BasicCalendar';
 import { getPartners, getPartnerBalanceDetails, createPartner, updatePartner, deletePartner } from "../../../../utils/financeService";
-
-// 공용 달력이 이미 지원하는 색상만 선택합니다. 공용 파일은 수정하지 않습니다.
-
 import "../../../../css/Form.css";
 import "../../../../css/Table.css";
 import "../../../../css/SubMain.css";
 import "../../../../css/ModalPopup.css";
 import "../../../../css/GroupBord.css";
+
 const partnerCalendarColors = Object.entries(TOGLE_COLORS || {}).filter(([key, color]) => /^(0|[1-9]\d*)$/.test(key) && Number(key) <= 255 && typeof color === "string").map(([key, color]) => ({
   typeId: Number(key),
   color

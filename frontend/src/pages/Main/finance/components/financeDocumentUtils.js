@@ -278,3 +278,14 @@ export function validateFinanceDocument(data, type = 'receipt') {
   if (type === 'invoice' && !validateLength(data.account, { max: 200 })) return false;
   return validateLength(data.note, { max: 2000 });
 }
+
+// 회사 기본정보와 사용 가능한 회사계좌를 기존 서버에서 조회합니다.
+export function getDocumentBusiness(signal) {
+  return documentRequest(`${API_BASE_URL}/finance/document-business`, { signal });
+}
+
+export async function getDocumentAccounts(signal) {
+  const accounts = await documentRequest(`${API_BASE_URL}/finance/bank-accounts`, { signal });
+  if (!Array.isArray(accounts)) throw new Error('회사계좌 목록 형식을 확인해주세요.');
+  return accounts.filter(account => ['사용', 'ACTIVE'].includes(account.account_status));
+}
