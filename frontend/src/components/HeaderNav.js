@@ -64,7 +64,7 @@ function HeaderNav(){
                         <ul>
                             <li><Link to="/main/profile">마이페이지</Link></li>
                             <li><Link to="/main/mytesk">내업무 관리</Link></li>
-                            <li><button onClick={() => setShowAccountModal(true)}>계정 전환</button></li>
+                            <li><button type="button" className="account-change-btn" onClick={() => setShowAccountModal(true)}>계정 전환</button></li>
                             <li>
                                 <button type="button" onClick={handleLogout}>
                                     로그아웃
