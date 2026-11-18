@@ -1,5 +1,6 @@
-import React from "react";
+import React, {useState} from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
+import ModalBase from "./ModalBase";
 
 //헤더모듈
 
@@ -12,6 +13,8 @@ function HeaderNav(){
         alert('로그아웃 되었습니다.');
         navigate('/');
     };
+
+    const [ShowAccountModal, setShowAccountModal] = useState(false);
 
     //유저데이터 겟
     function getLoginUser() {
@@ -61,6 +64,7 @@ function HeaderNav(){
                         <ul>
                             <li><Link to="/main/profile">마이페이지</Link></li>
                             <li><Link to="/main/mytesk">내업무 관리</Link></li>
+                            <li><button onClick={() => setShowAccountModal(true)}>계정 전환</button></li>
                             <li>
                                 <button type="button" onClick={handleLogout}>
                                     로그아웃
@@ -71,6 +75,16 @@ function HeaderNav(){
                     </div>
                 </div>
             </nav>
+            {ShowAccountModal && (
+                <ModalBase title="계정 전환"
+                    onClose={() => setShowAccountModal(false)}
+                    layout={
+                        <div className="draft-box">
+                            부서 선택
+                        </div>
+                    }
+                />
+            )}
         </div>
     )
 }

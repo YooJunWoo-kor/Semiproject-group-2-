@@ -126,3 +126,37 @@
   color:var(--color-brand) !important;
   margin-left: auto !important;
 }
+
+/* 계정 전환 버튼을 기존 a 태그와 동일하게 */
+.hoverList li button.account-change-btn {
+  all: unset;
+
+  display: block;
+  box-sizing: border-box;
+  width: auto !important;
+
+  padding: 5px 15px;
+  margin: 5px;
+  border-radius: var(--nav-radius);
+
+  font: inherit;
+  color: inherit;
+  text-align: center;
+  cursor: pointer;
+
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* 마이페이지, 내업무 관리와 동일한 hover */
+.hoverList li button.account-change-btn:hover {
+  background-color: var(--color-brand-soft) !important;
+  color: var(--color-brand) !important;
+}
+
+/* 키보드 포커스 표시 */
+.hoverList li button.account-change-btn:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
