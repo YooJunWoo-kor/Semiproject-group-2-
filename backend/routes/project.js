@@ -22,7 +22,9 @@ router.get('/getproject', (req, res) => {
             });
         }
         return res.status(200).json({
-            status: 'succeeded',
+            // 기존 main 응답 계약 유지: 구버전 클라이언트의 상태값 비교 지원
+            status: 'succeced',
+            success: true,
             data: Array.isArray(rows) ? rows : []
         });
     });

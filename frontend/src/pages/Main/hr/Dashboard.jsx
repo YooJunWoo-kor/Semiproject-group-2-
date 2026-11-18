@@ -5,6 +5,10 @@ import {
     getHrOrganization
 } from '../../../components/HrData';
 import DepartmentAttendanceComp from './DepartmentAttendanceComp';
+import axios from 'axios';
+import { API_BASE_URL } from '../../../utils/authStorage';
+
+import { getLoginUser } from '../../../utils/authStorage';
 
 function formatDate(date) {
     const year = date.getFullYear();
@@ -19,8 +23,11 @@ export default function Dashboard() {
     const [attendanceLoading, setAttendanceLoading] = useState(true);
     const [attendanceError, setAttendanceError] = useState('');
 
-    const [departmentsCount, setDepartmentsCount] = useState(0);
+    const [departments, setDepartmentsCount] = useState(0);
     const [employeesCount, setEmployeesCount] = useState(0);
+
+    // 부서 직원 표에서 사용할 자료
+    const [leaveCount, setLeaveCount] = useState(0);
 
     const today = formatDate(new Date());
 
@@ -33,9 +40,31 @@ export default function Dashboard() {
             attendance.status === '정상' ||
             attendance.status === '지각'
     ).length;
-    const todayLeaveCount = todayAttendance.filter(
-        (attendance) => attendance.status === '휴가'
-    ).length;
+
+    useEffect(() => {
+        loadLeave();
+    }, []);
+
+
+    const loadLeave = async () => {
+        try{
+            const employeeId = Number(getLoginUser()?.employeeKey);
+
+            const response = await axios.get(`${API_BASE_URL}/AD/attendance/leave`,
+                {
+                    params: { employeeId }
+                }
+
+            );
+
+            const usedLeaveDays  = response.data.data.usedLeaveDays;
+
+            setLeaveCount(Number(usedLeaveDays));
+        }
+        catch(err){
+            console.error("연차 조회 실패", err);
+        }
+    }
 
     // 상단 통계 카드용 근태 및 조직 요약 조회
     useEffect(() => {
@@ -109,8 +138,8 @@ export default function Dashboard() {
             <section className="stats-section">
                 <StatisticsCard title="전체직원" count={String(employeesCount)} stiyle={1} />
                 <StatisticsCard title="오늘출근" count={String(todayWorkingCount)} stiyle={1} />
-                <StatisticsCard title="휴가사용" count={String(todayLeaveCount)} stiyle={1} />
-                <StatisticsCard title="운용부서" count={String(departmentsCount)} stiyle={0} />
+                <StatisticsCard title="사용한 연차" count={String(leaveCount)} stiyle={3} />
+                <StatisticsCard title="운용부서" count={String(departments.length)} stiyle={0} />
             </section>
 
             {/* 분리된 부서 출결현황 컴포넌트 */}
