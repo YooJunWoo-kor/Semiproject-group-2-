@@ -1290,7 +1290,7 @@ export default function Attendance() {
                         <span>지각</span><strong>{lateCount}</strong>
                       </div>
                       <div className="summary-item">
-                        <span>휴가</span><strong>{leaveCount}</strong>
+                        <span>사용한 연차</span><strong>{leaveCount}</strong>
                       </div>
                     </div>
                   )}
