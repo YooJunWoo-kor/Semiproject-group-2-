@@ -30,10 +30,6 @@ function selectPayrolls(value0) {
         LEFT JOIN (${value0}) link ON link.payroll_id = p.payroll_id
         WHERE d.status IN ('APPROVED', '승인')
           AND p.pay_month REGEXP '^[0-9]{4}-(0[1-9]|1[0-2])$'
-          AND NOT EXISTS (
-              SELECT 1 FROM trade_transactions linked_trade
-              WHERE linked_trade.source_type = 'draft' AND linked_trade.source_id = d.draft_id
-          )
         GROUP BY p.pay_month
         ORDER BY p.pay_month DESC
     `;
@@ -74,10 +70,6 @@ function selectPayrolls2(value0) {
         LEFT JOIN payments paid ON paid.payment_id = link.payment_id
         LEFT JOIN bank_accounts account ON account.account_id = paid.account_id
         WHERE d.status IN ('APPROVED', '승인')
-          AND NOT EXISTS (
-              SELECT 1 FROM trade_transactions t
-              WHERE t.source_type = 'draft' AND t.source_id = d.draft_id
-          )
         ORDER BY p.employee_id, p.payroll_id
     `;
 }
@@ -105,7 +97,8 @@ const selectPayrolls3 = `SELECT p.*, d.status AS approval_status, d.draft_id
 
 const selectPayments = 'SELECT payroll_id FROM payments WHERE payroll_id = ? FOR UPDATE';
 
-const selectTradeTransactions = "SELECT transaction_id FROM trade_transactions WHERE source_type = 'draft' AND source_id = ? FOR UPDATE";
+// 급여 지출은 payrolls/payments를 원본으로 사용합니다. 별도 거래 연결 테이블은 사용하지 않습니다.
+const selectTradeTransactions = 'SELECT 0 AS transaction_id WHERE 1 = 0';
 
 const selectBankAccounts = 'SELECT balance, currency, account_status FROM bank_accounts WHERE account_id = ? FOR UPDATE';
 

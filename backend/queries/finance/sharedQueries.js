@@ -28,5 +28,6 @@ const selectPayments2 = `
 
 module.exports = {
     selectPayments,
-    selectPayments2
+    selectPayments2: `SELECT document_id, amount FROM payments
+        WHERE document_id IS NOT NULL AND payment_status = '완료' AND payment_direction = '출금'`
 };

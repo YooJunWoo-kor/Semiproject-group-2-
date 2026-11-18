@@ -18,17 +18,14 @@ i.supply_price,
 i.vat,
 (i.supply_price + i.vat) AS total_amount,
 p.closing_day,
-t.source_type AS linked_source_type,
-t.source_id AS linked_source_id,
-CASE WHEN c.category_code = 'expense_other_1' THEN 'unclassified'
-     ELSE COALESCE(c.category_code, 'unclassified') END AS category_code
+NULL AS linked_source_type,
+NULL AS linked_source_id,
+'unclassified' AS category_code
 FROM trade_items i
 INNER JOIN trade_transactions t
 ON i.transaction_id=t.transaction_id
 INNER JOIN partners p
 ON t.partner_id=p.partner_id
-LEFT JOIN finance_payment_classifications c
-ON c.source_type = 'transaction' AND c.source_id = t.transaction_id
 ORDER BY t.trade_date DESC, t.transaction_id DESC, i.item_id DESC
 `;
 
