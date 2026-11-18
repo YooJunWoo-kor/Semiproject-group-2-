@@ -129,6 +129,8 @@ function ProductList() {
 
             <section className=" horizontal-box ">
                 <select
+                    className="quality-product-status-select"
+                    aria-label="품질 검사 상태 필터"
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value)}
                 >
