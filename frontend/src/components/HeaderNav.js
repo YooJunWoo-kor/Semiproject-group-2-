@@ -77,13 +77,13 @@ function HeaderNav() {
         }
 
         saveLoginUser({
-            employeeKey: user.employee_id,
-            name: user.name,
-            email: user.email,
-            departmentName: user.department_name,
-            department: user.department_id,
-            position: user.position,
-            role: user.role
+            employeeKey: selectedEmployee.employee_id,
+            name: selectedEmployee.name,
+            email: selectedEmployee.email,
+            departmentName: selectedEmployee.department_name,
+            department: selectedEmployee.department_id,
+            position: selectedEmployee.position,
+            role: selectedEmployee.role
         })
 
         window.location.replace("/main"); // 계정전환 후 main으로 이동

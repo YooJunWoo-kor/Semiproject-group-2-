@@ -575,28 +575,53 @@ export default function Attendance() {
   const [leaveCount, setLeaveCount] = useState(0);
 
   useEffect(() => {
-    loadLeave();
-  }, [selectedEmployeeId]);
+    const employeeId = Number(selectedEmployeeId);
 
-  const loadLeave = async () => {
-    try{
-        const employeeId = Number(selectedEmployeeId);
+    // 직원이 아직 선택되지 않았다면 API 호출하지 않음
+    if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+        setLeaveCount(0);
+        return;
+    }
 
-        const response = await axios.get(`${API_BASE_URL}/AD/attendance/leave`,
-            {
-                params: { employeeId }
+    let cancelled = false;
+
+    const loadLeave = async () => {
+        try {
+            const response = await axios.get(
+                `${API_BASE_URL}/AD/attendance/leave`,
+                {
+                    params: { employeeId }
+                }
+            );
+
+            if (!response.data?.success) {
+                throw new Error("연차 조회 응답 오류");
             }
 
-        );
+            if (!cancelled) {
+                setLeaveCount(
+                    Number(response.data.data?.usedLeaveDays ?? 0)
+                );
+            }
 
-        const temp = response.data.data.usedLeaveDays;
+        } catch (err) {
+            if (!cancelled) {
+                console.error(
+                    "연차 조회 실패:",
+                    err.response?.status,
+                    err.response?.data || err
+                );
+                setLeaveCount(0);
+            }
+        }
+    };
 
-        setLeaveCount(Number(temp));
-    }
-    catch(err){
-        console.error("연차 조회 실패", err);
-    }
-}
+    loadLeave();
+
+    return () => {
+        cancelled = true;
+    };
+}, [selectedEmployeeId]);
 
   useEffect(() => {
     let ignore = false;
