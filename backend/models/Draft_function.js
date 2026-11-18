@@ -443,7 +443,6 @@ class Draft {
             const query = `
                 SELECT
                     DATE_FORMAT(e.hire_date, '%Y-%m-%d') AS hireDate,
-                    DATE_FORMAT(CURDATE(), '%Y-%m-%d') AS today,
                     JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.startDate')) AS startDate,
                     JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.endDate')) AS endDate
                 FROM employees e
@@ -462,7 +461,6 @@ class Draft {
                 }
     
                 const hireDate = rows[0].hireDate;
-                const today = rows[0].today;
     
                 let usedLeaveDays = 0;
     
@@ -472,9 +470,10 @@ class Draft {
                     const startDate = row.startDate.slice(0, 10); // 날짜만 추출
                     const endDate = row.endDate.slice(0, 10);
     
-                    // 입사일 이전과 오늘 이후 날짜는 제외
+                    // 최종 승인 시 미래 휴가도 전체 신청 기간의 평일을 즉시 사용 연차로 계산한다.
+                    // 입사일 이전 날짜는 기존대로 제외한다.
                     const start = startDate < hireDate ? hireDate : startDate;
-                    const end = endDate > today ? today : endDate;
+                    const end = endDate;
     
                     if (start <= end) {
                         usedLeaveDays += calculateLeaveDays(start, end);
