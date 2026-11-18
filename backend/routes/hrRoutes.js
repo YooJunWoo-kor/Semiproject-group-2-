@@ -1,6 +1,9 @@
 const express = require('express');
 const db = require('../db');
 
+const createImageUpload = require('../middleware/imageUpload');
+const upload = createImageUpload('Images');
+
 const hrRouter = express.Router();
 const promiseDb = db.promise();
 
@@ -1432,6 +1435,96 @@ hrRouter.patch('/employees/:employeeId/status', async (req, res) => {
         });
     }
 });
+
+// 이것은 마이페이지 이메일과 전화번호 업데이트용 api임 (인사아님!)
+
+hrRouter.patch('/employees/:employeeId/contact', async (req, res) => {
+    const employeeId = Number(req.params.employeeId);
+    const email = String(req.body?.email ?? '').trim();
+    const phone = String(req.body?.phone ?? '').trim();
+
+    if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+        return res.status(400).json({
+            success: false,
+            message: '올바른 직원 ID가 필요합니다.'
+        });
+    }
+
+    if (!isEmailString(email) || email.length > 100) {
+        return res.status(400).json({
+            success: false,
+            message: '이메일 형식을 확인해 주세요.'
+        });
+    }
+
+    if (!/^[0-9+\-()\s]{8,20}$/.test(phone)) {
+        return res.status(400).json({
+            success: false,
+            message: '전화번호 형식을 확인해 주세요.'
+        });
+    }
+
+    try {
+        // 직원 존재 여부 확인
+        const [employees] = await promiseDb.query(
+            'SELECT employee_id FROM employees WHERE employee_id = ?',
+            [employeeId]
+        );
+
+        if (employees.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '해당 직원을 찾을 수 없습니다.'
+            });
+        }
+
+        // 다른 직원이 동일 이메일을 사용 중인지 확인
+        const [duplicates] = await promiseDb.query(
+            `SELECT employee_id
+             FROM employees
+             WHERE email = ? AND employee_id <> ?
+             LIMIT 1`,
+            [email, employeeId]
+        );
+
+        if (duplicates.length > 0) {
+            return res.status(409).json({
+                success: false,
+                message: '이미 사용 중인 이메일입니다.'
+            });
+        }
+
+        // 이메일과 전화번호만 변경
+        await promiseDb.query(
+            `UPDATE employees
+            SET email = ?, phone = ?
+            WHERE employee_id = ?`,
+            [email, phone, employeeId]
+        );
+
+        return res.json({
+            success: true,
+            data: { employeeId, email, phone },
+            message: '개인정보가 저장되었습니다.'
+        });
+
+    } catch (error) {
+        console.error('개인정보 수정 오류:', error);
+
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({
+                success: false,
+                message: '이미 사용 중인 이메일입니다.'
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: '개인정보 저장에 실패했습니다.'
+        });
+    }
+});
+
 
 
 module.exports = hrRouter;
