@@ -25,6 +25,8 @@ function ProductList() {
     const [isSaving, setIsSaving] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
 
+    const [statusFilter, setStatusFilter] = useState("전체");
+
     useEffect(() => {
         const loadProducts = async () => {
             try {
@@ -38,10 +40,18 @@ function ProductList() {
         loadProducts();
     }, [refreshKey]);
 
-    const filteredProducts = products.filter(product =>
-        (product.product_name || "").toLowerCase().includes(search.toLowerCase()) ||
-        (product.product_code || "").toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredProducts = products.filter(product => {
+
+        const matchesSearch =
+            (product.product_name || "").toLowerCase().includes(search.toLowerCase()) ||
+            (product.product_code || "").toLowerCase().includes(search.toLowerCase());
+
+        const matchesStatus =
+            statusFilter === "전체" ||
+            (product.quality_status || "미실시") === statusFilter;
+
+        return matchesSearch && matchesStatus;
+    });
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -78,22 +88,22 @@ function ProductList() {
 
     console.log(filteredProducts)
 
-    const notimpleLength = ()=>{
-        const filterLengt = filteredProducts.filter((item)=>{
+    const notimpleLength = () => {
+        const filterLengt = filteredProducts.filter((item) => {
             return item.quality_status == "미실시"
         })
         return filterLengt.length;
     }
 
-    const failedLength = ()=>{
-        const filterLengt = filteredProducts.filter((item)=>{
+    const failedLength = () => {
+        const filterLengt = filteredProducts.filter((item) => {
             return item.quality_status == "불합격"
         })
         return filterLengt.length;
     }
 
-    const sucessedLength = ()=>{
-        const filterLengt = filteredProducts.filter((item)=>{
+    const sucessedLength = () => {
+        const filterLengt = filteredProducts.filter((item) => {
             return item.quality_status == "통과"
         })
         return filterLengt.length;
@@ -104,12 +114,12 @@ function ProductList() {
     fail = failedLength();
 
     return (
-        <div className="border-container" style={{gap:"10px"}}>
+        <div className="border-container" style={{ gap: "10px" }}>
             <header className="dashboard-header">
                 <span className="subtitle">제품 목록</span>
-                <ColorTeg title={"통과"} count={sucesse} type={"건"} color={"blue"}/>
+                <ColorTeg title={"통과"} count={sucesse} type={"건"} color={"blue"} />
                 <ColorTeg title={"실패"} count={fail} type={"건"} />
-                <ColorTeg title={"미실시"} count={notimple} type={"건"} color={"orange"}/>
+                <ColorTeg title={"미실시"} count={notimple} type={"건"} color={"orange"} />
                 <div className="dashboard-top">
                     <button type="button" className="register-btn" onClick={() => setIsRegisterOpen(true)}>
                         + 제품등록
@@ -118,20 +128,30 @@ function ProductList() {
             </header>
 
             <section className=" horizontal-box ">
-                    <input
-                        style={{
-                            width:"250px",
-                            fontSize: "12px",
-                            marginLeft: "auto"
-                        }}
-                        value={search} onChange={e => setSearch(e.target.value)}
-                        placeholder="제품명 또는 제품코드" aria-label="제품 검색" />
+                <select
+                    value={statusFilter}
+                    onChange={e => setStatusFilter(e.target.value)}
+                >
+                    <option value="전체">전체</option>
+                    <option value="통과">통과</option>
+                    <option value="불합격">불합격</option>
+                    <option value="미실시">미실시</option>
+                </select>
+                
+                <input
+                    style={{
+                        width: "250px",
+                        fontSize: "12px",
+                        marginLeft: "auto"
+                    }}
+                    value={search} onChange={e => setSearch(e.target.value)}
+                    placeholder="제품명 또는 제품코드" aria-label="제품 검색" />
             </section>
 
             {filteredProducts.length === 0 ? (
                 <div className="quality-empty-state quality-empty-card">검색 조건에 맞는 제품이 없습니다.</div>
             ) : (
-                <div className="quality-product-grid" style={{overflowY: 'scroll', maxHeight: '650px', paddingTop:'10px'}}>
+                <div className="quality-product-grid" style={{ overflowY: 'scroll', maxHeight: '650px', paddingTop: '10px' }}>
                     {filteredProducts.map(product => (
                         <article key={product.product_id} className="quality-product-card"
                             onClick={() => navigate("/main/qa/products/" + product.product_id)}
