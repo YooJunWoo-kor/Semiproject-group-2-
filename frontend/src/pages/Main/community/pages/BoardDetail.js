@@ -11,6 +11,7 @@ import {
 
 const formatDate = (value) =>
   value ? new Date(value).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }) : "-";
+
 const formatDateTime = (value) =>
   value ? new Date(value).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) : "-";
 
@@ -24,6 +25,8 @@ export default function BoardDetail({
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState("");
+  const [replyToId, setReplyToId] = useState(null);
+  const [replyContent, setReplyContent] = useState("");
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editingComment, setEditingComment] = useState("");
   const [busy, setBusy] = useState(false);
@@ -43,12 +46,19 @@ export default function BoardDetail({
   useEffect(() => {
     setLoading(true);
     setComment("");
+    setReplyToId(null);
+    setReplyContent("");
     setEditingCommentId(null);
     fetchDetail();
   }, [apiPath, postId, refreshKey]);
 
-  if (loading) return <p className="no-data">게시글을 불러오는 중입니다.</p>;
-  if (!post) return <p className="no-data">존재하지 않거나 삭제된 게시글입니다.</p>;
+  if (loading) {
+    return <p className="no-data">게시글을 불러오는 중입니다.</p>;
+  }
+
+  if (!post) {
+    return <p className="no-data">존재하지 않거나 삭제된 게시글입니다.</p>;
+  }
 
   const getEmployeeId = () => {
     const user = getLoginUser();
@@ -58,6 +68,7 @@ export default function BoardDetail({
 
   const handleDeletePost = async () => {
     if (busy || !window.confirm("이 게시글을 삭제할까요?")) return;
+
     setBusy(true);
     try {
       await deleteBoardPost(apiPath, post.post_id);
@@ -70,9 +81,11 @@ export default function BoardDetail({
     }
   };
 
-  const handleAddComment = async (e) => {
+  const handleAddComment = async (e, parentId = null) => {
     e.preventDefault();
-    if (!comment.trim() || busy) return;
+
+    const content = (parentId === null ? comment : replyContent).trim();
+    if (!content || busy) return;
 
     const employeeId = getEmployeeId();
     if (!employeeId) return alert("로그인 직원 정보를 확인해 주세요.");
@@ -80,11 +93,19 @@ export default function BoardDetail({
     setBusy(true);
     try {
       await addBoardComment(apiPath, post.post_id, {
-        content: comment.trim(),
+        content,
         employee_id: employeeId,
+        parent_comment_id: parentId,
       });
-      setComment("");
-      fetchDetail();
+
+      if (parentId === null) {
+        setComment("");
+      } else {
+        setReplyToId(null);
+        setReplyContent("");
+      }
+
+      await fetchDetail();
     } catch (error) {
       alert(error.response?.data?.message || "댓글 등록에 실패했습니다.");
     } finally {
@@ -110,20 +131,52 @@ export default function BoardDetail({
     }
   };
 
-  const handleDeleteComment = async (commentId) => {
-    if (busy || !window.confirm("댓글을 삭제할까요?")) return;
+  const handleDeleteComment = async (item) => {
+    const message = item.parent_comment_id == null
+      ? "댓글을 삭제할까요? 달린 답글도 함께 삭제됩니다."
+      : "답글을 삭제할까요?";
+
+    if (busy || !window.confirm(message)) return;
 
     setBusy(true);
     try {
-      await deleteBoardComment(apiPath, post.post_id, commentId);
+      await deleteBoardComment(apiPath, post.post_id, item.comment_id);
       setEditingCommentId(null);
-      fetchDetail();
+
+      if (replyToId === item.comment_id) {
+        setReplyToId(null);
+        setReplyContent("");
+      }
+
+      await fetchDetail();
     } catch (error) {
       alert(error.response?.data?.message || "댓글 삭제에 실패했습니다.");
     } finally {
       setBusy(false);
     }
   };
+
+  const comments = post.comments || [];
+  const rootComments = [];
+  const repliesByParent = new Map();
+
+  for (const item of comments) {
+    if (item.parent_comment_id == null) {
+      rootComments.push(item);
+      continue;
+    }
+
+    const parentId = String(item.parent_comment_id);
+    const replies = repliesByParent.get(parentId) || [];
+
+    replies.push(item);
+    repliesByParent.set(parentId, replies);
+  }
+
+  const orderedComments = rootComments.flatMap((item) => [
+    item,
+    ...(repliesByParent.get(String(item.comment_id)) || []),
+  ]);
 
   const inputStyle = {
     display: "block",
@@ -137,32 +190,45 @@ export default function BoardDetail({
   };
 
   return (
-    <article className="boder vertical-box"
-        style={{
-            padding: '30px',
-            paddingBottom: '80px'
-        }}
+    <article
+      className="boder vertical-box"
+      style={{
+        padding: "30px",
+        paddingBottom: "80px",
+      }}
     >
-        <div className="horizontal-box">
-            <h3>{post.title}</h3>
-        </div>
-        <div className="horizontal-box">
-            
-            <EmployeeTag id={getEmployeeId()}/>
-            <p className="subtext">
-                {` ${formatDate(post.created_at) < formatDate(post.updated_at) ? formatDate(post.updated_at) + '(수정)' : formatDate(post.updated_at)}`}
-            </p>
-        </div>
-        <hr/>
-      <div className="detail-body" style={{
-        whiteSpace: "pre-wrap", overflowWrap: "anywhere",
-        minHeight: '450px', backgroundColor:'#efefef',
-        padding:'30px', borderRadius:'10px'
-        }}>
+      <div className="horizontal-box">
+        <h3>{post.title}</h3>
+      </div>
+
+      <div className="horizontal-box">
+        <EmployeeTag id={getEmployeeId()} />
+        <p className="subtext">
+          {` ${
+            formatDate(post.created_at) < formatDate(post.updated_at)
+              ? formatDate(post.updated_at) + "(수정)"
+              : formatDate(post.updated_at)
+          }`}
+        </p>
+      </div>
+
+      <hr />
+
+      <div
+        className="detail-body"
+        style={{
+          whiteSpace: "pre-wrap",
+          overflowWrap: "anywhere",
+          minHeight: "450px",
+          backgroundColor: "#efefef",
+          padding: "30px",
+          borderRadius: "10px",
+        }}
+      >
         {post.content}
       </div>
 
-      <div className="horizontal-box" style={{fontSize: '13px'}}>
+      <div className="horizontal-box" style={{ fontSize: "13px" }}>
         <button type="button" disabled={busy} onClick={() => onEditPost(post)}>
           수정
         </button>
@@ -176,28 +242,42 @@ export default function BoardDetail({
         </button>
       </div>
 
-      <hr style={{margin:'20px 0'}}/>
+      <hr style={{ margin: "20px 0" }} />
 
       <section className="comment-section">
-        <h4>댓글 ({(post.comments || []).length})</h4>
-        <div className="comment-list" style={{
-            maxHeight: "300px", overflowY: "auto",
-             padding:'15px', marginBottom:'20px'
-            ,borderRadius:'10px'
-        }}>
-          {(post.comments || []).map((c) => (
-            <div className="comment-item" key={c.comment_id}>
+        <h4>댓글 ({orderedComments.length})</h4>
+
+        <div
+          className="comment-list"
+          style={{
+            maxHeight: "300px",
+            overflowY: "auto",
+            padding: "15px",
+            marginBottom: "20px",
+            borderRadius: "10px",
+          }}
+        >
+          {orderedComments.map((c) => (
+            <div
+              className="comment-item"
+              key={c.comment_id}
+              style={c.parent_comment_id == null ? undefined : { marginLeft: 24 }}
+            >
               <div className="comment-meta">
                 <strong>{c.employee_name || "작성자 미확인"}</strong>
-                <span className="subtext" style={{fontSize:'13px', marginLeft:'auto'}}>
+
+                <span className="subtext" style={{ fontSize: "13px", marginLeft: "auto" }}>
                   {` ${formatDateTime(c.created_at)}`}
                   {c.updated_at && ` | 수정: ${formatDateTime(c.updated_at)}`}
                 </span>
 
                 {editingCommentId === c.comment_id ? (
-                  <form onSubmit={(e) => handleUpdateComment(e, c.comment_id)} className="horizontal-box">
+                  <form
+                    className="horizontal-box"
+                    onSubmit={(e) => handleUpdateComment(e, c.comment_id)}
+                  >
                     <input
-                        className="size-fill"
+                      className="size-fill"
                       required
                       maxLength={10000}
                       style={inputStyle}
@@ -205,17 +285,41 @@ export default function BoardDetail({
                       onChange={(e) => setEditingComment(e.target.value)}
                       disabled={busy}
                     />
-                    <button type="submit" disabled={busy} style={{fontSize:'13px'}}>저장</button>
-                    <button type="button" disabled={busy} style={{fontSize:'13px'}} onClick={() => setEditingCommentId(null)}>
+                    <button type="submit" disabled={busy} style={{ fontSize: "13px" }}>
+                      저장
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      style={{ fontSize: "13px" }}
+                      onClick={() => setEditingCommentId(null)}
+                    >
                       취소
                     </button>
                   </form>
                 ) : (
                   <div className="horizontal-box">
-                    <p className="comment-text" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                    <p
+                      className="comment-text"
+                      style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
+                    >
                       {c.content}
                     </p>
-                    <div className="horizontal-box" style={{fontSize:'13px', marginLeft:'auto'}}>
+
+                    <div className="horizontal-box" style={{ fontSize: "13px", marginLeft: "auto" }}>
+                      {c.parent_comment_id == null && (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => {
+                            setReplyToId(c.comment_id);
+                            setReplyContent("");
+                          }}
+                        >
+                          답글
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         disabled={busy}
@@ -226,10 +330,11 @@ export default function BoardDetail({
                       >
                         수정
                       </button>
+
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() => handleDeleteComment(c.comment_id)}
+                        onClick={() => handleDeleteComment(c)}
                       >
                         삭제
                       </button>
@@ -237,10 +342,41 @@ export default function BoardDetail({
                   </div>
                 )}
               </div>
+
+              {replyToId === c.comment_id && (
+                <form
+                  className="horizontal-box"
+                  onSubmit={(e) => handleAddComment(e, c.comment_id)}
+                >
+                  <input
+                    className="size-fill"
+                    required
+                    maxLength={10000}
+                    placeholder="답글을 입력하세요"
+                    value={replyContent}
+                    onChange={(e) => setReplyContent(e.target.value)}
+                    disabled={busy}
+                    style={inputStyle}
+                  />
+                  <button type="submit" disabled={busy}>
+                    답글 등록
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setReplyToId(null);
+                      setReplyContent("");
+                    }}
+                  >
+                    취소
+                  </button>
+                </form>
+              )}
             </div>
           ))}
 
-          {(post.comments || []).length === 0 && (
+          {orderedComments.length === 0 && (
             <p className="no-data">등록된 댓글이 없습니다.</p>
           )}
         </div>
@@ -259,7 +395,12 @@ export default function BoardDetail({
             onChange={(e) => setComment(e.target.value)}
             style={{ ...inputStyle, flex: "1 1 240px", width: "auto" }}
           />
-          <button type="submit" className="register-btn" disabled={busy} style={{fontSize:'13px'}}>
+          <button
+            type="submit"
+            className="register-btn"
+            disabled={busy}
+            style={{ fontSize: "13px" }}
+          >
             댓글 등록
           </button>
         </form>

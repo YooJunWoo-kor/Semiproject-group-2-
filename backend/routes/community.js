@@ -237,8 +237,13 @@ async function deleteComment(req, res, board) {
     }
 
     const [result] = await db.promise().execute(
-        `DELETE c FROM community_comments c
+        `DELETE c, reply
+         FROM community_comments c
          JOIN community_posts p ON c.post_id = p.post_id
+         LEFT JOIN community_comments reply
+           ON reply.post_id = c.post_id
+          AND reply.parent_comment_id = c.comment_id
+          AND c.parent_comment_id IS NULL
          WHERE ${target.condition}`,
         target.params
     );
@@ -319,31 +324,53 @@ router.delete('/:boardPath/:postId', withBoard(async (req, res, board) => {
     res.json({ message: '게시글이 삭제되었습니다.' });
 }));
 
-// 8. 동적 게시판 댓글 등록
+// 8. 동적 게시판 댓글·대댓글 등록
 router.post('/:boardPath/:postId/comments', withBoard(async (req, res, board) => {
     const { postId } = req.params;
+    const { content, employee_id, parent_comment_id = null } = req.body ?? {};
 
-    if (!validId(postId) ||
-        !validId(req.body?.employee_id) ||
-        !validText(req.body?.content, 10000)) {
+    if (!validId(postId) || !validId(employee_id) || !validText(content, 10000)) {
         return badRequest(res, '게시글 번호, 댓글 내용과 작성 직원 번호를 확인해 주세요.');
     }
 
+    const isReply = parent_comment_id !== null;
+    if (isReply && !validId(parent_comment_id)) {
+        return badRequest(res, '원댓글 번호를 확인해 주세요.');
+    }
+
     const [result] = await db.promise().execute(
-        `INSERT INTO community_comments (post_id, content, employee_id)
-         SELECT post_id, ?, ?
-         FROM community_posts
-         WHERE post_id = ? AND board_type = ?`,
-        [req.body.content.trim(), req.body.employee_id, postId, board.type]
+        `INSERT INTO community_comments
+             (post_id, content, employee_id, parent_comment_id)
+         SELECT p.post_id, ?, ?, ?
+         FROM community_posts p
+         LEFT JOIN community_comments parent
+           ON parent.comment_id = ?
+          AND parent.post_id = p.post_id
+          AND parent.parent_comment_id IS NULL
+          AND parent.deleted_at IS NULL
+         WHERE p.post_id = ? AND p.board_type = ?
+           AND (? IS NULL OR parent.comment_id IS NOT NULL)`,
+        [
+            content.trim(),
+            employee_id,
+            parent_comment_id,
+            parent_comment_id,
+            postId,
+            board.type,
+            parent_comment_id
+        ]
     );
 
     if (!result.affectedRows) {
-        return notFound(res, '게시글을 찾을 수 없습니다.');
+        const message = isReply
+            ? '게시글 또는 답글을 달 수 있는 원댓글을 찾을 수 없습니다.'
+            : '게시글을 찾을 수 없습니다.';
+        return notFound(res, message);
     }
 
     res.status(201).json({
         comment_id: result.insertId,
-        message: '댓글이 등록되었습니다.'
+        message: isReply ? '답글이 등록되었습니다.' : '댓글이 등록되었습니다.'
     });
 }));
 
