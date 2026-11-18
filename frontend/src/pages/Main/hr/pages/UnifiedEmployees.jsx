@@ -93,6 +93,26 @@ function isVisibleEmployee(employee) {
   return resignationDate >= oneMonthAgo;
 }
 
+function getEmployeeDisplayStatus(employee) {
+  const employmentStatus = employee.employmentStatus || "-";
+  const isOnLeaveToday =
+    employee.isOnLeaveToday === true ||
+    Number(employee.isOnLeaveToday) === 1 ||
+    String(employee.isOnLeaveToday).toLowerCase() === "true";
+
+  if (employmentStatus === "휴직" || employmentStatus === "퇴사") {
+    return employmentStatus;
+  }
+
+  return isOnLeaveToday ? "휴가" : employmentStatus;
+}
+
+function getEmployeeStatusClass(status) {
+  if (status === "재직") return "active";
+  if (status === "휴직" || status === "휴가") return "on-leave";
+  return "retired";
+}
+
 function money(value) {
   return value === null || value === undefined || value === ""
     ? "-"
@@ -797,10 +817,20 @@ export default function UnifiedEmployees() {
       }
     }
 
+    function refreshOnVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        load();
+      }
+    }
+
     load();
+    window.addEventListener("focus", load);
+    document.addEventListener("visibilitychange", refreshOnVisibilityChange);
 
     return () => {
       active = false;
+      window.removeEventListener("focus", load);
+      document.removeEventListener("visibilitychange", refreshOnVisibilityChange);
     };
   }, []);
 
@@ -1852,15 +1882,6 @@ export default function UnifiedEmployees() {
                   <strong>{dept.departmentName}</strong>
                   <span>{members}명</span>
 
-                  {dept.managerName && (
-                    <small>
-                      부서장: {dept.managerName}
-                    </small>
-                  )}
-
-                  {dept.description && (
-                    <small>{dept.description}</small>
-                  )}
                 </button>
               );
             })}
@@ -1906,7 +1927,10 @@ export default function UnifiedEmployees() {
                   조건에 맞는 직원이 없습니다.
                 </p>
               ) : (
-                visibleEmployees.map((emp) => (
+                visibleEmployees.map((emp) => {
+                  const displayStatus = getEmployeeDisplayStatus(emp);
+
+                  return (
                   <button
                     key={emp.employeeId}
                     type="button"
@@ -1921,14 +1945,9 @@ export default function UnifiedEmployees() {
                       <span className="employee-name-line">
                         <strong className="emp-name">{emp.name}</strong>
                         <span
-                          className={`employee-status-badge ${emp.employmentStatus === "재직"
-                            ? "active"
-                            : emp.employmentStatus === "휴직"
-                              ? "on-leave"
-                              : "retired"
-                            }`}
+                          className={`employee-status-badge ${getEmployeeStatusClass(displayStatus)}`}
                         >
-                          {emp.employmentStatus || "-"}
+                          {displayStatus}
                         </span>
                       </span>
                       <span>
@@ -1939,7 +1958,8 @@ export default function UnifiedEmployees() {
                       </span>
                     </span>
                   </button>
-                ))
+                  );
+                })
               )}
             </div>
 
@@ -2046,14 +2066,14 @@ export default function UnifiedEmployees() {
                     </div>
 
                     <span
-                      className={`status-tag ${selected.employmentStatus === "재직"
+                      className={`status-tag ${getEmployeeDisplayStatus(selected) === "재직"
                         ? "working"
-                        : selected.employmentStatus === "휴직"
+                        : getEmployeeDisplayStatus(selected) === "휴직" || getEmployeeDisplayStatus(selected) === "휴가"
                           ? "leave"
                           : "off"
                         }`}
                     >
-                      {selected.employmentStatus}
+                      {getEmployeeDisplayStatus(selected)}
                     </span>
                   </div>
                 )}

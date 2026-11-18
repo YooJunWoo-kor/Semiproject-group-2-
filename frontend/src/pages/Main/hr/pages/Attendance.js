@@ -1,6 +1,5 @@
 
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import PaginationTable from "../../../../components/PaginationTable";
 import ModalBase from "../../../../components/ModalBase";
 import { getLoginUser } from "../../../../utils/authStorage";
@@ -32,6 +31,26 @@ function createDepartmentList(data) {
     }
     return list;
   }, []);
+}
+
+function getEmployeeDisplayStatus(employee) {
+  const employmentStatus = employee.employmentStatus || "-";
+  const isOnLeaveToday =
+    employee.isOnLeaveToday === true ||
+    Number(employee.isOnLeaveToday) === 1 ||
+    String(employee.isOnLeaveToday).toLowerCase() === "true";
+
+  if (employmentStatus === "휴직" || employmentStatus === "퇴사") {
+    return employmentStatus;
+  }
+
+  return isOnLeaveToday ? "휴가" : employmentStatus;
+}
+
+function getEmployeeStatusBadgeClass(status) {
+  if (status === "재직") return "active";
+  if (status === "휴직" || status === "휴가") return "on-leave";
+  return "retired";
 }
 
 function countDepartmentEmployees(employees, departmentId) {
@@ -522,7 +541,6 @@ function AttendanceEditForm({ attendance, onSave, onCancel, saving }) {
 export default function Attendance() {
   // HR 근태 화면의 공통 상태: 조직·근태·휴가 데이터를 한 화면에서 관리합니다.
   // 근태 기록과 휴가 신청·승인 조회를 한 화면의 탭으로 제공합니다.
-  const navigate = useNavigate();
   const loginUser = getLoginUser();
   const isMaster = String(loginUser?.role || "").trim().toUpperCase() === "MASTER";
   const [employees, setEmployees] = useState([]);
@@ -940,16 +958,6 @@ export default function Attendance() {
                 근태 상태 수정
               </button>
             )}
-            {selectedEmployee && (
-              <button
-                type="button"
-                className="register-btn erp-primary-button"
-                onClick={() => navigate("/main/mytesk/draft-create?type=leave")}
-                disabled={saving}
-              >
-                휴가 신청
-              </button>
-            )}
           </div>
         ) : null}
       </header>
@@ -1099,11 +1107,8 @@ export default function Attendance() {
             ) : (
               <div className="employee-list">
                 {visibleEmployeeList.map((employee) => {
-                  const statusClass = employee.employmentStatus === "재직"
-                    ? "active"
-                    : employee.employmentStatus === "휴직"
-                      ? "on-leave"
-                      : "retired";
+                  const displayStatus = getEmployeeDisplayStatus(employee);
+                  const statusClass = getEmployeeStatusBadgeClass(displayStatus);
 
                   return (
                     <button
@@ -1118,7 +1123,7 @@ export default function Attendance() {
                         <span className="employee-name-line">
                           <strong className="emp-name">{employee.employeeName}</strong>
                           <span className={`employee-status-badge ${statusClass}`}>
-                            {employee.employmentStatus || "-"}
+                            {displayStatus}
                           </span>
                         </span>
                         <span>

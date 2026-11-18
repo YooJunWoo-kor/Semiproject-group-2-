@@ -762,7 +762,8 @@
   background: #fff7ed;
 }
 
-.attendance-detail-panel .status-tag.leave {
+.attendance-detail-panel .status-tag.leave,
+.hr-department-attendance .status-tag.leave {
   color: var(--color-brand);
   background: var(--color-brand-soft);
 }

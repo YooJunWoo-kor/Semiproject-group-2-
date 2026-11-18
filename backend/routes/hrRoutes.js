@@ -21,6 +21,20 @@ const {
 
 const hrRouter = express.Router();
 
+function seoulToday() {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(new Date()).reduce((values, part) => {
+        if (part.type !== 'literal') values[part.type] = part.value;
+        return values;
+    }, {});
+
+    return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 // 근태관리: 출퇴근 기록 등록·조회·수정·삭제와 부서별 현황을 처리합니다.
 hrRouter.post('/attendance', async (req, res) => {
     const employeeId = Number(req.body.employeeId);
@@ -412,6 +426,15 @@ hrRouter.get('/employees', async (req, res) => {
             e.initial_annual_salary AS initialAnnualSalary,
             DATE_FORMAT(e.resignation_date, '%Y-%m-%d') AS resignationDate,
             e.employment_status AS employmentStatus,
+            EXISTS (
+                SELECT 1
+                FROM my_draft leaveDraft
+                WHERE leaveDraft.employee_id = e.employee_id
+                  AND leaveDraft.document_type = '휴가'
+                  AND leaveDraft.status IN ('APPROVED', '승인')
+                  AND JSON_UNQUOTE(JSON_EXTRACT(leaveDraft.detail_data, '$.startDate')) <= ?
+                  AND JSON_UNQUOTE(JSON_EXTRACT(leaveDraft.detail_data, '$.endDate')) >= ?
+            ) AS isOnLeaveToday,
             ea.role,
             ea.account_status AS accountStatus
         FROM employees e
@@ -423,7 +446,8 @@ hrRouter.get('/employees', async (req, res) => {
     `;
 
     try {
-        const [rows] = await promiseDb.query(query);
+        const today = seoulToday();
+        const [rows] = await promiseDb.query(query, [today, today]);
 
         return res.json({
             success: true,
