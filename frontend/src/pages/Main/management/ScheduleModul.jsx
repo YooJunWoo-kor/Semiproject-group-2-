@@ -6,6 +6,8 @@ import ScheduleModalPopup from './ScheduleModalPopup';
 import axios from 'axios';
 import { formatDateToYYYYMMDD, API_BASE_URL, getLoginUser, getTodayString } from '../../../utils/authStorage';
 import ColorTeg from '../../../components/ColorTeg';
+import EmployeeTag from '../../../components/EmployeeTag'
+import ProjectProgress from '../../../components/ProjectProgress';
 
 function ScheduleModul({dataType = 1}) {
     //로그인 유저 정보 get
@@ -31,9 +33,11 @@ function ScheduleModul({dataType = 1}) {
                 return {
                     scheduleID: item.schedule_id
                     ,title: item.description
+                    ,description: item.description || item.content || ""
                     ,start: start
                     ,end: end
                     ,typeId: item.type_id
+                    ,employee_id: item.employee_id
                 }
             });
 
@@ -58,9 +62,11 @@ function ScheduleModul({dataType = 1}) {
                 return {
                     scheduleID: item.schedule_id
                     ,title: item.schedule_name
+                    ,description: item.description || item.content || ""
                     ,start: start
                     ,end: end
                     ,typeId: item.type_id
+                    ,employee_id: item.employee_id
                 }
             });
             setMySchduleData(dataSet);
@@ -83,9 +89,11 @@ function ScheduleModul({dataType = 1}) {
                 return {
                     scheduleID: `work_${item.worklist_id}`, // 일반 schedule_id와 충돌 방지
                     title: `[할일] ${item.title}`,
+                    description: item.content,
                     start: start,
                     end: end,
                     typeId: item.type_id
+                    ,employee_id: item.employee_id
                 };
             });
 
@@ -148,6 +156,18 @@ function ScheduleModul({dataType = 1}) {
         , count: finalSchadulData.length
     };
 
+    //스케쥴의 상세 데이터 보기
+    const [selectedSchedule, setSelectedSchedule] = useState(null);
+
+    // BasicCalendar에서 일정을 클릭했을 때 호출될 함수 (item을 매개변수로 받음)
+    const handleEventClick = (item) => {
+        setSelectedSchedule(item);
+    };
+
+    const closeScheduleDetail = () => {
+        setSelectedSchedule(null);
+    };
+
     return (
         <div className="border-container">
             <header className="dashboard-header">
@@ -170,7 +190,10 @@ function ScheduleModul({dataType = 1}) {
                 gap: '30px'
                 }}>
                 <div style={{ flex: '0.5' }}>
-                    <BasicCalendar schedule={finalSchadulData}/>
+                    <BasicCalendar
+                        schedule={finalSchadulData}
+                        onEventClick={handleEventClick}
+                    />
                 </div>
                 <div style={{ flex: '0.5' }} >
                     <WeeklyCalendar schedule={finalSchadulData}/>
@@ -182,6 +205,35 @@ function ScheduleModul({dataType = 1}) {
               layout={<ScheduleModalPopup
                 onClose={closeModal}
               />}/>: <div></div>}
+            {selectedSchedule && (
+                <ModalBase
+                    onClose={closeScheduleDetail}
+                    title={selectedSchedule.title || "일정 상세"}
+                    layout={
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minWidth: '320px', marginBottom:'50px' }}>
+                            <div>
+                                <EmployeeTag id = {selectedSchedule.employee_id}/>
+                                <ProjectProgress start={selectedSchedule.start} end={selectedSchedule.end}/>
+                            </div>
+                            <div
+                                style={{
+                                    backgroundColor: '#efefef'
+                                    ,padding: '30px'
+                                    ,minWidth: '450px'
+                                    ,height: '500px'
+                                    ,borderRadius: '10px'
+                                    ,overflowY:'auto'
+                                }}
+                            >
+                                {selectedSchedule.description || "등록된 상세 내용이 없습니다."}
+                            </div>
+                            <button style={{fontSize:"13px", width:'100px', marginLeft:'auto'}}
+                                onClick = {closeScheduleDetail}
+                            >닫기</button>
+                        </div>
+                    }
+                />
+            )}
         </div>
     );
 }

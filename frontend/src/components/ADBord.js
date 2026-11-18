@@ -8,9 +8,9 @@ import axios from "axios";
 async function setAttendens(){
     const userInfo = localStorage.getItem(LOGIN_USER_KEY);
     const userID = JSON.parse(userInfo).employeeKey;
-    try {
-        const data = await axios.post(API_BASE_URL + '/AD/setAttendenc',{userID});
-    } catch (error) {
+    const response = await axios.post(API_BASE_URL + '/AD/setAttendenc', { userID });
+    if (!response.data?.success) {
+        throw new Error(response.data?.message || '출근 처리 실패');
     }
 }
  
@@ -18,10 +18,9 @@ async function setAttendens(){
 async function updateAttendens(){
     const userInfo = localStorage.getItem(LOGIN_USER_KEY);
     const userID = JSON.parse(userInfo).employeeKey;
-    try {
-        const data = await axios.post(API_BASE_URL + '/AD/updateAttendens',{userID});
-    } catch (error) {
-        //console.log('데이터 전송 실패');
+    const response = await axios.post(API_BASE_URL + '/AD/updateAttendens', { userID });
+    if (!response.data?.success) {
+        throw new Error(response.data?.message || '퇴근 처리 실패');
     }
 }
 
@@ -33,11 +32,63 @@ function ADBord({dataSet, btnStl}){
     const userName = user?.name;
     const [isAttend, setAttend] = useState(setStyle);
 
+    const [summary, setSummary] = useState({
+        lateCount : 0,
+        overtimeCount : 0,
+        workingMinutes : 0,
+    })
+    const [remainingLeave, setRemainingLeave] = useState(null);
+
     useEffect(() => {
         if (btnStl != null) {
             setAttend(Number(btnStl));
         }
     }, [btnStl]);
+
+    useEffect(() => {
+        loadSummary();
+        loadLeave();
+    }, [])
+
+    const loadSummary = async () => {
+        try{
+            const employeeId = Number(getLoginUser()?.employeeKey)
+
+            const response = await axios.get(
+                `${API_BASE_URL}/AD/attendance/summary`,
+                {
+                    params : {employeeId}
+                }
+            );
+
+            setSummary(response.data.data);
+        }
+        catch (err){
+            console.error('근태 통계 조회 실패:', err);
+        }
+    }
+
+    const loadLeave = async () => {
+        try{
+            const employeeId = Number(getLoginUser()?.employeeKey);
+
+            const response = await axios.get(`${API_BASE_URL}/AD/attendance/leave`,
+                {
+                    params: { employeeId }
+                }
+
+            );
+
+            const { earnedLeaveDays, usedLeaveDays } = response.data.data;
+
+            setRemainingLeave(
+                Number(earnedLeaveDays) - Number(usedLeaveDays)
+            );
+        }
+        catch(err){
+            console.error("연차 조회 실패", err);
+        }
+    }
 
     return (
         <div className="attendance-card" style={{maxWidth: '250px'}}>
@@ -61,18 +112,28 @@ function ADBord({dataSet, btnStl}){
                     <button
                         className="btn-attendance check-in"
                         onClick = {async()=>{
-                            await setAttendens();
-                            await dataSet();
-                            setAttend(1);
+                            try {
+                                await setAttendens();
+                                await dataSet();
+                                await loadSummary();
+                                setAttend(1);
+                            } catch (error) {
+                                console.error('출근 처리 실패:', error);
+                            }
                         }}
                     >출근하기</button>:
                 isAttend == 1 ?
                     <button
                         className="btn-attendance check-out"
                         onClick = {async()=>{
-                            await updateAttendens();
-                            await dataSet();
-                            setAttend(2);
+                            try {
+                                await updateAttendens();
+                                await dataSet();
+                                await loadSummary();
+                                setAttend(2);
+                            } catch (error) {
+                                console.error('퇴근 처리 실패:', error);
+                            }
                         }}
                     >퇴근하기</button>:
                 <div className="btn-attendance check-ended">근무완료</div>
@@ -82,25 +143,27 @@ function ADBord({dataSet, btnStl}){
                 {/* 1. 잔여 연차 태그 (소프트 에메랄드) */}
                 <div className="attendance-tag tag-emerald">
                     <span className="tag-label">잔여 연차</span>
-                    <span className="tag-value">12.5</span>
+                    <span className="tag-value">
+                        {remainingLeave === null ? "-" : remainingLeave}
+                    </span>
                 </div>
 
-                {/* 2. 이번 달 야근 태그 (소프트 앰버) */}
+                {/* 2. 전체 누적 야근 태그 (소프트 앰버) */}
                 <div className="attendance-tag tag-amber">
                     <span className="tag-label">야근 횟수</span>
-                    <span className="tag-value">3</span>
+                    <span className="tag-value">{summary.overtimeCount}</span>
                 </div>
 
                 {/* 3. 누적 근무 시간 태그 (소프트 블루) */}
                 <div className="attendance-tag tag-blue">
                     <span className="tag-label">근무 시간</span>
-                    <span className="tag-value">168</span>
+                    <span className="tag-value">{Math.floor(summary.workingMinutes / 60)}</span>
                 </div>
 
                 {/* 4. 지각/이상 태그 (뮤트 레드) */}
                 <div className="attendance-tag tag-red">
                     <span className="tag-label">지각 횟수</span>
-                    <span className="tag-value">0</span>
+                    <span className="tag-value">{summary.lateCount}</span>
                 </div>
             </div>
             {

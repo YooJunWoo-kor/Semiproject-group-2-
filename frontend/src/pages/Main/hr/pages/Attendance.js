@@ -12,6 +12,8 @@ import {
   deleteHrAttendance,
   updateHrAttendance
 } from "../../../../components/HrData";
+import axios from "axios";
+import { API_BASE_URL } from "../../../../utils/authStorage";
 
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -251,7 +253,7 @@ function AttendanceProgressBar({ label, percent, value, detail, tone = "brand" }
   );
 }
 
-function AttendanceStatistics({ records, month }) {
+function AttendanceStatistics({ records, month, leaveCount }) {
   const monthRecords = records.filter((attendance) =>
     String(attendance.attendanceDate || "").startsWith(month)
   );
@@ -267,13 +269,16 @@ function AttendanceStatistics({ records, month }) {
   const clockedInCount = monthRecords.filter((item) => item.clockIn).length;
   const normalCount = monthRecords.filter((item) => item.status === "정상").length;
   const lateCount = monthRecords.filter((item) => item.status === "지각").length;
-  const leaveCount = monthRecords.filter((item) => item.status === "휴가").length;
   const businessTripCount = monthRecords.filter((item) => item.status === "출장").length;
   const absenceCount = monthRecords.filter((item) => item.status === "미출근").length;
   const expectedWorkMinutes = clockedInCount * 8 * 60;
   const workTimeRate = expectedWorkMinutes
     ? (workMinutes / expectedWorkMinutes) * 100
     : 0;
+
+    
+
+  
 
   return (
     <div className="attendance-subview">
@@ -567,6 +572,56 @@ export default function Attendance() {
   const [selectedAttendanceRecord, setSelectedAttendanceRecord] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [leaveCount, setLeaveCount] = useState(0);
+
+  useEffect(() => {
+    const employeeId = Number(selectedEmployeeId);
+
+    // 직원이 아직 선택되지 않았다면 API 호출하지 않음
+    if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+        setLeaveCount(0);
+        return;
+    }
+
+    let cancelled = false;
+
+    const loadLeave = async () => {
+        try {
+            const response = await axios.get(
+                `${API_BASE_URL}/AD/attendance/leave`,
+                {
+                    params: { employeeId }
+                }
+            );
+
+            if (!response.data?.success) {
+                throw new Error("연차 조회 응답 오류");
+            }
+
+            if (!cancelled) {
+                setLeaveCount(
+                    Number(response.data.data?.usedLeaveDays ?? 0)
+                );
+            }
+
+        } catch (err) {
+            if (!cancelled) {
+                console.error(
+                    "연차 조회 실패:",
+                    err.response?.status,
+                    err.response?.data || err
+                );
+                setLeaveCount(0);
+            }
+        }
+    };
+
+    loadLeave();
+
+    return () => {
+        cancelled = true;
+    };
+}, [selectedEmployeeId]);
 
   useEffect(() => {
     let ignore = false;
@@ -749,9 +804,7 @@ export default function Attendance() {
   const lateCount = selectedAttendance.filter(
     (item) => item.status === "지각"
   ).length;
-  const leaveCount = selectedAttendance.filter(
-    (item) => item.status === "휴가"
-  ).length;
+
   const tableHeaders = [
     "날짜",
     "요일",
@@ -1267,8 +1320,10 @@ export default function Attendance() {
                       <div className="summary-item">
                         <span>지각</span><strong>{lateCount}</strong>
                       </div>
+
                       <div className="summary-item">
-                        <span>휴가</span><strong>{leaveCount}</strong>
+                        <span>사용한 연차</span>
+                        <strong>{leaveCount}일</strong>
                       </div>
                     </div>
                   )}
@@ -1307,6 +1362,7 @@ export default function Attendance() {
                 <AttendanceStatistics
                   records={selectedAttendance}
                   month={selectedMonth}
+                  leaveCount={ leaveCount }
                 />
               )
             ) : leaveLoading ? (

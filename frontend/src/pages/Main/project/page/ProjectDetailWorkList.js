@@ -8,11 +8,15 @@ function ProjectDetailWorkList({ projectID, onOpenNewModal, click }) {
     const [selectedTaskId, setSelectedTaskId] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // 1. 백엔드에서 할 일 목록 불러오기
     const fetchWorkList = async () => {
+        // 1. projectID가 제대로 넘어오는지 콘솔로 먼저 확인
+        if (!projectID) return;
+    
         try {
             setLoading(true);
-            const response = await axios.get(`${API_BASE_URL}/project/worklist`);
+            const response = await axios.post(`${API_BASE_URL}/project/worklist`, {
+                projectID: projectID
+            });
             setTasks(response.data);
         } catch (error) {
             console.error("할 일 목록 조회 실패:", error);
@@ -20,7 +24,7 @@ function ProjectDetailWorkList({ projectID, onOpenNewModal, click }) {
             setLoading(false);
         }
     };
-
+    
     useEffect(() => {
         fetchWorkList();
     }, [projectID]);

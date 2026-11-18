@@ -437,6 +437,106 @@ class Draft {
         });
     }
     // 모든 결재자가 추가되면 이 결재자들을 table에 올리는 transaction 아니면 올리지 않는 rollback 로직
+
+    static getUsedLeaveDays(employeeId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT
+                    DATE_FORMAT(e.hire_date, '%Y-%m-%d') AS hireDate,
+                    JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.startDate')) AS startDate,
+                    JSON_UNQUOTE(JSON_EXTRACT(d.detail_data, '$.endDate')) AS endDate
+                FROM employees e
+                LEFT JOIN my_draft d
+                    ON e.employee_id = d.employee_id
+                    AND d.document_type = '휴가'
+                    AND d.status = 'APPROVED'
+                WHERE e.employee_id = ?
+            `;
+    
+            db.query(query, [employeeId], (err, rows) => {
+                if (err) return reject(err);
+    
+                if (rows.length === 0 || !rows[0].hireDate) {
+                    return reject(new Error("직원 또는 입사일 정보가 없습니다."));
+                }
+    
+                const hireDate = rows[0].hireDate;
+    
+                let usedLeaveDays = 0;
+    
+                rows.forEach(row => {
+                    if (!row.startDate || !row.endDate) return;
+    
+                    const startDate = row.startDate.slice(0, 10); // 날짜만 추출
+                    const endDate = row.endDate.slice(0, 10);
+    
+                    // 입사일 이전과 오늘 이후 날짜는 제외
+                    const start = startDate < hireDate ? hireDate : startDate;
+                    const end = endDate;
+    
+                    if (start <= end) {
+                        usedLeaveDays += calculateLeaveDays(start, end);
+                    }
+                });
+    
+                resolve(usedLeaveDays);
+            });
+        });
+    }
+       
+
+    // 승인된 휴가를 조회 / 사용한 연차를 계산
+
+    static getEarnedLeaveDays(employeeId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT
+                    GREATEST(
+                        0,
+                        TIMESTAMPDIFF(MONTH, hire_date, CURDATE())
+                    ) AS earnedLeaveDays
+                FROM employees
+                WHERE employee_id = ?
+            `;
+    
+            db.query(query, [employeeId], (err, rows) => {
+                if (err) {
+                    return reject(err);
+                }
+    
+                if (rows.length === 0 || rows[0].earnedLeaveDays === null) {
+                    return reject(new Error("직원 또는 입사일 정보가 없습니다."));
+                }
+    
+                resolve(Number(rows[0].earnedLeaveDays));
+            });
+        });
+    }
+    // 고용일로부터 현재 날짜까지 월마다 1일의 연차를 부과하는 로직
+
 }
 module.exports = Draft;
 
+function calculateLeaveDays(startDate, endDate) {
+    let count = 0;
+
+    const current = new Date(startDate + "T00:00:00Z");
+    const end = new Date(endDate + "T00:00:00Z");
+
+    if (isNaN(current.getTime()) || isNaN(end.getTime())) {
+        return 0;
+    }
+
+    while (current <= end) {
+        const day = current.getUTCDay();
+
+        if (day !== 0 && day !== 6) { // 토요일 또는 일요일이 아니라면
+            count++;
+        }
+
+        current.setUTCDate(current.getUTCDate() + 1);
+    }
+
+    return count;
+}
+// 날짜간의 계산해서 토요일과 일요일을 제외하는 로직

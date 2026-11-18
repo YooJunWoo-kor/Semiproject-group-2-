@@ -259,6 +259,52 @@ async function deleteComment(req, res, board) {
 router.put('/comments/:commentId', withBoard(updateComment, '/free-posts'));
 router.delete('/comments/:commentId', withBoard(deleteComment, '/free-posts'));
 
+// 새 게시판 등록 (POST /api/community/boards) - 경로 자동 생성
+router.post('/boards', handle(async (req, res) => {
+    const { board_name } = req.body;
+
+    if (!validText(board_name, 50)) {
+        return badRequest(res, '게시판 이름을 입력해 주세요. (최대 50자)');
+    }
+
+    const cleanName = board_name.trim();
+
+    // 중복 게시판 이름 체크
+    const [dup] = await db.promise().execute(
+        'SELECT board_type FROM community_boards WHERE board_name = ?',
+        [cleanName]
+    );
+    if (dup.length > 0) {
+        return badRequest(res, '이미 사용 중인 게시판 이름입니다.');
+    }
+
+    // 현재 가장 큰 board_type 번호 + 1 자동 계산
+    const [[maxRow]] = await db.promise().execute(
+        'SELECT COALESCE(MAX(CAST(board_type AS UNSIGNED)), 0) AS maxType FROM community_boards'
+    );
+    const nextBoardType = String(Number(maxRow.maxType) + 1);
+
+    // 번호 기반 고유 경로 자동 생성 (예: /board-6)
+    const autoPath = `/board-${nextBoardType}`;
+
+    await db.promise().execute(
+        `INSERT INTO community_boards (board_type, board_name, api_path, front_path)
+         VALUES (?, ?, ?, ?)`,
+        [nextBoardType, cleanName, autoPath, autoPath]
+    );
+
+    res.status(201).json({
+        status: 'succesed',
+        board: {
+            board_type: nextBoardType,
+            board_name: cleanName,
+            api_path: autoPath,
+            front_path: autoPath,
+        },
+        message: '새 게시판이 등록되었습니다.',
+    });
+}));
+
 // 4. 동적 게시판 게시글 목록 조회
 router.get('/:boardPath', withBoard(async (req, res, board) => {
     res.json(await loadBoard(board));
@@ -408,51 +454,5 @@ router.post('/notices/:postId/view', withBoard(async (req, res, board) => {
 
     res.json({ views: post.views });
 }, '/notices'));
-
-// 새 게시판 등록 (POST /api/community/boards) - 경로 자동 생성
-router.post('/boards', handle(async (req, res) => {
-    const { board_name } = req.body;
-
-    if (!validText(board_name, 50)) {
-        return badRequest(res, '게시판 이름을 입력해 주세요. (최대 50자)');
-    }
-
-    const cleanName = board_name.trim();
-
-    // 중복 게시판 이름 체크
-    const [dup] = await db.promise().execute(
-        'SELECT board_type FROM community_boards WHERE board_name = ?',
-        [cleanName]
-    );
-    if (dup.length > 0) {
-        return badRequest(res, '이미 사용 중인 게시판 이름입니다.');
-    }
-
-    // 현재 가장 큰 board_type 번호 + 1 자동 계산
-    const [[maxRow]] = await db.promise().execute(
-        'SELECT COALESCE(MAX(CAST(board_type AS UNSIGNED)), 0) AS maxType FROM community_boards'
-    );
-    const nextBoardType = String(Number(maxRow.maxType) + 1);
-
-    // 번호 기반 고유 경로 자동 생성 (예: /board-6)
-    const autoPath = `/board-${nextBoardType}`;
-
-    await db.promise().execute(
-        `INSERT INTO community_boards (board_type, board_name, api_path, front_path)
-         VALUES (?, ?, ?, ?)`,
-        [nextBoardType, cleanName, autoPath, autoPath]
-    );
-
-    res.status(201).json({
-        status: 'succesed',
-        board: {
-            board_type: nextBoardType,
-            board_name: cleanName,
-            api_path: autoPath,
-            front_path: autoPath,
-        },
-        message: '새 게시판이 등록되었습니다.',
-    });
-}));
 
 module.exports = router;

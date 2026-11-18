@@ -1,0 +1,241 @@
+[33m49995410[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mkws[m[33m, [m[1;31morigin/kds[m[33m)[m HEAD@{0}: checkout: moving from ghy to kws
+[33m02d109f9[m[33m ([m[1;31morigin/ghy[m[33m, [m[1;32mghy[m[33m)[m HEAD@{1}: checkout: moving from main to ghy
+[33m25f00b87[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/kws[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{2}: reset: moving to origin/kws
+[33m25f00b87[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/kws[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{3}: checkout: moving from yjw to main
+[33m3778c10c[m[33m ([m[1;31morigin/yjw[m[33m, [m[1;32myjw[m[33m)[m HEAD@{4}: pull origin yjw: Fast-forward
+[33m19c693dc[m HEAD@{5}: checkout: moving from kws to yjw
+[33m49995410[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mkws[m[33m, [m[1;31morigin/kds[m[33m)[m HEAD@{6}: reset: moving to HEAD~1
+[33m25f00b87[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/kws[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{7}: checkout: moving from ghy to kws
+[33m02d109f9[m[33m ([m[1;31morigin/ghy[m[33m, [m[1;32mghy[m[33m)[m HEAD@{8}: pull origin ghy: Fast-forward
+[33m2377d838[m HEAD@{9}: checkout: moving from kws to ghy
+[33m25f00b87[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/kws[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{10}: reset: moving to origin/main
+[33m49995410[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mkws[m[33m, [m[1;31morigin/kds[m[33m)[m HEAD@{11}: checkout: moving from main to kws
+[33m25f00b87[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/kws[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{12}: commit: 켈린더 버튼 작동기능
+[33m49995410[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mkws[m[33m, [m[1;31morigin/kds[m[33m)[m HEAD@{13}: reset: moving to origin/kws
+[33m4c2da559[m HEAD@{14}: checkout: moving from kws to main
+[33m49995410[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mkws[m[33m, [m[1;31morigin/kds[m[33m)[m HEAD@{15}: commit: ui개선
+[33m5cad5d27[m HEAD@{16}: commit (merge): 기안서 취합
+[33mecc384e7[m HEAD@{17}: checkout: moving from yjw to kws
+[33m19c693dc[m HEAD@{18}: pull origin yjw: Fast-forward
+[33mf744646e[m HEAD@{19}: checkout: moving from kws to yjw
+[33mecc384e7[m HEAD@{20}: commit: 커뮤니티 ui수정
+[33m62fbe74f[m HEAD@{21}: checkout: moving from kds to kws
+[33mc85f48b5[m[33m ([m[1;32mkds[m[33m)[m HEAD@{22}: reset: moving to HEAD
+[33mc85f48b5[m[33m ([m[1;32mkds[m[33m)[m HEAD@{23}: checkout: moving from kws to kds
+[33m62fbe74f[m HEAD@{24}: commit: 제품검사 이슈해결
+[33m09ae1c2a[m HEAD@{25}: commit (merge): 유효성 체크함수 병합
+[33me16806c6[m HEAD@{26}: checkout: moving from ghy to kws
+[33m2377d838[m HEAD@{27}: pull origin ghy: Fast-forward
+[33m33236c01[m HEAD@{28}: checkout: moving from kws to ghy
+[33me16806c6[m HEAD@{29}: checkout: moving from kds to kws
+[33mc85f48b5[m[33m ([m[1;32mkds[m[33m)[m HEAD@{30}: pull origin kds: Fast-forward
+[33m269ee17c[m HEAD@{31}: checkout: moving from kws to kds
+[33me16806c6[m HEAD@{32}: commit: 프로젝트 수정 완
+[33mf41f2116[m HEAD@{33}: checkout: moving from main to kws
+[33m4c2da559[m HEAD@{34}: reset: moving to origin/kws
+[33m4c2da559[m HEAD@{35}: checkout: moving from kws to main
+[33mf41f2116[m HEAD@{36}: checkout: moving from main to kws
+[33m4c2da559[m HEAD@{37}: reset: moving to origin/kws
+[33m1b324cf0[m HEAD@{38}: checkout: moving from kws to main
+[33mf41f2116[m HEAD@{39}: merge origin/yjw: Merge made by the 'ort' strategy.
+[33m4c2da559[m HEAD@{40}: checkout: moving from yjw to kws
+[33mf744646e[m HEAD@{41}: pull origin yjw: Fast-forward
+[33mb53b78a1[m HEAD@{42}: checkout: moving from kws to yjw
+[33m4c2da559[m HEAD@{43}: commit: 사원정보 버튼 제작중
+[33m1b324cf0[m HEAD@{44}: checkout: moving from main to kws
+[33m1b324cf0[m HEAD@{45}: reset: moving to origin/kws
+[33m35ee3e63[m HEAD@{46}: reset: moving to main
+[33m35ee3e63[m HEAD@{47}: checkout: moving from kws to main
+[33m1b324cf0[m HEAD@{48}: commit (merge): 유효성 함수 병합
+[33m35ee3e63[m HEAD@{49}: checkout: moving from ghy to kws
+[33m33236c01[m HEAD@{50}: pull origin ghy: Fast-forward
+[33m790061b3[m HEAD@{51}: checkout: moving from kws to ghy
+[33m35ee3e63[m HEAD@{52}: checkout: moving from ghy to kws
+[33m790061b3[m HEAD@{53}: checkout: moving from main to ghy
+[33m35ee3e63[m HEAD@{54}: reset: moving to origin/kws
+[33m286dd798[m HEAD@{55}: checkout: moving from kws to main
+[33m35ee3e63[m HEAD@{56}: commit: 품질ui개선
+[33mdb0633b1[m HEAD@{57}: checkout: moving from ghy to kws
+[33m790061b3[m HEAD@{58}: checkout: moving from kws to ghy
+[33mdb0633b1[m HEAD@{59}: pull origin: Fast-forward
+[33m286dd798[m HEAD@{60}: checkout: moving from main to kws
+[33m286dd798[m HEAD@{61}: reset: moving to origin/kws
+[33mf293f22c[m HEAD@{62}: checkout: moving from kws to main
+[33m286dd798[m HEAD@{63}: checkout: moving from kds to kws
+[33m269ee17c[m HEAD@{64}: checkout: moving from kws to kds
+[33m286dd798[m HEAD@{65}: reset: moving to 286dd798
+[33m86622b4c[m HEAD@{66}: commit (merge): 커뮤니티 업데이트
+[33m286dd798[m HEAD@{67}: checkout: moving from kds to kws
+[33m269ee17c[m HEAD@{68}: pull origin kds: Fast-forward
+[33ma4dd9860[m HEAD@{69}: checkout: moving from kws to kds
+[33m286dd798[m HEAD@{70}: commit: 재무파트 취합
+[33m67ebfe9d[m HEAD@{71}: commit: 재무 취합 확인중
+[33m6ede1e50[m HEAD@{72}: merge ghy: Merge made by the 'ort' strategy.
+[33m744986b4[m HEAD@{73}: checkout: moving from ghy to kws
+[33m790061b3[m HEAD@{74}: pull origin ghy: Fast-forward
+[33m34600bfc[m HEAD@{75}: checkout: moving from kws to ghy
+[33m744986b4[m HEAD@{76}: commit (merge): 내업무 관리 취합
+[33m5edad496[m HEAD@{77}: checkout: moving from yjw to kws
+[33mb53b78a1[m HEAD@{78}: pull origin yjw: Fast-forward
+[33m9b77e7da[m HEAD@{79}: checkout: moving from kws to yjw
+[33m5edad496[m HEAD@{80}: checkout: moving from main to kws
+[33mf293f22c[m HEAD@{81}: reset: moving to origin/kws
+[33m4db979dd[m HEAD@{82}: reset: moving to main
+[33m4db979dd[m HEAD@{83}: checkout: moving from kws to main
+[33m5edad496[m HEAD@{84}: merge kds: Merge made by the 'ort' strategy.
+[33mf293f22c[m HEAD@{85}: checkout: moving from kds to kws
+[33ma4dd9860[m HEAD@{86}: pull origin kds: Fast-forward
+[33mab324f6d[m HEAD@{87}: checkout: moving from kws to kds
+[33mf293f22c[m HEAD@{88}: commit: 알람기능 생성중
+[33m78c389dc[m HEAD@{89}: commit: 알람기능 생성중
+[33m4db979dd[m HEAD@{90}: checkout: moving from main to kws
+[33m4db979dd[m HEAD@{91}: reset: moving to origin/kws
+[33m87e97f8d[m HEAD@{92}: checkout: moving from kws to main
+[33m4db979dd[m HEAD@{93}: commit: 11/13통합중
+[33mc8676342[m HEAD@{94}: commit (merge): 재무 ui개선 후 머지
+[33me24d43c8[m HEAD@{95}: checkout: moving from ghy to kws
+[33m34600bfc[m HEAD@{96}: pull origin ghy: Fast-forward
+[33m7d7c087b[m HEAD@{97}: checkout: moving from kws to ghy
+[33me24d43c8[m HEAD@{98}: commit: 프로젝트관리 상세 작업중
+[33m87e97f8d[m HEAD@{99}: checkout: moving from main to kws
+[33m87e97f8d[m HEAD@{100}: reset: moving to origin/kws
+[33m56adf983[m HEAD@{101}: checkout: moving from kws to main
+[33m87e97f8d[m HEAD@{102}: commit (merge): 회의실 통합
+[33m86850afd[m HEAD@{103}: checkout: moving from yjw to kws
+[33m9b77e7da[m HEAD@{104}: commit: draft수정
+[33mfddbecb0[m HEAD@{105}: checkout: moving from kws to yjw
+[33m86850afd[m HEAD@{106}: checkout: moving from yjw to kws
+[33mfddbecb0[m HEAD@{107}: pull origin yjw: Fast-forward
+[33m60790839[m HEAD@{108}: pull origin yjw: Fast-forward
+[33m1165b0f6[m HEAD@{109}: checkout: moving from kws to yjw
+[33m86850afd[m HEAD@{110}: commit: 회의실 예약 머지 대기
+[33m6607bbd7[m HEAD@{111}: commit: 프로젝트 상세 작업중
+[33m56adf983[m HEAD@{112}: checkout: moving from main to kws
+[33m56adf983[m HEAD@{113}: reset: moving to origin/kws
+[33mefe9ea9c[m HEAD@{114}: checkout: moving from kws to main
+[33m56adf983[m HEAD@{115}: commit (merge): 11/11 통합
+[33m55919eb0[m HEAD@{116}: commit (merge): 인사, 커뮤니티 머지
+[33m39ece3f8[m HEAD@{117}: commit (merge): 커뮤니티 통합버전 머지
+[33mab03fdcf[m HEAD@{118}: checkout: moving from kds to kws
+[33mab324f6d[m HEAD@{119}: pull origin: Fast-forward
+[33md655c8c3[m HEAD@{120}: checkout: moving from kws to kds
+[33mab03fdcf[m HEAD@{121}: commit: 프로젝트 상세 제작 예정
+[33mcfbc4184[m HEAD@{122}: checkout: moving from kkb to kws
+[33m0be144ec[m[33m ([m[1;32mkkb[m[33m)[m HEAD@{123}: pull origin kkb: Fast-forward
+[33m407d21a9[m HEAD@{124}: checkout: moving from kws to kkb
+[33mcfbc4184[m HEAD@{125}: commit: 프로젝트 관리 리스트 레이아웃 작업중
+[33m72b1466d[m HEAD@{126}: checkout: moving from kkb to kws
+[33m407d21a9[m HEAD@{127}: pull origin kkb: Fast-forward
+[33m76976044[m HEAD@{128}: checkout: moving from kws to kkb
+[33m72b1466d[m HEAD@{129}: commit: 프로젝트 관리 리스트 불러오기 수정중
+[33mbbf5af07[m HEAD@{130}: checkout: moving from yjw to kws
+[33m1165b0f6[m HEAD@{131}: pull origin yjw: Fast-forward
+[33m147c796b[m HEAD@{132}: checkout: moving from kws to yjw
+[33mbbf5af07[m HEAD@{133}: commit: 프로젝트 등록 쿼리문 작성중
+[33m472f9a75[m HEAD@{134}: commit: 프로젝트 상세페이지 생성 중
+[33m5f82c8b1[m HEAD@{135}: cherry-pick: 프로젝트 상세페이지 제작중
+[33m2945ef6d[m HEAD@{136}: checkout: moving from kds to kws
+[33md655c8c3[m HEAD@{137}: pull origin kds: Fast-forward
+[33mc89ffbec[m HEAD@{138}: checkout: moving from main to kds
+[33mefe9ea9c[m HEAD@{139}: commit: 프로젝트 상세페이지 제작중
+[33m2945ef6d[m HEAD@{140}: reset: moving to origin/kws
+[33m4125d088[m HEAD@{141}: checkout: moving from kws to main
+[33m2945ef6d[m HEAD@{142}: commit (merge): 품질 페이지 머지
+[33mcf42b46a[m HEAD@{143}: checkout: moving from yjw to kws
+[33m147c796b[m HEAD@{144}: pull origin yjw: Fast-forward
+[33m6a91644e[m HEAD@{145}: checkout: moving from kws to yjw
+[33mcf42b46a[m HEAD@{146}: commit: 품질 머지 준비
+[33m0746d00d[m HEAD@{147}: checkout: moving from yjw to kws
+[33m6a91644e[m HEAD@{148}: pull origin yjw: Fast-forward
+[33m82894d96[m HEAD@{149}: checkout: moving from kws to yjw
+[33m0746d00d[m HEAD@{150}: commit: 프로젝트 등록 제작 및/프로젝트테이블 수정 중
+[33m69013a3d[m HEAD@{151}: checkout: moving from kds to kws
+[33mc89ffbec[m HEAD@{152}: checkout: moving from kws to kds
+[33m69013a3d[m HEAD@{153}: commit: 프로젝트 생성 중
+[33mb40a1168[m HEAD@{154}: checkout: moving from kds to kws
+[33mc89ffbec[m HEAD@{155}: checkout: moving from kws to kds
+[33mb40a1168[m HEAD@{156}: commit: 프로젝트 관리 작업중
+[33me2751e3e[m HEAD@{157}: commit: 프로젝트 작업중
+[33m7ea2a6d9[m HEAD@{158}: commit: 일정관리 완성
+[33m4125d088[m HEAD@{159}: checkout: moving from main to kws
+[33m4125d088[m HEAD@{160}: reset: moving to origin/kws
+[33mb49639d5[m HEAD@{161}: checkout: moving from kws to main
+[33m4125d088[m HEAD@{162}: commit (merge): 내업무관리 머지
+[33m34b2df1b[m HEAD@{163}: checkout: moving from yjw to kws
+[33m82894d96[m HEAD@{164}: pull origin yjw: Fast-forward
+[33ma2b9bf44[m HEAD@{165}: checkout: moving from kws to yjw
+[33m34b2df1b[m HEAD@{166}: commit: 일정수정중
+[33m8d0ce996[m HEAD@{167}: checkout: moving from yjw to kws
+[33ma2b9bf44[m HEAD@{168}: pull origin yjw: Fast-forward
+[33m48a4100a[m[33m ([m[1;31morigin/backup/yjw-before-main-merge-20261106[m[33m)[m HEAD@{169}: checkout: moving from kws to yjw
+[33m8d0ce996[m HEAD@{170}: commit: 캘린더 수정중
+[33md7aa0bd0[m HEAD@{171}: pull origin kws: Fast-forward
+[33m508c6a4d[m HEAD@{172}: checkout: moving from kkb to kws
+[33m76976044[m HEAD@{173}: reset: moving to origin/kkb
+[33m442f68bf[m HEAD@{174}: checkout: moving from kws to kkb
+[33m508c6a4d[m HEAD@{175}: reset: moving to HEAD@{1}
+[33m8731e6d4[m HEAD@{176}: commit (merge): 인사기능 머지
+[33m508c6a4d[m HEAD@{177}: commit: 모듈 주석 작성중
+[33m2e91bac4[m HEAD@{178}: commit (merge): 부서 불러오기 함수 추가
+[33m0381d899[m HEAD@{179}: checkout: moving from main to kws
+[33mb49639d5[m HEAD@{180}: reset: moving to origin/kws
+[33mbdc29911[m HEAD@{181}: checkout: moving from kws to main
+[33m0381d899[m HEAD@{182}: reset: moving to HEAD@{5}
+[33mb49639d5[m HEAD@{183}: commit (merge): 재무관리와 병합
+[33m0381d899[m HEAD@{184}: checkout: moving from ghy to kws
+[33m7d7c087b[m HEAD@{185}: reset: moving to origin/ghy
+[33m475fc421[m HEAD@{186}: reset: moving to HEAD
+[33m475fc421[m HEAD@{187}: checkout: moving from kws to ghy
+[33m0381d899[m HEAD@{188}: commit (merge): 커뮤니티 병합
+[33maca61765[m HEAD@{189}: checkout: moving from kds to kws
+[33mc89ffbec[m HEAD@{190}: checkout: moving from kws to kds
+[33maca61765[m HEAD@{191}: commit: 내업무관리 통합중
+[33m515b5739[m HEAD@{192}: commit (merge): 마이페이지 머지
+[33m55cbabbd[m HEAD@{193}: checkout: moving from yjw to kws
+[33m48a4100a[m[33m ([m[1;31morigin/backup/yjw-before-main-merge-20261106[m[33m)[m HEAD@{194}: pull origin yjw: Fast-forward
+[33m0f6f3828[m HEAD@{195}: checkout: moving from kws to yjw
+[33m55cbabbd[m HEAD@{196}: commit: 스케쥴 등록 기능 완료, 참여자 기능 생성 예정
+[33m72dc0056[m HEAD@{197}: checkout: moving from yjw to kws
+[33m0f6f3828[m HEAD@{198}: pull: Fast-forward
+[33m1994ad5a[m HEAD@{199}: checkout: moving from kws to yjw
+[33m72dc0056[m HEAD@{200}: commit: 스케쥴 작업중
+[33m06dd3a0a[m HEAD@{201}: checkout: moving from yjw to kws
+[33m1994ad5a[m HEAD@{202}: reset: moving to HEAD~1
+[33mc74d6977[m HEAD@{203}: reset: moving to origin/yjw
+[33m8021cfc8[m HEAD@{204}: reset: moving to HEAD
+[33m8021cfc8[m HEAD@{205}: checkout: moving from kws to yjw
+[33m06dd3a0a[m HEAD@{206}: commit (merge): 준우씨꺼랑 머지중
+[33mbdc29911[m HEAD@{207}: checkout: moving from main to kws
+[33mbdc29911[m HEAD@{208}: reset: moving to origin/kws
+[33m9a2a6767[m HEAD@{209}: checkout: moving from kws to main
+[33mbdc29911[m HEAD@{210}: commit: 일정관리 db제작중
+[33m29534d56[m HEAD@{211}: commit: 근태관리 기능 생성중
+[33m9a2a6767[m HEAD@{212}: reset: moving to origin/main
+[33m43f3d813[m HEAD@{213}: checkout: moving from main to kws
+[33m9a2a6767[m HEAD@{214}: commit: 로그인 기능 생성
+[33m43f3d813[m HEAD@{215}: reset: moving to origin/kws
+[33m625258ec[m HEAD@{216}: commit (merge): Merge conflict resolved
+[33m43f3d813[m HEAD@{217}: reset: moving to origin/kws
+[33m08390007[m HEAD@{218}: checkout: moving from kws to main
+[33m43f3d813[m HEAD@{219}: commit: 서버 기본구조 제작
+[33m99a4328e[m HEAD@{220}: checkout: moving from main to kws
+[33m08390007[m HEAD@{221}: commit: 쿼리문 추가
+[33m1e8a4936[m HEAD@{222}: commit: 테스트용 스키마 적용
+[33m99a4328e[m HEAD@{223}: reset: moving to origin/kws
+[33m6fd8c8fc[m HEAD@{224}: checkout: moving from kws to main
+[33m99a4328e[m HEAD@{225}: pull origin kws: Fast-forward
+[33m6fd8c8fc[m HEAD@{226}: reset: moving to origin/main
+[33m4c882c69[m HEAD@{227}: checkout: moving from main to kws
+[33m6fd8c8fc[m HEAD@{228}: commit: 화면 정리중
+[33m4c882c69[m HEAD@{229}: reset: moving to kws
+[33m737f0c4e[m HEAD@{230}: checkout: moving from kws to main
+[33m4c882c69[m HEAD@{231}: commit: 주간켈린더, 마이페이지, 스케줄, 고객관리 업데이트
+[33m737f0c4e[m HEAD@{232}: checkout: moving from main to kws
+[33m737f0c4e[m HEAD@{233}: reset: moving to origin/kws
+[33mc9c6b2b2[m HEAD@{234}: checkout: moving from kws to main
+[33m737f0c4e[m HEAD@{235}: commit: 내업무관리빼고 병합
+[33m744a99b0[m HEAD@{236}: commit: 프로젝트 제작중
+[33me78037d0[m HEAD@{237}: checkout: moving from ghy to kws
+[33m475fc421[m HEAD@{238}: reset: moving to origin/ghy
+[33me8557af5[m HEAD@{239}: reset: moving to HEAD
+[33me8557af5[m HEAD@{240}: checkout: moving from kws to ghy
