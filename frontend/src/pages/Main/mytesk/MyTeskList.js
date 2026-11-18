@@ -83,12 +83,10 @@ function MyTeskList() {
     }, [loadDrafts]);
 
     const urlList = [
-        { name: "출결관리", url: mainUrl },
-        {name : "전자결재 대시보드", url: mainUrl + "/draft-dashboard"},
+        { name: "대시보드", url: mainUrl },
         { name: "기안 작성", url: mainUrl + "/draft-create" },
         { name: "내 결재 요청", url: mainUrl + "/draft-request" },
         { name: "결재할 문서", url: mainUrl + "/draft-received" },
-        { name: "결재 완료", url: mainUrl + "/draft-approved" }
     ];
 
     return (
@@ -99,8 +97,15 @@ function MyTeskList() {
                 <Routes>
                     <Route index element={
                         <div>
-                            <h2>출결관리</h2>
-                            <ADComp />
+                            <h2>내 업무 관리</h2>
+                            <div className="horizontal-box">
+                                <DraftDashboard
+                                    drafts={drafts}
+                                    receivedDrafts={receivedDrafts}
+                                    approvedDrafts={approvedDrafts}
+                                />
+                                <ADComp />
+                            </div>
                         </div>
                     } />
                     <Route path="draft-create" element={
@@ -116,13 +121,8 @@ function MyTeskList() {
                         <DraftReq drafts={drafts} setEditingDraft={setEditingDraft} onDraftChanged={loadDrafts} />
                     } />
                     <Route path="draft-received" element={
-                        <DraftReceived drafts={receivedDrafts} onDraftChanged={loadDrafts} />
+                        <DraftReceived drafts={receivedDrafts} appDrafts={approvedDrafts} onDraftChanged={loadDrafts} />
                     } />
-                    <Route path="draft-approved" element={
-                        <DraftApproved drafts={approvedDrafts} />
-                    } />
-
-                    <Route path="draft-dashboard" element = { <DraftDashboard drafts={drafts} receivedDrafts={receivedDrafts} approvedDrafts={approvedDrafts}/>}/>
                 </Routes>
             </div>
         </div>

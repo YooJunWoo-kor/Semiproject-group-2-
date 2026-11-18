@@ -36,15 +36,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// 서버 점검 API
-app.get('/api/health', (req, res) => {
-    res.json({
-        success: true,
-        service: 'semiproject-group-2-backend',
-        message: 'ERP API 서버 정상 작동'
-    });
-});
-
 // API 연결
 app.use('/api/hr', hrRouter);
 app.use('/api/hr', hrLeaveRouter);

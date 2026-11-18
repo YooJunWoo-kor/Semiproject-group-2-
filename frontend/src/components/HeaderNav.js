@@ -47,7 +47,7 @@ function HeaderNav(){
                 <NavLink to="/main/qa">품질</NavLink>
                 <NavLink to="/main/schedule">일정</NavLink>
                 <NavLink to="/main/project">프로젝트</NavLink>
-                <NavLink to="/main/crm">고객관리</NavLink>
+                {/* <NavLink to="/main/crm">고객관리</NavLink> */}
                 <NavLink to="/main/community">커뮤니티</NavLink>
                 
                 <NavLink to="/main/mytesk" className='mypage-link'>내업무 관리</NavLink>

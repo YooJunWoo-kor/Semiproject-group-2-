@@ -3,10 +3,10 @@ const db = require('../db');
 
 const router = express.Router();
 
-// [추가] API 주소로 게시판 번호와 기본 분류를 조회합니다.
+// API 주소로 게시판 설정 조회 (default_category 제거 반영)
 async function findBoard(apiPath) {
     const [rows] = await db.promise().execute(
-        `SELECT board_type AS type, default_category AS category
+        `SELECT board_type AS type, board_name, api_path, front_path
          FROM community_boards
          WHERE api_path = ?`,
         [apiPath]
@@ -53,7 +53,7 @@ function handle(action) {
     };
 }
 
-// [추가] 게시판 설정을 찾은 뒤 글·댓글 처리 함수에 전달합니다.
+// 게시판 설정을 찾은 뒤 글·댓글 처리 함수에 전달
 function withBoard(action, fixedPath) {
     return handle(async (req, res) => {
         const apiPath = fixedPath ?? `/${req.params.boardPath}`;
@@ -67,6 +67,18 @@ function withBoard(action, fixedPath) {
     });
 }
 
+// 1. 게시판 설정 목록 전체 조회 (내비게이션 & 대시보드 동적 생성용 - 반드시 /:boardPath 위에 위치)
+router.get('/boards', handle(async (req, res) => {
+    const [boards] = await db.promise().execute(
+        `SELECT board_type, board_name, api_path, front_path
+         FROM community_boards
+         ORDER BY CAST(board_type AS UNSIGNED) ASC`
+    );
+
+    res.json(boards);
+}));
+
+// 2. 직원 정보 조회
 router.get('/employee', handle(async (req, res) => {
     const { email } = req.query;
 
@@ -86,11 +98,10 @@ router.get('/employee', handle(async (req, res) => {
     res.json(rows[0]);
 }));
 
-// 고정 주소인 /posts는 /:boardPath보다 먼저 등록합니다.
+// 3. 통합게시판 전체 게시글 조회
 router.get('/posts', handle(async (req, res) => {
     const boardType = req.query.board_type;
 
-    // [수정] 게시판 번호가 전달되면 설정 테이블에서 확인합니다.
     if (boardType !== undefined) {
         if (typeof boardType !== 'string') {
             return badRequest(res, '게시판 구분을 확인해 주세요.');
@@ -125,7 +136,7 @@ router.get('/posts', handle(async (req, res) => {
 }));
 
 async function loadBoard(board) {
-    const order = board.type === '2' ? 'p.important DESC, ' : '';
+    const order = String(board.type) === '2' ? 'p.important DESC, ' : '';
 
     const [posts] = await db.promise().execute(
         `SELECT p.*, e.name AS employee_name, e.email AS login_id
@@ -165,28 +176,12 @@ function readPost(body, board) {
         return null;
     }
 
-    let category = null;
-
-    if (board.category !== null) {
-        const value = body.category ?? board.category;
-
-        if (!validText(value, 100)) {
-            return null;
-        }
-
-        category = value.trim();
-    }
-
-    if (board.type === '2' && !['일반공지', '중요공지'].includes(category)) {
-        return null;
-    }
-
-    const important = board.type === '2' && category === '중요공지' ? 1 : 0;
+    const category = validText(body?.category, 100) ? body.category.trim() : null;
+    const important = String(board.type) === '2' && category === '중요공지' ? 1 : 0;
 
     return [body.title.trim(), body.content.trim(), category, important];
 }
 
-// [수정] 기존 주소에 맞춰 댓글 번호와 게시글 번호를 확인합니다.
 function commentTarget(req, board) {
     const { commentId, postId } = req.params;
 
@@ -194,7 +189,7 @@ function commentTarget(req, board) {
         return null;
     }
 
-    // 자유게시판의 기존 댓글 수정·삭제 주소에는 postId가 없습니다.
+    // 기존 자유게시판 구버전 호환용 (postId 없이 호출되는 경우)
     if (postId === undefined) {
         return {
             condition: 'c.comment_id = ? AND p.board_type = ?',
@@ -202,7 +197,7 @@ function commentTarget(req, board) {
         };
     }
 
-    if (!validId(postId) || board.type === '1') {
+    if (!validId(postId)) {
         return null;
     }
 
@@ -255,15 +250,16 @@ async function deleteComment(req, res, board) {
     res.json({ message: '댓글이 삭제되었습니다.' });
 }
 
-// 자유게시판 댓글 주소는 /:boardPath/:postId보다 먼저 등록합니다.
+// 구버전 자유게시판 댓글 경로 호환 (/:boardPath/:postId 보다 먼저 등록)
 router.put('/comments/:commentId', withBoard(updateComment, '/free-posts'));
 router.delete('/comments/:commentId', withBoard(deleteComment, '/free-posts'));
 
-// [수정] 각 요청의 주소로 DB 설정을 찾습니다.
+// 4. 동적 게시판 게시글 목록 조회
 router.get('/:boardPath', withBoard(async (req, res, board) => {
     res.json(await loadBoard(board));
 }));
 
+// 5. 동적 게시판 게시글 등록
 router.post('/:boardPath', withBoard(async (req, res, board) => {
     const values = readPost(req.body, board);
 
@@ -283,6 +279,7 @@ router.post('/:boardPath', withBoard(async (req, res, board) => {
     });
 }));
 
+// 6. 동적 게시판 게시글 수정
 router.put('/:boardPath/:postId', withBoard(async (req, res, board) => {
     const values = readPost(req.body, board);
 
@@ -304,12 +301,12 @@ router.put('/:boardPath/:postId', withBoard(async (req, res, board) => {
     res.json({ message: '게시글이 수정되었습니다.' });
 }));
 
+// 7. 동적 게시판 게시글 삭제
 router.delete('/:boardPath/:postId', withBoard(async (req, res, board) => {
     if (!validId(req.params.postId)) {
         return badRequest(res, '게시글 번호를 확인해 주세요.');
     }
 
-    // 연결된 댓글은 기존 DB 외래키로 함께 삭제됩니다.
     const [result] = await db.promise().execute(
         'DELETE FROM community_posts WHERE post_id = ? AND board_type = ?',
         [req.params.postId, board.type]
@@ -322,6 +319,7 @@ router.delete('/:boardPath/:postId', withBoard(async (req, res, board) => {
     res.json({ message: '게시글이 삭제되었습니다.' });
 }));
 
+// 8. 동적 게시판 댓글 등록
 router.post('/:boardPath/:postId/comments', withBoard(async (req, res, board) => {
     const { postId } = req.params;
 
@@ -349,10 +347,11 @@ router.post('/:boardPath/:postId/comments', withBoard(async (req, res, board) =>
     });
 }));
 
+// 9. 동적 게시판 댓글 수정·삭제
 router.put('/:boardPath/:postId/comments/:commentId', withBoard(updateComment));
 router.delete('/:boardPath/:postId/comments/:commentId', withBoard(deleteComment));
 
-// [수정] 공지사항 조회수에도 DB에서 찾은 게시판 번호를 사용합니다.
+// 10. 공지사항 조회수 증가
 router.post('/notices/:postId/view', withBoard(async (req, res, board) => {
     const { postId } = req.params;
 
@@ -360,7 +359,6 @@ router.post('/notices/:postId/view', withBoard(async (req, res, board) => {
         return badRequest(res, '게시글 번호를 확인해 주세요.');
     }
 
-    // 조회수를 올려도 게시글 수정일은 그대로 유지합니다.
     const [result] = await db.promise().execute(
         `UPDATE community_posts
          SET views = views + 1, updated_at = updated_at
@@ -383,5 +381,51 @@ router.post('/notices/:postId/view', withBoard(async (req, res, board) => {
 
     res.json({ views: post.views });
 }, '/notices'));
+
+// 새 게시판 등록 (POST /api/community/boards) - 경로 자동 생성
+router.post('/boards', handle(async (req, res) => {
+    const { board_name } = req.body;
+
+    if (!validText(board_name, 50)) {
+        return badRequest(res, '게시판 이름을 입력해 주세요. (최대 50자)');
+    }
+
+    const cleanName = board_name.trim();
+
+    // 중복 게시판 이름 체크
+    const [dup] = await db.promise().execute(
+        'SELECT board_type FROM community_boards WHERE board_name = ?',
+        [cleanName]
+    );
+    if (dup.length > 0) {
+        return badRequest(res, '이미 사용 중인 게시판 이름입니다.');
+    }
+
+    // 현재 가장 큰 board_type 번호 + 1 자동 계산
+    const [[maxRow]] = await db.promise().execute(
+        'SELECT COALESCE(MAX(CAST(board_type AS UNSIGNED)), 0) AS maxType FROM community_boards'
+    );
+    const nextBoardType = String(Number(maxRow.maxType) + 1);
+
+    // 번호 기반 고유 경로 자동 생성 (예: /board-6)
+    const autoPath = `/board-${nextBoardType}`;
+
+    await db.promise().execute(
+        `INSERT INTO community_boards (board_type, board_name, api_path, front_path)
+         VALUES (?, ?, ?, ?)`,
+        [nextBoardType, cleanName, autoPath, autoPath]
+    );
+
+    res.status(201).json({
+        status: 'succesed',
+        board: {
+            board_type: nextBoardType,
+            board_name: cleanName,
+            api_path: autoPath,
+            front_path: autoPath,
+        },
+        message: '새 게시판이 등록되었습니다.',
+    });
+}));
 
 module.exports = router;

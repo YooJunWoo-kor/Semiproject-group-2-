@@ -265,7 +265,9 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 <span className="subtitle">기안서 작성</span>
             </header>
 
-            <form className="draft-box" onSubmit={e => e.preventDefault()}>
+            <form className="boder vertical-box" onSubmit={e => e.preventDefault()}
+                style={{padding:'30px'}}
+            >
                 <div className="draft-row">
                     <p>작성자: {loginUser.name}</p>
                     <p>부서: {loginUser.departmentName}</p>
@@ -412,7 +414,10 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 <div className="draft-box">
                     <div className="draft-row">
                         <h4>결재선</h4>
-                        <button type="button" onClick={() => setShowApproverModal(true)}>결재자 추가</button>
+                        <button type="button"
+                            onClick={() => setShowApproverModal(true)}
+                            style={{fontSize: '13px'}}
+                        >결재자 추가</button>
                     </div>
                     {approvers.length === 0 ? (
                         <p>등록된 결재자가 없습니다.</p>
@@ -428,9 +433,13 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
 
                 <div className="draft-actions">
                     <button type="button" disabled={isSaving}
-                        onClick={() => handleSubmit("temporary")}>임시저장</button>
+                        onClick={() => handleSubmit("temporary")}
+                        style={{fontSize: '13px'}}
+                    >임시저장</button>
                     <button type="button" className="erp-primary-button" disabled={isSaving}
-                        onClick={() => handleSubmit("submit")}>
+                        onClick={() => handleSubmit("submit")}
+                        style={{fontSize: '13px'}}
+                        >
                         {isSaving ? "저장 중..." : "결재 요청"}
                     </button>
                 </div>

@@ -8,7 +8,8 @@ function BasicTable({ title, th, td = [] }) {
     return (
         <div className="attendance-card" style={{
             maxWidth: "100%",
-            paddingBottom: "30px"
+            paddingBottom: "30px",
+            minHeight: "300px"
         }}>
             <h4 style={{ marginBottom: "0px" }}>{title ?? "테이블제목"}</h4>
             <div className="table-shell">
@@ -34,13 +35,16 @@ function BasicTable({ title, th, td = [] }) {
                             }}
                         >등록된 정보가 없습니다.</td></tr>
 
-                        : td.map((item)=>{
-                            return <tr>{item.content.map((item)=>(
-                                <td style={{
-                                    fontSize:"13"
-                                }}>{item}</td>
-                            ))}</tr>
-                    })}
+                            : td.map((item)=>{
+                                return <tr>{item.content.map((item, index)=>(
+                                    <td
+                                        key={index}
+                                        style={{
+                                            fontSize:"13"
+                                    }}>{item}</td>
+                                ))}</tr>
+                        })}
+
                 </table>
             </div>
         </div>

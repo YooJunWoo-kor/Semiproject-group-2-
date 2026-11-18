@@ -53,7 +53,10 @@ export default function ProjectModul() {
   // 프로젝트 등록을 위한 모달
   const [isModal, setIsModal] = useState(0);
   const oppenModal = function () { setIsModal(1); };
-  const clossModal = function () { setIsModal(0); };
+  const clossModal = function () {
+    setIsModal(0);
+    getProjectData();
+  };
 
   // 프로젝트 상세보기 모달 관련
   const [isProjectDetail, setIsProjectDetail] = useState(false);
@@ -63,7 +66,10 @@ export default function ProjectModul() {
     setIsProjectDetail(true);
     setCurrontProjectIndex(projectID);
   };
-  const clossProjectDetail = () => { setIsProjectDetail(false); };
+  const clossProjectDetail = () => {
+    setIsProjectDetail(false);
+    getProjectData();
+  };
 
   let selectData;
   let selectProjectTitle;
@@ -71,7 +77,7 @@ export default function ProjectModul() {
     selectData = projectData.filter((item) => {
       return item.project_id == currontProjectIndex;
     });
-    selectProjectTitle = selectData[0]?.project_name;
+    selectProjectTitle = selectData[0]?.description;
   }
 
   //ColorTeg에 전달할 현재 선택된 상태 및 개수 객체 (ScheduleModul과 동일 구조)
@@ -137,7 +143,7 @@ export default function ProjectModul() {
         <ModalBase
           onClose={clossModal}
           title={'프로젝트 등록'}
-          layout={<SetNewProjectLayout setIsModal={clossModal} />}
+          layout={<SetNewProjectLayout setIsModal={clossModal} onClose={clossModal} />}
         />
       ) : null}
 

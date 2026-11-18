@@ -16,7 +16,7 @@ const selectApprovalDocuments = `
           a.created_at, '%Y-%m-%d %H:%i'
         ) AS created_at,
         p.payment_methods,
-        (SELECT COUNT(*) FROM finance_approval_attachments f WHERE f.document_id = a.document_id) AS attachment_count,
+        (SELECT COUNT(*) FROM approval_attachments f WHERE f.document_id = a.document_id) AS attachment_count,
         source_link.transaction_id AS linked_transaction_id
       FROM approval_documents a
   

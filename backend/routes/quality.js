@@ -218,6 +218,7 @@ router.get("/calendar/events", (req, res) => {
 
     
 router.post('/inspections', (req, res) => {
+    console.log('체크리스트 저장 시작')
 
     const {
         productId, inspector,
@@ -256,6 +257,9 @@ router.post('/inspections', (req, res) => {
             item.result,
             item.custom ? 1 : 0
         ]);
+
+        console.log('체크리스트 저장 성공',result);
+        console.log('체크리스트 저장 성공',items);
 
         const itemSql = `
             INSERT INTO quality_inspection_items
