@@ -17,8 +17,13 @@ function selectPayments(value0) {
                  WHEN payroll_link.payroll_id IS NOT NULL THEN payroll_link.pay_month
                  ELSE COALESCE(p.document_id, p.transaction_id, p.payment_id) END AS source_id,
             CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(p.payroll_snapshot, '$.entry_type')) = 'payroll_deduction' OR payroll_link.payroll_id IS NOT NULL THEN 'expense_administration_1'
-                 ELSE NULL END AS category_code
+                 ELSE c.category_code END AS category_code
             FROM payments p
+            -- 분류 조회 복구: 저장할 때와 동일한 문서/거래/입출금 키로 읽습니다.
+            LEFT JOIN finance_payment_classifications c
+              ON c.source_type = CASE WHEN p.document_id IS NOT NULL THEN 'approval'
+                   WHEN p.transaction_id IS NOT NULL THEN 'transaction' ELSE 'payment' END
+             AND c.source_id = COALESCE(p.document_id, p.transaction_id, p.payment_id)
             LEFT JOIN (${value0}) payroll_link ON payroll_link.payment_id = p.payment_id
             LEFT JOIN approval_documents a ON a.document_id = p.document_id
             LEFT JOIN trade_transactions t ON t.transaction_id = p.transaction_id
@@ -29,8 +34,10 @@ function selectPayments(value0) {
 
 const selectApprovalDocuments = `SELECT a.document_id AS source_id, 'approval' AS source_type,
                 a.title, DATE_FORMAT(COALESCE(a.due_date, a.created_at), '%Y-%m-%d') AS payment_date,
-                GREATEST(a.amount - COALESCE(p.paid, 0), 0) AS amount, NULL AS category_code
+                GREATEST(a.amount - COALESCE(p.paid, 0), 0) AS amount, c.category_code
                 FROM approval_documents a
+                LEFT JOIN finance_payment_classifications c
+                    ON c.source_type = 'approval' AND c.source_id = a.document_id
                 LEFT JOIN (SELECT document_id, SUM(amount) AS paid FROM payments
                     WHERE payment_status = '완료' AND payment_direction = '출금' GROUP BY document_id) p
                     ON p.document_id = a.document_id
@@ -40,8 +47,10 @@ const selectApprovalDocuments = `SELECT a.document_id AS source_id, 'approval' A
 
 const selectTradeTransactions = `SELECT t.transaction_id AS source_id, 'transaction' AS source_type,
             t.company_name AS title, DATE_FORMAT(COALESCE(t.due_date, t.trade_date), '%Y-%m-%d') AS payment_date,
-            GREATEST(i.total - COALESCE(p.paid, 0), 0) AS amount, NULL AS category_code
+            GREATEST(i.total - COALESCE(p.paid, 0), 0) AS amount, c.category_code
             FROM trade_transactions t
+            LEFT JOIN finance_payment_classifications c
+                ON c.source_type = 'transaction' AND c.source_id = t.transaction_id
             INNER JOIN (SELECT transaction_id, SUM(supply_price + vat) AS total FROM trade_items GROUP BY transaction_id) i
                 ON i.transaction_id = t.transaction_id
             LEFT JOIN (SELECT transaction_id, SUM(amount) AS paid FROM payments

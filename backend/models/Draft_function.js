@@ -334,6 +334,114 @@ class Draft {
         return result.affectedRows;
     }
 
+    static decide(draftId, employeeId, decision) {
+        return new Promise((resolve, reject) => {
+            db.beginTransaction(err => {
+                if (err) return reject(err);
+                const sql = `
+                    SELECT step_order FROM draft_approval_steps
+                    WHERE draft_id = ? AND employee_id = ? AND step_status = 'PENDING'
+                    FOR UPDATE
+                `;
+                db.query(sql, [draftId, employeeId], (err, rows) => {
+                    if (err) return db.rollback(() => reject(err));
+                    if (rows.length !== 1) return db.rollback(() => resolve(false));
+                    const order = rows[0].step_order;
+                    db.query(
+                        "UPDATE draft_approval_steps SET step_status = ? WHERE draft_id = ? AND employee_id = ? AND step_status = 'PENDING'",
+                        [decision === 'approve' ? 'APPROVED' : 'REJECTED', draftId, employeeId],
+                        (err, result) => {
+                            if (err) return db.rollback(() => reject(err));
+                            if (result.affectedRows !== 1) return db.rollback(() => resolve(false));
+                            if (decision === 'reject') {
+                                return db.query(
+                                    "UPDATE my_draft SET status = 'REJECTED' WHERE draft_id = ? AND status = 'PENDING'",
+                                    [draftId], err => err ? db.rollback(() => reject(err)) :
+                                        db.commit(err => err ? db.rollback(() => reject(err)) : resolve(true))
+                                );
+                            }
+                            db.query(
+                                "UPDATE draft_approval_steps SET step_status = 'PENDING' WHERE draft_id = ? AND step_order = ? AND step_status = 'WAITING'",
+                                [draftId, order + 1],
+                                (err, nextResult) => {
+                                    if (err) return db.rollback(() => reject(err));
+                                    if (nextResult.affectedRows === 1) {
+                                        return db.commit(err => err ? db.rollback(() => reject(err)) : resolve(true));
+                                    }
+                                    db.query(
+                                        `SELECT document_type, detail_data
+                                         FROM my_draft
+                                         WHERE draft_id = ? AND status = 'PENDING'
+                                         FOR UPDATE`,
+                                        [draftId],
+                                        (err, rows) => {
+                                            if (err) {
+                                                return db.rollback(() => reject(err));
+                                            }
+
+                                            if (rows.length !== 1) {
+                                                return db.rollback(() => resolve(false));
+                                            }
+
+                                            const approveDraft = () => {
+                                                db.query(
+                                                    "UPDATE my_draft SET status = 'APPROVED' WHERE draft_id = ? AND status = 'PENDING'",
+                                                    [draftId],
+                                                    (err, result) => {
+                                                        if (err) return db.rollback(() => reject(err));
+                                                        if (result.affectedRows !== 1) {
+                                                            return db.rollback(() => resolve(false));
+                                                        }
+
+                                                        db.commit(err =>
+                                                            err ? db.rollback(() => reject(err)) : resolve(true)
+                                                        );
+                                                    }
+                                                );
+                                            };
+
+                                            const draft = rows[0];
+
+                                            if (draft.document_type !== '비용') {
+                                                return approveDraft();
+                                            }
+
+                                            const detailData = typeof draft.detail_data === "string" ? JSON.parse(draft.detail_data) : draft.detail_data;
+
+                                            const expenseRows = (detailData?.expenseItems || []).map(item => [
+                                                draftId,
+                                                item.useDate,
+                                                item.merchant,
+                                                Number(item.amount),
+                                                item.memo || null
+                                            ])
+
+                                            if (!expenseRows.length) {
+                                                return db.rollback(() => reject(new Error("비용 내역 없음")));
+                                            }
+
+                                            db.query(
+                                                `INSERT INTO expense_items
+                                                (draft_id, use_date, merchant, amount, memo)
+                                                VALUES ?`,
+                                                [expenseRows],
+                                                err => {
+                                                    if (err) return db.rollback(() => reject(err));
+                                                    approveDraft();
+                                                }
+                                            )
+
+                                        }
+                                    );
+                                }
+                            );
+                        }
+                    );
+                });
+            });
+        });
+    }
+
     static async create(employeeId, title, documentType, content, detailData = {}) {
         const [result] = await promiseDb.query(
             `INSERT INTO my_draft (
@@ -475,38 +583,38 @@ class Draft {
                     AND d.status = 'APPROVED'
                 WHERE e.employee_id = ?
             `;
-    
+
             db.query(query, [employeeId], (err, rows) => {
                 if (err) return reject(err);
-    
+
                 if (rows.length === 0 || !rows[0].hireDate) {
                     return reject(new Error("직원 또는 입사일 정보가 없습니다."));
                 }
-    
+
                 const hireDate = rows[0].hireDate;
-    
+
                 let usedLeaveDays = 0;
-    
+
                 rows.forEach(row => {
                     if (!row.startDate || !row.endDate) return;
-    
+
                     const startDate = row.startDate.slice(0, 10); // 날짜만 추출
                     const endDate = row.endDate.slice(0, 10);
-    
+
                     // 입사일 이전과 오늘 이후 날짜는 제외
                     const start = startDate < hireDate ? hireDate : startDate;
                     const end = endDate;
-    
+
                     if (start <= end) {
                         usedLeaveDays += calculateLeaveDays(start, end);
                     }
                 });
-    
+
                 resolve(usedLeaveDays);
             });
         });
     }
-       
+
 
     // 승인된 휴가를 조회 / 사용한 연차를 계산
 
@@ -521,16 +629,16 @@ class Draft {
                 FROM employees
                 WHERE employee_id = ?
             `;
-    
+
             db.query(query, [employeeId], (err, rows) => {
                 if (err) {
                     return reject(err);
                 }
-    
+
                 if (rows.length === 0 || rows[0].earnedLeaveDays === null) {
                     return reject(new Error("직원 또는 입사일 정보가 없습니다."));
                 }
-    
+
                 resolve(Number(rows[0].earnedLeaveDays));
             });
         });
