@@ -1,10 +1,9 @@
 import React, { Component, useState } from 'react';
 import "./MyPage.css";
-import { getLoginUser } from '../../../utils/authStorage';
 import  { getHrEmployees } from '../../../components/HrData'
 import { useEffect } from 'react';
 import axios from 'axios';
-import { API_BASE_URL, formatDateToYYYYMMDD, getTodayString } from '../../../utils/authStorage';
+import { API_BASE_URL, formatDateToYYYYMMDD, getTodayString, getLoginUser, saveLoginUser } from '../../../utils/authStorage';
 
 
 
@@ -64,6 +63,11 @@ function MyPage() {
                 }
 
                 setEmployee(employeeData);
+
+                setForm({
+                    email: employeeData.email || "",
+                    phone: employeeData.phone || ""
+                })
             }
 
             catch(error){
@@ -115,31 +119,70 @@ function MyPage() {
         setForm((currentForm) => ({ ...currentForm, [name]: value }));
     }
 
-    function handleSave(event) {
-        event.preventDefault();
+   
 
+    async function handleSave(event) {
+        event.preventDefault();
+    
         const email = form.email.trim();
         const phone = form.phone.trim();
-
-        if (email === '' || phone === '') {
+        const employeeId = Number(getLoginUser()?.employeeKey);
+    
+        if (!email || !phone) {
             setMessage('이메일과 전화번호를 입력해주세요.');
             return;
         }
-
-        setEmployee({
-            ...employee,
-            email: email,
-            phone: phone,
-        });
-
-        setForm({
-            email: email,
-            phone: phone,
-        });
-
-        setIsEditing(false);
-        setMessage('개인정보가 화면에 반영되었습니다.');
+    
+        if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+            setMessage('로그인 정보를 확인해주세요.');
+            return;
+        }
+    
+        try {
+            const response = await axios.patch(
+                `${API_BASE_URL}/hr/employees/${employeeId}/contact`,
+                { email, phone }
+            );
+    
+            if (!response.data.success) {
+                setMessage('개인정보 저장에 실패했습니다.');
+                return;
+            }
+    
+            const saved = response.data.data;
+    
+            setEmployee({
+                ...employee,
+                email: saved.email,
+                phone: saved.phone
+            });
+    
+            setForm({
+                email: saved.email,
+                phone: saved.phone
+            });
+    
+            const loginUser = getLoginUser();
+    
+            saveLoginUser({
+                ...loginUser,
+                email: saved.email
+            });
+    
+            setIsEditing(false);
+            setMessage('개인정보가 저장되었습니다.');
+    
+        } catch (error) {
+            console.error('개인정보 수정 오류:', error);
+    
+            setMessage(
+                error.response?.data?.message ||
+                '개인정보 저장에 실패했습니다.'
+            );
+        }
     }
+    
+
 
     function handleCancel() {
         setForm({ email: employee.email, phone: employee.phone });
