@@ -4,7 +4,7 @@ import '../css/PaginationTable.css';
 
 //기본 게시판 모듈, BasicTable활용
 
-function PaginationTable({ title, th, allData = [], itemsPerPage = 5, style = 1 }) {
+function PaginationTable({ title, th, allData = [], itemsPerPage = 5, pageGroupSize = 5, style = 1 }) {
   
   // 현재 페이지 번호 (1부터 시작)
   const [currentPage, setCurrentPage] = useState(1);
@@ -18,11 +18,14 @@ function PaginationTable({ title, th, allData = [], itemsPerPage = 5, style = 1 
   const startIndex = (visiblePage - 1) * itemsPerPage;
   const currentTd = allData.slice(startIndex, startIndex + itemsPerPage);
 
-  // 페이지 번호 배열 생성 ([1, 2, 3, ...])
-  const pageNumbers = [];
-  for (let page = 1; page <= totalPages; page++) {
-    pageNumbers.push(page);
-  }
+  // 페이지 번호를 묶어 표시합니다. 기본값: 1~5, 6~10, 11~15.
+  const groupSize = Math.max(1, Math.floor(Number(pageGroupSize)) || 5);
+  const firstPage = Math.floor((visiblePage - 1) / groupSize) * groupSize + 1;
+  const lastPage = Math.min(firstPage + groupSize - 1, totalPages);
+  const pageNumbers = Array.from(
+    { length: lastPage - firstPage + 1 },
+    (_, index) => firstPage + index
+  );
 
   const handlePageChange = (pageNum) => {
     setCurrentPage(pageNum);
@@ -49,6 +52,7 @@ function PaginationTable({ title, th, allData = [], itemsPerPage = 5, style = 1 
           <button
             type="button"
             className="page-btn nav-btn"
+            aria-label="이전 페이지"
             onClick={handlePrev}
             disabled={visiblePage === 1}
           >
@@ -61,6 +65,7 @@ function PaginationTable({ title, th, allData = [], itemsPerPage = 5, style = 1 
                 key={num}
                 type="button"
                 className={`page-btn number-btn ${visiblePage === num ? 'active' : ''}`}
+                aria-current={visiblePage === num ? "page" : undefined}
                 onClick={() => handlePageChange(num)}
               >
                 {num}
@@ -71,6 +76,7 @@ function PaginationTable({ title, th, allData = [], itemsPerPage = 5, style = 1 
           <button
             type="button"
             className="page-btn nav-btn"
+            aria-label="다음 페이지"
             onClick={handleNext}
             disabled={visiblePage === totalPages}
           >

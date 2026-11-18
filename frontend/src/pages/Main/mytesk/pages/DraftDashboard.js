@@ -8,6 +8,7 @@ function DraftDashboard({
     receivedDrafts = [],
     approvedDrafts = []
 }) {
+    
     const savedCount = drafts.filter(
         draft => draft.status === "임시저장"
     ).length;
@@ -45,8 +46,15 @@ function DraftDashboard({
     }));
 
     return (
-        <div className="vertical-box size-fill" style={{alignSelf:'stretch'}}>
-            <section className="horizontal-box">
+        <div
+            className="vertical-box size-fill"
+            style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignSelf: 'stretch',
+            }}
+        >
+            <section className="horizontal-box" style={{ flexShrink: 0 }}>
                 {summaryCards.map(card => (
                     <StatisticsCard
                         key={card.title}
@@ -56,7 +64,17 @@ function DraftDashboard({
                     />
                 ))}
             </section>
-            <div className="size-fill" style={{alignSelf:'stretch'}}>
+
+            <div
+                className="size-fill"
+                style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minHeight: 0,
+                    alignSelf: 'stretch'
+                }}
+            >
                 <BasicTable
                     title="최근 작성한 기안서 (최대 5건)"
                     th={["제목", "문서 종류", "작성일", "상태"]}

@@ -50,7 +50,7 @@ function toDraft(draft, loginUser) {
 }
 
 function MyTeskList() {
-     const [editingDraft, setEditingDraft] = useState(null);
+    const [editingDraft, setEditingDraft] = useState(null);
     const [drafts, setDrafts] = useState([]);
     const [receivedDrafts, setReceivedDrafts] = useState([]);
     const [approvedDrafts, setApprovedDrafts] = useState([]);
@@ -130,3 +130,45 @@ function MyTeskList() {
 }
 
 export default MyTeskList;
+
+
+export function MainDraftDashbord(){
+    const [drafts, setDrafts] = useState([]);
+    const [receivedDrafts, setReceivedDrafts] = useState([]);
+    const [approvedDrafts, setApprovedDrafts] = useState([]);
+    const loginUser = getLoginUser();
+    const employeeId = Number(loginUser?.employeeKey);
+
+    const loadDrafts = useCallback(async () => {
+        if (!Number.isSafeInteger(employeeId) || employeeId <= 0) return;
+        try {
+            const currentUser = getLoginUser();
+            const [mine, received, approved] = await Promise.all([
+                axios.get(`${API_BASE_URL}/drafts`, { params: { employeeId } }),
+                axios.get(`${API_BASE_URL}/drafts/received/list`, { params: { employeeId } }),
+                axios.get(`${API_BASE_URL}/drafts/approved/list`, { params: { employeeId } })
+            ]); // 서버에 get 요청 3개를 한꺼번에 보내고 모든걸로 부터 응답이 오면 밑 코드를 실행
+            setDrafts(mine.data.map(row => toDraft(row, currentUser)));
+            setReceivedDrafts(received.data.map(row => toDraft(row, currentUser)));
+            setApprovedDrafts(approved.data.map(row => toDraft(row, currentUser)));
+        } catch (error) {
+            console.error("기안서 목록 조회 오류:", error);
+        }
+    }, [employeeId]);
+
+    useEffect(() => {
+        loadDrafts();
+    }, [loadDrafts]);
+    return(
+        <div className="border-container">
+            <header class="dashboard-header">
+                <span class="subtitle">내업무 관리</span>
+            </header>
+            <DraftDashboard
+                        drafts={drafts}
+                        receivedDrafts={receivedDrafts}
+                        approvedDrafts={approvedDrafts}
+                    />
+        </div>
+    );
+}

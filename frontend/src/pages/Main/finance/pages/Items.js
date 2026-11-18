@@ -363,7 +363,8 @@ function Items(props) {
             title={itemTableTitle}
             th={itemHeaders}
             allData={tItemData}
-            itemsPerPage={5}
+            itemsPerPage={10}
+            pageGroupSize={5}
           />
           {compact && !scope?.unified && (
             <p className="finance-workspace-note">
