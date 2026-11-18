@@ -6,7 +6,7 @@ const { calculateFreelancerPayroll } = require('./hrPayrollApplication');
 
 const promiseDb = db.promise();
 
-const attendanceStatuses = ['정상', '지각', '결근', '휴가', '출장', '휴직', '미출근'];
+const attendanceStatuses = ['정상', '근무중', '지각', '조퇴', '야근', '지각·조퇴', '지각·야근', '결근', '휴가', '출장', '휴직', '미출근'];
 // 급여는 작성중 단계에서만 금액을 바꿀 수 있고, 확정 이후에는 이력을 보존합니다.
 const payrollDraftStatuses = ['작성중'];
 const payrollFinalStatuses = ['확정', '지급대기', '지급완료'];
@@ -50,19 +50,8 @@ function nextPayMonth() {
 }
 
 function normalizeDepartmentName(value) {
-    const name = String(value || '').trim();
-
-    if (!name) {
-        return '';
-    }
-
-    if (name.endsWith('부서')) {
-        return name;
-    }
-
-    return name.endsWith('팀')
-        ? `${name.slice(0, -1)}부서`
-        : `${name}부서`;
+    // Keep existing department names such as 인사팀 and 재무부 unchanged.
+    return String(value || '').trim();
 }
 
 function parseNonNegativeInteger(value) {
@@ -159,11 +148,25 @@ function validatePayrollAmounts(row) {
             ? null
             : incomeTax + localIncomeTax;
 
+    // The original kws payroll form stored a single freely entered deduction.
+    // After merging ghy, newly added tax-detail columns default to zero.
+    // Preserve historical totals rather than inventing a tax split or changing
+    // a finalized employee's payment amount. New payrolls use the strict rule.
+    const legacyDeductionWithoutTaxDetails =
+        incomeTax === 0 &&
+        localIncomeTax === 0 &&
+        deduction !== null &&
+        deduction > 0 &&
+        deduction !== expectedDeduction;
+    const valid = amounts.every((value) => value !== null) &&
+        Number.isSafeInteger(expectedGrossPay) &&
+        grossPay === expectedGrossPay &&
+        (deduction === expectedDeduction || legacyDeductionWithoutTaxDetails) &&
+        netPay === grossPay - deduction;
+
     return {
-        valid: amounts.every((value) => value !== null) &&
-            grossPay === expectedGrossPay &&
-            deduction === expectedDeduction &&
-            netPay === grossPay - deduction,
+        valid,
+        legacyDeductionWithoutTaxDetails: valid && legacyDeductionWithoutTaxDetails,
         grossPay,
         deduction,
         netPay
@@ -439,6 +442,7 @@ module.exports = {
     currentPayMonth,
     nextPayMonth,
     normalizeDepartmentName,
+    departmentExists,
     parseNonNegativeInteger,
     normalizePositiveIds,
     normalizePayrollIds,

@@ -117,6 +117,25 @@ function getStatusClass(status) {
   return "off";
 }
 
+function getEmployeeDisplayStatus(employee) {
+  const employmentStatus = employee.employmentStatus || "-";
+
+  if (employmentStatus === "휴직" || employmentStatus === "퇴사") {
+    return employmentStatus;
+  }
+
+  const onLeave = employee.isOnLeaveToday === true ||
+    Number(employee.isOnLeaveToday) === 1 ||
+    String(employee.isOnLeaveToday).toLowerCase() === "true";
+  return onLeave ? "휴가" : employmentStatus;
+}
+
+function getEmployeeStatusBadgeClass(status) {
+  if (status === "재직") return "active";
+  if (status === "휴직" || status === "휴가") return "on-leave";
+  return "retired";
+}
+
 function getWorkMinutes(clockIn, clockOut) {
   if (!clockIn || !clockOut) return null;
 
@@ -1099,11 +1118,8 @@ export default function Attendance() {
             ) : (
               <div className="employee-list">
                 {visibleEmployeeList.map((employee) => {
-                  const statusClass = employee.employmentStatus === "재직"
-                    ? "active"
-                    : employee.employmentStatus === "휴직"
-                      ? "on-leave"
-                      : "retired";
+                  const displayStatus = getEmployeeDisplayStatus(employee);
+                  const statusClass = getEmployeeStatusBadgeClass(displayStatus);
 
                   return (
                     <button
@@ -1118,7 +1134,7 @@ export default function Attendance() {
                         <span className="employee-name-line">
                           <strong className="emp-name">{employee.employeeName}</strong>
                           <span className={`employee-status-badge ${statusClass}`}>
-                            {employee.employmentStatus || "-"}
+                            {displayStatus}
                           </span>
                         </span>
                         <span>

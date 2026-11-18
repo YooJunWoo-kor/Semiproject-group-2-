@@ -93,6 +93,25 @@ function isVisibleEmployee(employee) {
   return resignationDate >= oneMonthAgo;
 }
 
+function getEmployeeDisplayStatus(employee) {
+  const employmentStatus = employee.employmentStatus || "-";
+
+  if (employmentStatus === "휴직" || employmentStatus === "퇴사") {
+    return employmentStatus;
+  }
+
+  const onLeave = employee.isOnLeaveToday === true ||
+    Number(employee.isOnLeaveToday) === 1 ||
+    String(employee.isOnLeaveToday).toLowerCase() === "true";
+  return onLeave ? "휴가" : employmentStatus;
+}
+
+function getEmployeeStatusBadgeClass(status) {
+  if (status === "재직") return "active";
+  if (status === "휴직" || status === "휴가") return "on-leave";
+  return "retired";
+}
+
 function money(value) {
   return value === null || value === undefined || value === ""
     ? "-"
@@ -797,10 +816,20 @@ export default function UnifiedEmployees() {
       }
     }
 
+    function reloadWhenVisible() {
+      if (document.visibilityState === "visible" && active) {
+        load();
+      }
+    }
+
     load();
+    window.addEventListener("focus", reloadWhenVisible);
+    document.addEventListener("visibilitychange", reloadWhenVisible);
 
     return () => {
       active = false;
+      window.removeEventListener("focus", reloadWhenVisible);
+      document.removeEventListener("visibilitychange", reloadWhenVisible);
     };
   }, []);
 
@@ -1906,7 +1935,11 @@ export default function UnifiedEmployees() {
                   조건에 맞는 직원이 없습니다.
                 </p>
               ) : (
-                visibleEmployees.map((emp) => (
+                visibleEmployees.map((emp) => {
+                  const displayStatus = getEmployeeDisplayStatus(emp);
+                  const statusClass = getEmployeeStatusBadgeClass(displayStatus);
+
+                  return (
                   <button
                     key={emp.employeeId}
                     type="button"
@@ -1921,14 +1954,9 @@ export default function UnifiedEmployees() {
                       <span className="employee-name-line">
                         <strong className="emp-name">{emp.name}</strong>
                         <span
-                          className={`employee-status-badge ${emp.employmentStatus === "재직"
-                            ? "active"
-                            : emp.employmentStatus === "휴직"
-                              ? "on-leave"
-                              : "retired"
-                            }`}
+                          className={`employee-status-badge ${statusClass}`}
                         >
-                          {emp.employmentStatus || "-"}
+                          {displayStatus}
                         </span>
                       </span>
                       <span>
@@ -1939,7 +1967,8 @@ export default function UnifiedEmployees() {
                       </span>
                     </span>
                   </button>
-                ))
+                  );
+                })
               )}
             </div>
 
@@ -2046,14 +2075,14 @@ export default function UnifiedEmployees() {
                     </div>
 
                     <span
-                      className={`status-tag ${selected.employmentStatus === "재직"
+                      className={`status-tag ${getEmployeeDisplayStatus(selected) === "재직"
                         ? "working"
-                        : selected.employmentStatus === "휴직"
+                        : ["휴직", "휴가"].includes(getEmployeeDisplayStatus(selected))
                           ? "leave"
                           : "off"
                         }`}
                     >
-                      {selected.employmentStatus}
+                      {getEmployeeDisplayStatus(selected)}
                     </span>
                   </div>
                 )}

@@ -1,13 +1,9 @@
 import React, { Component, useState } from 'react';
 import "./MyPage.css";
-import { getLoginUser } from '../../../utils/authStorage';
 import  { getHrEmployees } from '../../../components/HrData'
 import { useEffect } from 'react';
 import axios from 'axios';
-import { API_BASE_URL, formatDateToYYYYMMDD, getTodayString } from '../../../utils/authStorage';
-
-
-
+import { API_BASE_URL, formatDateToYYYYMMDD, getTodayString, getLoginUser, saveLoginUser } from '../../../utils/authStorage';
 
 
 function MyPage() {
@@ -64,6 +60,11 @@ function MyPage() {
                 }
 
                 setEmployee(employeeData);
+
+                setForm({
+                    email: employeeData.email || "",
+                    phone: employeeData.phone || ""
+                })
             }
 
             catch(error){
@@ -115,31 +116,70 @@ function MyPage() {
         setForm((currentForm) => ({ ...currentForm, [name]: value }));
     }
 
-    function handleSave(event) {
-        event.preventDefault();
+   
 
+    async function handleSave(event) {
+        event.preventDefault();
+    
         const email = form.email.trim();
         const phone = form.phone.trim();
-
-        if (email === '' || phone === '') {
+        const employeeId = Number(getLoginUser()?.employeeKey);
+    
+        if (!email || !phone) {
             setMessage('이메일과 전화번호를 입력해주세요.');
             return;
         }
-
-        setEmployee({
-            ...employee,
-            email: email,
-            phone: phone,
-        });
-
-        setForm({
-            email: email,
-            phone: phone,
-        });
-
-        setIsEditing(false);
-        setMessage('개인정보가 화면에 반영되었습니다.');
+    
+        if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+            setMessage('로그인 정보를 확인해주세요.');
+            return;
+        }
+    
+        try {
+            const response = await axios.patch(
+                `${API_BASE_URL}/hr/employees/${employeeId}/contact`,
+                { email, phone }
+            );
+    
+            if (!response.data.success) {
+                setMessage('개인정보 저장에 실패했습니다.');
+                return;
+            }
+    
+            const saved = response.data.data;
+    
+            setEmployee({
+                ...employee,
+                email: saved.email,
+                phone: saved.phone
+            });
+    
+            setForm({
+                email: saved.email,
+                phone: saved.phone
+            });
+    
+            const loginUser = getLoginUser();
+    
+            saveLoginUser({
+                ...loginUser,
+                email: saved.email
+            });
+    
+            setIsEditing(false);
+            setMessage('개인정보가 저장되었습니다.');
+    
+        } catch (error) {
+            console.error('개인정보 수정 오류:', error);
+    
+            setMessage(
+                error.response?.data?.message ||
+                '개인정보 저장에 실패했습니다.'
+            );
+        }
     }
+    
+
 
     function handleCancel() {
         setForm({ email: employee.email, phone: employee.phone });
@@ -148,31 +188,48 @@ function MyPage() {
     }
 
 
-    function handleImageChange(event) {
+    async function handleImageChange(event) {
         const file = event.target.files[0];
-
-        if (!file) {
-            return;
-        }
-
+    
+        if (!file) return;
+    
         if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
             setMessage('JPG, PNG, WEBP 사진만 등록할 수 있습니다.');
             return;
         }
-
+    
         if (file.size > 2 * 1024 * 1024) {
             setMessage('2MB 이하의 사진을 등록해주세요.');
             return;
         }
-
-        const reader = new FileReader();
-
-        reader.onload = function () {
-            setProfileImage(reader.result);
+    
+        const employeeId = Number(getLoginUser()?.employeeKey);
+    
+        if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+            setMessage('로그인 정보를 확인해주세요.');
+            return;
+        }
+    
+        const formData = new FormData();
+        formData.append('image', file);
+    
+        try {
+            const response = await axios.patch(
+                `${API_BASE_URL}/hr/employees/${employeeId}/image`, // 이미지 변경요청 employeeId에 맞게 프로필 사진이 나와야되기 때문에 url 파라미터로 넘김, 변경사항 -> patch
+                formData
+            );
+    
+            setProfileImage(response.data.imageUrl);
             setMessage('프로필 사진이 등록되었습니다.');
-        };
-
-        reader.readAsDataURL(file);
+    
+        } catch (error) {
+            console.error('프로필 사진 업로드 오류:', error);
+            setMessage(
+                error.response?.data?.message ||
+                '프로필 사진 등록에 실패했습니다.'
+            );
+        }
+    
         event.target.value = '';
     }
 

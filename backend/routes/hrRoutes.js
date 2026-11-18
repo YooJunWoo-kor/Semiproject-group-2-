@@ -3,16 +3,15 @@
 
 const express = require('express');
 const db = require('../db');
-const { attendanceStatus } = require('../models/Attendance');
 const {
     promiseDb,
-    attendanceStatuses,
     payrollFinalStatuses,
     isDateString,
     isTimeString,
     isEmailString,
     currentPayMonth,
     normalizeDepartmentName,
+    departmentExists,
     parseNonNegativeInteger,
     propagateAnnualSalaryToFutureRecords,
     ensurePayrollForMonth,
@@ -20,6 +19,19 @@ const {
 } = require('../services/hrCommon');
 
 const hrRouter = express.Router();
+
+function seoulToday() {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(new Date()).reduce((values, part) => {
+        if (part.type !== 'literal') values[part.type] = part.value;
+        return values;
+    }, {});
+    return `${parts.year}-${parts.month}-${parts.day}`;
+}
 
 // 근태관리: 출퇴근 기록 등록·조회·수정·삭제와 부서별 현황을 처리합니다.
 hrRouter.post('/attendance', async (req, res) => {
@@ -39,7 +51,7 @@ hrRouter.post('/attendance', async (req, res) => {
         (checkOut !== null && !isTimeString(checkOut)) ||
         (checkOut !== null && checkIn === null) ||
         (checkIn !== null && checkOut !== null && checkOut < checkIn) ||
-        !attendanceStatuses.includes(status) ||
+        !allowedStatuses.includes(status) ||
         memo.length === 0 ||
         memo.length > 255
     ) {
@@ -49,7 +61,6 @@ hrRouter.post('/attendance', async (req, res) => {
         });
     }
 
-    status = attendanceStatus(checkIn, checkOut, status);
 
     try {
         const [employeeRows] = await promiseDb.query(
@@ -224,7 +235,7 @@ hrRouter.put('/attendance/:attendanceId', async (req, res) => {
         (checkOut !== null && !isTimeString(checkOut)) ||
         (checkOut !== null && checkIn === null) ||
         (checkIn !== null && checkOut !== null && checkOut < checkIn) ||
-        !attendanceStatuses.includes(status) ||
+        !allowedStatuses.includes(status) ||
         memo.length === 0 ||
         memo.length > 255
     ) {
@@ -234,7 +245,6 @@ hrRouter.put('/attendance/:attendanceId', async (req, res) => {
         });
     }
 
-    status = attendanceStatus(checkIn, checkOut, status);
 
     try {
         const [existingRows] = await promiseDb.query(
@@ -408,6 +418,25 @@ hrRouter.get('/employees', async (req, res) => {
             e.position,
             e.email,
             e.phone,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM attendance leave_att
+                WHERE leave_att.employee_id = e.employee_id
+                  AND leave_att.work_date = ?
+                  AND leave_att.attendance_status = '휴가'
+            ) OR EXISTS (
+                SELECT 1 FROM draft_leave leave_detail
+                JOIN my_draft leave_draft ON leave_draft.draft_id = leave_detail.draft_id
+                WHERE leave_draft.employee_id = e.employee_id
+                  AND leave_draft.status IN ('APPROVED', '승인', '완료')
+                  AND ? BETWEEN leave_detail.start_date AND leave_detail.end_date
+            ) OR EXISTS (
+                SELECT 1 FROM my_draft leave_draft
+                WHERE leave_draft.employee_id = e.employee_id
+                  AND leave_draft.document_type = '휴가'
+                  AND leave_draft.status IN ('APPROVED', '승인', '완료')
+                  AND JSON_UNQUOTE(JSON_EXTRACT(leave_draft.detail_data, '$.startDate')) <= ?
+                  AND JSON_UNQUOTE(JSON_EXTRACT(leave_draft.detail_data, '$.endDate')) >= ?
+            ) THEN 1 ELSE 0 END AS isOnLeaveToday,
             DATE_FORMAT(e.hire_date, '%Y-%m-%d') AS hireDate,
             e.initial_annual_salary AS initialAnnualSalary,
             DATE_FORMAT(e.resignation_date, '%Y-%m-%d') AS resignationDate,
@@ -423,7 +452,8 @@ hrRouter.get('/employees', async (req, res) => {
     `;
 
     try {
-        const [rows] = await promiseDb.query(query);
+        const today = seoulToday();
+        const [rows] = await promiseDb.query(query, [today, today, today, today]);
 
         return res.json({
             success: true,
@@ -1126,6 +1156,95 @@ hrRouter.patch('/employees/:employeeId/status', async (req, res) => {
         return res.status(500).json({
             success: false,
             message: '퇴사 처리에 실패했습니다.'
+        });
+    }
+});
+
+// 이것은 마이페이지 이메일과 전화번호 업데이트용 api임 (인사아님!)
+
+hrRouter.patch('/employees/:employeeId/contact', async (req, res) => {
+    const employeeId = Number(req.params.employeeId);
+    const email = String(req.body?.email ?? '').trim();
+    const phone = String(req.body?.phone ?? '').trim();
+
+    if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+        return res.status(400).json({
+            success: false,
+            message: '올바른 직원 ID가 필요합니다.'
+        });
+    }
+
+    if (!isEmailString(email) || email.length > 100) {
+        return res.status(400).json({
+            success: false,
+            message: '이메일 형식을 확인해 주세요.'
+        });
+    }
+
+    if (!/^[0-9+\-()\s]{8,20}$/.test(phone)) {
+        return res.status(400).json({
+            success: false,
+            message: '전화번호 형식을 확인해 주세요.'
+        });
+    }
+
+    try {
+        // 직원 존재 여부 확인
+        const [employees] = await promiseDb.query(
+            'SELECT employee_id FROM employees WHERE employee_id = ?',
+            [employeeId]
+        );
+
+        if (employees.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '해당 직원을 찾을 수 없습니다.'
+            });
+        }
+
+        // 다른 직원이 동일 이메일을 사용 중인지 확인
+        const [duplicates] = await promiseDb.query(
+            `SELECT employee_id
+             FROM employees
+             WHERE email = ? AND employee_id <> ?
+             LIMIT 1`,
+            [email, employeeId]
+        );
+
+        if (duplicates.length > 0) {
+            return res.status(409).json({
+                success: false,
+                message: '이미 사용 중인 이메일입니다.'
+            });
+        }
+
+        // 이메일과 전화번호만 변경
+        await promiseDb.query(
+            `UPDATE employees
+            SET email = ?, phone = ?
+            WHERE employee_id = ?`,
+            [email, phone, employeeId]
+        );
+
+        return res.json({
+            success: true,
+            data: { employeeId, email, phone },
+            message: '개인정보가 저장되었습니다.'
+        });
+
+    } catch (error) {
+        console.error('개인정보 수정 오류:', error);
+
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({
+                success: false,
+                message: '이미 사용 중인 이메일입니다.'
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: '개인정보 저장에 실패했습니다.'
         });
     }
 });
