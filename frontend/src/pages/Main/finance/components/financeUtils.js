@@ -41,6 +41,8 @@ export function toApprovedTradeRows(documents, payrollMonths = []) {
   return documents.filter(document => {
     const id = String(document.document_id ?? '');
     const status = normalizeApprovalStatus(document.approval_status);
+    // [승인 기안서 필터 수정] 내 기안서는 종류와 관계없이 최종 승인된 건만 매입에 표시합니다.
+    if (document.source_type === 'draft' && status !== 'APPROVED') return false;
     const months = document.payroll_months || [];
     const payrollCovered = document.is_payroll_draft && status === 'APPROVED' && months.length > 0 && months.every(month => payrollMonths.includes(month));
     if (payrollCovered || document.linked_transaction_id || status === 'UNKNOWN' || !(/^[1-9]\d*$/.test(id) || document.source_type === 'draft' && /^draft-[1-9]\d*$/.test(id)) || seen.has(id)) return false;
@@ -70,7 +72,8 @@ export function toApprovedTradeRows(documents, payrollMonths = []) {
     vat: null,
     totalAmount: document.amount == null ? null : Number(document.amount),
     // 결재 상태로 정산 완료 여부를 추정하지 않습니다.
-    status: '미등록',
+    // [비용 연동 추가] 거래 등록 전 승인 비용은 지급대기로 표시합니다.
+    status: document.source_type === 'draft' && document.document_type === '비용' ? '지급대기' : '미등록',
     closingDay: null,
     requester: document.requester_name || '미등록',
     department: document.department_name || '미등록',

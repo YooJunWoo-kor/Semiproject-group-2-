@@ -63,6 +63,22 @@ export function isTradeOverdue(item, today) {
   const dueDate = String(item.dueDate || '').slice(0, 10);
   return /^\d{4}-\d{2}-\d{2}$/.test(dueDate) && dueDate < today && getSettlementLabel(item.status) !== '완료';
 }
+// [최신순 정렬 추가] 날짜가 없는 항목은 뒤로 보내고, 급여 월은 해당 월 1일로 비교합니다.
+export function compareTradeNewest(left, right) {
+  const dateKey = item => {
+    const value = String(item.date || item.createdAt || '').slice(0, 10);
+    if (/^\d{4}-\d{2}$/.test(value)) return value + '-01';
+    return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '';
+  };
+  const dateOrder = dateKey(right).localeCompare(dateKey(left));
+  if (dateOrder) return dateOrder;
+  const createdOrder = String(right.createdAt || '').localeCompare(String(left.createdAt || ''));
+  if (createdOrder) return createdOrder;
+  // 같은 날짜/작성시각이면 등록 번호 내림차순, 최종적으로 ID로 순서를 고정합니다.
+  const number = item => Number(String(item.id ?? '').match(/\d+$/)?.[0] || 0);
+  return number(right) - number(left) || String(right.id ?? '').localeCompare(String(left.id ?? ''));
+}
+
 function Items({
   embedded = false,
   initialCreate = false,
@@ -157,7 +173,7 @@ function Items({
     supplyAmount: row.amount, vat: 0, totalAmount: row.amount, status: row.payment_status,
     approvalStatus: 'APPROVED', linkedSourceType: 'additional_payroll', linkedSourceId: row.draft_id
   }));
-  const itemList = [...additionalItems, ...payrollDeductionRows, ...payrollItems, ...toApprovedTradeRows(approvedDocuments, payrollItems.map(row => row.date)), ...storedItemList];
+  const itemList = [...additionalItems, ...payrollDeductionRows, ...payrollItems, ...toApprovedTradeRows(approvedDocuments, payrollItems.map(row => row.date)), ...storedItemList].sort(compareTradeNewest);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -406,7 +422,8 @@ function Items({
       }, item);
     }
     // Completed rows come from actual payments. Outstanding unclassified drafts/transactions may not yet have payment records.
-    if (scope.view === 'completed' || getSettlementLabel(item.status) === '완료') return false;
+    // [완료 거래 표시 수정] 통합 목록에서는 완료 거래도 거래일/마감일 기준으로 유지합니다.
+    if (!scope.unified && (scope.view === 'completed' || getSettlementLabel(item.status) === '완료')) return false;
     const date = item.dueDate || (item.date !== '미등록' ? item.date : item.createdAt);
     return String(date || '').slice(0, 7) === scope.month && categoryMatches({
       category_code: 'unclassified',
@@ -591,14 +608,17 @@ function Items({
       trade_type: '매입',
       trade_date: today,
       due_date: item.dueDate || '',
-      item_name: '',
+      item_name: item.documentType === '비용' ? item.itemName : '',
       standard: '',
       quantity: '1',
-      unit_price: '',
+      unit_price: item.documentType === '비용' ? String(item.totalAmount) : '',
       vat: '0'
     });
     setFormOpen(true);
   }
+
+  // [비용 간편등록 추가] 승인 비용만 원본 금액으로 등록합니다.
+  const isExpenseRegistration = linkingApproval?.isSourceDraft && linkingApproval.documentType === '비용';
 
   // 입력칸의 name에 해당하는 값을 변경합니다.
   function handleItemChange(e) {
@@ -609,6 +629,8 @@ function Items({
     setItemForm(prev => ({
       ...prev,
       [name]: value,
+      // [비용 간편등록 추가] 부가세를 바꿔도 신청 총액은 유지합니다.
+      ...(isExpenseRegistration && name === 'vat' ? { unit_price: String(linkingApproval.totalAmount - Number(value)) } : {}),
       ...(name === "trade_type" ? { category_code: "" } : {})
     }));
   }
@@ -651,7 +673,7 @@ function Items({
         itemName: itemForm.item_name.trim(),
         spec: itemForm.standard.trim() || "-",
         // 기존 거래처를 유지하면 저장 당시의 거래처명도 유지합니다.
-        customer: existingItem && Number(existingItem.partnerId) === Number(itemForm.partner_id) ? existingItem.customer : partner?.company_name || "-",
+        customer: result.company_name || (existingItem && Number(existingItem.partnerId) === Number(itemForm.partner_id) ? existingItem.customer : partner?.company_name || "-"),
         unitPrice,
         quantity,
         supplyAmount,
@@ -985,6 +1007,8 @@ function Items({
     setPaymentForm(prev => ({
       ...prev,
       [name]: value,
+      // [비용 간편등록 추가] 부가세를 바꿔도 신청 총액은 유지합니다.
+      ...(isExpenseRegistration && name === 'vat' ? { unit_price: String(linkingApproval.totalAmount - Number(value)) } : {}),
       // 결제수단을 바꾸면 이전 계좌·카드 선택을 초기화합니다.
       ...(name === "payment_method" ? {
         account_id: "",
@@ -1162,7 +1186,7 @@ function Items({
                   
                     <fieldset disabled={saving}>
                       {linkingApproval && <p>원본: {linkingApproval.itemName}<br />승인 금액: {linkingApproval.totalAmount.toLocaleString()}원 · 입력 합계가 이 금액과 같아야 합니다.</p>}
-                      <div>
+                      {!isExpenseRegistration && <><div>
                         <label htmlFor="item-partner">거래처 *</label>
                         <select id="item-partner" name="partner_id" value={itemForm.partner_id} onChange={handleItemChange} required>
                           <option value="">거래처 선택</option>
@@ -1181,6 +1205,7 @@ function Items({
                         </select>
                       </div>
                   
+                      </>}
                       <div>
                         <label htmlFor="item-category">거래 분류</label>
                         <select id="item-category" name="category_code" value={itemForm.category_code || ""}
@@ -1236,7 +1261,7 @@ function Items({
                 required: true,
                 min: 0,
                 step: 1
-              }].map(field => <div key={field.name}>
+              }].filter(field => !isExpenseRegistration || !['due_date', 'standard', 'quantity', 'unit_price'].includes(field.name)).map(field => <div key={field.name}>
                           <label htmlFor={`item-${field.name}`}>
                             {field.label}{field.required ? " *" : ""}
                           </label>
@@ -1254,7 +1279,8 @@ function Items({
                         {(Number(itemForm.quantity) * Number(itemForm.unit_price) + Number(itemForm.vat)).toLocaleString()}원
                       </p>
                   
-                      <p>신규 거래는 미정산 상태로 등록됩니다.</p>
+                      {/* [비용 간편등록 추가] 등록만으로 계좌를 차감하거나 지급완료로 처리하지 않습니다. */}
+                      <p>{isExpenseRegistration ? '신청 금액으로 등록되며 지급대기를 유지합니다. 등록 후 출금 등록이 가능합니다.' : '신규 거래는 미정산 상태로 등록됩니다.'}</p>
                   
                       {formError && <p role="alert">{formError}</p>}
                   

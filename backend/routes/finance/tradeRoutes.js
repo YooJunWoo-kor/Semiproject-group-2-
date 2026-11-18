@@ -2,7 +2,7 @@ const queries = require("../../queries/finance/tradeQueries");
 const express = require("express");
 const db = require("../../db");
 const financeMysql = require("mysql2/promise");
-const { readAmount, category, amount, sum } = require("./financeShared");
+const { readAmount, readExpenseAmount, financeApprovalStatus, category, amount, sum } = require("./financeShared");
 
 const router = express.Router();
 
@@ -49,7 +49,9 @@ router.post("/items", async (req, res) => {
         return res.status(400).json({ message: "거래 구분에 맞는 분류를 선택해 주세요." });
     }
 
-    const partnerId = Number(partner_id);
+    // [비용 간편등록 추가] 거래처 생략은 원본 비용 기안서를 검증한 경우만 허용합니다.
+    const expenseWithoutPartner = sourceType === 'draft' && (partner_id === '' || partner_id == null);
+    const partnerId = expenseWithoutPartner ? null : Number(partner_id);
     const itemName = typeof item_name === "string"
         ? item_name.trim()
         : "";
@@ -63,8 +65,7 @@ router.post("/items", async (req, res) => {
 
     // 거래처와 거래 구분 확인
     if (
-        !Number.isSafeInteger(partnerId) ||
-        partnerId <= 0 ||
+        (!expenseWithoutPartner && (!Number.isSafeInteger(partnerId) || partnerId <= 0)) ||
         !["매입", "매출"].includes(trade_type)
     ) {
         return res.status(400).json({
@@ -184,15 +185,16 @@ router.post("/items", async (req, res) => {
                 const [drafts] = await connection.execute(
                     queries.selectMyDraft, [sourceId]);
                 if (!drafts.length) failSource(404, '원본 기안서를 찾을 수 없습니다.');
+                // [비용 간편등록 추가] 다른 종류의 기안서는 거래처 생략 불가
+                if (expenseWithoutPartner && drafts[0].document_type !== '비용') failSource(400, '비용 기안서만 거래처 없이 등록할 수 있습니다.');
                 if (['추가급여', '수당', '상여금'].includes(drafts[0].document_type)) failSource(409, '추가급여는 추가급여 지급 화면에서 처리해주세요.');
-                if (drafts[0].status !== 'APPROVED') failSource(409, '최종 승인된 기안서만 거래로 등록할 수 있습니다.');
+                if (financeApprovalStatus(drafts[0].status) !== '승인') failSource(409, '최종 승인된 기안서만 거래로 등록할 수 있습니다.');
                 const [payrollRows] = await connection.execute(
                     queries.selectPayrolls, [sourceId]);
                 if (payrollRows.length) failSource(409, '급여 기안서는 인건비 목록에 자동 표시됩니다. 일반 품목 거래로 중복 등록할 수 없습니다.');
                 const [expenses] = await connection.execute(queries.selectDraftExpense, [sourceId]);
-                if (expenses.length && expenses.every(row => readAmount(row.amount) !== null)) {
-                    approvedAmount = expenses.reduce((total, row) => total + Number(row.amount), 0);
-                }
+                // [비용 연동 추가] 목록과 거래 등록에 같은 원본 비용 합계 적용
+                approvedAmount = readExpenseAmount(drafts[0].detail_data, expenses);
             }
             if (!Number.isSafeInteger(approvedAmount) || approvedAmount <= 0) failSource(409, '원본의 승인 금액이 미등록입니다. 먼저 원본 금액을 확인해주세요.');
             const [links] = await connection.execute(
@@ -202,10 +204,9 @@ router.post("/items", async (req, res) => {
         }
 
         // 선택한 거래처가 실제로 존재하는지 확인합니다.
-        const [partners] = await connection.execute(
-            queries.selectPartners,
-            [partnerId]
-        );
+        const [partners] = expenseWithoutPartner
+            ? [[{ company_name: '비용 청구' }]]
+            : await connection.execute(queries.selectPartners, [partnerId]);
 
         if (partners.length === 0) {
             await connection.rollback();
@@ -271,6 +272,7 @@ router.post("/items", async (req, res) => {
             message: "거래 품목이 등록되었습니다.",
             transaction_id: transactionId,
             item_id: itemResult.insertId,
+            company_name: partners[0].company_name,
             category_code: savedCategoryCode,
             linked_source_type: sourceType, linked_source_id: sourceId
         });

@@ -46,7 +46,10 @@ const selectApprovalDocuments = `
 const selectPayrolls = `
           SELECT m.*,
                  DATE_FORMAT(m.created_at, '%Y-%m-%d %H:%i') AS created_at,
-                 e.name AS requester_name, d.department_name, expense.expense_amount, NULL AS linked_transaction_id,
+                 e.name AS requester_name, d.department_name, expense.expense_amount,
+                 /* [비용 연동 추가] 거래 전환 후 원본 기안서 중복 표시 방지 */
+                 (SELECT MIN(t.transaction_id) FROM trade_transactions t
+                   WHERE t.source_type = 'draft' AND t.source_id = m.draft_id) AS linked_transaction_id,
                  EXISTS (
                    SELECT 1 FROM payrolls payroll
                    WHERE m.document_type = '급여'

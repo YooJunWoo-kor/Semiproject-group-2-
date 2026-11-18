@@ -18,13 +18,14 @@ i.supply_price,
 i.vat,
 (i.supply_price + i.vat) AS total_amount,
 p.closing_day,
-NULL AS linked_source_type,
-NULL AS linked_source_id,
+/* [비용 연동 추가] 새로고침 후에도 원본 연결 유지 */
+t.source_type AS linked_source_type,
+t.source_id AS linked_source_id,
 'unclassified' AS category_code
 FROM trade_items i
 INNER JOIN trade_transactions t
 ON i.transaction_id=t.transaction_id
-INNER JOIN partners p
+LEFT JOIN partners p
 ON t.partner_id=p.partner_id
 ORDER BY t.trade_date DESC, t.transaction_id DESC, i.item_id DESC
 `;
@@ -33,7 +34,7 @@ const selectApprovalDocuments = 'SELECT amount, approval_status FROM approval_do
 
 const selectPayments = "SELECT payment_id FROM payments WHERE document_id = ? LIMIT 1 FOR UPDATE";
 
-const selectMyDraft = 'SELECT status, document_type FROM my_draft WHERE draft_id = ? FOR UPDATE';
+const selectMyDraft = 'SELECT status, document_type, detail_data FROM my_draft WHERE draft_id = ? FOR UPDATE';
 
 const selectPayrolls = `SELECT p.payroll_id
         FROM payrolls p

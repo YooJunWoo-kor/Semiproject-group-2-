@@ -320,7 +320,10 @@ router.post("/:draftId/receipt", receiptUpload.single("receipt"), (req, res) => 
          [imageUrl, draftId, employeeId],
          
          (err, result) => {
-            if(err) return res.status(500).json({message: "저장 실패"});
+            if (err) {
+                console.error("영수증 경로 저장 오류:", err);
+                return res.status(500).json({ message: "영수증 저장 실패" });
+            }
 
          
 
