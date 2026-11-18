@@ -69,7 +69,20 @@ hrFinanceRouter.post('/payrolls/submit-to-finance', async (req, res) => {
                 local_income_tax AS localIncomeTax,
                 deduction,
                 gross_pay AS grossPay,
-                net_pay AS netPay
+                net_pay AS netPay,
+                EXISTS (
+                    SELECT 1
+                    FROM my_draft financeDraft
+                    WHERE financeDraft.document_type = '급여'
+                      AND financeDraft.status = 'APPROVED'
+                      AND JSON_UNQUOTE(
+                          JSON_EXTRACT(financeDraft.detail_data, '$.source')
+                      ) = 'HR_PAYROLL'
+                      AND JSON_CONTAINS(
+                          JSON_EXTRACT(financeDraft.detail_data, '$.payrollIds'),
+                          JSON_ARRAY(payrolls.payroll_id)
+                      )
+                ) AS financeHandoffExists
              FROM payrolls
              WHERE pay_month = ?
                AND payroll_id IN (?)
@@ -88,10 +101,14 @@ hrFinanceRouter.post('/payrolls/submit-to-finance', async (req, res) => {
 
         const invalidRows = rows.filter((row) => {
             const payrollAmounts = validatePayrollAmounts(row);
+            const hasFinanceHandoff = Number(row.financeHandoffExists) === 1;
+            const recoverableOrphan =
+                row.paymentStatus === '지급대기' && !hasFinanceHandoff;
 
             return (
                 row.payMonth !== payMonth ||
-                row.paymentStatus !== '확정' ||
+                (row.paymentStatus !== '확정' && !recoverableOrphan) ||
+                hasFinanceHandoff ||
                 !payrollAmounts.valid
             );
         });
@@ -122,27 +139,41 @@ hrFinanceRouter.post('/payrolls/submit-to-finance', async (req, res) => {
         );
         const draftId = null;
 
-        const [updated] = await promiseDb.query(
-            `UPDATE payrolls
-             SET payment_status = '지급대기'
-             WHERE pay_month = ?
-               AND payroll_id IN (?)
-               AND payment_status = '확정'`,
-            [payMonth, payrollIds]
+        const confirmedRows = rows.filter(
+            (row) => row.paymentStatus === '확정'
         );
 
-        if (updated.affectedRows !== payrollIds.length) {
-            throw new Error('재무 전달 직전에 급여 상태가 변경되었습니다. 다시 조회해 주세요.');
+        if (confirmedRows.length > 0) {
+            const confirmedPayrollIds = confirmedRows.map(
+                (row) => row.payrollId
+            );
+            const [updated] = await promiseDb.query(
+                `UPDATE payrolls
+                 SET payment_status = '지급대기'
+                 WHERE pay_month = ?
+                   AND payroll_id IN (?)
+                   AND payment_status = '확정'`,
+                [payMonth, confirmedPayrollIds]
+            );
+
+            if (updated.affectedRows !== confirmedRows.length) {
+                throw new Error('재무 전달 직전에 급여 상태가 변경되었습니다. 다시 조회해 주세요.');
+            }
         }
 
         for (const row of rows) {
+            const recoveringOrphan = row.paymentStatus === '지급대기';
             await recordPayrollChange({
                 payrollId: row.payrollId,
                 employeeId: row.employeeId,
-                actionType: 'FINANCE_HANDOFF',
-                previousStatus: '확정',
+                actionType: recoveringOrphan
+                    ? 'FINANCE_HANDOFF_RECOVERY'
+                    : 'FINANCE_HANDOFF',
+                previousStatus: row.paymentStatus,
                 newStatus: '지급대기',
-                reason: `${payMonth} 급여 재무 전달`,
+                reason: recoveringOrphan
+                    ? `${payMonth} 급여 재무 연결 누락 복구`
+                    : `${payMonth} 급여 재무 전달`,
                 changedBy: actorEmployeeId
             });
         }

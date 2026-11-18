@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import ModalBase from "../../../../components/ModalBase";
 import DepEmpList from "../../../../components/DepEmpList";
@@ -13,12 +14,12 @@ const emptyForm = {
 
     paymentType: "수당",
     payMonth: "",
-    paymentDate: "",
     paymentDetail: ""
 
 };
 
 function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftChanged }) {
+    const [searchParams] = useSearchParams();
     const [form, setForm] = useState(emptyForm);
     const [departments, setDepartments] = useState([]);
     const [approvers, setApprovers] = useState([]);
@@ -37,7 +38,17 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
         }
     ]);
 
-    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount, paymentType, payMonth, paymentDate, paymentDetail } = form;
+    const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount, paymentType, payMonth, paymentDetail } = form;
+
+    useEffect(() => {
+        if (editingDraft || searchParams.get("type") !== "leave") return;
+
+        setForm((current) => ({
+            ...current,
+            title: current.title || "휴가 신청",
+            draftType: "휴가"
+        }));
+    }, [editingDraft, searchParams]);
 
     useEffect(() => {
         const loadDepartments = async () => {
@@ -111,12 +122,6 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             return;
         }
 
-        // [수정] 추가급여 문서에만 상세 분류를 필수로 검사합니다.
-        if (draftType === "추가급여" && !paymentDetail.trim()) {
-            alert("상세 내용을 입력해주세요");
-            return;
-        }
-
         if (saveType === "submit") {
             if (!content.trim() || approvers.length === 0) {
                 alert("내용을 입력하고 결재자를 한 명 이상 선택해주세요.");
@@ -146,6 +151,10 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             }
 
             if (draftType === "추가급여") {
+                if (!paymentDetail.trim()) {
+                    alert("상세 분류를 입력해주세요.");
+                    return;
+                }
                 if (
                     !["수당", "상여"].includes(paymentType) ||
                     !/^\d{4}-(0[1-9]|1[0-2])$/.test(payMonth) ||
@@ -173,9 +182,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                         draftType === "추가급여" ? {
                             paymentType,
                             payMonth,
-                            // [재무 연동 추가] 지급 예정일과 상세 분류를 원본 기안서에 함께 저장합니다.
-                            paymentDate,
-                            paymentDetail,
+                            paymentDetail: paymentDetail.trim(),
                             amount: amount === "" ? null : Number(amount)
                         } : {};
 
@@ -265,9 +272,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 <span className="subtitle">기안서 작성</span>
             </header>
 
-            <form className="boder vertical-box" onSubmit={e => e.preventDefault()}
-                style={{padding:'30px'}}
-            >
+            <form className="draft-box" onSubmit={e => e.preventDefault()}>
                 <div className="draft-row">
                     <p>작성자: {loginUser.name}</p>
                     <p>부서: {loginUser.departmentName}</p>
@@ -368,43 +373,67 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 )}
 
                 {draftType === "추가급여" && (
-                    <div className="draft-box">
-                        <div className="draft-row">
-                            <h4>추가급여 지급 정보</h4>
-                            {/* [재무 연동 추가] 기존 급여월 검증에 필요한 입력란입니다. */}
-                            <label>급여월<input type="month" name="payMonth" value={payMonth} onChange={handleInputChange} /></label>
+                    <section className="draft-box additional-pay-form" aria-labelledby="additional-pay-title">
+                        <div className="additional-pay-heading">
+                            <div>
+                                <span className="additional-pay-eyebrow">PAYMENT REQUEST</span>
+                                <h4 id="additional-pay-title">추가급여 지급 정보</h4>
+                                <p>지급 구분과 대상 월, 신청 금액을 입력해 주세요.</p>
+                            </div>
                         </div>
 
-                        <div className="draft-row">
-                            <label>지급 구분
+                        <div className="additional-pay-grid">
+                            <label>
+                                <span>지급 구분</span>
                                 <select name="paymentType" value={paymentType} onChange={handleInputChange}>
                                     <option value="수당">수당</option>
                                     <option value="상여">상여금</option>
                                 </select>
                             </label>
-                        </div>
 
-                        <label>상세 분류
-                            <input
-                                type="text"
-                                name="paymentDetail"
-                                value={paymentDetail}
-                                onChange={handleInputChange}
-                                placeholder="예: 야근 수당, 근무 수당, 성과급"
-                                maxLength={50}
-                            />
-                        </label>
-
-                        <div className="draft-row">
-                            <label>지급 예정일
-                                <input type="date" name="paymentDate" value={paymentDate} onChange={handleInputChange} />
+                            <label>
+                                <span>지급 대상 월</span>
+                                <input
+                                    type="month"
+                                    name="payMonth"
+                                    value={payMonth}
+                                    onChange={handleInputChange}
+                                />
                             </label>
 
-                            <label>신청 금액 (원)
-                                <input type="number" min="1" step="1" name="amount" value={amount} onChange={handleInputChange} />
+                            <label>
+                                <span>상세 분류</span>
+                                <input
+                                    type="text"
+                                    name="paymentDetail"
+                                    value={paymentDetail}
+                                    onChange={handleInputChange}
+                                    placeholder="예: 야근 수당, 근무 수당, 성과급"
+                                    maxLength={50}
+                                />
+                            </label>
+
+                            <label>
+                                <span>신청 금액 (원)</span>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    name="amount"
+                                    value={amount}
+                                    onChange={handleInputChange}
+                                    placeholder="금액을 입력해 주세요"
+                                />
                             </label>
                         </div>
-                    </div>
+
+                        <div className="additional-pay-summary" aria-live="polite">
+                            <span>신청 금액</span>
+                            <strong>{amount !== "" && Number.isFinite(Number(amount))
+                                ? Number(amount).toLocaleString("ko-KR")
+                                : "0"}<small>원</small></strong>
+                        </div>
+                    </section>
                 )}
 
                 <label>내용
@@ -414,10 +443,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 <div className="draft-box">
                     <div className="draft-row">
                         <h4>결재선</h4>
-                        <button type="button"
-                            onClick={() => setShowApproverModal(true)}
-                            style={{fontSize: '13px'}}
-                        >결재자 추가</button>
+                        <button type="button" onClick={() => setShowApproverModal(true)}>결재자 추가</button>
                     </div>
                     {approvers.length === 0 ? (
                         <p>등록된 결재자가 없습니다.</p>
@@ -433,13 +459,9 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
 
                 <div className="draft-actions">
                     <button type="button" disabled={isSaving}
-                        onClick={() => handleSubmit("temporary")}
-                        style={{fontSize: '13px'}}
-                    >임시저장</button>
+                        onClick={() => handleSubmit("temporary")}>임시저장</button>
                     <button type="button" className="erp-primary-button" disabled={isSaving}
-                        onClick={() => handleSubmit("submit")}
-                        style={{fontSize: '13px'}}
-                        >
+                        onClick={() => handleSubmit("submit")}>
                         {isSaving ? "저장 중..." : "결재 요청"}
                     </button>
                 </div>

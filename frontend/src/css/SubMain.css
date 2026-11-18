@@ -127,6 +127,7 @@
     overflow: hidden;
 }
 
+
 /* 대시보드 헤더 래퍼: 좌측 텍스트와 우측 버튼 양 끝 배치 */
 .dashboard-header {
   display: flex;

@@ -90,7 +90,7 @@ router.post('/approvals/:documentId/attachments', (req, res) => {
         }
         try {
             const [result] = await db.promise().query(queries.insertAttachment, [
-                originalName, req.file.filename, req.file.mimetype, req.file.size, key.id, employeeId
+                originalName, req.file.filename, req.file.size, key.id, employeeId
             ]);
             if (result.affectedRows !== 1) {
                 await removeUpload(req.file);

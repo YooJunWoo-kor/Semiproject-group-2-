@@ -161,10 +161,27 @@ const leaveQuery = `
         ON d.department_id = e.department_id
     LEFT JOIN employees approver
         ON approver.employee_id = md.approver_id
-    WHERE (? = '' OR DATE_FORMAT(dl.start_date, '%Y-%m') = ?)
-      AND (? = '' OR DATE_FORMAT(dl.start_date, '%Y') = ?)
+    WHERE (? IS NULL OR (
+        dl.start_date < ?
+        AND dl.end_date >= ?
+    ))
+      AND (? IS NULL OR (
+        dl.start_date < ?
+        AND dl.end_date >= ?
+    ))
     ORDER BY dl.start_date DESC, dl.leave_id DESC
 `;
+
+function nextMonthStart(month) {
+    if (!month) {
+        return null;
+    }
+
+    const [year, monthNumber] = month.split('-').map(Number);
+    const date = new Date(Date.UTC(year, monthNumber, 1));
+
+    return formatDate(date);
+}
 
 function toLeaveResponse(row) {
     return {
@@ -179,14 +196,14 @@ hrLeaveRouter.get('/leaves', async (req, res) => {
     const month = String(req.query.month || '').trim();
     const year = String(req.query.year || '').trim();
 
-    if (month && !/^(\\d{4})-(0[1-9]|1[0-2])$/.test(month)) {
+    if (month && !/^(\d{4})-(0[1-9]|1[0-2])$/.test(month)) {
         return res.status(400).json({
             success: false,
             message: '휴가 조회 월 형식은 YYYY-MM이어야 합니다.'
         });
     }
 
-    if (year && !/^\\d{4}$/.test(year)) {
+    if (year && !/^\d{4}$/.test(year)) {
         return res.status(400).json({
             success: false,
             message: '휴가 조회 연도 형식은 YYYY여야 합니다.'
@@ -201,11 +218,17 @@ hrLeaveRouter.get('/leaves', async (req, res) => {
     }
 
     try {
+        const monthStart = month ? `${month}-01` : null;
+        const monthEnd = nextMonthStart(month);
+        const yearStart = year ? `${year}-01-01` : null;
+        const yearEnd = year ? `${Number(year) + 1}-01-01` : null;
         const [rows] = await promiseDb.query(leaveQuery, [
-            month,
-            month,
-            year,
-            year
+            monthStart ? monthEnd : null,
+            monthEnd,
+            monthStart,
+            yearStart ? yearEnd : null,
+            yearEnd,
+            yearStart
         ]);
 
         return res.json({
