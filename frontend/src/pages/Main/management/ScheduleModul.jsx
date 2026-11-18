@@ -103,10 +103,15 @@ function ScheduleModul({dataType = 1}) {
         }
     };
 
-    useEffect(()=>{
+    // 1) ScheduleModul.jsx 내부 (getMyWorklistData 아래에 추가)
+    const refreshSchedules = () => {
         getSchduleData();
         getMySchduleData();
         getMyWorklistData();
+    };
+
+    useEffect(()=>{
+        refreshSchedules();
     },[])
 
     let finalSchadulData = [];
@@ -201,10 +206,16 @@ function ScheduleModul({dataType = 1}) {
             </div>
             
             {/* onClose, title, layout */}
-            {isModal ? <ModalBase onClose={closeModal} title={"일정 등록"}
-              layout={<ScheduleModalPopup
-                onClose={closeModal}
-              />}/>: <div></div>}
+            {isModal ?
+                <ModalBase
+                    onClose={closeModal}
+                    title={"일정 등록"}
+                    layout={
+                        <ScheduleModalPopup
+                            onClose={closeModal}
+                            setSubmit={refreshSchedules}
+                        />
+                    }/>: <div></div>}
             {selectedSchedule && (
                 <ModalBase
                     onClose={closeScheduleDetail}

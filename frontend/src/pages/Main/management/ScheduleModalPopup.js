@@ -48,8 +48,8 @@ function ScheduleModalPopup({onClose, setSubmit}){
     const onSubmit = async function(e){
       e.preventDefault();
   
-      let startTime = startTimeH + ':' + startTimeM + ':00'
-      let endTime = endTimeH + ':' + endTimeM + ':00'
+      let startTime = (startTimeH === '시' ? '09' : startTimeH) + ':' + (startTimeM === '분' ? '00' : startTimeM) + ':00';
+      let endTime = (endTimeH === '시' ? '18' : endTimeH) + ':' + (endTimeM === '분' ? '00' : endTimeM) + ':00';
   
       const userID = getLoginUser().employeeKey;
       try {
@@ -74,6 +74,7 @@ function ScheduleModalPopup({onClose, setSubmit}){
   
           if( response.data.status){
             alert( response.data.message );
+            if (setSubmit) setSubmit();
             onClose();
           }
       } catch (error) {
