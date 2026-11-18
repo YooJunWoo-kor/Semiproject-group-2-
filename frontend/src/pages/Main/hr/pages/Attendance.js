@@ -6,7 +6,6 @@ import ModalBase from "../../../../components/ModalBase";
 import { getLoginUser } from "../../../../utils/authStorage";
 import {
   getHrAttendance,
-  getHrLeaves,
   getHrOrganization,
   createHrAttendance,
   deleteHrAttendance,
@@ -118,10 +117,20 @@ function getStatusClass(status) {
   return "off";
 }
 
-function getLeaveStatusClass(status) {
-  if (status === "승인완료") return "working";
-  if (status === "반려") return "off";
-  return "late";
+function getEmployeeDisplayStatus(employee) {
+  const employmentStatus = employee.employmentStatus || "-";
+
+  if (employmentStatus === "휴직" || employmentStatus === "퇴사") {
+    return employmentStatus;
+  }
+
+  return Number(employee.isOnLeaveToday) === 1 ? "휴가" : employmentStatus;
+}
+
+function getEmployeeStatusBadgeClass(status) {
+  if (status === "재직") return "active";
+  if (status === "휴직" || status === "휴가") return "on-leave";
+  return "retired";
 }
 
 function getWorkMinutes(clockIn, clockOut) {
@@ -380,61 +389,39 @@ function AttendanceEmployeeHeader({
   );
 }
 
-function AttendanceSubTabs({
-  activeTab,
-  isAttendanceTab,
-  isAttendanceRecords,
-  setActiveTab
-}) {
+function AttendanceSubTabs({ activeTab, isAttendanceRecords, setActiveTab }) {
   return (
     <nav
       className="attendance-tabs attendance-selected-subtabs"
-      aria-label={isAttendanceTab ? "근태 조회 구분" : "휴가 조회 구분"}
+      aria-label="근태 조회 구분"
     >
-      {isAttendanceTab ? (
-        <>
-          <button
-            type="button"
-            role="tab"
-            className={isAttendanceRecords ? "active" : ""}
-            aria-selected={isAttendanceRecords}
-            onClick={() => setActiveTab("attendance-records")}
-          >
-            월별 기록
-          </button>
-          <button
-            type="button"
-            role="tab"
-            className={activeTab === "attendance-anomalies" ? "active" : ""}
-            aria-selected={activeTab === "attendance-anomalies"}
-            onClick={() => setActiveTab("attendance-anomalies")}
-          >
-            이상 근태
-          </button>
-          <button
-            type="button"
-            role="tab"
-            className={activeTab === "attendance-statistics" ? "active" : ""}
-            aria-selected={activeTab === "attendance-statistics"}
-            onClick={() => setActiveTab("attendance-statistics")}
-          >
-            월별 통계
-          </button>
-        </>
-      ) : (
-        <>
-          <button
-            type="button"
-            role="tab"
-            className={activeTab === "leave-requests" ? "active" : ""}
-            aria-selected={activeTab === "leave-requests"}
-            onClick={() => setActiveTab("leave-requests")}
-          >
-            신청 목록
-          </button>
-
-        </>
-      )}
+      <button
+        type="button"
+        role="tab"
+        className={isAttendanceRecords ? "active" : ""}
+        aria-selected={isAttendanceRecords}
+        onClick={() => setActiveTab("attendance-records")}
+      >
+        일별 기록
+      </button>
+      <button
+        type="button"
+        role="tab"
+        className={activeTab === "attendance-anomalies" ? "active" : ""}
+        aria-selected={activeTab === "attendance-anomalies"}
+        onClick={() => setActiveTab("attendance-anomalies")}
+      >
+        이상 근태
+      </button>
+      <button
+        type="button"
+        role="tab"
+        className={activeTab === "attendance-statistics" ? "active" : ""}
+        aria-selected={activeTab === "attendance-statistics"}
+        onClick={() => setActiveTab("attendance-statistics")}
+      >
+        월별 통계
+      </button>
     </nav>
   );
 }
@@ -563,9 +550,6 @@ export default function Attendance() {
   const [activeTab, setActiveTab] = useState("attendance-records");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [leaveData, setLeaveData] = useState([]);
-  const [leaveLoading, setLeaveLoading] = useState(false);
-  const [leaveError, setLeaveError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -685,57 +669,6 @@ export default function Attendance() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!selectedMonth) {
-      setLeaveData([]);
-      setLeaveError("");
-      return undefined;
-    }
-
-    let ignore = false;
-
-    // 선택한 기준 월의 휴가 신청 데이터를 조회합니다.
-    // 기준 월이 바뀌면 해당 월의 휴가 신청 목록을 다시 조회합니다.
-    async function loadLeaves() {
-      setLeaveLoading(true);
-      setLeaveError("");
-
-      try {
-        const response = await getHrLeaves(selectedMonth);
-
-        if (
-          !response.data.success ||
-          !Array.isArray(response.data.data)
-        ) {
-          throw new Error("휴가 신청 응답 형식이 올바르지 않습니다.");
-        }
-
-        if (!ignore) {
-          setLeaveData(response.data.data);
-        }
-      } catch (requestError) {
-        console.error("휴가 신청 조회 오류:", requestError);
-
-        if (!ignore) {
-          setLeaveData([]);
-          setLeaveError(
-            requestError.response?.data?.message ||
-            "휴가 신청 정보를 불러오지 못했습니다."
-          );
-        }
-      } finally {
-        if (!ignore) {
-          setLeaveLoading(false);
-        }
-      }
-    }
-
-    loadLeaves();
-
-    return () => {
-      ignore = true;
-    };
-  }, [selectedMonth]);
 
   // 부서와 검색어를 동시에 적용해 왼쪽 직원 목록을 구성합니다.
   // 필터 결과를 기준으로 페이지 목록과 현재 선택 직원을 계산합니다.
@@ -765,7 +698,6 @@ export default function Attendance() {
     (employee) => String(employee.employeeId) === String(selectedEmployeeId)
   ) || visibleEmployeeList[0] || null;
   const isAttendanceTab = activeTab.startsWith("attendance-");
-  const isLeaveTab = activeTab.startsWith("leave-");
   const isAttendanceRecords = activeTab === "attendance-records";
 
   useEffect(() => {
@@ -998,33 +930,6 @@ export default function Attendance() {
   }
 
   // 선택 직원의 휴가만 계산합니다. 직원 목록은 두 탭에서 동일합니다.
-  const selectedEmployeeLeaves = leaveData
-    .filter((leave) =>
-      String(leave.employeeId) === String(selectedEmployeeId)
-    )
-    .sort((a, b) =>
-      String(b.startDate || "").localeCompare(String(a.startDate || ""))
-    );
-
-  const leaveTableHeaders = [
-    "휴가 유형", "시작일", "종료일", "일수", "신청 상태", "신청일", "사유", "승인자", "승인일"
-  ];
-  const leaveTableData = selectedEmployeeLeaves.map((leave) => ({
-    content: [
-      leave.leaveType || "휴가",
-      leave.startDate || "-",
-      leave.endDate || "-",
-      `${leave.leaveDays ?? "-"}일`,
-      <span className={`status-tag ${getLeaveStatusClass(leave.applicationStatus)}`}>
-        {leave.applicationStatus || "-"}
-      </span>,
-      leave.applicationDate || "-",
-      leave.reason || "-",
-      leave.approverName || "-",
-      leave.approvalDate || "-"
-    ]
-  }));
-
   return (
     <div className="border-container hr-attendance-management">
       <header className="dashboard-header">
@@ -1032,7 +937,7 @@ export default function Attendance() {
           <span className="subtitle">근태관리</span>
 
         </div>
-        {(isAttendanceTab && isMaster) || isLeaveTab ? (
+        {isAttendanceTab && selectedEmployee ? (
           <div className="dashboard-top">
             {isAttendanceTab && isMaster && (
               <button
@@ -1051,13 +956,14 @@ export default function Attendance() {
                 근태 상태 수정
               </button>
             )}
-            {isLeaveTab && (
+            {selectedEmployee && (
               <button
                 type="button"
                 className="register-btn erp-primary-button"
                 onClick={() => navigate("/main/mytesk/draft-create?type=leave")}
+                disabled={saving}
               >
-                휴가신청
+                휴가 신청
               </button>
             )}
           </div>
@@ -1080,15 +986,6 @@ export default function Attendance() {
                 onClick={() => setActiveTab("attendance-records")}
               >
                 근태 기록
-              </button>
-              <button
-                type="button"
-                role="tab"
-                className={isLeaveTab ? "active" : ""}
-                aria-selected={isLeaveTab}
-                onClick={() => setActiveTab("leave-requests")}
-              >
-                휴가 신청
               </button>
             </nav>
 
@@ -1218,11 +1115,8 @@ export default function Attendance() {
             ) : (
               <div className="employee-list">
                 {visibleEmployeeList.map((employee) => {
-                  const statusClass = employee.employmentStatus === "재직"
-                    ? "active"
-                    : employee.employmentStatus === "휴직"
-                      ? "on-leave"
-                      : "retired";
+                  const displayStatus = getEmployeeDisplayStatus(employee);
+                  const statusClass = getEmployeeStatusBadgeClass(displayStatus);
 
                   return (
                     <button
@@ -1237,7 +1131,7 @@ export default function Attendance() {
                         <span className="employee-name-line">
                           <strong className="emp-name">{employee.employeeName}</strong>
                           <span className={`employee-status-badge ${statusClass}`}>
-                            {employee.employmentStatus || "-"}
+                            {displayStatus}
                           </span>
                         </span>
                         <span>
@@ -1307,7 +1201,6 @@ export default function Attendance() {
                     selectedMonth,
                     selectedEmployee.employeeId
                   )}
-                  leaveCount={selectedEmployeeLeaves.length}
                 >
                   {isAttendanceTab && (
                     <div className="attendance-summary">
@@ -1330,7 +1223,6 @@ export default function Attendance() {
                 </AttendanceEmployeeHeader>
                 <AttendanceSubTabs
                   activeTab={activeTab}
-                  isAttendanceTab={isAttendanceTab}
                   isAttendanceRecords={isAttendanceRecords}
                   setActiveTab={setActiveTab}
                 />
@@ -1341,7 +1233,7 @@ export default function Attendance() {
               <p className="attendance-empty">
                 상세 정보를 확인할 직원을 선택해 주세요.
               </p>
-            ) : isAttendanceTab ? (
+            ) : (
               isAttendanceRecords ? (
                 <>
                 {tableData.length > 0 ? (
@@ -1364,28 +1256,6 @@ export default function Attendance() {
                   month={selectedMonth}
                   leaveCount={ leaveCount }
                 />
-              )
-            ) : leaveLoading ? (
-              <p className="attendance-feedback" role="status">
-                휴가 신청 내역을 불러오는 중입니다.
-              </p>
-            ) : leaveError ? (
-              <p className="attendance-feedback attendance-error" role="alert">
-                {leaveError}
-              </p>
-            ) : (
-              leaveTableData.length > 0 ? (
-                <PaginationTable
-                  key={`leave-${selectedEmployeeId}-${selectedMonth}`}
-                  title="휴가 신청 내역"
-                  th={leaveTableHeaders}
-                  allData={leaveTableData}
-                  itemsPerPage={8}
-                />
-              ) : (
-                <p className="attendance-empty">
-                  선택한 월에 해당 직원의 휴가 신청 내역이 없습니다.
-                </p>
               )
             )}
           </section>
@@ -1415,3 +1285,7 @@ export default function Attendance() {
     </div>
   );
 }
+
+
+
+

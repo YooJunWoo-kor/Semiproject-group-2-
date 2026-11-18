@@ -33,6 +33,14 @@ export function getHrLeaves(month) {
   });
 }
 
+// 기존 전자결재 API로 휴가 기안의 승인·반려를 처리합니다.
+export function decideHrLeave(draftId, employeeId, decision) {
+  return axios.post(API_BASE_URL + '/drafts/' + draftId + '/decision', {
+    employeeId,
+    decision
+  });
+}
+
 // 출퇴근 시간·근태 상태·수정 사유를 수정합니다.
 export function updateHrAttendance(attendanceId, data) {
   return axios.put(API_BASE_URL + '/hr/attendance/' + attendanceId, data);
@@ -87,7 +95,6 @@ export function getHrPayrolls(payMonth) {
   });
 }
 
-// 선택한 직원의 월별 급여 이력을 조회합니다.
 export function getHrPayrollHistory(employeeId) {
   return axios.get(
     API_BASE_URL + '/hr/payrolls/employee/' + employeeId + '/history'
@@ -102,5 +109,29 @@ export function createHrPayroll(data) {
 // 기존 급여 기록을 수정합니다.
 export function updateHrPayroll(payrollId, data) {
   return axios.put(API_BASE_URL + '/hr/payrolls/' + payrollId, data);
+}
+
+// 선택한 급여를 서버 트랜잭션으로 한 번에 확정합니다.
+export function bulkConfirmHrPayrolls(data) {
+  return axios.post(
+    API_BASE_URL + '/hr/payrolls/bulk-confirm',
+    data
+  );
+}
+
+// 급여 확정 전 승인 기안 반영 예상 금액을 조회합니다.
+export function previewBulkConfirmHrPayrolls(data) {
+  return axios.post(
+    API_BASE_URL + '/hr/payrolls/bulk-confirm',
+    { ...data, preview: true }
+  );
+}
+
+// HR에서 확정한 급여를 재무 지급 목록으로 전달합니다.
+export function submitHrPayrollsToFinance(data) {
+  return axios.post(
+    API_BASE_URL + '/hr/payrolls/submit-to-finance',
+    data
+  );
 }
 
