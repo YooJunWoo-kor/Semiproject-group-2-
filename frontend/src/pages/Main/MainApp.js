@@ -1,5 +1,5 @@
 // src/pages/Main/MainApp.js
-import React from 'react';
+import React, { useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import MainModule from './MainModule';
 import FinanceHome from './finance/FinanceHom';
@@ -19,9 +19,36 @@ import MotionBanner from '../../components/MotionBanner';
 function MainApp() {
     useScheduleAlarm();
 
+    // 임시 알림 데이터 (동작 확인 후 실제 API 데이터로 교체)
+    const [notifications, setNotifications] = useState([
+        {
+            id: 1,
+            title: "프로젝트 회의",
+            message: "마감 30분 전입니다.",
+            read: false
+        },
+        {
+            id: 2,
+            title: "보고서 제출",
+            message: "마감 1시간 전입니다.",
+            read: false
+        }
+    ]);
+
+    // 알림 읽음 처리
+    const handleReadNotification = (id) => {
+        setNotifications(prev =>
+            prev.map(notification =>
+                notification.id === id
+                    ? { ...notification, read: true }
+                    : notification
+            )
+        );
+    };
+
     return (
         <div className="main-sell" data-theme='light'>
-            <HeaderNav />
+            <HeaderNav notifications={notifications} onReadNotification={handleReadNotification}/>
             {/* 실제 화면 라우팅 연결 영역 */}
             {/* <MotionBanner /> */}
             <Routes>

@@ -160,3 +160,43 @@
   outline: 2px solid var(--color-brand);
   outline-offset: 2px;
 }
+
+/* Header.css 맨 아래에 추가 */
+
+.header-work-menu {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.header-work-menu .mypage-link {
+  margin-left: 0 !important;
+}
+
+.header-bell-wrap {
+  position: relative;
+}
+
+.header-bell-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.header-bell-count {
+  position: absolute;
+  top: -4px;
+  right: -5px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: white;
+  font-size: 10px;
+}
