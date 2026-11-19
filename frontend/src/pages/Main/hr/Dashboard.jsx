@@ -41,6 +41,20 @@ export default function Dashboard() {
             attendance.status === '지각'
     ).length;
 
+    const abnormalStatuses = [
+        '지각',
+        '조퇴',
+        '야근',
+        '지각·조퇴',
+        '지각·야근'
+    ];
+    
+    const todayAbnormalCount = todayAttendance.filter(
+        (attendance) =>
+            attendance.clockIn &&
+            abnormalStatuses.includes(attendance.status)
+    ).length;
+
     useEffect(() => {
         loadLeave();
     }, []);
@@ -138,8 +152,10 @@ export default function Dashboard() {
             <section className="stats-section">
                 <StatisticsCard title="전체직원" count={String(employeesCount)} stiyle={1} />
                 <StatisticsCard title="오늘출근" count={String(todayWorkingCount)} stiyle={1} />
+                <StatisticsCard title="이상근태자" count={String(todayAbnormalCount)} stiyle={1} />
                 <StatisticsCard title="사용한 연차" count={String(leaveCount)} stiyle={3} />
                 <StatisticsCard title="운용부서" count={String(departments)} stiyle={0} />
+               
             </section>
 
             {/* 분리된 부서 출결현황 컴포넌트 */}

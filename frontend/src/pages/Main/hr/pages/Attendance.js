@@ -163,16 +163,28 @@ function getAttendanceAnomaly(attendance) {
   if (attendance.status === "지각") return "지각";
   if (attendance.status === "미출근") return "결근";
   if (attendance.status === "출장") return "출장";
+  if (attendance.status === "휴가") return "휴가"; // 추가
 
   const workMinutes = getWorkMinutes(
     attendance.clockIn,
     attendance.clockOut
   );
 
-  return workMinutes !== null && workMinutes < 8 * 60
-    ? "조기퇴근"
-    : "";
+  if (workMinutes !== null && workMinutes < 8 * 60) {
+    return "조기퇴근";
+  }
+
+  // 메모에 내용이 있으면 이상근태에 포함
+  const memo = String(attendance.memo || "").trim();
+
+  if (memo !== "" && memo !== "-") {
+    return attendance.status || "메모 등록";
+  }
+
+  return "";
 }
+
+
 
 function AttendanceAnomalies({ records }) {
   const anomalies = records
@@ -733,6 +745,8 @@ export default function Attendance() {
         String(first.attendanceDate || "")
       )
     );
+
+ 
   const normalCount = selectedAttendance.filter(
     (item) => item.status === "정상"
   ).length;
