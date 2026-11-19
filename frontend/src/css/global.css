@@ -47,3 +47,15 @@
 .size-fill{
     flex: 1;
 }
+
+.color-red{
+    background-color: red;
+}
+
+.color-blue{
+    background-color: blue;
+}
+
+.color-green{
+    background-color: green;
+}

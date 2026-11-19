@@ -270,7 +270,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 <span className="subtitle">기안서 작성</span>
             </header>
 
-            <form className="draft-box" onSubmit={e => e.preventDefault()}>
+            <form className="boder" onSubmit={e => e.preventDefault()} style={{padding: '30px', paddingBottom: '60px', gap: '30px'}}>
                 <div className="draft-row">
                     <p>작성자: {loginUser.name}</p>
                     <p>부서: {loginUser.departmentName}</p>

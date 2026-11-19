@@ -229,6 +229,7 @@ export default function Dashboard() {
     }, []);
 
 
+    const color = [ 'color-red', 'color-blue', 'color-green'];
 
     return (
         <div className="border-container">
@@ -259,11 +260,13 @@ export default function Dashboard() {
                 <StatisticsCard title="이상근태자" count={String(todayAbnormalCount)} stiyle={1} />
                 <StatisticsCard title="금일휴가자" count={String(todayLeaveCount)} stiyle={1} />
                 
-               
             </section>
 
-            {/* 분리된 부서 출결현황 컴포넌트 */}
-            <DepartmentAttendanceComp today={today} />
+            <div className='size-fill'>
+                {/* 분리된 부서 출결현황 컴포넌트 */}
+                <DepartmentAttendanceComp today={today} />
+                    
+            </div>
         </div>
     );
 }

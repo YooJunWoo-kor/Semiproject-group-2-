@@ -323,7 +323,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    height: auto;
+    height: 250px;
     padding: 0;
     overflow: hidden;
     background: #f7fbfc;
