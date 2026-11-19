@@ -176,6 +176,137 @@ form.draft-box > label { display: flex; flex-direction: column; gap: 10px; color
 
 
 
+/* 추가급여 기안서 — 다른 문서 양식에는 영향을 주지 않는 전용 카드 */
+form.draft-box > .additional-pay-form {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+  padding: 26px 28px;
+  overflow: hidden;
+  border: 1px solid #dbe5f5;
+  border-top: 3px solid var(--color-brand);
+  border-radius: var(--radius-card, 14px);
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 36%);
+  box-shadow: 0 10px 30px rgb(29 57 105 / 6%);
+}
+
+.additional-pay-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e6edf8;
+}
+
+.additional-pay-eyebrow {
+  display: inline-block;
+  margin-bottom: 7px;
+  color: var(--color-brand);
+  font-size: .71rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.additional-pay-heading h4 {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 1.14rem;
+  font-weight: 800;
+}
+
+.additional-pay-heading p {
+  margin: 7px 0 0;
+  color: var(--color-muted);
+  font-size: .87rem;
+  font-weight: 400;
+}
+
+.additional-pay-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 22px;
+  min-width: 0;
+}
+
+.additional-pay-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+  color: var(--color-ink);
+  font-size: .88rem;
+  font-weight: 700;
+}
+
+.additional-pay-grid label > span {
+  line-height: 1.3;
+}
+
+.additional-pay-grid input,
+.additional-pay-grid select {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  border: 1px solid #d9e2f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.additional-pay-grid input:focus,
+.additional-pay-grid select:focus {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px rgb(49 87 213 / 12%);
+}
+
+.additional-pay-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px solid #e4ecfa;
+  border-radius: 12px;
+  background: #f2f6ff;
+}
+
+.additional-pay-summary > span {
+  color: #53657f;
+  font-size: .9rem;
+  font-weight: 700;
+}
+
+.additional-pay-summary strong {
+  color: var(--color-brand-dark);
+  font-size: clamp(1.3rem, 2.2vw, 1.65rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.04em;
+}
+
+.additional-pay-summary strong small {
+  margin-left: 5px;
+  color: #53657f;
+  font-size: .86rem;
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  form.draft-box > .additional-pay-form {
+    padding: 20px 16px;
+    gap: 18px;
+  }
+
+  .additional-pay-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .additional-pay-summary {
+    padding: 16px;
+  }
+}
+
 /* 비용 기안서: 기존 draft-box, table-shell, 버튼 스타일 재사용 */
 form.draft-box > .table-shell {
   width: 100%;

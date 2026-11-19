@@ -3,7 +3,9 @@ import { useNavigate } from "react-router-dom";
 import "./QualityControl.css";
 import axios from "axios";
 import { API_BASE_URL } from "../../../../utils/authStorage";
+import ColorTeg from "../../../../components/ColorTeg";
 
+// 제품목록과 겹쳐서 삭제
 function QualityTestList() {
     const navigate = useNavigate();
     const [search, setSearch] = useState("");
@@ -38,12 +40,39 @@ const [products, setProducts] = useState([]);
         loadProducts();
     }, []);
 
+    let sucesse;
+    let fail;
+    let notimple;
 
+    const notimpleLength = ()=>{
+        const filterLengt = products.filter((item)=>{
+            return item.qualityStatus == "미실시"
+        })
+        return filterLengt.length;
+    }
+
+    const failedLength = ()=>{
+        const filterLengt = products.filter((item)=>{
+            return item.qualityStatus == "불합격"
+        })
+        return filterLengt.length;
+    }
+
+    const sucessedLength = ()=>{
+        const filterLengt = products.filter((item)=>{
+            return item.qualityStatus == "통과"
+        })
+        return filterLengt.length;
+    }
+
+    notimple = notimpleLength();
+    sucesse = sucessedLength();
+    fail = failedLength();
 
     const filteredProducts = products.filter(product => {
         const searchMatch =
-            product.name.toLowerCase().includes(search.toLowerCase()) ||
-            product.code.toLowerCase().includes(search.toLowerCase());
+            (product.name || "").toLowerCase().includes(search.toLowerCase()) ||
+            (product.code || "").toLowerCase().includes(search.toLowerCase());
 
         const statusMatch =
             statusFilter === "전체" || product.qualityStatus === statusFilter;
@@ -52,33 +81,33 @@ const [products, setProducts] = useState([]);
     });
 
     return (
-        <div className="quality-test-page">
-            <header className="quality-page-header">
-                <div>
-                    <span className="quality-eyebrow">INSPECTIONS</span>
-                    <h1>품질검사 관리</h1>
-                    <p>제품별 품질검사 상태와 최근 검사일을 확인합니다.</p>
-                </div>
-                <div className="quality-header-badge">총 {filteredProducts.length}건</div>
+        <div className="border-container" style={{gap:"10px"}}>
+            <header className="dashboard-header">
+                <span className="subtitle">품질검사 관리</span>
+                <ColorTeg title={"통과"} count={sucesse} type={"건"} color={"blue"}/>
+                <ColorTeg title={"실패"} count={fail} type={"건"} />
+                <ColorTeg title={"미실시"} count={notimple} type={"건"} color={"orange"}/>
             </header>
 
-            <section className="quality-toolbar quality-test-toolbar">
-                <div className="quality-toolbar-copy">
-                    <strong>검사 목록 검색</strong>
-                    <span>검색어와 상태 필터를 함께 적용할 수 있습니다.</span>
-                </div>
-
+            <section className="">
                 <div className="quality-filter-controls">
-                    <div className="quality-search-box">
-                        <input
-                            type="text"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder="제품명 또는 제품코드 검색"
-                        />
-                    </div>
+                    <input
+                        style={{
+                            width:"250px",
+                            fontSize: "12px",
+                            marginLeft: "auto"
+                        }}
+
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="제품명 또는 제품코드 검색"
+                    />
 
                     <select
+                        style={{
+                            fontSize: '12px'
+                        }}
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
                         aria-label="검사 상태 필터"
@@ -125,6 +154,14 @@ const [products, setProducts] = useState([]);
                                     <tr
                                         key={product.id}
                                         onClick={() => navigate(`/main/qa/products/${product.id}`)}
+                                        onKeyDown={event => {
+                                            if (event.key === "Enter" || event.key === " ") {
+                                                event.preventDefault();
+                                                navigate(`/main/qa/products/${product.id}`);
+                                            }
+                                        }}
+                                        tabIndex={0}
+                                        role="link"
                                         className="quality-clickable-row"
                                     >
                                         <td className="quality-code-cell">{product.code}</td>

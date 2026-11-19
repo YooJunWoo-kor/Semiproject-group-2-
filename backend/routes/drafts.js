@@ -227,7 +227,9 @@ router.post('/:draftId/decision', async (req, res) => {
         return res.json({ message: decision === 'approve' ? '승인 완료' : '반려 완료' });
     } catch (error) {
         console.error('결재 처리 오류:', error);
-        return res.status(500).json({ message: '결재 처리 실패' });
+        return res.status(error.status || 500).json({
+            message: error.status ? error.message : '결재 처리 실패'
+        });
     }
 });
 
@@ -253,6 +255,51 @@ router.get('/departments', (req, res) => {
     })
 })
 
+router.get('/leaves', async (req, res) => {
+    const { month, year } = req.query;
+
+    if (month !== undefined && (typeof month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month))) {
+        return res.status(400).json({ success: false, message: '조회 월은 YYYY-MM 형식이어야 합니다.' });
+    }
+    if (year !== undefined && (typeof year !== 'string' || !/^\d{4}$/.test(year))) {
+        return res.status(400).json({ success: false, message: '조회 연도는 YYYY 형식이어야 합니다.' });
+    }
+    if (month && year) {
+        return res.status(400).json({ success: false, message: '월과 연도를 동시에 지정할 수 없습니다.' });
+    }
+
+    try {
+        const leaves = await Draft.getLeaveDrafts();
+        let rangeStart = null;
+        let rangeEnd = null;
+
+        if (month) {
+            const [y, m] = month.split('-').map(Number);
+            const lastDay = String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0');
+            rangeStart = month + '-01';
+            rangeEnd = month + '-' + lastDay;
+        } else if (year) {
+            rangeStart = year + '-01-01';
+            rangeEnd = year + '-12-31';
+        }
+
+        // 휴가 시작일만 비교하지 않고 조회 기간과 겹치는 휴가도 포함합니다.
+        const filteredLeaves = leaves.filter(leave =>
+            !rangeStart || (
+                leave.startDate &&
+                leave.endDate &&
+                leave.startDate <= rangeEnd &&
+                leave.endDate >= rangeStart
+            )
+        );
+
+        return res.json({ success: true, data: filteredLeaves });
+    } catch (error) {
+        console.error('휴가 조회 오류:', error);
+        return res.status(500).json({ success: false, message: '휴가 조회 실패' });
+    }
+});
+
 router.post("/:draftId/receipt", receiptUpload.single("receipt"), (req, res) => {
     const draftId = Number(req.params.draftId);
     const employeeId = Number(req.body.employeeId);
@@ -273,7 +320,10 @@ router.post("/:draftId/receipt", receiptUpload.single("receipt"), (req, res) => 
          [imageUrl, draftId, employeeId],
          
          (err, result) => {
-            if(err) return res.status(500).json({message: "저장 실패"});
+            if (err) {
+                console.error("영수증 경로 저장 오류:", err);
+                return res.status(500).json({ message: "영수증 저장 실패" });
+            }
 
          
 

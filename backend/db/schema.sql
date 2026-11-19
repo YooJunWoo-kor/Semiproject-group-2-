@@ -3,6 +3,12 @@
 -- Host: localhost    Database: mydb
 -- ------------------------------------------------------
 -- Server version	26.10.0
+--
+-- NOTE: This file is a partial legacy dump captured on 2026-11-02.
+-- It is not the authoritative schema for the current mydb database and
+-- must not be used to recreate the database. The current HR tables and
+-- columns are maintained in the existing database and migrations; verify
+-- them with read-only schema checks before applying any change.
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;

@@ -1,66 +1,47 @@
+// HR 기본 라우터
+// 역할: 직원·부서·근태 등 인사관리의 기본 조회와 변경 API를 제공합니다.
+
 const express = require('express');
 const db = require('../db');
+const {
+    promiseDb,
+    payrollFinalStatuses,
+    isDateString,
+    isTimeString,
+    isEmailString,
+    currentPayMonth,
+    normalizeDepartmentName,
+    departmentExists,
+    parseNonNegativeInteger,
+    propagateAnnualSalaryToFutureRecords,
+    ensurePayrollForMonth,
+    calculateFreelancerPayroll
+} = require('../services/hrCommon');
 
 const hrRouter = express.Router();
-const promiseDb = db.promise();
 
-// HR API에서 공통으로 사용하는 날짜·이메일·급여월·금액 입력 검증 함수입니다.
-function isDateString(value) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        return false;
-    }
-
-    const date = new Date(value + 'T00:00:00Z');
-
-    return !Number.isNaN(date.getTime()) &&
-        date.toISOString().slice(0, 10) === value;
+function seoulToday() {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(new Date()).reduce((values, part) => {
+        if (part.type !== 'literal') values[part.type] = part.value;
+        return values;
+    }, {});
+    return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
-function isTimeString(value) {
-    return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
-}
-
-function isEmailString(value) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function isPayMonthString(value) {
-    return typeof value === 'string' && /^(\d{4})-(0[1-9]|1[0-2])$/.test(value);
-}
-
-function parseNonNegativeInteger(value) {
-    if (value === '' || value === null || value === undefined) {
-        return null;
-    }
-
-    const numberValue = Number(value);
-
-    return Number.isInteger(numberValue) && numberValue >= 0
-        ? numberValue
-        : null;
-}
-
-async function departmentExists(departmentId) {
-    // 직원 등록·수정 전에 참조할 부서가 실제로 존재하는지 확인합니다.
-    const [rows] = await promiseDb.query(
-        'SELECT department_id FROM departments WHERE department_id = ?',
-        [departmentId]
-    );
-
-    return rows.length > 0;
-}
-
-
-// 관리자가 선택한 직원의 신규 근태 기록을 등록합니다.
-// 저장 요청이 있을 때만 한 건을 생성하며, 동일 직원·날짜 중복은 허용하지 않습니다.
+// 근태관리: 출퇴근 기록 등록·조회·수정·삭제와 부서별 현황을 처리합니다.
 hrRouter.post('/attendance', async (req, res) => {
     const employeeId = Number(req.body.employeeId);
     const workDate = String(req.body.workDate || '').trim();
     const checkIn = String(req.body.checkIn || '').trim() || null;
     const checkOut = String(req.body.checkOut || '').trim() || null;
-    const status = String(req.body.status || '').trim();
+    let status = String(req.body.status || '').trim();
     const memo = String(req.body.memo || '').trim();
-    const allowedStatuses = ['정상', '지각', '결근', '휴가', '출장', '휴직', '미출근'];
+    const allowedStatuses = ['정상', '근무중', '지각', '조퇴', '야근', '지각·조퇴', '지각·야근', '결근', '휴가', '출장', '휴직', '미출근'];
 
     if (
         !Number.isInteger(employeeId) ||
@@ -68,6 +49,7 @@ hrRouter.post('/attendance', async (req, res) => {
         !isDateString(workDate) ||
         (checkIn !== null && !isTimeString(checkIn)) ||
         (checkOut !== null && !isTimeString(checkOut)) ||
+        (checkOut !== null && checkIn === null) ||
         (checkIn !== null && checkOut !== null && checkOut < checkIn) ||
         !allowedStatuses.includes(status) ||
         memo.length === 0 ||
@@ -78,6 +60,7 @@ hrRouter.post('/attendance', async (req, res) => {
             message: '직원, 근무일, 출퇴근 시간, 근태 상태와 수정 사유를 올바르게 입력해 주세요.'
         });
     }
+
 
     try {
         const [employeeRows] = await promiseDb.query(
@@ -236,110 +219,21 @@ hrRouter.get('/attendance', async (req, res) => {
 });
 
 
-// 기존 결재 초안과 휴가 기간을 조합한 휴가 신청 조회
-// 휴가 신청·승인 저장 API가 없어 현재 라우트는 읽기 전용입니다.
-hrRouter.get('/leaves', async (req, res) => {
-    const month = String(req.query.month || '').trim();
-    const year = String(req.query.year || '').trim();
-
-    if (month && !isPayMonthString(month)) {
-        return res.status(400).json({
-            success: false,
-            message: '휴가 조회 월 형식은 YYYY-MM이어야 합니다.'
-        });
-    }
-
-    if (year && !/^\d{4}$/.test(year)) {
-        return res.status(400).json({
-            success: false,
-            message: '휴가 조회 연도 형식은 YYYY여야 합니다.'
-        });
-    }
-
-    if (month && year) {
-        return res.status(400).json({
-            success: false,
-            message: '휴가 조회는 월 또는 연도 중 하나만 지정해 주세요.'
-        });
-    }
-
-    const query = `
-        SELECT
-            dl.leave_id AS leaveId,
-            md.draft_id AS draftId,
-            md.employee_id AS employeeId,
-            e.employee_number AS employeeNumber,
-            e.name AS employeeName,
-            e.department_id AS departmentId,
-            d.department_name AS departmentName,
-            e.position,
-            md.document_type AS leaveType,
-            md.title,
-            md.content AS reason,
-            DATE_FORMAT(dl.start_date, '%Y-%m-%d') AS startDate,
-            DATE_FORMAT(dl.end_date, '%Y-%m-%d') AS endDate,
-            dl.leave_days AS leaveDays,
-            CASE
-                WHEN md.status IN ('승인', '승인완료', '완료') THEN '승인완료'
-                WHEN md.status IN ('반려', '거절') THEN '반려'
-                ELSE '승인대기'
-            END AS applicationStatus,
-            md.status AS sourceStatus,
-            DATE_FORMAT(md.created_at, '%Y-%m-%d %H:%i') AS applicationDate,
-            md.approver_id AS approverId,
-            approver.name AS approverName,
-            DATE_FORMAT(md.processed_at, '%Y-%m-%d %H:%i') AS approvalDate
-        FROM draft_leave dl
-        INNER JOIN my_draft md
-            ON md.draft_id = dl.draft_id
-        INNER JOIN employees e
-            ON e.employee_id = md.employee_id
-        LEFT JOIN departments d
-            ON d.department_id = e.department_id
-        LEFT JOIN employees approver
-            ON approver.employee_id = md.approver_id
-        WHERE (? = '' OR DATE_FORMAT(dl.start_date, '%Y-%m') = ?)
-          AND (? = '' OR DATE_FORMAT(dl.start_date, '%Y') = ?)
-        ORDER BY dl.start_date DESC, dl.leave_id DESC
-    `;
-
-    try {
-        const [rows] = await promiseDb.query(query, [
-            month,
-            month,
-            year,
-            year
-        ]);
-
-        return res.json({
-            success: true,
-            data: rows
-        });
-    } catch (error) {
-        console.error('휴가 신청 조회 오류:', error);
-
-        return res.status(500).json({
-            success: false,
-            message: '휴가 신청 정보를 불러오지 못했습니다.'
-        });
-    }
-});
-
-
 // 근태 시간·상태·수정 사유를 수정합니다.
 hrRouter.put('/attendance/:attendanceId', async (req, res) => {
     const attendanceId = Number(req.params.attendanceId);
     const checkIn = String(req.body.checkIn || '').trim() || null;
     const checkOut = String(req.body.checkOut || '').trim() || null;
-    const status = String(req.body.status || '').trim();
+    let status = String(req.body.status || '').trim();
     const memo = String(req.body.memo || '').trim();
-    const allowedStatuses = ['정상', '지각', '결근', '휴가', '출장', '휴직', '미출근'];
+    const allowedStatuses = ['정상', '근무중', '지각', '조퇴', '야근', '지각·조퇴', '지각·야근', '결근', '휴가', '출장', '휴직', '미출근'];
 
     if (
         !Number.isInteger(attendanceId) ||
         attendanceId < 1 ||
         (checkIn !== null && !isTimeString(checkIn)) ||
         (checkOut !== null && !isTimeString(checkOut)) ||
+        (checkOut !== null && checkIn === null) ||
         (checkIn !== null && checkOut !== null && checkOut < checkIn) ||
         !allowedStatuses.includes(status) ||
         memo.length === 0 ||
@@ -350,6 +244,7 @@ hrRouter.put('/attendance/:attendanceId', async (req, res) => {
             message: '출퇴근 시간, 근태 상태와 수정 사유를 올바르게 입력해 주세요.'
         });
     }
+
 
     try {
         const [existingRows] = await promiseDb.query(
@@ -511,8 +406,7 @@ hrRouter.get('/attendance/department', async (req, res) => {
 });
 
 
-// 직원 목록 조회
-// 직원 기본정보와 부서·계정 정보를 조합해 직원관리 화면에 전달합니다.
+// 조직관리: 직원 목록과 부서 목록을 조회합니다.
 hrRouter.get('/employees', async (req, res) => {
     const query = `
         SELECT
@@ -524,7 +418,28 @@ hrRouter.get('/employees', async (req, res) => {
             e.position,
             e.email,
             e.phone,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM attendance leave_att
+                WHERE leave_att.employee_id = e.employee_id
+                  AND leave_att.work_date = ?
+                  AND leave_att.attendance_status = '휴가'
+            ) OR EXISTS (
+                SELECT 1 FROM draft_leave leave_detail
+                JOIN my_draft leave_draft ON leave_draft.draft_id = leave_detail.draft_id
+                WHERE leave_draft.employee_id = e.employee_id
+                  AND leave_draft.status IN ('APPROVED', '승인', '완료')
+                  AND ? BETWEEN leave_detail.start_date AND leave_detail.end_date
+            ) OR EXISTS (
+                SELECT 1 FROM my_draft leave_draft
+                WHERE leave_draft.employee_id = e.employee_id
+                  AND leave_draft.document_type = '휴가'
+                  AND leave_draft.status IN ('APPROVED', '승인', '완료')
+                  AND JSON_UNQUOTE(JSON_EXTRACT(leave_draft.detail_data, '$.startDate')) <= ?
+                  AND JSON_UNQUOTE(JSON_EXTRACT(leave_draft.detail_data, '$.endDate')) >= ?
+            ) THEN 1 ELSE 0 END AS isOnLeaveToday,
             DATE_FORMAT(e.hire_date, '%Y-%m-%d') AS hireDate,
+            e.initial_annual_salary AS initialAnnualSalary,
+            DATE_FORMAT(e.resignation_date, '%Y-%m-%d') AS resignationDate,
             e.employment_status AS employmentStatus,
             ea.role,
             ea.account_status AS accountStatus
@@ -537,7 +452,8 @@ hrRouter.get('/employees', async (req, res) => {
     `;
 
     try {
-        const [rows] = await promiseDb.query(query);
+        const today = seoulToday();
+        const [rows] = await promiseDb.query(query, [today, today, today, today]);
 
         return res.json({
             success: true,
@@ -591,7 +507,7 @@ hrRouter.get('/departments', async (req, res) => {
 // 부서 등록
 // 선택한 직원은 부서장으로 연결하고 부서명 중복을 먼저 확인합니다.
 hrRouter.post('/departments', async (req, res) => {
-    const departmentName = String(req.body.departmentName || '').trim();
+    const departmentName = normalizeDepartmentName(req.body.departmentName);
     const description = String(req.body.description || '').trim();
     const managerIdValue = req.body.managerId;
     const managerId =
@@ -610,6 +526,9 @@ hrRouter.post('/departments', async (req, res) => {
             message: '부서 등록 정보를 올바르게 입력해 주세요.'
         });
     }
+
+    // 부서 생성과 부서장 직원의 소속 이동을 한 번에 처리합니다.
+    let transactionStarted = false;
 
     try {
         const [duplicateRows] = await promiseDb.query(
@@ -640,6 +559,9 @@ hrRouter.post('/departments', async (req, res) => {
             }
         }
 
+        await promiseDb.beginTransaction();
+        transactionStarted = true;
+
         const [result] = await promiseDb.query(
             `INSERT INTO departments (
                 department_name,
@@ -649,6 +571,26 @@ hrRouter.post('/departments', async (req, res) => {
              VALUES (?, ?, ?)`,
             [departmentName, managerId, description || null]
         );
+
+        if (managerId !== null) {
+            await promiseDb.query(
+                `UPDATE departments
+                 SET manager_id = NULL
+                 WHERE manager_id = ?
+                   AND department_id <> ?`,
+                [managerId, result.insertId]
+            );
+
+            await promiseDb.query(
+                `UPDATE employees
+                 SET department_id = ?
+                 WHERE employee_id = ?`,
+                [result.insertId, managerId]
+            );
+        }
+
+        await promiseDb.commit();
+        transactionStarted = false;
 
         return res.status(201).json({
             success: true,
@@ -661,6 +603,10 @@ hrRouter.post('/departments', async (req, res) => {
             message: '부서가 등록되었습니다.'
         });
     } catch (error) {
+        if (transactionStarted) {
+            await promiseDb.rollback();
+        }
+
         console.error('부서 등록 오류:', error);
 
         if (error.code === 'ER_DUP_ENTRY') {
@@ -757,345 +703,7 @@ hrRouter.delete('/departments/:departmentId', async (req, res) => {
 });
 
 
-// 급여월별 직원 급여 목록 조회
-// LEFT JOIN으로 급여 미등록 직원도 포함해 실제 등록 여부를 표시합니다.
-hrRouter.get('/payrolls', async (req, res) => {
-    const payMonth = String(req.query.payMonth || '').trim();
-
-    if (!isPayMonthString(payMonth)) {
-        return res.status(400).json({
-            success: false,
-            message: '급여월 형식은 YYYY-MM이어야 합니다.'
-        });
-    }
-
-    const query = `
-        SELECT
-            p.payroll_id AS payrollId,
-            e.employee_id AS employeeId,
-            e.employee_number AS employeeNumber,
-            e.name AS employeeName,
-            e.department_id AS departmentId,
-            d.department_name AS departmentName,
-            e.position,
-            e.employment_status AS employmentStatus,
-            p.pay_month AS payMonth,
-            p.base_salary AS baseSalary,
-            p.allowance,
-            p.deduction,
-            p.bonus,
-            p.gross_pay AS grossPay,
-            p.net_pay AS netPay,
-            DATE_FORMAT(p.payment_date, '%Y-%m-%d') AS paymentDate,
-            CASE
-                WHEN p.payroll_id IS NULL THEN '급여 미등록'
-                ELSE COALESCE(p.payment_status, '지급대기')
-            END AS paymentStatus
-        FROM employees e
-        LEFT JOIN departments d
-            ON d.department_id = e.department_id
-        LEFT JOIN payrolls p
-            ON p.employee_id = e.employee_id
-            AND p.pay_month = ?
-        WHERE e.employment_status IN ('재직', '휴직')
-        ORDER BY d.department_id, e.employee_id
-    `;
-
-    try {
-        const [rows] = await promiseDb.query(query, [payMonth]);
-
-        return res.json({
-            success: true,
-            data: rows
-        });
-    } catch (error) {
-        console.error('급여 목록 조회 오류:', error);
-
-        return res.status(500).json({
-            success: false,
-            message: '급여 정보를 불러오지 못했습니다.'
-        });
-    }
-});
-
-
-// 선택한 직원의 월별 급여 이력 조회
-// 기존 payrolls 테이블의 실제 금액·지급 상태만 반환하고 최신 급여월 순으로 정렬합니다.
-hrRouter.get('/payrolls/employee/:employeeId/history', async (req, res) => {
-    const employeeId = Number(req.params.employeeId);
-
-    if (!Number.isInteger(employeeId) || employeeId < 1) {
-        return res.status(400).json({
-            success: false,
-            message: '직원 식별자가 올바르지 않습니다.'
-        });
-    }
-
-    const query = `
-        SELECT
-            p.payroll_id AS payrollId,
-            p.employee_id AS employeeId,
-            p.pay_month AS payMonth,
-            p.base_salary AS baseSalary,
-            p.allowance,
-            p.bonus,
-            p.deduction,
-            p.gross_pay AS grossPay,
-            p.net_pay AS netPay,
-            DATE_FORMAT(p.payment_date, '%Y-%m-%d') AS paymentDate,
-            COALESCE(p.payment_status, '지급대기') AS paymentStatus
-        FROM payrolls p
-        WHERE p.employee_id = ?
-        ORDER BY p.pay_month DESC, p.payroll_id DESC
-    `;
-
-    try {
-        const [rows] = await promiseDb.query(query, [employeeId]);
-
-        return res.json({
-            success: true,
-            data: rows
-        });
-    } catch (error) {
-        console.error('직원 급여 이력 조회 오류:', error);
-
-        return res.status(500).json({
-            success: false,
-            message: '급여 이력을 불러오지 못했습니다.'
-        });
-    }
-});
-
-
-// 급여 등록
-// 등록 요청의 금액을 검증하고 gross/net 금액은 서버에서 계산합니다.
-hrRouter.post('/payrolls', async (req, res) => {
-    const employeeId = Number(req.body.employeeId);
-    const payMonth = String(req.body.payMonth || '').trim();
-    const baseSalary = parseNonNegativeInteger(req.body.baseSalary);
-    const allowance = parseNonNegativeInteger(req.body.allowance);
-    const deduction = parseNonNegativeInteger(req.body.deduction);
-    const bonus = parseNonNegativeInteger(req.body.bonus);
-    const paymentDate = String(req.body.paymentDate || '').trim() || null;
-    const paymentStatus = String(req.body.paymentStatus || '').trim() || '지급대기';
-
-    if (
-        !Number.isInteger(employeeId) ||
-        employeeId < 1 ||
-        !isPayMonthString(payMonth) ||
-        baseSalary === null ||
-        allowance === null ||
-        deduction === null ||
-        bonus === null ||
-        paymentStatus.length > 20
-    ) {
-        return res.status(400).json({
-            success: false,
-            message: '급여 등록 정보를 올바르게 입력해 주세요.'
-        });
-    }
-
-    if (paymentDate && !isDateString(paymentDate)) {
-        return res.status(400).json({
-            success: false,
-            message: '지급일 형식은 YYYY-MM-DD여야 합니다.'
-        });
-    }
-
-    const grossPay = baseSalary + allowance + bonus;
-    const netPay = grossPay - deduction;
-
-    if (netPay < 0) {
-        return res.status(400).json({
-            success: false,
-            message: '공제액은 세전 총액보다 클 수 없습니다.'
-        });
-    }
-
-    try {
-        const [employeeRows] = await promiseDb.query(
-            'SELECT employee_id FROM employees WHERE employee_id = ?',
-            [employeeId]
-        );
-
-        if (employeeRows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: '직원을 찾을 수 없습니다.'
-            });
-        }
-
-        const [existingRows] = await promiseDb.query(
-            `SELECT payroll_id
-             FROM payrolls
-             WHERE employee_id = ? AND pay_month = ?`,
-            [employeeId, payMonth]
-        );
-
-        if (existingRows.length > 0) {
-            return res.status(409).json({
-                success: false,
-                message: '해당 직원의 선택한 월 급여가 이미 등록되어 있습니다.'
-            });
-        }
-
-        const query = `
-            INSERT INTO payrolls (
-                employee_id,
-                pay_month,
-                base_salary,
-                allowance,
-                deduction,
-                bonus,
-                gross_pay,
-                net_pay,
-                payment_date,
-                payment_status
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-        const [result] = await promiseDb.query(query, [
-            employeeId,
-            payMonth,
-            baseSalary,
-            allowance,
-            deduction,
-            bonus,
-            grossPay,
-            netPay,
-            paymentDate,
-            paymentStatus
-        ]);
-
-        return res.status(201).json({
-            success: true,
-            data: {
-                payrollId: result.insertId,
-                grossPay,
-                netPay
-            },
-            message: '급여가 등록되었습니다.'
-        });
-    } catch (error) {
-        console.error('급여 등록 오류:', error);
-
-        if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(409).json({
-                success: false,
-                message: '해당 직원의 선택한 월 급여가 이미 등록되어 있습니다.'
-            });
-        }
-
-        return res.status(500).json({
-            success: false,
-            message: '급여를 등록하지 못했습니다.'
-        });
-    }
-});
-
-
-// 급여 수정
-// 기존 급여 기록의 금액과 지급 상태를 다시 계산해 저장합니다.
-hrRouter.put('/payrolls/:payrollId', async (req, res) => {
-    const payrollId = Number(req.params.payrollId);
-    const baseSalary = parseNonNegativeInteger(req.body.baseSalary);
-    const allowance = parseNonNegativeInteger(req.body.allowance);
-    const deduction = parseNonNegativeInteger(req.body.deduction);
-    const bonus = parseNonNegativeInteger(req.body.bonus);
-    const paymentDate = String(req.body.paymentDate || '').trim() || null;
-    const paymentStatus = String(req.body.paymentStatus || '').trim() || '지급대기';
-
-    if (
-        !Number.isInteger(payrollId) ||
-        payrollId < 1 ||
-        baseSalary === null ||
-        allowance === null ||
-        deduction === null ||
-        bonus === null ||
-        paymentStatus.length > 20
-    ) {
-        return res.status(400).json({
-            success: false,
-            message: '급여 수정 정보를 올바르게 입력해 주세요.'
-        });
-    }
-
-    if (paymentDate && !isDateString(paymentDate)) {
-        return res.status(400).json({
-            success: false,
-            message: '지급일 형식은 YYYY-MM-DD여야 합니다.'
-        });
-    }
-
-    const grossPay = baseSalary + allowance + bonus;
-    const netPay = grossPay - deduction;
-
-    if (netPay < 0) {
-        return res.status(400).json({
-            success: false,
-            message: '공제액은 세전 총액보다 클 수 없습니다.'
-        });
-    }
-
-    try {
-        const [existingRows] = await promiseDb.query(
-            'SELECT payroll_id FROM payrolls WHERE payroll_id = ?',
-            [payrollId]
-        );
-
-        if (existingRows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: '급여 기록을 찾을 수 없습니다.'
-            });
-        }
-
-        const query = `
-            UPDATE payrolls
-            SET base_salary = ?,
-                allowance = ?,
-                deduction = ?,
-                bonus = ?,
-                gross_pay = ?,
-                net_pay = ?,
-                payment_date = ?,
-                payment_status = ?
-            WHERE payroll_id = ?
-        `;
-        await promiseDb.query(query, [
-            baseSalary,
-            allowance,
-            deduction,
-            bonus,
-            grossPay,
-            netPay,
-            paymentDate,
-            paymentStatus,
-            payrollId
-        ]);
-
-        return res.json({
-            success: true,
-            data: {
-                payrollId,
-                grossPay,
-                netPay
-            },
-            message: '급여 정보가 수정되었습니다.'
-        });
-    } catch (error) {
-        console.error('급여 수정 오류:', error);
-
-        return res.status(500).json({
-            success: false,
-            message: '급여 정보를 수정하지 못했습니다.'
-        });
-    }
-});
-
-
-// 직원 등록
-// 직원과 계정을 하나의 트랜잭션으로 등록해 부분 저장을 방지합니다.
+// 직원관리: 직원·계정 정보를 함께 등록하고 수정·퇴사 처리합니다.
 hrRouter.post('/employees', async (req, res) => {
     const name = String(req.body.name || '').trim();
     const departmentId = Number(req.body.departmentId);
@@ -1103,6 +711,9 @@ hrRouter.post('/employees', async (req, res) => {
     const email = String(req.body.email || '').trim();
     const phone = String(req.body.phone || '').trim();
     const password = String(req.body.password || '');
+    const initialAnnualSalary = parseNonNegativeInteger(
+        req.body.initialAnnualSalary
+    );
     let transactionStarted = false;
 
     if (
@@ -1111,11 +722,12 @@ hrRouter.post('/employees', async (req, res) => {
         departmentId < 1 ||
         !position ||
         !email ||
-        !password
+        !password ||
+        initialAnnualSalary === null
     ) {
         return res.status(400).json({
             success: false,
-            message: '이름, 부서, 직급, 이메일, 초기 비밀번호는 필수입니다.'
+            message: '이름, 부서, 직급, 이메일, 초기 비밀번호, 최초 연봉은 필수입니다.'
         });
     }
 
@@ -1157,10 +769,11 @@ hrRouter.post('/employees', async (req, res) => {
                 position,
                 email,
                 phone,
+                initial_annual_salary,
                 hire_date,
                 employment_status
             )
-            VALUES (?, ?, ?, ?, ?, ?, CURRENT_DATE, '재직')
+            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_DATE, '재직')
         `;
         const [employeeResult] = await promiseDb.query(employeeQuery, [
             employeeNumber,
@@ -1168,8 +781,19 @@ hrRouter.post('/employees', async (req, res) => {
             departmentId,
             position,
             email,
-            phone || null
+            phone || null,
+            initialAnnualSalary
         ]);
+
+        await promiseDb.query(
+            `INSERT INTO employee_salary_history (
+                employee_id,
+                annual_salary,
+                effective_month
+             )
+             VALUES (?, ?, DATE_FORMAT(CURRENT_DATE, '%Y-%m'))`,
+            [employeeResult.insertId, initialAnnualSalary]
+        );
 
         const accountQuery = `
             INSERT INTO employee_accounts (
@@ -1226,6 +850,9 @@ hrRouter.put('/employees/:employeeId', async (req, res) => {
     const phone = String(req.body.phone || '').trim();
     const hireDate = String(req.body.hireDate || '').trim();
     const employmentStatus = String(req.body.employmentStatus || '').trim();
+    const initialAnnualSalary = parseNonNegativeInteger(
+        req.body.initialAnnualSalary
+    );
     const allowedStatuses = ['재직', '휴직', '퇴사'];
 
     if (
@@ -1237,7 +864,8 @@ hrRouter.put('/employees/:employeeId', async (req, res) => {
         !position ||
         !email ||
         !hireDate ||
-        !allowedStatuses.includes(employmentStatus)
+        !allowedStatuses.includes(employmentStatus) ||
+        initialAnnualSalary === null
     ) {
         return res.status(400).json({
             success: false,
@@ -1259,9 +887,13 @@ hrRouter.put('/employees/:employeeId', async (req, res) => {
         });
     }
 
+    let transactionStarted = false;
+
     try {
         const [existingEmployees] = await promiseDb.query(
-            `SELECT employment_status AS employmentStatus
+            `SELECT
+                employment_status AS employmentStatus,
+                initial_annual_salary AS initialAnnualSalary
              FROM employees
              WHERE employee_id = ?`,
             [employeeId]
@@ -1274,6 +906,12 @@ hrRouter.put('/employees/:employeeId', async (req, res) => {
             });
         }
 
+        const previousAnnualSalary = parseNonNegativeInteger(
+            existingEmployees[0].initialAnnualSalary
+        );
+
+        // 직원 정보에서 연봉이 변경된 경우 현재 월 급여가 없으면 준비하고,
+        // 있으면 기본급과 3.3% 계산액만 갱신합니다.
         if (
             employmentStatus === '퇴사' &&
             existingEmployees[0].employmentStatus !== '퇴사'
@@ -1301,6 +939,9 @@ hrRouter.put('/employees/:employeeId', async (req, res) => {
             });
         }
 
+        await promiseDb.beginTransaction();
+        transactionStarted = true;
+
         const query = `
             UPDATE employees
             SET name = ?,
@@ -1308,6 +949,7 @@ hrRouter.put('/employees/:employeeId', async (req, res) => {
                 position = ?,
                 email = ?,
                 phone = ?,
+                initial_annual_salary = ?,
                 hire_date = ?,
                 employment_status = ?
             WHERE employee_id = ?
@@ -1318,6 +960,7 @@ hrRouter.put('/employees/:employeeId', async (req, res) => {
             position,
             email,
             phone || null,
+            initialAnnualSalary,
             hireDate,
             employmentStatus,
             employeeId
@@ -1330,6 +973,86 @@ hrRouter.put('/employees/:employeeId', async (req, res) => {
             });
         }
 
+        if (
+            previousAnnualSalary !== initialAnnualSalary
+        ) {
+            await promiseDb.query(
+                `INSERT INTO employee_salary_history (
+                    employee_id,
+                    annual_salary,
+                    effective_month
+                 )
+                 VALUES (?, ?, DATE_FORMAT(CURRENT_DATE, '%Y-%m'))
+                 ON DUPLICATE KEY UPDATE
+                    annual_salary = VALUES(annual_salary)`,
+                [employeeId, initialAnnualSalary]
+            );
+
+            await ensurePayrollForMonth(currentPayMonth(), employeeId);
+            await propagateAnnualSalaryToFutureRecords(
+                employeeId,
+                currentPayMonth(),
+                initialAnnualSalary
+            );
+
+            const [currentPayrollRows] = await promiseDb.query(
+                `SELECT
+                    payroll_id AS payrollId,
+                    allowance,
+                    bonus,
+                    other_payment AS otherPayment,
+                    payment_status AS paymentStatus
+                 FROM payrolls
+                 WHERE employee_id = ?
+                   AND pay_month = DATE_FORMAT(CURRENT_DATE, '%Y-%m')
+                 LIMIT 1`,
+                [employeeId]
+            );
+
+            if (
+                currentPayrollRows.length > 0 &&
+                !payrollFinalStatuses.includes(
+                    currentPayrollRows[0].paymentStatus
+                )
+            ) {
+                const calculation = calculateFreelancerPayroll({
+                    baseSalary: Math.floor(initialAnnualSalary / 12),
+                    allowance: parseNonNegativeInteger(
+                        currentPayrollRows[0].allowance
+                    ) ?? 0,
+                    bonus: parseNonNegativeInteger(
+                        currentPayrollRows[0].bonus
+                    ) ?? 0,
+                    otherPayment: parseNonNegativeInteger(
+                        currentPayrollRows[0].otherPayment
+                    ) ?? 0
+                });
+
+                await promiseDb.query(
+                    `UPDATE payrolls
+                     SET base_salary = ?,
+                         income_tax = ?,
+                         local_income_tax = ?,
+                         deduction = ?,
+                         gross_pay = ?,
+                         net_pay = ?
+                     WHERE payroll_id = ?`,
+                    [
+                        Math.floor(initialAnnualSalary / 12),
+                        calculation.incomeTax,
+                        calculation.localIncomeTax,
+                        calculation.totalDeduction,
+                        calculation.grossPay,
+                        calculation.netPay,
+                        currentPayrollRows[0].payrollId
+                    ]
+                );
+            }
+        }
+
+        await promiseDb.commit();
+        transactionStarted = false;
+
         return res.json({
             success: true,
             data: {
@@ -1338,6 +1061,10 @@ hrRouter.put('/employees/:employeeId', async (req, res) => {
             message: '직원 정보가 수정되었습니다.'
         });
     } catch (error) {
+        if (transactionStarted) {
+            await promiseDb.rollback();
+        }
+
         console.error('직원 정보 수정 오류:', error);
 
         if (error.code === 'ER_DUP_ENTRY') {
@@ -1374,7 +1101,8 @@ hrRouter.patch('/employees/:employeeId/status', async (req, res) => {
 
         const [employeeResult] = await promiseDb.query(
             `UPDATE employees
-             SET employment_status = '퇴사'
+             SET employment_status = '퇴사',
+                 resignation_date = CURRENT_DATE
              WHERE employee_id = ?`,
             [employeeId]
         );
@@ -1432,5 +1160,93 @@ hrRouter.patch('/employees/:employeeId/status', async (req, res) => {
     }
 });
 
+// 이것은 마이페이지 이메일과 전화번호 업데이트용 api임 (인사아님!)
+
+hrRouter.patch('/employees/:employeeId/contact', async (req, res) => {
+    const employeeId = Number(req.params.employeeId);
+    const email = String(req.body?.email ?? '').trim();
+    const phone = String(req.body?.phone ?? '').trim();
+
+    if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+        return res.status(400).json({
+            success: false,
+            message: '올바른 직원 ID가 필요합니다.'
+        });
+    }
+
+    if (!isEmailString(email) || email.length > 100) {
+        return res.status(400).json({
+            success: false,
+            message: '이메일 형식을 확인해 주세요.'
+        });
+    }
+
+    if (!/^[0-9+\-()\s]{8,20}$/.test(phone)) {
+        return res.status(400).json({
+            success: false,
+            message: '전화번호 형식을 확인해 주세요.'
+        });
+    }
+
+    try {
+        // 직원 존재 여부 확인
+        const [employees] = await promiseDb.query(
+            'SELECT employee_id FROM employees WHERE employee_id = ?',
+            [employeeId]
+        );
+
+        if (employees.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '해당 직원을 찾을 수 없습니다.'
+            });
+        }
+
+        // 다른 직원이 동일 이메일을 사용 중인지 확인
+        const [duplicates] = await promiseDb.query(
+            `SELECT employee_id
+             FROM employees
+             WHERE email = ? AND employee_id <> ?
+             LIMIT 1`,
+            [email, employeeId]
+        );
+
+        if (duplicates.length > 0) {
+            return res.status(409).json({
+                success: false,
+                message: '이미 사용 중인 이메일입니다.'
+            });
+        }
+
+        // 이메일과 전화번호만 변경
+        await promiseDb.query(
+            `UPDATE employees
+            SET email = ?, phone = ?
+            WHERE employee_id = ?`,
+            [email, phone, employeeId]
+        );
+
+        return res.json({
+            success: true,
+            data: { employeeId, email, phone },
+            message: '개인정보가 저장되었습니다.'
+        });
+
+    } catch (error) {
+        console.error('개인정보 수정 오류:', error);
+
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({
+                success: false,
+                message: '이미 사용 중인 이메일입니다.'
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: '개인정보 저장에 실패했습니다.'
+        });
+    }
+});
 
 module.exports = hrRouter;

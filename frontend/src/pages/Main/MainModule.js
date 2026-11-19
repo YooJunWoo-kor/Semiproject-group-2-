@@ -14,6 +14,8 @@ import {
   MessagesSquare, 
   CheckSquare 
 } from 'lucide-react';
+import ScheduleModul from './management/ScheduleModul';
+import { MainDraftDashbord } from './mytesk/MyTeskList';
 
 function MainModule() {
   const url = '/main';
@@ -34,7 +36,9 @@ function MainModule() {
   const [index, setIndex] = useState(0);
   const boardList = [
     <ADComp key="ad" />,
-    <Dashboard key="dashboard" />
+    <Dashboard key="dashboard" />,
+    <ScheduleModul isMain={true}/>,
+    <MainDraftDashbord />
   ];
 
   const prevBoard = () => {

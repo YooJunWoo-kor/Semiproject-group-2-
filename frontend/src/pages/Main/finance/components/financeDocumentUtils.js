@@ -1,4 +1,6 @@
+import { validateEmail, validatePhone, validateBusinessNumber, validateLength, validateDateRange } from '../../../../utils/validation';
 import { API_BASE_URL } from '../../../../utils/authStorage';
+
 export const DOCUMENT_TYPES = {
   receipt: {
     title: '영수증',
@@ -28,6 +30,7 @@ export const DOCUMENT_TYPES = {
     total: '총 견적 금액'
   }
 };
+
 export function localDate(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -64,6 +67,7 @@ function previewScaled(value, digits) {
   }
   return window.BigInt(whole) * 10n ** window.BigInt(digits) + window.BigInt(fraction.padEnd(digits, '0') || '0');
 }
+
 export function calculateRows(items, currency) {
   const digits = currencyDigits(currency);
   const scale = 10 ** digits;
@@ -83,6 +87,7 @@ export function calculateRows(items, currency) {
     };
   });
 }
+
 export function calculateTotals(rows, currency) {
   const supplyMinor = rows.reduce((sum, row) => sum + window.BigInt(row.supplyMinor), 0n);
   const taxMinor = rows.reduce((sum, row) => sum + window.BigInt(row.taxMinor), 0n);
@@ -110,6 +115,7 @@ function collectDocumentStyles(ownerDocument) {
       return '';
     }
   }
+
   function fromRules(rules) {
     return Array.from(rules || []).map(rule => {
       if (rule.styleSheet) return fromSheet(rule.styleSheet);
@@ -132,6 +138,7 @@ function collectDocumentStyles(ownerDocument) {
   }
   return styles;
 }
+
 export function printDocument(paper, title) {
   if (!paper) {
     throw new Error('인쇄할 문서를 찾을 수 없습니다.');
@@ -193,6 +200,7 @@ export function printDocument(paper, title) {
     `;
   document.body.appendChild(frame);
 }
+
 const DOCUMENT_API = `${API_BASE_URL}/finance/documents`;
 async function documentRequest(url, options = {}) {
   const response = await fetch(url, options);
@@ -207,6 +215,7 @@ async function documentRequest(url, options = {}) {
   }
   return result;
 }
+
 export function saveFinanceDocument(payload) {
   return documentRequest(DOCUMENT_API, {
     method: 'POST',
@@ -216,6 +225,7 @@ export function saveFinanceDocument(payload) {
     body: JSON.stringify(payload)
   });
 }
+
 export function getFinanceDocuments({
   page = 1,
   type = '',
@@ -232,13 +242,50 @@ export function getFinanceDocuments({
     signal
   });
 }
+
 export function getFinanceDocument(id, signal) {
   return documentRequest(`${DOCUMENT_API}/${encodeURIComponent(id)}`, {
     signal
   });
 }
+
 export function getDocumentPartners(signal) {
   return documentRequest(`${API_BASE_URL}/finance/partners`, {
     signal
   });
+}
+
+// 문서별 필수 항목/길이 정책을 검사하고 boolean을 반환합니다.
+export function validateFinanceDocument(data, type = 'receipt') {
+  const config = DOCUMENT_TYPES[type] || DOCUMENT_TYPES.receipt;
+  for (const party of [data.business, data.customer]) {
+    if (!validateLength(party.name, { required: true, max: 100 })) return false;
+    if (!validateEmail(party.email)) return false;
+    if (!validatePhone(party.phone)) return false;
+    if (!validateBusinessNumber(party.businessNumber)) return false;
+    if (!validateLength(party.address, { max: 200 })) return false;
+    for (const field of ['email', 'city', 'country', 'phone', 'businessNumber']) {
+      if (!validateLength(party[field], { max: 100 })) return false;
+    }
+  }
+  let endDate = data.date;
+  if (config.extraDate) endDate = data.extraDate;
+  if (!validateDateRange(data.date, endDate, { required: true })) return false;
+  for (const item of data.items) {
+    if (!validateLength(item.name, { required: true, max: 150 })) return false;
+    if (!validateLength(item.description, { max: 300 })) return false;
+  }
+  if (type === 'invoice' && !validateLength(data.account, { max: 200 })) return false;
+  return validateLength(data.note, { max: 2000 });
+}
+
+// 회사 기본정보와 사용 가능한 회사계좌를 기존 서버에서 조회합니다.
+export function getDocumentBusiness(signal) {
+  return documentRequest(`${API_BASE_URL}/finance/document-business`, { signal });
+}
+
+export async function getDocumentAccounts(signal) {
+  const accounts = await documentRequest(`${API_BASE_URL}/finance/bank-accounts`, { signal });
+  if (!Array.isArray(accounts)) throw new Error('회사계좌 목록 형식을 확인해주세요.');
+  return accounts.filter(account => ['사용', 'ACTIVE'].includes(account.account_status));
 }

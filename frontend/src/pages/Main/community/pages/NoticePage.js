@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import PaginationTable from '../../../../components/PaginationTable';
 import ModalBase from '../../../../components/ModalBase';
 import { getLoginUser } from '../../../../utils/authStorage';
+import { getCommunityBoards, getCommunityPosts } from "../../../../utils/communityApi";
 
 import {
     getNotices,
@@ -15,6 +16,7 @@ import {
     deleteNoticeComment,
     recordNoticeView
 } from '../../../../utils/communityApi';
+import StatisticsCard from '../../../../components/StatisticsCard';
 
 export default function NoticePage() {
     const [items, setItems] = useState([]);
@@ -690,47 +692,62 @@ export default function NoticePage() {
     );
 }
 
-// 메인 화면에서 사용하는 기존 공지사항 표시 영역입니다.
+// 메인 화면에서 사용하는 공지사항 및 게시판 요약 영역입니다.
 export function NoticeModule({ style = 1 }) {
-    const tableHeaders = ['구분', '분류', '제목', '작성자', '작성일', '조회수'];
+    const tableHeaders = ['분류', '제목', '작성자', '조회수'];
 
-    // [수정] 빈 배열로 고정하던 목록을 조회 결과로 채웁니다.
+    const [boards, setBoards] = useState([]);
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const [error, setError] = useState("");
 
-    // [추가] 메인 화면에 공지사항 표가 나타나면 목록을 조회합니다.
     useEffect(() => {
         let active = true;
 
-        async function loadNotices() {
+        const fetchDashboardData = async () => {
             try {
-                const notices = await getNotices();
-                if (!Array.isArray(notices)) {
-                    throw new Error('공지사항 목록 형식이 올바르지 않습니다.');
-                }
-                if (active) setItems(notices);
-            } catch {
-                if (active) setError('공지사항을 불러오지 못했습니다.');
-            } finally {
-                if (active) setLoading(false);
-            }
-        }
+                // 게시판 목록과 전체 게시글을 병렬로 동시 조회
+                const [boardRows, postRows] = await Promise.all([
+                    getCommunityBoards(),
+                    getCommunityPosts()
+                ]);
 
-        loadNotices();
+                if (!Array.isArray(boardRows) || !Array.isArray(postRows)) {
+                    throw new Error("데이터 형식이 올바르지 않습니다.");
+                }
+
+                if (active) {
+                    setBoards(boardRows);
+                    setItems(postRows);
+                }
+            } catch (err) {
+                console.error("통합게시판 조회 실패:", err);
+                if (active) {
+                    setError("통합게시판 목록을 불러오지 못했습니다.");
+                }
+            } finally {
+                if (active) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        fetchDashboardData();
 
         return () => {
             active = false;
         };
     }, []);
 
-    // [수정] 현재 API 응답의 필드로 표를 구성합니다.
-    const tableData = items.map(item => ({
+    if (loading) return <p>공지사항을 불러오는 중입니다.</p>;
+    if (error) return <p role="alert">{error}</p>;
+
+    // 하단 표에는 공지사항(board_type === '2')만 필터링해서 표시
+    const noticeItems = items.filter((item) => String(item.board_type) === "2");
+
+    const tableData = noticeItems.map(item => ({
         content: [
-            item.important
-                ? <span className="status-badge status-danger">공지</span>
-                : '-',
-            item.category,
+            item.category || '-',
             <Link
                 key={`notice-title-${item.post_id}`}
                 className="table-link-title"
@@ -739,25 +756,41 @@ export function NoticeModule({ style = 1 }) {
                 {item.title}
             </Link>,
             item.employee_name || '작성자 미확인',
-            item.created_at
-                ? new Date(item.created_at).toLocaleDateString('sv-SE', {
-                    timeZone: 'Asia/Seoul'
-                })
-                : '-',
             item.views ?? 0
         ]
     }));
 
-    if (loading) return <p>공지사항을 불러오는 중입니다.</p>;
-    if (error) return <p role="alert">{error}</p>;
+    const getBoardUrl = (board) => `/main/community${board.front_path || board.api_path}`;
 
     return (
-        <PaginationTable
-            title="공지사항 목록"
-            th={tableHeaders}
-            allData={tableData}
-            itemsPerPage={10}
-            style={style}
-        />
+        <div className='border-container'>
+            <section className="stats-section">
+                {boards.map((board) => {
+                    const count = items.filter(
+                        (item) => String(item.board_type) === String(board.board_type)
+                    ).length;
+
+                    return (
+                        <Link
+                            key={board.board_type}
+                            to={getBoardUrl(board)}
+                            style={{ textDecoration: "none", color: "inherit" }}
+                        >
+                            <StatisticsCard
+                                title={board.board_name}
+                                count={count}
+                                stiyle={0}
+                            />
+                        </Link>
+                    );
+                })}
+            </section>
+            <PaginationTable
+                title="공지사항 목록"
+                th={tableHeaders}
+                allData={tableData}
+                itemsPerPage={10}
+            />
+        </div>
     );
 }

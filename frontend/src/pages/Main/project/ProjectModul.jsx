@@ -53,7 +53,10 @@ export default function ProjectModul() {
   // 프로젝트 등록을 위한 모달
   const [isModal, setIsModal] = useState(0);
   const oppenModal = function () { setIsModal(1); };
-  const clossModal = function () { setIsModal(0); };
+  const clossModal = function () {
+    setIsModal(0);
+    getProjectData();
+  };
 
   // 프로젝트 상세보기 모달 관련
   const [isProjectDetail, setIsProjectDetail] = useState(false);
@@ -63,7 +66,10 @@ export default function ProjectModul() {
     setIsProjectDetail(true);
     setCurrontProjectIndex(projectID);
   };
-  const clossProjectDetail = () => { setIsProjectDetail(false); };
+  const clossProjectDetail = () => {
+    setIsProjectDetail(false);
+    getProjectData();
+  };
 
   let selectData;
   let selectProjectTitle;
@@ -71,7 +77,7 @@ export default function ProjectModul() {
     selectData = projectData.filter((item) => {
       return item.project_id == currontProjectIndex;
     });
-    selectProjectTitle = selectData[0]?.project_name;
+    selectProjectTitle = selectData[0]?.schedule_name;
   }
 
   //ColorTeg에 전달할 현재 선택된 상태 및 개수 객체 (ScheduleModul과 동일 구조)
@@ -84,6 +90,12 @@ export default function ProjectModul() {
         ? '시작예정'
         : '완료됨'
   ;
+
+  //프로젝트 켈린더 클릭시 작동
+  const handleEventClick = (clickedItem) => {
+    console.log(clickedItem);
+    selectProject(clickedItem.project_id);
+  };
 
   return (
     <div className="border-container">
@@ -101,10 +113,17 @@ export default function ProjectModul() {
       </header>
 
       <div style={{ display: 'flex', gap: '30px' }}>
-        <div style={{ flex: '1', display: 'flex', flexFlow: 'column' }}>
-          <div style={{ fontSize: '13px' }}>
+        <div
+          className='boder'
+          style={{ 
+            padding: '30px',
+            paddingBottom: '100px',
+            flex: '1', display: 'flex', flexFlow: 'column'
+          }}>
+          <div className="horizontal-box" style={{ fontSize: '13px', marginBottom:"30px"}}>
+            <div><h2> 프로젝트 리스트 </h2></div>
             <select
-              style={{ width: '150px', marginBottom: '20px' }}
+              style={{ width: '150px', marginLeft:'scroll'}}
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
             >
@@ -114,7 +133,7 @@ export default function ProjectModul() {
               <option value="COMPLETED">완료된 프로젝트</option>
             </select>
           </div>
-          <div style={{ overflowY: 'scroll', maxHeight: '600px', display: 'flex', flexFlow: 'column', flex: '1', gap: '10px' }}>
+          <div style={{ overflowY: 'scroll', maxHeight: '480px', display: 'flex', flexFlow: 'column', flex: '1', gap: '10px' }}>
             {filteredProjects.map((item) => {
               return (
                 <ProjectListModule
@@ -127,9 +146,16 @@ export default function ProjectModul() {
           </div>
         </div>
 
-        <div style={{ flex: '1' }}>
+        <div className="boder"
+          style={{
+            flex: '1',
+            padding: '30px'
+        }}>
           {/* 캘린더에도 필터링된 결과를 같이 보여주려면 filteredProjects, 전체를 유지하려면 projectData 전달 */}
-          <BasicCalendar schedule={filteredProjects} />
+          <BasicCalendar
+            schedule={filteredProjects}
+            onEventClick={handleEventClick}
+          />
         </div>
       </div>
 
@@ -137,7 +163,7 @@ export default function ProjectModul() {
         <ModalBase
           onClose={clossModal}
           title={'프로젝트 등록'}
-          layout={<SetNewProjectLayout setIsModal={clossModal} />}
+          layout={<SetNewProjectLayout setIsModal={clossModal} onClose={clossModal} />}
         />
       ) : null}
 

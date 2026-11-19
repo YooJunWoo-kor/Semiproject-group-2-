@@ -4,6 +4,7 @@ import axios from "axios";
 import ModalBase from "../../../../components/ModalBase";
 import { API_BASE_URL } from "../../../../utils/authStorage";
 import "./QualityControl.css";
+import ColorTeg from "../../../../components/ColorTeg";
 
 const emptyForm = {
     productCode: "",
@@ -71,17 +72,44 @@ function ProductList() {
         }
     };
 
+    let sucesse;
+    let fail;
+    let notimple;
+
+    console.log(filteredProducts)
+
+    const notimpleLength = ()=>{
+        const filterLengt = filteredProducts.filter((item)=>{
+            return item.quality_status == "미실시"
+        })
+        return filterLengt.length;
+    }
+
+    const failedLength = ()=>{
+        const filterLengt = filteredProducts.filter((item)=>{
+            return item.quality_status == "불합격"
+        })
+        return filterLengt.length;
+    }
+
+    const sucessedLength = ()=>{
+        const filterLengt = filteredProducts.filter((item)=>{
+            return item.quality_status == "통과"
+        })
+        return filterLengt.length;
+    }
+
+    notimple = notimpleLength();
+    sucesse = sucessedLength();
+    fail = failedLength();
+
     return (
-        <div className="quality-products-page">
-            <header className="dashboard-header quality-page-header">
-                <div>
-                    <span className="quality-eyebrow">PRODUCTS</span>
-                    <div className="quality-title-row">
-                        <h1>제품 목록</h1>
-                        <span className="quality-header-badge">{filteredProducts.length}개 제품</span>
-                    </div>
-                    <p>등록된 제품의 기본정보와 재고 현황을 확인합니다.</p>
-                </div>
+        <div className="border-container" style={{gap:"10px"}}>
+            <header className="dashboard-header">
+                <span className="subtitle">제품 목록</span>
+                <ColorTeg title={"통과"} count={sucesse} type={"건"} color={"blue"}/>
+                <ColorTeg title={"실패"} count={fail} type={"건"} />
+                <ColorTeg title={"미실시"} count={notimple} type={"건"} color={"orange"}/>
                 <div className="dashboard-top">
                     <button type="button" className="register-btn" onClick={() => setIsRegisterOpen(true)}>
                         + 제품등록
@@ -89,24 +117,32 @@ function ProductList() {
                 </div>
             </header>
 
-            <section className="quality-toolbar">
-                <div className="quality-toolbar-copy">
-                    <strong>제품 검색</strong>
-                    <span>제품명이나 제품코드로 검색하세요.</span>
-                </div>
-                <div className="quality-search-box">
-                    <input value={search} onChange={e => setSearch(e.target.value)}
-                        placeholder="제품명 또는 제품코드 검색" aria-label="제품 검색" />
-                </div>
+            <section className=" horizontal-box ">
+                    <input
+                        style={{
+                            width:"250px",
+                            fontSize: "12px",
+                            marginLeft: "auto"
+                        }}
+                        value={search} onChange={e => setSearch(e.target.value)}
+                        placeholder="제품명 또는 제품코드" aria-label="제품 검색" />
             </section>
 
             {filteredProducts.length === 0 ? (
                 <div className="quality-empty-state quality-empty-card">검색 조건에 맞는 제품이 없습니다.</div>
             ) : (
-                <div className="quality-product-grid">
+                <div className="quality-product-grid" style={{overflowY: 'scroll', maxHeight: '650px', paddingTop:'10px'}}>
                     {filteredProducts.map(product => (
                         <article key={product.product_id} className="quality-product-card"
-                            onClick={() => navigate("/main/qa/products/" + product.product_id)}>
+                            onClick={() => navigate("/main/qa/products/" + product.product_id)}
+                            onKeyDown={event => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                    event.preventDefault();
+                                    navigate("/main/qa/products/" + product.product_id);
+                                }
+                            }}
+                            tabIndex={0}
+                            role="link">
                             <div className="quality-product-image">
                                 {product.image_url ? (
                                     <img src={product.image_url} alt={product.product_name} />

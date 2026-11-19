@@ -8,6 +8,9 @@ import {
   createHrDepartment,
   createHrEmployee,
   createHrPayroll,
+  bulkConfirmHrPayrolls,
+  previewBulkConfirmHrPayrolls,
+  submitHrPayrollsToFinance,
   deleteHrDepartment,
   getHrOrganization,
   getHrPayrollHistory,
@@ -17,7 +20,14 @@ import {
   updateHrPayroll
 } from "../../../../components/HrData";
 
-const positions = ["사원", "대리", "과장", "팀장", "부장"];
+const positions = ["사원", "대리", "과장", "차장", "부장"];
+const payrollFinalStatuses = ["확정", "지급대기", "지급완료"];
+
+const payrollDraftSelectionStatuses = ["\uC791\uC131\uC911"];
+const payrollSelectionStatuses = [
+  ...payrollDraftSelectionStatuses,
+  "\uD655\uC815"
+];
 
 const emptyEmployee = {
   name: "",
@@ -27,7 +37,8 @@ const emptyEmployee = {
   phone: "",
   password: "",
   hireDate: "",
-  employmentStatus: "재직"
+  employmentStatus: "재직",
+  initialAnnualSalary: ""
 };
 
 const emptyDepartment = {
@@ -37,17 +48,68 @@ const emptyDepartment = {
 };
 
 const emptyPay = {
+  annualSalary: "0",
   baseSalary: "0",
   allowance: "0",
   bonus: "0",
-  deduction: "0",
-  paymentDate: "",
-  paymentStatus: "지급대기"
+  otherPayment: "0"
 };
 
 function currentMonth() {
   const date = new Date();
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthlyBaseSalary(annualSalary) {
+  const amount = Number(annualSalary);
+
+  return Number.isSafeInteger(amount) && amount >= 0
+    ? Math.floor(amount / 12)
+    : 0;
+}
+
+function isVisibleEmployee(employee) {
+  // 퇴사자는 퇴사일로부터 한 달 동안만 일반 직원 목록에 표시합니다.
+  if (employee.employmentStatus !== "퇴사") {
+    return true;
+  }
+
+  if (!employee.resignationDate) {
+    return false;
+  }
+
+  const resignationDate = new Date(
+    `${employee.resignationDate}T00:00:00`
+  );
+
+  if (Number.isNaN(resignationDate.getTime())) {
+    return true;
+  }
+
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setHours(0, 0, 0, 0);
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+  return resignationDate >= oneMonthAgo;
+}
+
+function getEmployeeDisplayStatus(employee) {
+  const employmentStatus = employee.employmentStatus || "-";
+
+  if (employmentStatus === "휴직" || employmentStatus === "퇴사") {
+    return employmentStatus;
+  }
+
+  const onLeave = employee.isOnLeaveToday === true ||
+    Number(employee.isOnLeaveToday) === 1 ||
+    String(employee.isOnLeaveToday).toLowerCase() === "true";
+  return onLeave ? "휴가" : employmentStatus;
+}
+
+function getEmployeeStatusBadgeClass(status) {
+  if (status === "재직") return "active";
+  if (status === "휴직" || status === "휴가") return "on-leave";
+  return "retired";
 }
 
 function money(value) {
@@ -56,8 +118,69 @@ function money(value) {
     : `${Number(value).toLocaleString("ko-KR")}원`;
 }
 
+function payrollStatusLabel(status, financeDraftId = true) {
+  if (
+    status === "지급대기" &&
+    (financeDraftId === null || financeDraftId === undefined)
+  ) {
+    return "재무 전달 필요";
+  }
+
+  return {
+    // [급여 흐름 수정] 기안 승인과 급여확정을 구분합니다.
+    확정: "확정",
+    지급대기: "지급대기",
+    지급완료: "지급완료"
+  }[status] || status || "-";
+}
+
+function payrollIdValue(row) {
+  const payrollId = Number(row?.payrollId);
+
+  return Number.isSafeInteger(payrollId) && payrollId > 0
+    ? payrollId
+    : null;
+}
+
+function payrollAmount(value) {
+  const amount = Number(value);
+
+  return Number.isSafeInteger(amount) && amount >= 0 ? amount : null;
+}
+
+function sumPayrollAmounts(rows, field) {
+  return rows.reduce((total, row) => {
+    const amount = payrollAmount(row[field]);
+
+    return total + (amount ?? 0);
+  }, 0);
+}
+
+function visiblePayrollRows(rows) {
+  return rows.filter((row) => row.employmentStatus !== "퇴사");
+}
+
 function apiError(error, fallback) {
   return error?.response?.data?.message || error?.message || fallback;
+}
+
+async function fetchOrganization() {
+  const [departmentResponse, employeeResponse] =
+    await getHrOrganization();
+
+  if (
+    !departmentResponse.data.success ||
+    !Array.isArray(departmentResponse.data.data) ||
+    !employeeResponse.data.success ||
+    !Array.isArray(employeeResponse.data.data)
+  ) {
+    throw new Error("직원·부서 응답 형식이 올바르지 않습니다.");
+  }
+
+  return {
+    departments: departmentResponse.data.data,
+    employees: employeeResponse.data.data
+  };
 }
 
 function DetailRow({ title, value, emphasis = false }) {
@@ -140,6 +263,19 @@ function EmployeeForm({
             </option>
           ))}
         </select>
+      </label>
+
+      <label>
+        연봉 (원)
+        <input
+          name="initialAnnualSalary"
+          type="number"
+          min="0"
+          step="1"
+          value={form.initialAnnualSalary}
+          onChange={change}
+          required
+        />
       </label>
 
       <label>
@@ -299,16 +435,11 @@ function DepartmentForm({
 }
 
 
-/* 급여 계산 공통 함수 */
+/* 급여 계산 공통 함수: 서버 계산 전에 화면 미리보기에도 같은 3.3% 규칙을 적용합니다. */
 function calculatePayroll(data) {
   if (!data) return null;
 
-  const names = [
-    "baseSalary",
-    "allowance",
-    "bonus",
-    "deduction"
-  ];
+  const names = ["baseSalary", "allowance", "bonus", "otherPayment"];
 
   const amounts = names.map((name) => Number(data[name]));
 
@@ -323,10 +454,11 @@ function calculatePayroll(data) {
 
   if (invalid) return null;
 
-  const grossPay =
-    amounts[0] + amounts[1] + amounts[2];
-
-  const netPay = grossPay - amounts[3];
+  const grossPay = amounts[0] + amounts[1] + amounts[2] + amounts[3];
+  const incomeTax = Math.floor(grossPay * 3 / 100);
+  const localIncomeTax = Math.floor(incomeTax * 10 / 100);
+  const totalDeduction = incomeTax + localIncomeTax;
+  const netPay = grossPay - totalDeduction;
 
   if (
     !Number.isSafeInteger(grossPay) ||
@@ -338,6 +470,9 @@ function calculatePayroll(data) {
 
   return {
     grossPay,
+    incomeTax,
+    localIncomeTax,
+    totalDeduction,
     netPay
   };
 }
@@ -347,6 +482,7 @@ function PayrollForm({
   setForm,
   employee,
   month,
+  payroll,
   saving,
   onSave,
   onClose
@@ -357,9 +493,18 @@ function PayrollForm({
       [event.target.name]: event.target.value
     }));
 
-  const calculation = calculatePayroll(form);
+  const annualSalary = form.annualSalary;
+  // 기본급은 연봉에서만 자동 산출하고, 수당·상여금·기타 지급액은 월별 입력값입니다.
+  const calculatedMonthlySalary = monthlyBaseSalary(annualSalary);
+  const calculation = calculatePayroll({
+    ...form,
+    baseSalary: calculatedMonthlySalary
+  });
 
   const gross = calculation?.grossPay ?? 0;
+  const incomeTax = calculation?.incomeTax ?? 0;
+  const localIncomeTax = calculation?.localIncomeTax ?? 0;
+  const totalDeduction = calculation?.totalDeduction ?? 0;
   const net = calculation?.netPay ?? 0;
 
   return (
@@ -368,11 +513,42 @@ function PayrollForm({
         {employee.name} · {employee.employeeNumber} · {month}
       </p>
 
+      <label>
+        연봉 (원)
+        <input
+          type="number"
+          name="annualSalary"
+          min="0"
+          step="1"
+          value={form.annualSalary}
+          onChange={change}
+          required
+        />
+      </label>
+
+      <div className="hr-employee-detail-fields">
+        <DetailRow
+          title="월 기본급"
+          value={money(calculatedMonthlySalary)}
+        />
+        <DetailRow
+          title="소득세 (3%)"
+          value={money(incomeTax)}
+        />
+        <DetailRow
+          title="지방소득세 (0.3%)"
+          value={money(localIncomeTax)}
+        />
+        <DetailRow
+          title="총공제액 (3.3%)"
+          value={money(totalDeduction)}
+        />
+      </div>
+
       {[
-        ["기본급", "baseSalary"],
         ["수당", "allowance"],
         ["상여금", "bonus"],
-        ["공제액", "deduction"]
+        ["기타 지급액", "otherPayment"],
       ].map(([label, name]) => (
         <label key={name}>
           {label} (원)
@@ -388,31 +564,20 @@ function PayrollForm({
         </label>
       ))}
 
-      <label>
-        지급일
-        <input
-          type="date"
-          name="paymentDate"
-          value={form.paymentDate}
-          onChange={change}
-        />
-      </label>
-
-      <label>
-        지급 상태
-        <select
-          name="paymentStatus"
-          value={form.paymentStatus}
-          onChange={change}
-        >
-          <option value="지급대기">지급대기</option>
-          <option value="지급완료">지급완료</option>
-        </select>
-      </label>
-
       <div className="hr-form-totals">
-        <span>세전 {money(gross)}</span>
+        <span>총지급액 {money(gross)}</span>
         <strong>실지급 {money(net)}</strong>
+      </div>
+
+      <div className="hr-employee-detail-fields">
+        <DetailRow
+          title="지급일"
+          value={payroll?.paymentDate || "-"}
+        />
+        <DetailRow
+          title="지급 상태"
+          value={payrollStatusLabel(payroll?.paymentStatus || "지급대기")}
+        />
       </div>
 
       <div className="hr-modal-actions">
@@ -468,7 +633,8 @@ function PayrollHistoryModal({
               <th>기본급</th>
               <th>수당</th>
               <th>상여금</th>
-              <th>공제액</th>
+              <th>기타 지급액</th>
+              <th>총공제액</th>
               <th>실수령액</th>
               <th>지급 상태</th>
             </tr>
@@ -480,9 +646,10 @@ function PayrollHistoryModal({
                 <td>{money(item.baseSalary)}</td>
                 <td>{money(item.allowance)}</td>
                 <td>{money(item.bonus)}</td>
-                <td>{money(item.deduction)}</td>
+                <td>{money(item.otherPayment)}</td>
+                <td>{money(item.totalDeduction ?? item.deduction)}</td>
                 <td>{money(item.netPay)}</td>
-                <td>{item.paymentStatus || "-"}</td>
+                <td>{payrollStatusLabel(item.paymentStatus)}</td>
               </tr>
             ))}
           </tbody>
@@ -531,14 +698,20 @@ function PayrollStatementModal({ employee, payroll, onClose }) {
             <DetailRow title="기본급" value={money(payroll.baseSalary)} />
             <DetailRow title="수당" value={money(payroll.allowance)} />
             <DetailRow title="상여금" value={money(payroll.bonus)} />
+            <DetailRow title="기타 지급액" value={money(payroll.otherPayment)} />
+            <DetailRow title="소득세 (3%)" value={money(payroll.incomeTax)} />
             <DetailRow
-              title="공제 내역(총액)"
-              value={money(payroll.deduction)}
+              title="지방소득세 (0.3%)"
+              value={money(payroll.localIncomeTax)}
+            />
+            <DetailRow
+              title="총공제액 (3.3%)"
+              value={money(payroll.totalDeduction ?? payroll.deduction)}
             />
             <DetailRow title="지급일" value={payroll.paymentDate || "-"} />
             <DetailRow
               title="지급 상태"
-              value={payroll.paymentStatus || "-"}
+              value={payrollStatusLabel(payroll.paymentStatus)}
             />
           </div>
 
@@ -568,9 +741,12 @@ export default function UnifiedEmployees() {
   const [search, setSearch] = useState("");
   const [employmentStatus, setEmploymentStatus] = useState("전체");
   const [accountStatus, setAccountStatus] = useState("전체");
-  const [detailTab, setDetailTab] = useState("info");
-  const [payMonth, setPayMonth] = useState(currentMonth);
+  const [detailTab, setDetailTab] = useState("payroll");
+  const initialPayMonthRef = useRef(currentMonth());
+  const [payMonth, setPayMonth] = useState(() => currentMonth());
   const [payrolls, setPayrolls] = useState([]);
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState([]);
+  const payrollRequestRef = useRef(0);
   const [payLoading, setPayLoading] = useState(false);
   const [payError, setPayError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -586,23 +762,36 @@ export default function UnifiedEmployees() {
   const [historyError, setHistoryError] = useState("");
   const historyRequestRef = useRef(0);
 
-  async function refreshOrganization() {
-    const [departmentResponse, employeeResponse] =
-      await getHrOrganization();
+  // 페이지를 오래 열어 둔 상태에서 월이 바뀌면 현재월을 자동 반영합니다.
+  // 사용자가 과거 월을 직접 선택한 경우에는 그 선택을 유지합니다.
+  useEffect(() => {
+    function syncCurrentPayMonth() {
+      const nextMonth = currentMonth();
 
-    if (
-      !departmentResponse.data.success ||
-      !Array.isArray(departmentResponse.data.data) ||
-      !employeeResponse.data.success ||
-      !Array.isArray(employeeResponse.data.data)
-    ) {
-      throw new Error("직원·부서 응답 형식이 올바르지 않습니다.");
+      setPayMonth((previousMonth) =>
+        previousMonth === initialPayMonthRef.current
+          ? nextMonth
+          : previousMonth
+      );
     }
 
-    setDepartments(departmentResponse.data.data);
-    setEmployees(employeeResponse.data.data);
+    syncCurrentPayMonth();
+    window.addEventListener("focus", syncCurrentPayMonth);
+    document.addEventListener("visibilitychange", syncCurrentPayMonth);
 
-    return employeeResponse.data.data;
+    return () => {
+      window.removeEventListener("focus", syncCurrentPayMonth);
+      document.removeEventListener("visibilitychange", syncCurrentPayMonth);
+    };
+  }, []);
+
+  async function refreshOrganization() {
+    const organization = await fetchOrganization();
+
+    setDepartments(organization.departments);
+    setEmployees(organization.employees);
+
+    return organization.employees;
   }
 
   useEffect(() => {
@@ -610,21 +799,11 @@ export default function UnifiedEmployees() {
 
     async function load() {
       try {
-        const [departmentResponse, employeeResponse] =
-          await getHrOrganization();
-
-        if (
-          !departmentResponse.data.success ||
-          !employeeResponse.data.success ||
-          !Array.isArray(departmentResponse.data.data) ||
-          !Array.isArray(employeeResponse.data.data)
-        ) {
-          throw new Error("직원·부서 자료 형식이 올바르지 않습니다.");
-        }
+        const organization = await fetchOrganization();
 
         if (active) {
-          setDepartments(departmentResponse.data.data);
-          setEmployees(employeeResponse.data.data);
+          setDepartments(organization.departments);
+          setEmployees(organization.employees);
         }
       } catch (e) {
         if (active) {
@@ -637,10 +816,20 @@ export default function UnifiedEmployees() {
       }
     }
 
+    function reloadWhenVisible() {
+      if (document.visibilityState === "visible" && active) {
+        load();
+      }
+    }
+
     load();
+    window.addEventListener("focus", reloadWhenVisible);
+    document.addEventListener("visibilitychange", reloadWhenVisible);
 
     return () => {
       active = false;
+      window.removeEventListener("focus", reloadWhenVisible);
+      document.removeEventListener("visibilitychange", reloadWhenVisible);
     };
   }, []);
 
@@ -650,9 +839,12 @@ export default function UnifiedEmployees() {
     }
 
     let active = true;
+    const requestId = ++payrollRequestRef.current;
 
-    async function load() {
-      setPayLoading(true);
+    async function load({ initial = false } = {}) {
+      if (initial) {
+        setPayLoading(true);
+      }
       setPayError("");
 
       try {
@@ -665,32 +857,45 @@ export default function UnifiedEmployees() {
           throw new Error("급여 목록 응답 형식이 올바르지 않습니다.");
         }
 
-        if (active) {
-          setPayrolls(response.data.data);
+        if (active && requestId === payrollRequestRef.current) {
+          setPayrolls(visiblePayrollRows(response.data.data));
+          if (initial) {
+            setSelectedEmployeeIds([]);
+          }
         }
       } catch (e) {
-        if (active) {
+        if (initial && active && requestId === payrollRequestRef.current) {
           setPayrolls([]);
+          setSelectedEmployeeIds([]);
           setPayError(apiError(e, "급여 조회에 실패했습니다."));
         }
       } finally {
-        if (active) {
+        if (initial && active && requestId === payrollRequestRef.current) {
           setPayLoading(false);
         }
       }
     }
 
-    load();
+    load({ initial: true });
+    const refreshTimer = window.setInterval(() => {
+      load();
+    }, 3000);
 
     return () => {
       active = false;
+      window.clearInterval(refreshTimer);
     };
   }, [detailTab, payMonth]);
 
   // 검색·부서·재직·계정 상태를 모두 반영한 직원 목록입니다.
+  const employeeDirectory = useMemo(
+    () => employees.filter(isVisibleEmployee),
+    [employees]
+  );
+
   const filtered = useMemo(
     () =>
-      employees.filter((emp) => {
+      employeeDirectory.filter((emp) => {
         const keyword = search.trim().toLowerCase();
         const text = [
           emp.employeeNumber,
@@ -712,7 +917,7 @@ export default function UnifiedEmployees() {
         );
       }),
     [
-      employees,
+      employeeDirectory,
       search,
       selectedDept,
       employmentStatus,
@@ -760,19 +965,21 @@ export default function UnifiedEmployees() {
     visibleEmployees.find(
       (emp) => String(emp.employeeId) === String(selectedId)
     ) ||
-    visibleEmployees[0] ||
-    null;
+    (selectedDept === "전체" ? null : visibleEmployees[0] || null);
+
+  const isIntegratedPayrollView =
+    selectedDept === "전체" && !selected;
 
   // 페이지 변경 또는 필터 변경으로 선택 직원이 사라지면
   // 현재 페이지의 첫 번째 직원 자동 선택
   useEffect(() => {
-    // 필터·페이지 변경 시 현재 페이지의 첫 직원을 상세 대상으로 유지합니다.
+    // 전체 부서에서는 직원을 자동 선택하지 않고 급여 통합관리를 표시합니다.
     const nextId = selected?.employeeId ?? null;
 
     if (String(selectedId) !== String(nextId)) {
       setSelectedId(nextId);
     }
-  }, [selectedId, selected?.employeeId]);
+  }, [selectedDept, selectedId, selected?.employeeId]);
 
   useEffect(() => {
     // 직원 삭제·필터 변경으로 페이지 수가 줄어들면 마지막 페이지로 보정합니다.
@@ -795,7 +1002,7 @@ export default function UnifiedEmployees() {
         (emp) => String(emp.departmentId) === selectedDept
       );
 
-  const working = employees.filter(
+  const working = employeeDirectory.filter(
     (emp) => emp.employmentStatus === "재직"
   ).length;
   const averageDepartmentSize = departments.length
@@ -807,19 +1014,87 @@ export default function UnifiedEmployees() {
       String(row.employeeId) === String(selected?.employeeId)
   );
 
+  // 현재 급여월의 서버 응답으로 전체 현황과 확정 가능한 대상을 계산합니다.
+  const payrollSummary = useMemo(() => {
+    const registeredPayrolls = payrolls.filter(
+      (row) => payrollIdValue(row) !== null
+    );
+
+    return {
+      employeeCount: payrolls.length,
+      grossPay: sumPayrollAmounts(registeredPayrolls, "grossPay"),
+      totalDeduction: sumPayrollAmounts(registeredPayrolls, "deduction"),
+      netPay: sumPayrollAmounts(registeredPayrolls, "netPay"),
+      missingCount: payrolls.filter(
+        (row) => payrollIdValue(row) === null
+      ).length,
+      confirmedCount: payrolls.filter(
+        (row) => row.paymentStatus === "확정"
+      ).length
+    };
+  }, [payrolls]);
+
+  const selectionCandidates = useMemo(
+    () =>
+      payrolls.filter(
+        (row) =>
+          payrollIdValue(row) !== null &&
+          (payrollSelectionStatuses.includes(row.paymentStatus) ||
+            (row.paymentStatus === "지급대기" &&
+              (row.financeDraftId === null ||
+                row.financeDraftId === undefined)))
+      ),
+    [payrolls]
+  );
+
+  const selectedActionPayrolls = useMemo(
+    () => {
+      const selectedIdSet = new Set(selectedEmployeeIds.map(Number));
+
+      return selectionCandidates.filter((row) =>
+        selectedIdSet.has(Number(row.employeeId))
+      );
+    },
+    [selectedEmployeeIds, selectionCandidates]
+  );
+
+  const selectedConfirmPayrolls = useMemo(
+    () =>
+      selectedActionPayrolls.filter(
+        (row) =>
+          payrollIdValue(row) !== null &&
+          payrollDraftSelectionStatuses.includes(row.paymentStatus)
+      ),
+    [selectedActionPayrolls]
+  );
+
+  const selectedFinancePayrolls = useMemo(
+    () =>
+      selectedActionPayrolls.filter(
+        (row) =>
+          payrollIdValue(row) !== null &&
+          (row.paymentStatus === "\uD655\uC815" ||
+            (row.paymentStatus === "지급대기" &&
+              (row.financeDraftId === null ||
+                row.financeDraftId === undefined)))
+      ),
+    [selectedActionPayrolls]
+  );
+
   /* 등록·수정 가능 여부 */
   const canEditPay =
+    isMaster &&
     !!selected &&
     selected.employmentStatus !== "퇴사" &&
     !!payroll &&
     !payLoading &&
-    !payError;
+    !payError &&
+    !payrollFinalStatuses.includes(payroll.paymentStatus);
 
   const canRegisterPay = canEditPay && payroll.payrollId === null;
   const canUpdatePay = canEditPay && payroll.payrollId !== null;
   const canViewPay =
     !!selected &&
-    selected.employmentStatus !== "퇴사" &&
     !!payroll &&
     !payLoading &&
     !payError;
@@ -839,7 +1114,7 @@ export default function UnifiedEmployees() {
     setSelectedDept(value);
     setSelectedId(null);
     setCurrentPage(1);
-    setDetailTab("info");
+    setDetailTab(value === "전체" ? "payroll" : "info");
   }
 
   function chooseEmployee(emp) {
@@ -847,6 +1122,33 @@ export default function UnifiedEmployees() {
     setModal("");
     setSelectedId(emp.employeeId);
     setDetailTab("info");
+  }
+
+  function choosePayrollEmployee(row) {
+    const employee = employees.find(
+      (item) => String(item.employeeId) === String(row?.employeeId)
+    );
+
+    if (!employee) {
+      return;
+    }
+
+    clearPayrollHistory();
+    setModal("");
+    setSearch("");
+    setSelectedDept("전체");
+    setEmploymentStatus("전체");
+    setAccountStatus("전체");
+    const employeeIndex = employeeDirectory.findIndex(
+      (item) => String(item.employeeId) === String(employee.employeeId)
+    );
+    setCurrentPage(
+      employeeIndex >= 0
+        ? Math.floor(employeeIndex / itemsPerPage) + 1
+        : 1
+    );
+    setSelectedId(employee.employeeId);
+    setDetailTab("payroll");
   }
 
   function reset() {
@@ -872,6 +1174,9 @@ export default function UnifiedEmployees() {
         departmentId: String(selected.departmentId || ""),
         phone: selected.phone || "",
         hireDate: selected.hireDate || "",
+        initialAnnualSalary: String(
+          selected.initialAnnualSalary ?? ""
+        ),
         password: ""
       });
     } else {
@@ -908,7 +1213,10 @@ export default function UnifiedEmployees() {
           email: employeeForm.email,
           phone: employeeForm.phone,
           hireDate: employeeForm.hireDate,
-          employmentStatus: employeeForm.employmentStatus
+          employmentStatus: employeeForm.employmentStatus,
+          initialAnnualSalary: Number(
+            employeeForm.initialAnnualSalary
+          )
         })
         : await createHrEmployee(employeeForm);
 
@@ -1060,17 +1368,19 @@ export default function UnifiedEmployees() {
     setPayForm(
       existed
         ? {
+          annualSalary: String(selected.initialAnnualSalary ?? 0),
           baseSalary: String(payroll.baseSalary ?? 0),
           allowance: String(payroll.allowance ?? 0),
           bonus: String(payroll.bonus ?? 0),
-          deduction: String(payroll.deduction ?? 0),
-          paymentDate: payroll.paymentDate || "",
-          paymentStatus:
-            payroll.paymentStatus === "급여 미등록"
-              ? "지급대기"
-              : payroll.paymentStatus || "지급대기"
+          otherPayment: String(payroll.otherPayment ?? 0)
         }
-        : { ...emptyPay }
+        : {
+          ...emptyPay,
+          annualSalary: String(selected.initialAnnualSalary ?? 0),
+          baseSalary: String(
+            monthlyBaseSalary(selected.initialAnnualSalary)
+          )
+        }
     );
 
      setModal("payroll");
@@ -1122,8 +1432,180 @@ export default function UnifiedEmployees() {
     setModal("payroll-statement");
   }
 
+  function togglePayrollSelection(row) {
+    const employeeId = Number(row?.employeeId);
+
+    if (!Number.isSafeInteger(employeeId) || !selectionCandidates.includes(row)) {
+      return;
+    }
+
+    setSelectedEmployeeIds((previousIds) =>
+      previousIds.includes(employeeId)
+        ? previousIds.filter((id) => id !== employeeId)
+        : [...previousIds, employeeId]
+    );
+  }
+
+  function toggleAllPayrollSelection() {
+    const selectableIds = selectionCandidates
+      .map((row) => Number(row.employeeId))
+      .filter((employeeId) => Number.isSafeInteger(employeeId));
+    const allSelected =
+      selectableIds.length > 0 &&
+      selectableIds.every((employeeId) =>
+        selectedEmployeeIds.includes(employeeId)
+      );
+
+    setSelectedEmployeeIds(allSelected ? [] : selectableIds);
+  }
+
+  async function confirmSelectedPayrolls() {
+    if (!isMaster || saving) {
+      return;
+    }
+
+    if (selectedActionPayrolls.length === 0) {
+      setNotice("급여를 확정할 직원을 선택해주세요.");
+      return;
+    }
+
+    if (
+      selectedActionPayrolls.some((row) => payrollIdValue(row) === null)
+    ) {
+      setNotice("작성중 급여만 확정할 수 있습니다.");
+      return;
+    }
+
+    if (selectedConfirmPayrolls.length === 0) {
+      setNotice("작성중 급여만 확정할 수 있습니다.");
+      return;
+    }
+
+    await bulkConfirmPayrolls(selectedConfirmPayrolls);
+  }
+
+  async function bulkConfirmPayrolls(targetPayrolls) {
+    if (!isMaster || saving || targetPayrolls.length === 0) {
+      return;
+    }
+
+    const payrollIds = targetPayrolls
+      .map(payrollIdValue)
+      .filter((payrollId) => payrollId !== null);
+    setSaving(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const previewResponse = await previewBulkConfirmHrPayrolls({
+        payMonth,
+        payrollIds,
+        actorEmployeeId: user?.employeeKey
+      });
+
+      if (!previewResponse.data.success || !previewResponse.data.data) {
+        throw new Error(
+          previewResponse.data.message || "급여 확정 전 검증에 실패했습니다."
+        );
+      }
+
+      const preview = previewResponse.data.data;
+      const confirmMessage = [
+        // [급여 흐름 수정] 급여확정 후 재무 전달은 별도 버튼으로 처리합니다.
+        `${payMonth} 승인된 추가급여를 반영하고 급여를 확정하시겠습니까?`,
+        `선택 인원: ${preview.targetCount}명`,
+        `총지급액: ${money(preview.grossPay)}`,
+        `총공제액: ${money(preview.totalDeduction)}`,
+        `총실지급액: ${money(preview.netPay)}`,
+        `자동 반영될 승인 기안 수: ${preview.autoAppliedCount}건`
+      ].join("\n");
+
+      if (!window.confirm(confirmMessage)) {
+        return;
+      }
+
+      const response = await bulkConfirmHrPayrolls({
+        payMonth,
+        payrollIds,
+        actorEmployeeId: user?.employeeKey
+      });
+
+      if (!response.data.success) {
+        throw new Error(
+          response.data.message || "급여 확정에 실패했습니다."
+        );
+      }
+
+      await reloadPayrolls();
+      setSelectedEmployeeIds([]);
+      setNotice(response.data.message || "급여가 확정되었습니다.");
+    } catch (e) {
+      setError(apiError(e, "급여 확정에 실패했습니다."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function submitPayrollsToFinance() {
+    if (!isMaster || saving || selectedFinancePayrolls.length === 0) {
+      return;
+    }
+
+    const payrollIds = selectedFinancePayrolls
+      .map(payrollIdValue)
+      .filter((payrollId) => payrollId !== null);
+    const totalGrossPay = sumPayrollAmounts(
+      selectedFinancePayrolls,
+      "grossPay"
+    );
+    const totalDeduction = sumPayrollAmounts(
+      selectedFinancePayrolls,
+      "deduction"
+    );
+    const totalNetPay = sumPayrollAmounts(selectedFinancePayrolls, "netPay");
+
+    const confirmMessage = [
+      `${payMonth} 급여를 재무로 전달하시겠습니까?`,
+      `전달 인원: ${selectedFinancePayrolls.length}명`,
+      `총지급액: ${money(totalGrossPay)}`,
+      `총공제액: ${money(totalDeduction)}`,
+      `총실지급액: ${money(totalNetPay)}`
+    ].join("\n");
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await submitHrPayrollsToFinance({
+        payMonth,
+        payrollIds,
+        actorEmployeeId: user?.employeeKey
+      });
+
+      if (!response.data.success) {
+        throw new Error(
+          response.data.message || "급여 재무 전달에 실패했습니다."
+        );
+      }
+
+      await reloadPayrolls();
+      setSelectedEmployeeIds([]);
+      setNotice(response.data.message || "급여가 재무로 전달되었습니다.");
+    } catch (e) {
+      setError(apiError(e, "급여 재무 전달에 실패했습니다."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   // 급여 목록 다시 조회
   async function reloadPayrolls() {
+    const requestId = ++payrollRequestRef.current;
     const response = await getHrPayrolls(payMonth);
 
     if (
@@ -1133,34 +1615,45 @@ export default function UnifiedEmployees() {
       throw new Error("급여 재조회에 실패했습니다.");
     }
 
-    setPayrolls(response.data.data);
+    if (requestId === payrollRequestRef.current) {
+      setPayrolls(visiblePayrollRows(response.data.data));
+      setPayError("");
+    }
+
+    return response.data.data;
   }
 
   async function savePayroll(event) {
     // 급여 ID가 있으면 수정, 없으면 등록 API를 호출합니다.
+    // 서버가 최종 금액을 다시 계산하므로 화면 계산값은 미리보기와 입력 검증에 사용합니다.
     event.preventDefault();
 
     if (!canEditPay || modal !== "payroll" || saving) {
       return;
     }
 
-    const calculation = calculatePayroll(payForm);
+    const annualSalary = Number(payForm.annualSalary);
+    const calculation = calculatePayroll({
+      ...payForm,
+      baseSalary: monthlyBaseSalary(payForm.annualSalary)
+    });
 
-    if (!calculation) {
+    if (
+      !Number.isSafeInteger(annualSalary) ||
+      annualSalary < 0 ||
+      !calculation
+    ) {
       setError(
-        "급여는 0 이상의 정수로 입력해야 하며, " +
-        "공제액은 세전 총액을 초과할 수 없습니다."
+        "연봉·지급 항목은 0 이상의 정수로 입력해야 합니다."
       );
       return;
     }
 
     const values = {
-      baseSalary: Number(payForm.baseSalary),
+      annualSalary,
       allowance: Number(payForm.allowance),
       bonus: Number(payForm.bonus),
-      deduction: Number(payForm.deduction),
-      paymentDate: payForm.paymentDate,
-      paymentStatus: payForm.paymentStatus
+      otherPayment: Number(payForm.otherPayment)
     };
 
     setSaving(true);
@@ -1185,6 +1678,7 @@ export default function UnifiedEmployees() {
       }
 
       await reloadPayrolls();
+      await refreshOrganization();
 
       setModal("");
 
@@ -1209,7 +1703,7 @@ export default function UnifiedEmployees() {
         </div>
         <ColorTeg
           title="전체 직원"
-          count={employees.length}
+          count={employeeDirectory.length}
           type="명"
           color="green"
         />
@@ -1361,7 +1855,7 @@ export default function UnifiedEmployees() {
               onClick={() => chooseDept("전체")}
             >
               <strong>전체 부서</strong>
-              <span>{employees.length}명</span>
+              <span>{employeeDirectory.length}명</span>
             </button>
 
             {departments.map((dept) => {
@@ -1441,7 +1935,11 @@ export default function UnifiedEmployees() {
                   조건에 맞는 직원이 없습니다.
                 </p>
               ) : (
-                visibleEmployees.map((emp) => (
+                visibleEmployees.map((emp) => {
+                  const displayStatus = getEmployeeDisplayStatus(emp);
+                  const statusClass = getEmployeeStatusBadgeClass(displayStatus);
+
+                  return (
                   <button
                     key={emp.employeeId}
                     type="button"
@@ -1456,14 +1954,9 @@ export default function UnifiedEmployees() {
                       <span className="employee-name-line">
                         <strong className="emp-name">{emp.name}</strong>
                         <span
-                          className={`employee-status-badge ${emp.employmentStatus === "재직"
-                            ? "active"
-                            : emp.employmentStatus === "휴직"
-                              ? "on-leave"
-                              : "retired"
-                            }`}
+                          className={`employee-status-badge ${statusClass}`}
                         >
-                          {emp.employmentStatus || "-"}
+                          {displayStatus}
                         </span>
                       </span>
                       <span>
@@ -1474,7 +1967,8 @@ export default function UnifiedEmployees() {
                       </span>
                     </span>
                   </button>
-                ))
+                  );
+                })
               )}
             </div>
 
@@ -1526,68 +2020,74 @@ export default function UnifiedEmployees() {
           {/* 오른쪽: 직원 상세정보 / 급여관리 */}
           <aside className="hr-panel employee-detail-panel">
             <div className="hr-panel-heading">
-              <h2>직원 상세정보</h2>
+              <h2>
+                {isIntegratedPayrollView ? "급여 통합관리" : "직원 상세정보"}
+              </h2>
             </div>
 
-            <div
-              className="hr-single-detail-tabs"
-              role="tablist"
-              aria-label="선택 직원 정보 종류"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={detailTab === "info"}
-                className={
-                  detailTab === "info" ? "active" : ""
-                }
-                onClick={() => setDetailTab("info")}
+            {!isIntegratedPayrollView && (
+              <div
+                className="hr-single-detail-tabs"
+                role="tablist"
+                aria-label="선택 직원 정보 종류"
               >
-                직원 상세정보
-              </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={detailTab === "info"}
+                  className={
+                    detailTab === "info" ? "active" : ""
+                  }
+                  onClick={() => setDetailTab("info")}
+                >
+                  직원 상세정보
+                </button>
 
-              <button
-                type="button"
-                role="tab"
-                aria-selected={detailTab === "payroll"}
-                className={
-                  detailTab === "payroll" ? "active" : ""
-                }
-                onClick={() => setDetailTab("payroll")}
-              >
-                급여관리
-              </button>
-            </div>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={detailTab === "payroll"}
+                  className={
+                    detailTab === "payroll" ? "active" : ""
+                  }
+                  onClick={() => setDetailTab("payroll")}
+                >
+                  급여관리
+                </button>
+              </div>
+            )}
 
-            {!selected ? (
+            {!selected && !isIntegratedPayrollView ? (
               <p className="hr-empty-state">
                 직원을 선택하면 상세정보가 표시됩니다.
               </p>
             ) : (
               <>
-                <div className="hr-detail-summary">
-                  <div>
-                    <h3>{selected.name}</h3>
-                    <p>
-                      {selected.employeeNumber} ·{" "}
-                      {selected.departmentName || "-"} ·{" "}
-                      {selected.position}
-                    </p>
+                {selected && (
+                  <div className="hr-detail-summary">
+                    <div>
+                      <h3>{selected.name}</h3>
+                      <p>
+                        {selected.employeeNumber} ·{" "}
+                        {selected.departmentName || "-"} ·{" "}
+                        {selected.position}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`status-tag ${getEmployeeDisplayStatus(selected) === "재직"
+                        ? "working"
+                        : ["휴직", "휴가"].includes(getEmployeeDisplayStatus(selected))
+                          ? "leave"
+                          : "off"
+                        }`}
+                    >
+                      {getEmployeeDisplayStatus(selected)}
+                    </span>
                   </div>
+                )}
 
-                  <span
-                    className={`status-tag ${selected.employmentStatus === "재직"
-                      ? "working"
-                      : selected.employmentStatus === "휴직"
-                        ? "leave"
-                        : "off"
-                      }`}
-                  >
-                    {selected.employmentStatus}
-                  </span>
-                </div>
-
-                {detailTab === "info" ? (
+                {detailTab === "info" && selected ? (
                   <>
                     <div className="hr-employee-detail-fields">
                       <DetailRow
@@ -1661,22 +2161,184 @@ export default function UnifiedEmployees() {
                   </>
                 ) : (
                   <>
-                    <label className="hr-single-month">
-                      급여 기준월
-                      <input
-                        type="month"
-                        value={payMonth}
-                        onChange={(e) =>
-                          setPayMonth(e.target.value)
-                        }
-                      />
-                    </label>
+                    <div className="hr-payroll-summary">
+                      <label className="hr-single-month">
+                        급여 기준월
+                        <input
+                          type="month"
+                          value={payMonth}
+                          onChange={(e) => {
+                            setPayMonth(e.target.value);
+                          }}
+                        />
+                      </label>
 
-                    {selected.employmentStatus === "퇴사" ? (
-                      <p className="hr-empty-state">
-                        현재 급여 API는 재직·휴직 직원만 조회할 수 있습니다.
-                      </p>
-                    ) : payLoading ? (
+                      {isIntegratedPayrollView &&
+                        !payLoading &&
+                        !payError && (
+                          <div className="hr-payroll-summary-items">
+                            <div className="hr-payroll-summary-item">
+                              <span>전체 대상</span>
+                              <strong>{payrollSummary.employeeCount}명</strong>
+                            </div>
+                            <div className="hr-payroll-summary-item">
+                              <span>총지급액</span>
+                              <strong>{money(payrollSummary.grossPay)}</strong>
+                            </div>
+                            <div className="hr-payroll-summary-item">
+                              <span>총공제액</span>
+                              <strong>{money(payrollSummary.totalDeduction)}</strong>
+                            </div>
+                            <div className="hr-payroll-summary-item">
+                              <span>총실지급액</span>
+                              <strong>{money(payrollSummary.netPay)}</strong>
+                            </div>
+                            <div className="hr-payroll-summary-item">
+                              <span>미등록</span>
+                              <strong>{payrollSummary.missingCount}명</strong>
+                            </div>
+                            <div className="hr-payroll-summary-item">
+                              {/* [급여 흐름 수정] 급여확정 인원입니다. */}
+                              <span>확정</span>
+                              <strong>{payrollSummary.confirmedCount}명</strong>
+                            </div>
+                          </div>
+                        )}
+                    </div>
+
+                    {isIntegratedPayrollView &&
+                      !payLoading &&
+                      !payError && (
+                      <>
+                        {payrolls.length > 0 && (
+                          <div className="hr-payroll-history-scroll">
+                            <table className="hr-payroll-history-table">
+                              <thead>
+                                <tr>
+                                  <th>
+                                    <input
+                                      type="checkbox"
+                                      aria-label="급여 작업 대상 전체 선택"
+                                      checked={
+                                        selectionCandidates.length > 0 &&
+                                        selectionCandidates.every((row) =>
+                                          selectedEmployeeIds.includes(
+                                            Number(row.employeeId)
+                                          )
+                                        )
+                                      }
+                                      onChange={toggleAllPayrollSelection}
+                                      disabled={
+                                        selectionCandidates.length === 0 ||
+                                        saving
+                                      }
+                                    />
+                                  </th>
+                                  <th>직원</th>
+                                  <th>부서</th>
+                                  <th>총지급액</th>
+                                  <th>총공제액</th>
+                                  <th>실지급액</th>
+                                  <th>상태</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {payrolls.map((row) => {
+                                  const rowPayrollId = payrollIdValue(row);
+                                  return (
+                                    <tr key={rowPayrollId || row.employeeId}>
+                                      <td>
+                                        <input
+                                          type="checkbox"
+                                          aria-label={`${row.employeeName} 급여 선택`}
+                                          checked={
+                                            selectedEmployeeIds.includes(
+                                              Number(row.employeeId)
+                                            )
+                                          }
+                                          onChange={() =>
+                                            togglePayrollSelection(row)
+                                          }
+                                          disabled={!selectionCandidates.includes(row) || saving}
+                                        />
+                                      </td>
+                                      <td>
+                                        <button
+                                          type="button"
+                                          className="hr-payroll-employee-link"
+                                          onClick={() => choosePayrollEmployee(row)}
+                                        >
+                                          {row.employeeName} ({row.employeeNumber})
+                                        </button>
+                                        {/* [급여 흐름 추가] 최종 승인된 추가급여 원본과 HR 반영 여부를 표시합니다. */}
+                                        {row.additionalPayrollDrafts?.map(draft => (
+                                          <div key={draft.draftId}>
+                                            <small>추가급여 #{draft.draftId} · {draft.title} · {draft.applied ? "급여 반영완료" : "승인 · 확정 시 반영"}</small>
+                                          </div>
+                                        ))}
+                                      </td>
+                                      <td>{row.departmentName || "-"}</td>
+                                      <td>
+                                        {rowPayrollId === null
+                                          ? "-"
+                                          : money(row.grossPay)}
+                                      </td>
+                                      <td>
+                                        {rowPayrollId === null
+                                          ? "-"
+                                          : money(row.deduction)}
+                                      </td>
+                                      <td>
+                                        {rowPayrollId === null
+                                          ? "-"
+                                          : money(row.netPay)}
+                                      </td>
+                                      <td>
+                                        {payrollStatusLabel(
+                                          row.paymentStatus,
+                                          row.financeDraftId
+                                        )}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+
+                          <div className="employee-detail-actions hr-payroll-actions">
+                          <button
+                            type="button"
+                            className="erp-primary-button"
+                            onClick={confirmSelectedPayrolls}
+                            disabled={
+                              !isMaster ||
+                              selectedConfirmPayrolls.length === 0 ||
+                              saving
+                            }
+                          >
+                            {/* [급여 흐름 수정] 확정 후 별도로 재무에 전달합니다. */}
+                            급여확정
+                          </button>
+                          <button
+                            type="button"
+                            className="erp-primary-button"
+                            onClick={submitPayrollsToFinance}
+                            disabled={
+                              !isMaster ||
+                              selectedFinancePayrolls.length === 0 ||
+                              saving
+                            }
+                          >
+                            {/* [재무 연동 수정] 승인 후 자동 조회되므로 기존 전달 버튼의 문구를 보완합니다. */}
+                            재무 전달 확인
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {payLoading ? (
                       <p role="status">
                         급여 정보를 불러오는 중입니다.
                       </p>
@@ -1687,12 +2349,15 @@ export default function UnifiedEmployees() {
                       >
                         {payError}
                       </p>
-                    ) : payroll ? (
+                    ) : isIntegratedPayrollView ? null : payroll ? (
                       <>
                         <div className="hr-employee-detail-fields">
                           <DetailRow
                             title="급여 상태"
-                            value={payroll.paymentStatus}
+                            value={payrollStatusLabel(
+                              payroll.paymentStatus,
+                              payroll.financeDraftId
+                            )}
                           />
                           <DetailRow
                             title="기본급"
@@ -1719,11 +2384,35 @@ export default function UnifiedEmployees() {
                             }
                           />
                           <DetailRow
-                            title="공제액"
+                            title="기타 지급액"
                             value={
                               payroll.payrollId === null
                                 ? "-"
-                                : money(payroll.deduction)
+                                : money(payroll.otherPayment)
+                            }
+                          />
+                          <DetailRow
+                            title="소득세 (3%)"
+                            value={
+                              payroll.payrollId === null
+                                ? "-"
+                                : money(payroll.incomeTax)
+                            }
+                          />
+                          <DetailRow
+                            title="지방소득세 (0.3%)"
+                            value={
+                              payroll.payrollId === null
+                                ? "-"
+                                : money(payroll.localIncomeTax)
+                            }
+                          />
+                          <DetailRow
+                            title="총공제액 (3.3%)"
+                            value={
+                              payroll.payrollId === null
+                                ? "-"
+                                : money(payroll.totalDeduction ?? payroll.deduction)
                             }
                           />
                           <DetailRow
@@ -1852,6 +2541,7 @@ export default function UnifiedEmployees() {
               setForm={setPayForm}
               employee={selected}
               month={payMonth}
+              payroll={payroll}
               saving={saving}
               onSave={savePayroll}
               onClose={() => setModal("")}

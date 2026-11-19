@@ -8,6 +8,7 @@ function DraftDashboard({
     receivedDrafts = [],
     approvedDrafts = []
 }) {
+    
     const savedCount = drafts.filter(
         draft => draft.status === "임시저장"
     ).length;
@@ -45,19 +46,15 @@ function DraftDashboard({
     }));
 
     return (
-        <div className="draft-box">
-            <header className="dashboard-header">
-                <span className="subtitle">전자결재 대시보드</span>
-                <div className="dashboard-top">
-                    <Link to="/main/mytesk/draft-create" className="register-btn">
-                        새 기안 작성
-                    </Link>
-                </div>
-            </header>
-
-            <p className="subtext">내 기안과 결재 현황을 한눈에 확인하세요.</p>
-
-            <section className="stats-section" aria-label="전자결재 현황">
+        <div
+            className="vertical-box size-fill"
+            style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignSelf: 'stretch',
+            }}
+        >
+            <section className="horizontal-box" style={{ flexShrink: 0 }}>
                 {summaryCards.map(card => (
                     <StatisticsCard
                         key={card.title}
@@ -68,11 +65,22 @@ function DraftDashboard({
                 ))}
             </section>
 
-            <BasicTable
-                title="최근 작성한 기안서 (최대 5건)"
-                th={["제목", "문서 종류", "작성일", "상태"]}
-                td={recentTableData}
-            />
+            <div
+                className="size-fill"
+                style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minHeight: 0,
+                    alignSelf: 'stretch'
+                }}
+            >
+                <BasicTable
+                    title="최근 작성한 기안서 (최대 5건)"
+                    th={["제목", "문서 종류", "작성일", "상태"]}
+                    td={recentTableData}
+                />
+            </div>
         </div>
     );
 }

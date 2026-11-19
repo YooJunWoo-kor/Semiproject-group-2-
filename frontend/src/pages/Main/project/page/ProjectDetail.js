@@ -7,6 +7,8 @@ import ProjectStatusTage from "../../../../components/ProjectStatusTage";
 import axios from "axios";
 import { API_BASE_URL } from "../../../../utils/authStorage";
 import NewWorkList from "./NewWorkList";
+import EmployeeTage from "../../../../components/EmployeeTag";
+
 
 // 프로젝트 세부
 function ProjectDetail({ project, onClose }) {
@@ -15,21 +17,15 @@ function ProjectDetail({ project, onClose }) {
   
     // 프로젝트 전환 시 선택된 할 일 초기화 (해당 프로젝트의 첫 할 일이 있으면 선택, 없으면 null)
     // 신규 할 일 등록
-    const [leader, setleader] = useState('');
     const [member, setMember] = useState([]);
 
     const getLeader = async()=>{
-      let data = await axios.post(
-        API_BASE_URL+'/project/get_employee',
-        {employee_id : project.employee_id}
-      );
 
       let getProjectMember = await axios.post(
         API_BASE_URL+'/project/get_project_member',
         {projectID: project.project_id}
       );
 
-      setleader( data.data.data[0]);
       setMember( getProjectMember.data.data );
     }
 
@@ -38,7 +34,7 @@ function ProjectDetail({ project, onClose }) {
     },[]);
 
     return (
-      <div>
+      <div  style={{width: '400px'}}>
         <header className="horizontal-box" style={{marginBottom:'20px', marginTop:'10px'}}>
           <div>
             {/* 스케쥴 상태 스테이터스 */}
@@ -56,16 +52,14 @@ function ProjectDetail({ project, onClose }) {
           {/* 참여인원 */}
           <section className="vertical-box boder" style={{padding:"20px"}}>
             <div className="horizontal-box">
-              <strong style={{width:'70px'}}> 담당자 </strong>
-              <MemberLayout member={leader}/>
+              <EmployeeTage id = {project.employee_id}/>
             </div>
             <div className="horizontal-box">
               <strong style={{width:'70px'}}>참여자 ({member?.length || 0})</strong>
               <div style={{ display: "flex", gap: "5px" }}>
-                {member &&
-                  member.map((member, index) => (
-                    <MemberLayout key={index} member={member}/>
-                  ))}
+                {member && member.map((item)=>(
+                  <EmployeeTage id = {item.employee_id}/>
+                ))}
               </div>
             </div>
           </section>
@@ -110,7 +104,7 @@ function ProjectDetail({ project, onClose }) {
                 <ProjectWorkDetail
                   projectID={selectTask}
                 />:
-                <NewWorkList />
+                <NewWorkList projectID = {project.project_id}/>
               }
             </div>
           </section>
@@ -120,23 +114,10 @@ function ProjectDetail({ project, onClose }) {
               style={{
                 marginLeft:'auto'
               }}
+              onClick = {()=>{onClose()}}
             > 닫기</button>
           </div>
         </div>
-      </div>
-    );
-  }
-  
-  function MemberLayout({member}){
-    return(
-      <div
-        key={member.id}
-        className="attendee-tag"
-      >
-        <strong style={{ fontSize: "14px" }}>{member.name}</strong>
-        <span style={{ fontSize: "12px", marginTop: "2px", paddingRight: "5px"}}>
-          {member.position}
-        </span>
       </div>
     );
   }

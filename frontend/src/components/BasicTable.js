@@ -8,7 +8,8 @@ function BasicTable({ title, th, td = [] }) {
     return (
         <div className="attendance-card" style={{
             maxWidth: "100%",
-            paddingBottom: "30px"
+            paddingBottom: "30px",
+            minHeight: "300px"
         }}>
             <h4 style={{ marginBottom: "0px" }}>{title ?? "테이블제목"}</h4>
             <div className="table-shell">
@@ -21,19 +22,18 @@ function BasicTable({ title, th, td = [] }) {
                         </tr>
                     </thead>
 
-                    <tbody>
-                        {!td ?
-                            <tr
-                                style={{
-                                    height:'200px'
-                                }}
-                            ><td
-                                colSpan={th.length}
-                                style={{
-                                    textAlign: 'center'
+                    {!td ?
+                        <tr
+                            style={{
+                                height:'200px'
+                            }}
+                        ><td
+                            colSpan={th.length}
+                            style={{
+                                textAlign: 'center'
 
-                                }}
-                            >등록된 정보가 없습니다.</td></tr>
+                            }}
+                        >등록된 정보가 없습니다.</td></tr>
 
                             : td.map((item)=>{
                                 return <tr>{item.content.map((item, index)=>(
@@ -44,7 +44,6 @@ function BasicTable({ title, th, td = [] }) {
                                     }}>{item}</td>
                                 ))}</tr>
                         })}
-                    </tbody>
 
                 </table>
             </div>

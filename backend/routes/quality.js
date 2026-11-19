@@ -66,7 +66,6 @@ router.post("/products", (req, res) => {
         const {
             productCode,
             productName,
-            productType,
             company,
             price,
             stock,
@@ -150,8 +149,75 @@ router.post("/products", (req, res) => {
     });
 });
 
+
+router.get("/calendar/events", (req, res) => {
+    const sql = `
+        SELECT
+            CONCAT('planned-', p.product_id) AS event_id,
+            p.product_id,
+            p.product_code,
+            p.product_name,
+            DATE_FORMAT(p.next_inspection_date, '%Y-%m-%d') AS event_date,
+
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM quality_inspections h
+                    WHERE h.product_id = p.product_id
+                )
+                THEN '재검사 예정'
+                ELSE '검사 예정'
+            END AS event_type,
+
+            COALESCE((
+                SELECT i.quality_status
+                FROM quality_inspections i
+                WHERE i.product_id = p.product_id
+                ORDER BY i.created_at DESC, i.inspection_id DESC
+                LIMIT 1
+            ), '미실시') AS quality_status
+
+        FROM quality_products p
+        WHERE p.next_inspection_date IS NOT NULL
+
+        UNION ALL
+
+        SELECT
+            CONCAT('completed-', i.inspection_id) AS event_id,
+            p.product_id,
+            p.product_code,
+            p.product_name,
+            DATE_FORMAT(i.created_at, '%Y-%m-%d') AS event_date,
+            '검사 완료' AS event_type,
+            i.quality_status
+
+        FROM quality_inspections i
+        INNER JOIN quality_products p
+            ON p.product_id = i.product_id
+
+        WHERE i.created_at IS NOT NULL
+          AND i.quality_status IN ('통과', '불합격')
+
+        ORDER BY event_date, event_id
+    `;
+
+    db.query(sql, (err, rows) => {
+        if (err) {
+            console.error("품질 캘린더 조회 오류:", err);
+            return res.status(500).json({
+                message: "품질 검사 일정을 불러오지 못했습니다."
+            });
+        }
+
+        res.json(rows);
+    });
+    // concat product_id와 해당 문자열 합치는 것
+});
+
+
     
 router.post('/inspections', (req, res) => {
+    console.log('체크리스트 저장 시작')
 
     const {
         productId, inspector,
@@ -191,6 +257,9 @@ router.post('/inspections', (req, res) => {
             item.custom ? 1 : 0
         ]);
 
+        console.log('체크리스트 저장 성공',result);
+        console.log('체크리스트 저장 성공',items);
+
         const itemSql = `
             INSERT INTO quality_inspection_items
             (inspection_id, item_name, description, result, is_custom)
@@ -207,6 +276,41 @@ router.post('/inspections', (req, res) => {
 
             res.status(201).json({ message: "저장 완료" });
         });
+    });
+});
+
+
+router.patch("/products/:id/next-inspection", (req, res) => {
+    const productId = Number(req.params.id);
+    const { nextInspectionDate } = req.body;
+
+    // 제품 ID 검사
+    if (!Number.isInteger(productId) || productId <= 0) {
+        return res.status(400).json({ message: "잘못된 제품 ID입니다." });
+    }
+
+    // 날짜 형식 검사 (빈 값은 허용)
+    if (nextInspectionDate && !/^\d{4}-\d{2}-\d{2}$/.test(nextInspectionDate)) {
+        return res.status(400).json({ message: "날짜 형식이 올바르지 않습니다." });
+    }
+
+    const sql = `
+        UPDATE quality_products
+        SET next_inspection_date = ?
+        WHERE product_id = ?
+    `;
+
+    db.query(sql, [nextInspectionDate || null, productId], (err, result) => {
+        if (err) {
+            console.error("검사 일정 저장 오류:", err);
+            return res.status(500).json({ message: "검사 일정 저장 실패" });
+        }
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "제품이 존재하지 않습니다." });
+        }
+
+        res.json({ message: "검사 일정 저장 완료" });
     });
 });
 
@@ -233,6 +337,7 @@ router.post('/inspections', (req, res) => {
                 p.stock,
                 p.image_url,
                 p.variant_text,
+                DATE_FORMAT(p.next_inspection_date, '%Y-%m-%d') AS next_inspection_date,
                 COALESCE(i.quality_status, '미실시') AS quality_status,
                 DATE_FORMAT(i.created_at, '%Y-%m-%d / %H:%i:%s') AS created_at,
                 i.inspector,

@@ -4,8 +4,7 @@ import { API_BASE_URL, getLoginUser } from "../../../../utils/authStorage";
 import { useNavigate } from "react-router-dom";
 import PaginationTable from "../../../../components/PaginationTable";
 import ModalBase from "../../../../components/ModalBase";
-
-
+import DraftStatusTag from "./DraftStatusTag";
 
 function DraftReq({ drafts, setEditingDraft, onDraftChanged }) {
     const [searchText, setSearchText] = useState("");
@@ -39,17 +38,14 @@ function DraftReq({ drafts, setEditingDraft, onDraftChanged }) {
         }
 
         try{
-            await axios.delete(`${API_BASE_URL}/drafts/cancel/${draftId}/${employeeId}`
-            );
-
+            await axios.delete(`${API_BASE_URL}/drafts/cancel/${draftId}/${employeeId}`);
             await onDraftChanged();
-            
         }
         catch (error){
             console.error("요청 취소 오류:", error);
             alert(error.response?.data?.message || "결재 요청 취소에 실패했습니다.");
         }
-    }
+    };
 
     return (
         <div className="draft-box draft-list-view" data-page="draft-request">
@@ -65,21 +61,19 @@ function DraftReq({ drafts, setEditingDraft, onDraftChanged }) {
             <PaginationTable
                 title="내 결재 요청"
                 th={["제목", "문서 종류", "작성일", "상태", "관리"]}
-                
                 allData={requestedDrafts.map(draft => ({
                     content: [
                         <button
                             type="button"
                             className="table-link-title"
                             onClick={() => setSelectedDraft(draft)}
+                            style={{border:'0px'}}
                         >
                             {draft.title}
                         </button>,
-
                         draft.draftType,
                         draft.createdAt,
-                        draft.status,
-
+                        <DraftStatusTag status={draft.status} />,
                         draft.status === "임시저장" ? (
                             <div className="draft-actions">
                                 <button
@@ -99,37 +93,36 @@ function DraftReq({ drafts, setEditingDraft, onDraftChanged }) {
                                     삭제
                                 </button>
                             </div>
-                        ) : draft.status === "결재대기" ? (<button onClick={() => CancelReq(draft.id)}>요청취소</button>) : null
+                        ) : draft.status === "결재대기" ? (
+                            <button onClick={() => CancelReq(draft.id)}>요청취소</button>
+                        ) : null
                     ]
                 }))}
-
                 itemsPerPage={5}
             />
 
-        {selectedDraft && (
-            <ModalBase
-                title="기안서 상세내용"
-                onClose={() => setSelectedDraft(null)}
-                layout={
-                    <div className="draft-box">
-                        <div className="draft-item">
-                            <h3 className="draft-item-title">
-                                {selectedDraft.title}
-                            </h3>
-
-                            <p>문서 종류 : {selectedDraft.draftType}</p>
-                            <p>작성일 : {selectedDraft.createdAt}</p>
-                            <p>상태 : {selectedDraft.status}</p>
-                            <hr />
+            {selectedDraft && (
+                <ModalBase
+                    title={selectedDraft.title}
+                    onClose={() => setSelectedDraft(null)}
+                    layout={
+                        <div style={{width:'550px'}}>
+                            <div className="horizontal-box" style={{fontSize:"13px"}}>
+                                <DraftStatusTag status={selectedDraft.status} />
+                                {selectedDraft.createdAt}
+                            </div>
+                            <hr style={{margin:"20px 0 50px"}}/>
                             <h4>기안 내용</h4>
-                            <p>
-                                {selectedDraft.content || "등록된 내용이 없습니다."}
-                            </p>
+                            <div style={{padding: "10px 30px", minHeight:"300px"}}>
+                                <p>문서 종류 : {selectedDraft.draftType}</p>
+                                <p>
+                                    {selectedDraft.content || "등록된 내용이 없습니다."}
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                }
-            />
-        )}
+                    }
+                />
+            )}
         </div>
     );
 }

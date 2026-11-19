@@ -50,7 +50,7 @@ function toDraft(draft, loginUser) {
 }
 
 function MyTeskList() {
-     const [editingDraft, setEditingDraft] = useState(null);
+    const [editingDraft, setEditingDraft] = useState(null);
     const [drafts, setDrafts] = useState([]);
     const [receivedDrafts, setReceivedDrafts] = useState([]);
     const [approvedDrafts, setApprovedDrafts] = useState([]);
@@ -83,12 +83,10 @@ function MyTeskList() {
     }, [loadDrafts]);
 
     const urlList = [
-        { name: "출결관리", url: mainUrl },
-        {name : "전자결재 대시보드", url: mainUrl + "/draft-dashboard"},
+        { name: "대시보드", url: mainUrl },
         { name: "기안 작성", url: mainUrl + "/draft-create" },
         { name: "내 결재 요청", url: mainUrl + "/draft-request" },
         { name: "결재할 문서", url: mainUrl + "/draft-received" },
-        { name: "결재 완료", url: mainUrl + "/draft-approved" }
     ];
 
     return (
@@ -99,8 +97,15 @@ function MyTeskList() {
                 <Routes>
                     <Route index element={
                         <div>
-                            <h2>출결관리</h2>
-                            <ADComp />
+                            <h2>내 업무 관리</h2>
+                            <div className="horizontal-box">
+                                <DraftDashboard
+                                    drafts={drafts}
+                                    receivedDrafts={receivedDrafts}
+                                    approvedDrafts={approvedDrafts}
+                                />
+                                <ADComp />
+                            </div>
                         </div>
                     } />
                     <Route path="draft-create" element={
@@ -116,13 +121,8 @@ function MyTeskList() {
                         <DraftReq drafts={drafts} setEditingDraft={setEditingDraft} onDraftChanged={loadDrafts} />
                     } />
                     <Route path="draft-received" element={
-                        <DraftReceived drafts={receivedDrafts} onDraftChanged={loadDrafts} />
+                        <DraftReceived drafts={receivedDrafts} appDrafts={approvedDrafts} onDraftChanged={loadDrafts} />
                     } />
-                    <Route path="draft-approved" element={
-                        <DraftApproved drafts={approvedDrafts} />
-                    } />
-
-                    <Route path="draft-dashboard" element = { <DraftDashboard drafts={drafts} receivedDrafts={receivedDrafts} approvedDrafts={approvedDrafts}/>}/>
                 </Routes>
             </div>
         </div>
@@ -130,3 +130,45 @@ function MyTeskList() {
 }
 
 export default MyTeskList;
+
+
+export function MainDraftDashbord(){
+    const [drafts, setDrafts] = useState([]);
+    const [receivedDrafts, setReceivedDrafts] = useState([]);
+    const [approvedDrafts, setApprovedDrafts] = useState([]);
+    const loginUser = getLoginUser();
+    const employeeId = Number(loginUser?.employeeKey);
+
+    const loadDrafts = useCallback(async () => {
+        if (!Number.isSafeInteger(employeeId) || employeeId <= 0) return;
+        try {
+            const currentUser = getLoginUser();
+            const [mine, received, approved] = await Promise.all([
+                axios.get(`${API_BASE_URL}/drafts`, { params: { employeeId } }),
+                axios.get(`${API_BASE_URL}/drafts/received/list`, { params: { employeeId } }),
+                axios.get(`${API_BASE_URL}/drafts/approved/list`, { params: { employeeId } })
+            ]); // 서버에 get 요청 3개를 한꺼번에 보내고 모든걸로 부터 응답이 오면 밑 코드를 실행
+            setDrafts(mine.data.map(row => toDraft(row, currentUser)));
+            setReceivedDrafts(received.data.map(row => toDraft(row, currentUser)));
+            setApprovedDrafts(approved.data.map(row => toDraft(row, currentUser)));
+        } catch (error) {
+            console.error("기안서 목록 조회 오류:", error);
+        }
+    }, [employeeId]);
+
+    useEffect(() => {
+        loadDrafts();
+    }, [loadDrafts]);
+    return(
+        <div className="border-container">
+            <header class="dashboard-header">
+                <span class="subtitle">내업무 관리</span>
+            </header>
+            <DraftDashboard
+                        drafts={drafts}
+                        receivedDrafts={receivedDrafts}
+                        approvedDrafts={approvedDrafts}
+                    />
+        </div>
+    );
+}
