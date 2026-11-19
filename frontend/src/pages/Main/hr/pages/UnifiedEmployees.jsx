@@ -1886,10 +1886,6 @@ export default function UnifiedEmployees() {
                       부서장: {dept.managerName}
                     </small>
                   )}
-
-                  {dept.description && (
-                    <small>{dept.description}</small>
-                  )}
                 </button>
               );
             })}
