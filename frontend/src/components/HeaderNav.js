@@ -5,24 +5,24 @@ import DepEmpList from "./DepEmpList";
 import axios from "axios";
 import { API_BASE_URL } from "../utils/authStorage";
 import { saveLoginUser } from "../utils/authStorage";
+import { Bell } from "lucide-react";
 
 //헤더모듈
 
-function HeaderNav() {
-    //  페이지 이동 기능 사용
-    const navigate = useNavigate();
-    // 로그아웃 함수 정의
-    const handleLogout = () => {
-        localStorage.removeItem("loginUser");
-        alert('로그아웃 되었습니다.');
-        navigate('/');
-    };
+    function HeaderNav({ notifications = [], onReadNotification }) {
+        const [isBellOpen, setIsBellOpen] = useState(false);
+    
+        const unreadNotifications = notifications.filter(
+        notification => !notification.read
+    );
+  
+    // 아래에 기존 HeaderNav 코드 유지
 
     const [ShowAccountModal, setShowAccountModal] = useState(false);
     const [departments, setDepartments] = useState([]);
     const [selectedDepartment, setSelectedDepartment] = useState("");
     const [selectedEmployee, setSelectedEmployee] = useState(null);
-    
+
 
 
     useEffect(() => {
@@ -79,7 +79,7 @@ function HeaderNav() {
     // 디버깅용 consol창
 
     const handleChangeAccount = () => {
-        if(!selectedEmployee) {
+        if (!selectedEmployee) {
             alert("직원을 선택해주세요.");
             return;
         }
@@ -111,7 +111,61 @@ function HeaderNav() {
                 {/* <NavLink to="/main/crm">고객관리</NavLink> */}
                 <NavLink to="/main/community">커뮤니티</NavLink>
 
-                <NavLink to="/main/mytesk" className='mypage-link'>내업무 관리</NavLink>
+                <div className="header-work-menu">
+                    <div className="header-bell-wrap">
+                        <button
+                            type="button"
+                            className="header-bell-button"
+                            aria-label="일정 알림"
+                            aria-expanded={isBellOpen}
+                            onClick={() => setIsBellOpen(!isBellOpen)}
+                        >
+                            <Bell size={21} />
+
+                            {unreadNotifications.length > 0 && (
+                                <span className="header-bell-count">
+                                    {unreadNotifications.length > 99
+                                        ? "99+"
+                                        : unreadNotifications.length}
+                                </span>
+                            )}
+                        </button>
+
+                        {isBellOpen && (
+                            <div className="header-alarm-dropdown">
+                                <div className="header-alarm-title">
+                                    <strong>읽지 않은 알림</strong>
+                                    <button type="button" onClick={() => setIsBellOpen(false)}>
+                                        ×
+                                    </button>
+                                </div>
+
+                                {unreadNotifications.length === 0 ? (
+                                    <p className="header-alarm-empty">
+                                        읽지 않은 알림이 없습니다.
+                                    </p>
+                                ) : (
+                                    unreadNotifications.map((notification) => (
+                                        <button
+                                            key={notification.id}
+                                            type="button"
+                                            className="header-alarm-item"
+                                            onClick={() => onReadNotification?.(notification.id)}
+                                        >
+                                            <strong>{notification.title}</strong>
+                                            <span>{notification.message}</span>
+                                        </button>
+                                    ))
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    <NavLink to="/main/mytesk" className="mypage-link">
+                        내업무 관리
+                    </NavLink>
+                </div>
+
                 <div className="erp-header-user">
                     {/* 접속자 클릭 시 마이페이지 이동 */}
                     <NavLink to="/main/profile" className="profil-icon">
