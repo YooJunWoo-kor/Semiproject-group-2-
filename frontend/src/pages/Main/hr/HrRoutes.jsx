@@ -4,7 +4,6 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Dashboard from "./Dashboard.jsx";
 import UnifiedEmployees from "./pages/UnifiedEmployees.jsx";
 import Attendance from "./pages/Attendance.js";
-import SystemSettings from "./pages/SystemSettings.jsx";
 import Nav from "../../../components/Nav.js";
 import "./HR.css";
 
@@ -15,8 +14,7 @@ export default function HrRoutes() {
   const urlList = [
     { name: "대시보드", url: mainUrl + "/" },
     { name: "근태·휴가 관리", url: mainUrl + "/attendance" },
-    { name: "인사·조직 통합관리", url: mainUrl + "/employees" },
-    { name: "시스템 품목관리", url: mainUrl + "/settings" }
+    { name: "인사·조직 통합관리", url: mainUrl + "/employees" }
   ];
 
   return (
@@ -44,10 +42,6 @@ export default function HrRoutes() {
         <Route
           path="attendance"
           element={<Attendance />}
-        />
-        <Route
-          path="settings"
-          element={<SystemSettings />}
         />
       </Routes>
     </div>

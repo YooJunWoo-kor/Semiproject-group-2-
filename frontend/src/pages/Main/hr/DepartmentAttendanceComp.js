@@ -120,7 +120,7 @@ export default function DepartmentAttendanceComp({ today }) {
     }, [today, selectedDepartmentId]);
 
     return (
-        <div className="boder" style={{padding:'30px', paddingBottom:'100px'}}>
+        <div className="boder hr-department-attendance" style={{padding:'30px', paddingBottom:'100px'}}>
             <h2>부서 출결현황</h2>
             <div className="grouborad">
                 <ul className="grouplist">
@@ -193,7 +193,9 @@ export default function DepartmentAttendanceComp({ today }) {
                                                 className={`status-tag ${
                                                     attendance.status === '정상'
                                                         ? 'working'
-                                                        : 'off'
+                                                        : attendance.status === '휴가'
+                                                            ? 'leave'
+                                                            : 'off'
                                                 }`}
                                             >
                                                 {attendance.status}

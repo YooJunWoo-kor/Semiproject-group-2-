@@ -6,7 +6,7 @@ import GetPopover from '../../../components/GetPopover';
 import DepartmentList from "../../../components/DepartmentList";
 
 
-function ScheduleModalPopup({onClose}){
+function ScheduleModalPopup({onClose, setSubmit}){
     //오늘날짜 가져오기
     let today = getTodayString();
   
@@ -48,8 +48,8 @@ function ScheduleModalPopup({onClose}){
     const onSubmit = async function(e){
       e.preventDefault();
   
-      let startTime = startTimeH + ':' + startTimeM + ':00'
-      let endTime = endTimeH + ':' + endTimeM + ':00'
+      let startTime = (startTimeH === '시' ? '09' : startTimeH) + ':' + (startTimeM === '분' ? '00' : startTimeM) + ':00';
+      let endTime = (endTimeH === '시' ? '18' : endTimeH) + ':' + (endTimeM === '분' ? '00' : endTimeM) + ':00';
   
       const userID = getLoginUser().employeeKey;
       try {
@@ -74,6 +74,7 @@ function ScheduleModalPopup({onClose}){
   
           if( response.data.status){
             alert( response.data.message );
+            if (setSubmit) setSubmit();
             onClose();
           }
       } catch (error) {
@@ -87,6 +88,8 @@ function ScheduleModalPopup({onClose}){
           alert('요청중 에러가 발생했습니다.')
         }
       }
+
+      setSubmit();
     };
     
     return (

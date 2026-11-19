@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { getLoginUser } from "../utils/authStorage";
+import { getLoginUser, API_BASE_URL, LOGIN_USER_KEY } from "../utils/authStorage";
 import DateCount from "./DateCount";
-import { API_BASE_URL, LOGIN_USER_KEY } from '../utils/authStorage'
 import axios from "axios";
 
 //출근데이터 생성
@@ -13,9 +12,9 @@ async function setAttendens(){
         throw new Error(response.data?.message || '출근 처리 실패');
     }
 }
- 
+
 //퇴근데이터 생성 및 처리
-async function updateAttendens(){
+async function updateAttendens() {
     const userInfo = localStorage.getItem(LOGIN_USER_KEY);
     const userID = JSON.parse(userInfo).employeeKey;
     const response = await axios.post(API_BASE_URL + '/AD/updateAttendens', { userID });
@@ -25,9 +24,9 @@ async function updateAttendens(){
 }
 
 //출결관리 보드입니다.
-function ADBord({dataSet, btnStl}){
+function ADBord({ dataSet, btnStl }) {
     let setStyle = btnStl != null ? btnStl : 0;
-    dataSet = dataSet == null ? function(){} : dataSet;
+    dataSet = dataSet == null ? function () { } : dataSet;
     const user = getLoginUser();
     const userName = user?.name;
     const [isAttend, setAttend] = useState(setStyle);
@@ -45,6 +44,29 @@ function ADBord({dataSet, btnStl}){
         }
     }, [btnStl]);
 
+    // 버튼을 누른 현재 시각으로 판별합니다.
+    function checkAttendance(type) {
+        const now = new Date();
+        const time =
+            now.getHours() * 3600 +
+            now.getMinutes() * 60 +
+            now.getSeconds();
+
+        const result = [];
+
+        if (type === '출근') {
+            result.push('출근');
+            if (time > 9 * 3600) result.push('지각'); 
+        }
+
+        if (type === '퇴근') {
+            if (time < 18 * 3600) result.push('조퇴'); 
+            if (time > 18 * 3600) result.push('퇴근');
+            if (time > 19 * 3600) result.push('야근');
+        }
+
+        return result;
+    }
     useEffect(() => {
         loadSummary();
         loadLeave();
@@ -91,21 +113,21 @@ function ADBord({dataSet, btnStl}){
     }
 
     return (
-        <div className="attendance-card" style={{maxWidth: '250px'}}>
+        <div className="attendance-card" style={{ maxWidth: '250px' }}>
             <div className="attendance-card-header">
-            <span className="attendance-badge">근태 관리</span>
+                <span className="attendance-badge">근태 관리</span>
             </div>
-    
+
             {/* 인사말(좌)과 현재시각(우)을 한 줄에 배치 */}
             <div className="attendance-info-row">
-            <div className="attendance-user-info">
-                <span className="user-greeting">반갑습니다, </span>
-                <strong className="user-name">{userName}</strong>님
+                <div className="attendance-user-info">
+                    <span className="user-greeting">반갑습니다, </span>
+                    <strong className="user-name">{userName}</strong>님
+                </div>
+                {/* 숫자카운트 */}
+                <DateCount />
             </div>
-            {/* 숫자카운트 */}
-            <DateCount />
-            </div>
-    
+
             {/* 우측 하단에 정렬되는 출근 버튼 */}
             <div className="attendance-action-group">
                 {isAttend == 0 ?
@@ -169,14 +191,14 @@ function ADBord({dataSet, btnStl}){
             {
                 isAttend == 2 ?
                     <div style={{
-                        fontSize:'13px'
+                        fontSize: '13px'
                         , color: '#aaa'
                     }}>
-                        오늘하루도<br/>
-                        고생많으셨습니다,<br/>
+                        오늘하루도<br />
+                        고생많으셨습니다,<br />
                         안녕히 가십쇼 :)
                     </div>
-                : <div></div>
+                    : <div></div>
             }
         </div>
     );

@@ -87,20 +87,21 @@ router.post('/payrolls/:month/payments', async (req, res) => {
             seenEmployees.add(Number(row.employee_id));
         }
         for (const row of unpaid) {
-            if (row.payment_status !== '지급대기') fail(409, '지급대기 상태의 급여만 일괄 지급할 수 있습니다.');
+            if (!['확정', '승인', '지급대기'].includes(row.payment_status)) fail(409, '지급대기 상태의 급여만 일괄 지급할 수 있습니다.');
             const base = integer(row.base_salary, '기본급');
             const allowance = integer(row.allowance, '수당');
             const bonus = integer(row.bonus, '상여금');
+            const other = integer(row.other_payment || 0, '기타 지급액');
             const gross = integer(row.gross_pay, '세전 급여');
             const deduction = integer(row.deduction, '공제액');
             const net = integer(row.net_pay, '실지급액');
-            if (base + allowance + bonus !== gross || gross - deduction !== net || net <= 0) fail(409, '급여 계산이 일치하지 않거나 실지급액이 0원입니다. 급여를 확인해 주세요.');
+            if (base + allowance + bonus + other !== gross || gross - deduction !== net || net <= 0) fail(409, '급여 계산이 일치하지 않거나 실지급액이 0원입니다. 급여를 확인해 주세요.');
             netTotal += net;
             deductionTotal += deduction;
             if (!Number.isSafeInteger(netTotal) || !Number.isSafeInteger(deductionTotal)) fail(409, '급여 합계가 처리 범위를 초과했습니다.');
             const [links] = await connection.execute(queries.selectPayments, [row.payroll_id]);
             if (links.length) fail(409, '이미 지급 이력이 있는 급여입니다. 다시 지급할 수 없습니다.');
-            const [trades] = await connection.execute(queries.selectTradeTransactions, [row.draft_id]);
+            const [trades] = await connection.execute(queries.selectTradeTransactions, [row.draft_id ?? 0]);
             if (trades.length) fail(409, '이미 일반 거래로 연결된 기안서입니다. 기존 거래의 지급 이력을 확인해 주세요.');
         }
         if (netTotal !== expected) fail(409, '조회 후 급여 금액이나 지급 상태가 변경되었습니다. 새로고침 후 다시 확인해 주세요.');
@@ -114,8 +115,8 @@ router.post('/payrolls/:month/payments', async (req, res) => {
             [balance - netTotal, payment_date, payment_date, accountId]);
         for (const row of unpaid) {
             const snapshot = {
-                pay_month: month, employee_id: Number(row.employee_id), draft_id: Number(row.draft_id),
-                base_amount: Number(row.base_salary), allowance_amount: Number(row.allowance), bonus_amount: Number(row.bonus),
+                pay_month: month, employee_id: Number(row.employee_id), draft_id: row.draft_id == null ? null : Number(row.draft_id),
+                base_amount: Number(row.base_salary), allowance_amount: Number(row.allowance), bonus_amount: Number(row.bonus), other_payment_amount: Number(row.other_payment || 0),
                 gross_amount: Number(row.gross_pay), deduction_amount: Number(row.deduction), net_amount: Number(row.net_pay),
                 deduction_status: '납부대기', registered_by: employeeId
             };

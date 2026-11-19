@@ -1,4 +1,164 @@
 const db = require('../db');
+const promiseDb = db.promise();
+const {
+    validateAdditionalPayroll
+} = require('../services/additionalPayroll');
+
+async function hasDraftApprovalStepsTable() {
+    const [rows] = await promiseDb.query(
+        `SELECT 1
+         FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'draft_approval_steps'
+         LIMIT 1`
+    );
+
+    return rows.length > 0;
+}
+
+function parseDetailData(value) {
+    if (!value) return {};
+    if (typeof value === 'object' && !Array.isArray(value)) return value;
+    if (typeof value !== 'string') return {};
+
+    try {
+        const parsed = JSON.parse(value);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+            ? parsed
+            : {};
+    } catch (error) {
+        return {};
+    }
+}
+
+function parseDate(value) {
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return null;
+    }
+
+    const date = new Date(`${value}T00:00:00Z`);
+
+    return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value
+        ? null
+        : date;
+}
+
+function leaveDays(startDate, endDate) {
+    const start = parseDate(startDate);
+    const end = parseDate(endDate);
+
+    if (!start || !end || start > end) return null;
+    return ((end.getTime() - start.getTime()) / 86400000) + 1;
+}
+
+async function ensureLeaveDetail(draftId, documentType, detailData) {
+    if (documentType !== '휴가') return;
+
+    const days = leaveDays(detailData.startDate, detailData.endDate);
+    if (!days) {
+        throw new Error('휴가 시작일과 종료일이 올바르지 않습니다.');
+    }
+
+    const [existingRows] = await promiseDb.query(
+        `SELECT leave_id
+         FROM draft_leave
+         WHERE draft_id = ?
+         LIMIT 1
+         FOR UPDATE`,
+        [draftId]
+    );
+
+    if (existingRows.length > 0) return;
+
+    await promiseDb.query(
+        `INSERT INTO draft_leave (
+            draft_id,
+            start_date,
+            end_date,
+            leave_days
+         ) VALUES (?, ?, ?, ?)`,
+        [draftId, detailData.startDate, detailData.endDate, days]
+    );
+}
+
+async function persistExpenseDetail(draftId, documentType, detailData) {
+    if (documentType !== '비용') return;
+
+    const items = Array.isArray(detailData.expenseItems)
+        ? detailData.expenseItems
+        : [];
+    const validItems = items.filter((item) =>
+        parseDate(item?.useDate) &&
+        Number.isSafeInteger(Number(item?.amount)) &&
+        Number(item.amount) > 0
+    );
+
+    if (validItems.length === 0) {
+        throw new Error('비용 내역이 없습니다.');
+    }
+
+    const [existingRows] = await promiseDb.query(
+        `SELECT expense_id
+         FROM draft_expense
+         WHERE draft_id = ?
+         LIMIT 1
+         FOR UPDATE`,
+        [draftId]
+    );
+
+    if (existingRows.length > 0) return;
+
+    await promiseDb.query(
+        `INSERT INTO draft_expense (draft_id, expense_date, amount)
+         VALUES ?`,
+        [validItems.map((item) => [draftId, item.useDate, Number(item.amount)])]
+    );
+}
+
+async function applyLeaveAttendance(draftId, employeeId, detailData) {
+    const start = parseDate(detailData.startDate);
+    const end = parseDate(detailData.endDate);
+
+    if (!start || !end || start > end) {
+        throw new Error('휴가 기간이 올바르지 않습니다.');
+    }
+
+    const memo = `휴가 기안 ${draftId}`;
+    const cursor = new Date(start);
+
+    while (cursor <= end) {
+        const workDate = cursor.toISOString().slice(0, 10);
+        const [rows] = await promiseDb.query(
+            `SELECT attendance_status AS attendanceStatus, memo
+             FROM attendance
+             WHERE employee_id = ? AND work_date = ?
+             FOR UPDATE`,
+            [employeeId, workDate]
+        );
+
+        if (rows.length > 0) {
+            const sameLeave = rows.some(
+                (row) => row.attendanceStatus === '휴가' && row.memo === memo
+            );
+
+            if (!sameLeave) {
+                throw new Error(`${workDate} 근태 기록과 휴가 기간이 충돌합니다.`);
+            }
+        } else {
+            await promiseDb.query(
+                `INSERT INTO attendance (
+                    employee_id,
+                    work_date,
+                    attendance_status,
+                    memo
+                 ) VALUES (?, ?, '휴가', ?)`,
+                [employeeId, workDate, memo]
+            );
+        }
+
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+}
 
 class Draft {
     static getLeaveDrafts() {
@@ -115,86 +275,63 @@ class Draft {
         });
     }
 
-    static getReceivedByEmployeeId(employeeId) {
-        return new Promise((resolve, reject) => {
-            const sql = `
-                SELECT d.draft_id, d.employee_id, d.title, d.document_type,
-                       d.content, d.detail_data, d.status, d.created_at, e.name AS writer_name
-                FROM my_draft d
-                INNER JOIN draft_approval_steps s ON s.draft_id = d.draft_id
-                LEFT JOIN employees e ON e.employee_id = d.employee_id
-                WHERE s.employee_id = ? AND s.step_status = 'PENDING' AND d.status = 'PENDING'
-                ORDER BY d.created_at DESC, d.draft_id DESC
-            `;
-            db.query(sql, [employeeId], (err, rows) => err ? reject(err) : resolve(rows));
-        });
+    static async getReceivedByEmployeeId(employeeId) {
+        const hasSteps = await hasDraftApprovalStepsTable();
+        const sql = hasSteps
+            ? `SELECT d.draft_id, d.employee_id, d.title, d.document_type,
+                      d.content, d.detail_data, d.status, d.created_at, e.name AS writer_name
+                 FROM my_draft d
+                 INNER JOIN draft_approval_steps s ON s.draft_id = d.draft_id
+                 LEFT JOIN employees e ON e.employee_id = d.employee_id
+                 WHERE s.employee_id = ? AND s.step_status = 'PENDING' AND d.status = 'PENDING'
+                 ORDER BY d.created_at DESC, d.draft_id DESC`
+            : `SELECT d.draft_id, d.employee_id, d.title, d.document_type,
+                      d.content, d.detail_data, d.status, d.created_at, e.name AS writer_name
+                 FROM my_draft d
+                 LEFT JOIN employees e ON e.employee_id = d.employee_id
+                 WHERE d.approver_id = ? AND d.status = 'PENDING'
+                 ORDER BY d.created_at DESC, d.draft_id DESC`;
+        const [rows] = await promiseDb.query(sql, [employeeId]);
+        return rows;
     }
 
-    static getApprovedByEmployeeId(employeeId) {
-        return new Promise((resolve, reject) => {
-            const sql = `
-                SELECT DISTINCT d.draft_id, d.employee_id, d.title, d.document_type,
-                       d.content, d.detail_data, d.status, d.created_at, e.name AS writer_name
-                FROM my_draft d
-                INNER JOIN draft_approval_steps s ON s.draft_id = d.draft_id
-                LEFT JOIN employees e ON e.employee_id = d.employee_id
-                WHERE s.employee_id = ? AND s.step_status = 'APPROVED'
-                ORDER BY d.created_at DESC, d.draft_id DESC
-            `;
-            db.query(sql, [employeeId], (err, rows) => err ? reject(err) : resolve(rows));
-        });
+    static async getApprovedByEmployeeId(employeeId) {
+        const hasSteps = await hasDraftApprovalStepsTable();
+        const sql = hasSteps
+            ? `SELECT DISTINCT d.draft_id, d.employee_id, d.title, d.document_type,
+                      d.content, d.detail_data, d.status, d.created_at, e.name AS writer_name
+                 FROM my_draft d
+                 INNER JOIN draft_approval_steps s ON s.draft_id = d.draft_id
+                 LEFT JOIN employees e ON e.employee_id = d.employee_id
+                 WHERE s.employee_id = ? AND s.step_status = 'APPROVED'
+                 ORDER BY d.created_at DESC, d.draft_id DESC`
+            : `SELECT d.draft_id, d.employee_id, d.title, d.document_type,
+                      d.content, d.detail_data, d.status, d.created_at, e.name AS writer_name
+                 FROM my_draft d
+                 LEFT JOIN employees e ON e.employee_id = d.employee_id
+                 WHERE d.approver_id = ? AND d.status = 'APPROVED'
+                 ORDER BY d.created_at DESC, d.draft_id DESC`;
+        const [rows] = await promiseDb.query(sql, [employeeId]);
+        return rows;
     }
 
-    static updateDraft(draftId, employeeId, title, documentType, content, detailData = {}) {
-        return new Promise((resolve, reject) => {
-            const sql = `
-                UPDATE my_draft
-                SET title = ?, document_type = ?, content = ?, detail_data = ?
-                WHERE draft_id = ? AND employee_id = ? AND status = 'DRAFT'
-            `;
-            db.query(sql, [title, documentType, content, JSON.stringify(detailData), draftId, employeeId],
-                (err, result) => err ? reject(err) : resolve(result.affectedRows));
-        });
+    static async updateDraft(draftId, employeeId, title, documentType, content, detailData = {}) {
+        const [result] = await promiseDb.query(
+            `UPDATE my_draft
+             SET title = ?, document_type = ?, content = ?, detail_data = ?
+             WHERE draft_id = ? AND employee_id = ? AND status = 'DRAFT'`,
+            [title, documentType, content, JSON.stringify(detailData), draftId, employeeId]
+        );
+        return result.affectedRows;
     }
 
-    static deleteDraft(draftId, employeeId) {
-        return new Promise((resolve, reject) => {
-            db.query(
-                "DELETE FROM my_draft WHERE draft_id = ? AND employee_id = ? AND status = 'DRAFT'",
-                [draftId, employeeId],
-                (err, result) => err ? reject(err) : resolve(result.affectedRows)
-            );
-        });
-    }
-
-    static submitExisting(draftId, employeeId, approverIds) {
-        return new Promise((resolve, reject) => {
-            db.beginTransaction(err => {
-                if (err) return reject(err);
-                db.query(
-                    "UPDATE my_draft SET status = 'PENDING' WHERE draft_id = ? AND employee_id = ? AND status = 'DRAFT'",
-                    [draftId, employeeId],
-                    (err, result) => {
-                        if (err || result.affectedRows !== 1) {
-                            return db.rollback(() => err ? reject(err) : resolve(false));
-                        }
-                        const values = approverIds.map((id, index) =>
-                            [draftId, id, index + 1, index === 0 ? 'PENDING' : 'WAITING']
-                        );
-                        db.query(
-                            "INSERT INTO draft_approval_steps (draft_id, employee_id, step_order, step_status) VALUES ?",
-                            [values],
-                            err => {
-                                if (err) return db.rollback(() => reject(err));
-                                db.commit(err => err
-                                    ? db.rollback(() => reject(err))
-                                    : resolve(true));
-                            }
-                        );
-                    }
-                );
-            });
-        });
+    static async deleteDraft(draftId, employeeId) {
+        const [result] = await promiseDb.query(
+            `DELETE FROM my_draft
+             WHERE draft_id = ? AND employee_id = ? AND status = 'DRAFT'`,
+            [draftId, employeeId]
+        );
+        return result.affectedRows;
     }
 
     static decide(draftId, employeeId, decision) {
@@ -219,7 +356,7 @@ class Draft {
                             if (decision === 'reject') {
                                 return db.query(
                                     "UPDATE my_draft SET status = 'REJECTED' WHERE draft_id = ? AND status = 'PENDING'",
-                                        [draftId], err => err ? db.rollback(() => reject(err)) :
+                                    [draftId], err => err ? db.rollback(() => reject(err)) :
                                         db.commit(err => err ? db.rollback(() => reject(err)) : resolve(true))
                                 );
                             }
@@ -241,7 +378,7 @@ class Draft {
                                             if (err) {
                                                 return db.rollback(() => reject(err));
                                             }
-                                    
+
                                             if (rows.length !== 1) {
                                                 return db.rollback(() => resolve(false));
                                             }
@@ -255,21 +392,21 @@ class Draft {
                                                         if (result.affectedRows !== 1) {
                                                             return db.rollback(() => resolve(false));
                                                         }
-                                            
+
                                                         db.commit(err =>
                                                             err ? db.rollback(() => reject(err)) : resolve(true)
                                                         );
                                                     }
                                                 );
                                             };
-                                    
+
                                             const draft = rows[0];
-                                            
-                                            if(draft.document_type !== '비용'){
+
+                                            if (draft.document_type !== '비용') {
                                                 return approveDraft();
                                             }
 
-                                            const detailData = typeof draft.detail_data === "string"? JSON.parse(draft.detail_data) : draft.detail_data;
+                                            const detailData = typeof draft.detail_data === "string" ? JSON.parse(draft.detail_data) : draft.detail_data;
 
                                             const expenseRows = (detailData?.expenseItems || []).map(item => [
                                                 draftId,
@@ -279,7 +416,7 @@ class Draft {
                                                 item.memo || null
                                             ])
 
-                                            if(!expenseRows.length) {
+                                            if (!expenseRows.length) {
                                                 return db.rollback(() => reject(new Error("비용 내역 없음")));
                                             }
 
@@ -289,12 +426,12 @@ class Draft {
                                                 VALUES ?`,
                                                 [expenseRows],
                                                 err => {
-                                                    if(err) return db.rollback(() => reject(err));
+                                                    if (err) return db.rollback(() => reject(err));
                                                     approveDraft();
                                                 }
                                             )
-                                        
-                                    }
+
+                                        }
                                     );
                                 }
                             );
@@ -305,138 +442,132 @@ class Draft {
         });
     }
 
-    
-
-    static create(employeeId, title, documentType, content, detailData = {}) {
-        return new Promise((resolve, reject) => {
-            const sql = `
-            INSERT INTO my_draft (
-                employee_id,
-                title,
-                document_type,
-                content,
-                detail_data,
-                status
-            )
-            VALUES(?, ?, ?, ?, ?, 'DRAFT')
-        `;
-
-            const values = [
-                employeeId,
-                title,
-                documentType,
-                content,
-                JSON.stringify(detailData)
-            ];
-
-            db.query(sql, values, (err, result) => {
-                if (err) {
-                    return reject(err);
-                }
-
-                resolve(result.insertId)
-            });
-        });
+    static async create(employeeId, title, documentType, content, detailData = {}) {
+        const [result] = await promiseDb.query(
+            `INSERT INTO my_draft (
+                employee_id, title, document_type, content, detail_data, status
+             ) VALUES (?, ?, ?, ?, ?, 'DRAFT')`,
+            [employeeId, title, documentType, content, JSON.stringify(detailData)]
+        );
+        return result.insertId;
     }
 
-    static createApprovalStep(draftId, employeeId, stepOrder, stepStatus) {
-        return new Promise((resolve, reject) => {
+    static async createApprovalStep(draftId, employeeId, stepOrder, stepStatus) {
+        if (!(await hasDraftApprovalStepsTable())) {
+            const [result] = await promiseDb.query(
+                `UPDATE my_draft SET approver_id = ? WHERE draft_id = ?`,
+                [employeeId, draftId]
+            );
+            return result.affectedRows ? draftId : null;
+        }
 
-            const sql = `
-                INSERT INTO draft_approval_steps (
-                    draft_id,
-                    employee_id,
-                    step_order,
-                    step_status
-                )
-                VALUES (?, ?, ?, ?)
-            `;
+        const [result] = await promiseDb.query(
+            `INSERT INTO draft_approval_steps (
+                draft_id, employee_id, step_order, step_status
+             ) VALUES (?, ?, ?, ?)`,
+            [draftId, employeeId, stepOrder, stepStatus]
+        );
+        return result.insertId;
+    }
 
-            const values = [
+    static async submitExisting(draftId, employeeId, approverIds) {
+        const hasSteps = await hasDraftApprovalStepsTable();
+        if (!hasSteps && approverIds.length !== 1) {
+            throw new Error('현재 DB에는 단일 결재자만 저장할 수 있습니다. 결재자를 1명 선택해주세요.');
+        }
+
+        await promiseDb.beginTransaction();
+        try {
+            const [updated] = await promiseDb.query(
+                `UPDATE my_draft
+                 SET status = 'PENDING', approver_id = ?
+                 WHERE draft_id = ? AND employee_id = ? AND status = 'DRAFT'`,
+                [approverIds[0], draftId, employeeId]
+            );
+            if (updated.affectedRows !== 1) {
+                await promiseDb.rollback();
+                return false;
+            }
+
+            if (hasSteps) {
+                const values = approverIds.map((id, index) => [
+                    draftId,
+                    id,
+                    index + 1,
+                    index === 0 ? 'PENDING' : 'WAITING'
+                ]);
+                await promiseDb.query(
+                    `INSERT INTO draft_approval_steps
+                        (draft_id, employee_id, step_order, step_status)
+                     VALUES ?`,
+                    [values]
+                );
+            }
+
+            const [draftRows] = await promiseDb.query(
+                `SELECT document_type, detail_data
+                 FROM my_draft
+                 WHERE draft_id = ?
+                 FOR UPDATE`,
+                [draftId]
+            );
+            const draft = draftRows[0];
+            await ensureLeaveDetail(
                 draftId,
-                employeeId,
-                stepOrder,
-                stepStatus
-            ];
+                draft?.document_type,
+                parseDetailData(draft?.detail_data)
+            );
 
-            db.query(sql, values, (err, result) => {
-                if(err){
-                    return reject(err)
-                }
-
-                resolve(result.insertId);
-            })
-        })
+            await promiseDb.commit();
+            return true;
+        } catch (error) {
+            await promiseDb.rollback();
+            throw error;
+        }
     }
 
-    static submit(employeeId, title, documentType, content, approverIds, detailData = {}) {
-        return new Promise((resolve, reject) => {
-    
-            db.beginTransaction((err) => {
-                if (err) return reject(err);
-    
-                const sql = `
-                    INSERT INTO my_draft (
-                        employee_id,
-                        title,
-                        document_type,
-                        content,
-                        detail_data,
-                        status
-                    )
-                    VALUES (?, ?, ?, ?, ?, 'PENDING')
-                `;
-    
-                const values = [
-                    employeeId,
-                    title,
-                    documentType,
-                    content,
-                    JSON.stringify(detailData)
-                ];
-    
-                db.query(sql, values, (err, result) => {
-                    if (err) {
-                        return db.rollback(() => reject(err));
-                    }
-    
-                    const draftId = result.insertId;
-    
-                    const steps = approverIds.map((id, index) => [
-                        draftId,
-                        id,
-                        index + 1,
-                        index === 0 ? 'PENDING' : 'WAITING'
-                    ]);
-    
-                    const stepSql = `
-                        INSERT INTO draft_approval_steps (
-                            draft_id,
-                            employee_id,
-                            step_order,
-                            step_status
-                        )
-                        VALUES ?
-                    `;
-    
-                    db.query(stepSql, [steps], (err) => {
-                        if (err) {
-                            return db.rollback(() => reject(err));
-                        }
-    
-                        db.commit((err) => {
-                            if (err) {
-                                return db.rollback(() => reject(err));
-                            }
-    
-                            resolve(draftId);
-                        });
-                    });
-                });
-            });
-        });
+    static async submit(employeeId, title, documentType, content, approverIds, detailData = {}) {
+        if (!Array.isArray(approverIds) || approverIds.length === 0) {
+            throw new Error('결재자를 선택해주세요.');
+        }
+        const hasSteps = await hasDraftApprovalStepsTable();
+        if (!hasSteps && approverIds.length !== 1) {
+            throw new Error('현재 DB에는 단일 결재자만 저장할 수 있습니다. 결재자를 1명 선택해주세요.');
+        }
+
+        // 병합 수정: 상신과 순차 결재 등록을 하나의 트랜잭션으로 처리합니다.
+        await promiseDb.beginTransaction();
+        try {
+            const [result] = await promiseDb.query(
+                `INSERT INTO my_draft (
+                    employee_id, approver_id, title, document_type,
+                    content, detail_data, status
+                 ) VALUES (?, ?, ?, ?, ?, ?, 'PENDING')`,
+                [employeeId, approverIds[0], title, documentType,
+                    content, JSON.stringify(detailData)]
+            );
+            const draftId = result.insertId;
+
+            if (hasSteps) {
+                const steps = approverIds.map((id, index) => [
+                    draftId, id, index + 1, index === 0 ? 'PENDING' : 'WAITING'
+                ]);
+                await promiseDb.query(
+                    `INSERT INTO draft_approval_steps
+                        (draft_id, employee_id, step_order, step_status) VALUES ?`,
+                    [steps]
+                );
+            }
+
+            // 기존 휴가 상세 저장도 같은 트랜잭션에서 처리합니다.
+            await ensureLeaveDetail(draftId, documentType, detailData);
+            await promiseDb.commit();
+            return draftId;
+        } catch (error) {
+            await promiseDb.rollback();
+            throw error;
+        }
     }
-    // 모든 결재자가 추가되면 이 결재자들을 table에 올리는 transaction 아니면 올리지 않는 rollback 로직
 
     static getUsedLeaveDays(employeeId) {
         return new Promise((resolve, reject) => {
@@ -452,38 +583,38 @@ class Draft {
                     AND d.status = 'APPROVED'
                 WHERE e.employee_id = ?
             `;
-    
+
             db.query(query, [employeeId], (err, rows) => {
                 if (err) return reject(err);
-    
+
                 if (rows.length === 0 || !rows[0].hireDate) {
                     return reject(new Error("직원 또는 입사일 정보가 없습니다."));
                 }
-    
+
                 const hireDate = rows[0].hireDate;
-    
+
                 let usedLeaveDays = 0;
-    
+
                 rows.forEach(row => {
                     if (!row.startDate || !row.endDate) return;
-    
+
                     const startDate = row.startDate.slice(0, 10); // 날짜만 추출
                     const endDate = row.endDate.slice(0, 10);
-    
+
                     // 입사일 이전과 오늘 이후 날짜는 제외
                     const start = startDate < hireDate ? hireDate : startDate;
                     const end = endDate;
-    
+
                     if (start <= end) {
                         usedLeaveDays += calculateLeaveDays(start, end);
                     }
                 });
-    
+
                 resolve(usedLeaveDays);
             });
         });
     }
-       
+
 
     // 승인된 휴가를 조회 / 사용한 연차를 계산
 
@@ -498,16 +629,16 @@ class Draft {
                 FROM employees
                 WHERE employee_id = ?
             `;
-    
+
             db.query(query, [employeeId], (err, rows) => {
                 if (err) {
                     return reject(err);
                 }
-    
+
                 if (rows.length === 0 || rows[0].earnedLeaveDays === null) {
                     return reject(new Error("직원 또는 입사일 정보가 없습니다."));
                 }
-    
+
                 resolve(Number(rows[0].earnedLeaveDays));
             });
         });

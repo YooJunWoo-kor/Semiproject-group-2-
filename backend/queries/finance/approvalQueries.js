@@ -16,8 +16,8 @@ const selectApprovalDocuments = `
           a.created_at, '%Y-%m-%d %H:%i'
         ) AS created_at,
         p.payment_methods,
-        (SELECT COUNT(*) FROM finance_approval_attachments f WHERE f.document_id = a.document_id) AS attachment_count,
-        source_link.transaction_id AS linked_transaction_id
+        (SELECT COUNT(*) FROM approval_attachments f WHERE f.document_id = a.document_id) AS attachment_count,
+        NULL AS linked_transaction_id
       FROM approval_documents a
   
       LEFT JOIN employees e
@@ -40,19 +40,31 @@ const selectApprovalDocuments = `
       ) p
         ON a.document_id = p.document_id
   
-      LEFT JOIN trade_transactions source_link
-        ON source_link.source_type = 'approval' AND source_link.source_id = a.document_id
       ORDER BY a.created_at DESC, a.document_id DESC
     `;
 
 const selectPayrolls = `
           SELECT m.*,
                  DATE_FORMAT(m.created_at, '%Y-%m-%d %H:%i') AS created_at,
-                 e.name AS requester_name, d.department_name, expense.expense_amount, source_link.transaction_id AS linked_transaction_id,
-                 EXISTS (SELECT 1 FROM payrolls payroll WHERE payroll.draft_id = m.draft_id) AS is_payroll_draft,
-                 (SELECT SUM(payroll.gross_pay) FROM payrolls payroll WHERE payroll.draft_id = m.draft_id) AS payroll_amount,
+                 e.name AS requester_name, d.department_name, expense.expense_amount,
+                 /* [비용 연동 추가] 거래 전환 후 원본 기안서 중복 표시 방지 */
+                 (SELECT MIN(t.transaction_id) FROM trade_transactions t
+                   WHERE t.source_type = 'draft' AND t.source_id = m.draft_id) AS linked_transaction_id,
+                 EXISTS (
+                   SELECT 1 FROM payrolls payroll
+                   WHERE m.document_type = '급여'
+                     AND JSON_UNQUOTE(JSON_EXTRACT(m.detail_data, '$.source')) = 'HR_PAYROLL'
+                     AND JSON_CONTAINS(JSON_EXTRACT(m.detail_data, '$.payrollIds'), JSON_ARRAY(payroll.payroll_id))
+                 ) AS is_payroll_draft,
+                 (SELECT SUM(payroll.gross_pay) FROM payrolls payroll
+                   WHERE m.document_type = '급여'
+                     AND JSON_UNQUOTE(JSON_EXTRACT(m.detail_data, '$.source')) = 'HR_PAYROLL'
+                     AND JSON_CONTAINS(JSON_EXTRACT(m.detail_data, '$.payrollIds'), JSON_ARRAY(payroll.payroll_id))) AS payroll_amount,
                  (SELECT GROUP_CONCAT(DISTINCT payroll.pay_month ORDER BY payroll.pay_month)
-                    FROM payrolls payroll WHERE payroll.draft_id = m.draft_id) AS payroll_months
+                    FROM payrolls payroll
+                   WHERE m.document_type = '급여'
+                     AND JSON_UNQUOTE(JSON_EXTRACT(m.detail_data, '$.source')) = 'HR_PAYROLL'
+                     AND JSON_CONTAINS(JSON_EXTRACT(m.detail_data, '$.payrollIds'), JSON_ARRAY(payroll.payroll_id))) AS payroll_months
           FROM my_draft m
           LEFT JOIN employees e ON m.employee_id = e.employee_id
           LEFT JOIN departments d ON e.department_id = d.department_id
@@ -61,11 +73,15 @@ const selectPayrolls = `
             FROM draft_expense
             GROUP BY draft_id
           ) expense ON expense.draft_id = m.draft_id
-          LEFT JOIN trade_transactions source_link ON source_link.source_type = 'draft' AND source_link.source_id = m.draft_id
           WHERE m.status IN ('APPROVED', 'PENDING', 'WAITING', 'IN_PROGRESS', 'REJECTED', '승인', '대기', '승인대기', '결재대기', '진행중', '반려')
+            AND m.document_type NOT IN ('추가급여', '수당', '상여금')
             AND (m.document_type LIKE '%구매%' OR m.document_type LIKE '%비용%'
                  OR expense.draft_id IS NOT NULL
-                 OR EXISTS (SELECT 1 FROM payrolls payroll WHERE payroll.draft_id = m.draft_id))
+                 OR EXISTS (
+                   SELECT 1 FROM payrolls payroll
+                   WHERE m.document_type = '급여'
+                     AND JSON_UNQUOTE(JSON_EXTRACT(m.detail_data, '$.source')) = 'HR_PAYROLL'
+                     AND JSON_CONTAINS(JSON_EXTRACT(m.detail_data, '$.payrollIds'), JSON_ARRAY(payroll.payroll_id))))
           ORDER BY m.created_at DESC, m.draft_id DESC
         `;
 

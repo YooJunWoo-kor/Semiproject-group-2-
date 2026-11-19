@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import ModalBase from "../../../../components/ModalBase";
 import DepEmpList from "../../../../components/DepEmpList";
@@ -17,6 +18,7 @@ const emptyForm = {
 };
 
 function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftChanged }) {
+    const [searchParams] = useSearchParams();
     const [form, setForm] = useState(emptyForm);
     const [departments, setDepartments] = useState([]);
     const [approvers, setApprovers] = useState([]);
@@ -36,6 +38,16 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
     ]);
 
     const { title, draftType, content, startDate, endDate, itemName, quantity, useDate, amount, paymentType, paymentDetail } = form;
+
+    useEffect(() => {
+        if (editingDraft || searchParams.get("type") !== "leave") return;
+
+        setForm((current) => ({
+            ...current,
+            title: current.title || "휴가 신청",
+            draftType: "휴가"
+        }));
+    }, [editingDraft, searchParams]);
 
     useEffect(() => {
         const loadDepartments = async () => {
@@ -66,6 +78,10 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
             useDate: detail.useDate || "",
             amount: detail.amount ?? "",
             paymentType: detail.paymentType || "수당",
+            payMonth: detail.payMonth || "",
+            // [재무 연동 추가] 임시저장 기안서를 다시 열 때 지급 예정일을 복원합니다.
+            paymentDate: detail.paymentDate || "",
+            paymentDetail: detail.paymentDetail || "",
             paymentDetail : detail.paymentDetail || "",
         });
         setApprovers(editingDraft.approvers || []);
@@ -254,9 +270,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 <span className="subtitle">기안서 작성</span>
             </header>
 
-            <form className="boder vertical-box" onSubmit={e => e.preventDefault()}
-                style={{padding:'30px'}}
-            >
+            <form className="draft-box" onSubmit={e => e.preventDefault()}>
                 <div className="draft-row">
                     <p>작성자: {loginUser.name}</p>
                     <p>부서: {loginUser.departmentName}</p>
@@ -418,10 +432,7 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
                 <div className="draft-box">
                     <div className="draft-row">
                         <h4>결재선</h4>
-                        <button type="button"
-                            onClick={() => setShowApproverModal(true)}
-                            style={{fontSize: '13px'}}
-                        >결재자 추가</button>
+                        <button type="button" onClick={() => setShowApproverModal(true)}>결재자 추가</button>
                     </div>
                     {approvers.length === 0 ? (
                         <p>등록된 결재자가 없습니다.</p>
@@ -437,13 +448,9 @@ function DraftCreate({ loginUser = {}, editingDraft, setEditingDraft, onDraftCha
 
                 <div className="draft-actions">
                     <button type="button" disabled={isSaving}
-                        onClick={() => handleSubmit("temporary")}
-                        style={{fontSize: '13px'}}
-                    >임시저장</button>
+                        onClick={() => handleSubmit("temporary")}>임시저장</button>
                     <button type="button" className="erp-primary-button" disabled={isSaving}
-                        onClick={() => handleSubmit("submit")}
-                        style={{fontSize: '13px'}}
-                        >
+                        onClick={() => handleSubmit("submit")}>
                         {isSaving ? "저장 중..." : "결재 요청"}
                     </button>
                 </div>
