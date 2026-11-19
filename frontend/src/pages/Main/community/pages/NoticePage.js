@@ -789,7 +789,7 @@ export function NoticeModule({ style = 1 }) {
                 title="공지사항 목록"
                 th={tableHeaders}
                 allData={tableData}
-                itemsPerPage={10}
+                itemsPerPage={6}
             />
         </div>
     );

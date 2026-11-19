@@ -167,7 +167,7 @@ export default function BoardList({ board, hasCategory, refreshKey, onEditPost }
         title={`${board.board_name} 목록`}
         th={tableHeaders}
         allData={tableData}
-        itemsPerPage={10}
+        itemsPerPage={7}
       />
     </div>
   );

@@ -189,10 +189,19 @@ function FinanceModul() {
                 {!loading && data && <section className="stats-section fd-stats" aria-label="재무 현황">
                         {stats.map(([key, label]) => <StatisticsCard key={key} title={label} count={data.counts[key]} stiyle={0} color="var(--color-brand)" />)}
                     </section>}
-                <section className="fd-documents fd-panel">
+                <section className="fd-documents boder">
                     <h2>문서 작성</h2>
                     <div className="fd-document-grid">
-                        {[['receipt', '영수증 작성'], ['invoice', '청구서 작성'], ['quote', '견적서 작성']].map(([type, label]) => <button type="button" className="fd-document" key={type} onClick={() => setDocumentType(type === 'quote' ? 'estimate' : type)}>
+                        {[['receipt', '영수증 작성'], ['invoice', '청구서 작성'], ['quote', '견적서 작성']]
+                          .map(([type, label]) =>
+                            <button
+                              type="button"
+                              className="fd-document"
+                              key={type}
+                              style={{border:'1px solid #ddd'}}
+                              onClick={() => setDocumentType(
+                                type === 'quote' ? 'estimate' : type)
+                              }>
                                 <DocumentIcon type={type} />
                                 <span>{label}</span>
                             </button>)}
@@ -265,15 +274,22 @@ function FinanceModul() {
 
                     </div>
                 </section>
-                <div className="fd-summaries fd-panel">
+                <div className="boder" style={{padding:'30px'}}>
                     <PaymentSummary title="지급총액" kind="completed" data={data} loading={loading} />
                     <PaymentSummary title="지급예정" kind="planned" data={data} loading={loading} />
-                    <p className="fd-note subtext">지급예정: 승인된 결재 문서의 미지급 잔액 · 지급기한 기준</p>
                 </div>
             </div>
 
             {documentType && <div className="finance-document-modal">
-                    <ModalBase onClose={closeDocument} layout={<FinanceDocumentForm key={documentType} type={documentType} onClose={closeDocument} />} />
+                    <ModalBase
+                      title = {documentType}
+                      onClose={closeDocument}
+                      layout={<FinanceDocumentForm
+                          key={documentType}
+                          type={documentType}
+                          onClose={closeDocument}
+                        />}
+                      />
                 </div>}
         </div>;
 }

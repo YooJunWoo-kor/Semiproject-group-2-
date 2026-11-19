@@ -85,7 +85,8 @@ export async function getAttendance(){
                 , start: stData
                 , end: enData
                 ,typeId: (
-                    title === "정상" || title === "근무중" ? 0 :
+                    title === "정상" ? 0 :
+                    title === "근무중" ? 4 :
                     item.title === "지각·조퇴" ? 5 : 
                     ["지각", "조퇴"].includes(title) ? 1 :
                     title === "결근" ? 2 :
