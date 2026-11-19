@@ -76,8 +76,8 @@ export async function getAttendance(){
          const dataSet = data.data.data;
 
          const formattedData = dataSet.map((item)=>{
-            const stData = formatDateToYYYYMMDD(item.start);
-            const enData = formatDateToYYYYMMDD(item.end);
+            const stData = formatDateToYYYYMMDD(item.date);
+            const enData = stData;
             const title = item.title;
 
             return {
