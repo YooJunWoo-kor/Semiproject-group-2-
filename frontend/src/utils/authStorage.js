@@ -86,10 +86,10 @@ export async function getAttendance(){
                 , end: enData
                 ,typeId: (
                     title === "정상" || title === "근무중" ? 0 :
-                    ["지각", "조퇴", "지각·조퇴"].includes(title) ? 1 :
+                    item.title === "지각·조퇴" ? 5 : 
+                    ["지각", "조퇴"].includes(title) ? 1 :
                     title === "결근" ? 2 :
                     title === "휴가" ? 3 :
-                    title === "출장" ? 5 :
                     9
                 )
             }
