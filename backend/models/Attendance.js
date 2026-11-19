@@ -49,7 +49,16 @@ class Attendance{
           set
             check_out_at = now(),
             attendance_status = CASE
-            WHEN TIME(check_in_at) > '09:00:00' THEN '지각'
+            WHEN TIME(check_in_at) > '09:00:00' 
+            AND TIME(NOW()) < '18:00:00'
+            THEN '지각·조퇴'
+            
+            WHEN TIME(check_in_at) > '09:00:00'
+            THEN '지각'
+
+            WHEN TIME(NOW()) < '18:00:00'
+            THEN '조퇴'
+            
             ELSE '정상'
             END
           where 

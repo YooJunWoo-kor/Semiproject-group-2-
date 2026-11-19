@@ -84,12 +84,13 @@ export async function getAttendance(){
                 title: title
                 , start: stData
                 , end: enData
-                , typeId: (
-                    title == "정상출근" ? 0 :
-                    title == "지각" ? 1 :
-                    title == "휴가" ? 2 :
-                    title == "출장" ? 3 :
-                    title == "휴직" ? 4 : 5
+                ,typeId: (
+                    title === "정상" || title === "근무중" ? 0 :
+                    ["지각", "조퇴", "지각·조퇴"].includes(title) ? 1 :
+                    title === "결근" ? 2 :
+                    title === "휴가" ? 3 :
+                    title === "출장" ? 5 :
+                    9
                 )
             }
          });
