@@ -33,3 +33,20 @@
     min-height: 0;
     
 }
+
+/* 일정 등록 모달 전용 */
+.schedule-register-modal {
+    width: min(650px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+}
+
+.schedule-register-modal .modal-header {
+    flex-shrink: 0;
+}
+
+.schedule-register-modal .modal-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 8px;
+}

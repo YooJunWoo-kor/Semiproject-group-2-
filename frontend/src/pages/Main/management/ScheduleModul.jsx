@@ -241,6 +241,7 @@ function ScheduleModul({ dataType = 1, isMain = false }) {
                 <ModalBase
                     onClose={closeModal}
                     title={"일정 등록"}
+                    className="schedule-register-modal"
                     layout={
                         <ScheduleModalPopup
                             onClose={closeModal}
