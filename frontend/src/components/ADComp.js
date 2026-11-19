@@ -22,25 +22,25 @@ function ADComp(){
     //근테관련 데이터 get
     const dataSet = async () => {
       const getData = await getAttendance();
-      console.log(getData);
+  
       setData(getData);
-      getData.map((item)=>{
-        if(item.start == currontDay){
-          if(item.title == '근무중'){
-            resetAttendBtnStl = 1;
-          }
-          else{
-            resetAttendBtnStl = 2;
-          }
-
-          console.log("출근버튼 처리 완료");
-          setAttendBtnStl(resetAttendBtnStl);
-        }});
-    };
+  
+      const todayRecord = getData.find(
+          (item) => item.start === currontDay
+      );
+  
+      if (!todayRecord) {
+          setAttendBtnStl(0);
+      } else if (todayRecord.title === '근무중') {
+          setAttendBtnStl(1);
+      } else {
+          setAttendBtnStl(2);
+      }
+  };
 
     //출근버튼을 눌렀을때 최신상태 갱신
     const resetData = ()=>{
-      dataSet();
+      return dataSet();
     };
 
     //최초 데이터 실행
