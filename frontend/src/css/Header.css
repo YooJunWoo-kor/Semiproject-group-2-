@@ -175,15 +175,36 @@
 .erp-top-nav .header-work-menu {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   margin-left: auto;
   flex-shrink: 0;
 }
 
+/* 내업무 관리, 종, 프로필의 간격과 세로 중심을 통일합니다. */
 .erp-top-nav .header-work-menu .mypage-link,
 .erp-top-nav .header-work-menu .mypage-link:hover,
 .erp-top-nav .header-work-menu .mypage-link.active {
-  margin-left: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 46px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  margin: 0 !important;
+  white-space: nowrap;
+}
+
+.erp-top-nav .erp-header-user {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.erp-top-nav .erp-header-user .profil-icon {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
 }
 
 .erp-top-nav .header-bell-wrap {
