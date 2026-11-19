@@ -20,6 +20,20 @@ const {
 
 const hrRouter = express.Router();
 
+// 레거시 DB의 선택 컬럼을 확인해 조회 기능을 가능한 한 유지합니다.
+async function getHrSchemaColumns() {
+    const tables = ['employees', 'departments', 'employee_accounts', 'attendance', 'draft_leave', 'my_draft'];
+    const placeholders = tables.map(() => '?').join(', ');
+    const [rows] = await promiseDb.query(
+        'SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.COLUMNS ' +
+        'WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (' + placeholders + ')',
+        tables
+    );
+    const columns = new Set(rows.map((row) => row.TABLE_NAME + '.' + row.COLUMN_NAME));
+    return (table, column) => columns.has(table + '.' + column);
+}
+
+
 function seoulToday() {
     const parts = new Intl.DateTimeFormat('en-US', {
         timeZone: 'Asia/Seoul',
@@ -185,7 +199,7 @@ hrRouter.get('/attendance', async (req, res) => {
         FROM attendance a
         INNER JOIN employees e
             ON e.employee_id = a.employee_id
-        INNER JOIN departments d
+        LEFT JOIN departments d
             ON d.department_id = e.department_id
         WHERE (? IS NULL OR a.work_date >= ?)
           AND (? IS NULL OR a.work_date <= ?)
@@ -408,104 +422,139 @@ hrRouter.get('/attendance/department', async (req, res) => {
 
 // 조직관리: 직원 목록과 부서 목록을 조회합니다.
 hrRouter.get('/employees', async (req, res) => {
-    const query = `
-        SELECT
-            e.employee_id AS employeeId,
-            e.employee_number AS employeeNumber,
-            e.name,
-            e.department_id AS departmentId,
-            d.department_name AS departmentName,
-            e.position,
-            e.email,
-            e.phone,
-            CASE WHEN EXISTS (
-                SELECT 1 FROM attendance leave_att
-                WHERE leave_att.employee_id = e.employee_id
-                  AND leave_att.work_date = ?
-                  AND leave_att.attendance_status = '휴가'
-            ) OR EXISTS (
-                SELECT 1 FROM draft_leave leave_detail
-                JOIN my_draft leave_draft ON leave_draft.draft_id = leave_detail.draft_id
-                WHERE leave_draft.employee_id = e.employee_id
-                  AND leave_draft.status IN ('APPROVED', '승인', '완료')
-                  AND ? BETWEEN leave_detail.start_date AND leave_detail.end_date
-            ) OR EXISTS (
-                SELECT 1 FROM my_draft leave_draft
-                WHERE leave_draft.employee_id = e.employee_id
-                  AND leave_draft.document_type = '휴가'
-                  AND leave_draft.status IN ('APPROVED', '승인', '완료')
-                  AND JSON_UNQUOTE(JSON_EXTRACT(leave_draft.detail_data, '$.startDate')) <= ?
-                  AND JSON_UNQUOTE(JSON_EXTRACT(leave_draft.detail_data, '$.endDate')) >= ?
-            ) THEN 1 ELSE 0 END AS isOnLeaveToday,
-            DATE_FORMAT(e.hire_date, '%Y-%m-%d') AS hireDate,
-            e.initial_annual_salary AS initialAnnualSalary,
-            DATE_FORMAT(e.resignation_date, '%Y-%m-%d') AS resignationDate,
-            e.employment_status AS employmentStatus,
-            ea.role,
-            ea.account_status AS accountStatus
-        FROM employees e
-        LEFT JOIN departments d
-            ON d.department_id = e.department_id
-        LEFT JOIN employee_accounts ea
-            ON ea.employee_id = e.employee_id
-        ORDER BY e.employee_id
-    `;
-
     try {
+        const hasColumn = await getHrSchemaColumns();
         const today = seoulToday();
-        const [rows] = await promiseDb.query(query, [today, today, today, today]);
+        const leaveChecks = [];
+        const queryValues = [];
 
-        return res.json({
-            success: true,
-            data: rows
-        });
+        // 휴가 확장 테이블/컬럼이 없는 DB에서도 기본 직원 목록을 조회합니다.
+        if (['employee_id', 'work_date', 'attendance_status'].every(
+            (column) => hasColumn('attendance', column)
+        )) {
+            leaveChecks.push(
+                `EXISTS (
+                    SELECT 1 FROM attendance leave_att
+                    WHERE leave_att.employee_id = e.employee_id
+                      AND leave_att.work_date = ?
+                      AND leave_att.attendance_status = '휴가'
+                )`
+            );
+            queryValues.push(today);
+        }
+
+        if (['employee_id', 'start_date', 'end_date', 'draft_id'].every(
+            (column) => hasColumn('draft_leave', column)
+        ) && ['draft_id', 'employee_id', 'status'].every(
+            (column) => hasColumn('my_draft', column)
+        )) {
+            leaveChecks.push(
+                `EXISTS (
+                    SELECT 1 FROM draft_leave leave_detail
+                    JOIN my_draft leave_draft ON leave_draft.draft_id = leave_detail.draft_id
+                    WHERE leave_draft.employee_id = e.employee_id
+                      AND leave_draft.status IN ('APPROVED', '승인', '완료')
+                      AND ? BETWEEN leave_detail.start_date AND leave_detail.end_date
+                )`
+            );
+            queryValues.push(today);
+        }
+
+        if (['employee_id', 'document_type', 'status', 'detail_data'].every(
+            (column) => hasColumn('my_draft', column)
+        )) {
+            leaveChecks.push(
+                `EXISTS (
+                    SELECT 1 FROM my_draft leave_draft
+                    WHERE leave_draft.employee_id = e.employee_id
+                      AND leave_draft.document_type = '휴가'
+                      AND leave_draft.status IN ('APPROVED', '승인', '완료')
+                      AND JSON_UNQUOTE(JSON_EXTRACT(leave_draft.detail_data, '$.startDate')) <= ?
+                      AND JSON_UNQUOTE(JSON_EXTRACT(leave_draft.detail_data, '$.endDate')) >= ?
+                )`
+            );
+            queryValues.push(today, today);
+        }
+
+        const isOnLeaveToday = leaveChecks.length
+            ? `CASE WHEN ${leaveChecks.join(' OR ')} THEN 1 ELSE 0 END`
+            : '0';
+        const initialSalary = hasColumn('employees', 'initial_annual_salary')
+            ? 'e.initial_annual_salary' : 'NULL';
+        const resignationDate = hasColumn('employees', 'resignation_date')
+            ? `DATE_FORMAT(e.resignation_date, '%Y-%m-%d')` : 'NULL';
+        const hasAccounts = hasColumn('employee_accounts', 'employee_id');
+        const accountRole = hasAccounts && hasColumn('employee_accounts', 'role')
+            ? 'ea.role' : 'NULL';
+        const accountStatus = hasAccounts && hasColumn('employee_accounts', 'account_status')
+            ? 'ea.account_status' : 'NULL';
+
+        const query = `
+            SELECT
+                e.employee_id AS employeeId,
+                e.employee_number AS employeeNumber,
+                e.name,
+                e.department_id AS departmentId,
+                d.department_name AS departmentName,
+                e.position,
+                e.email,
+                e.phone,
+                ${isOnLeaveToday} AS isOnLeaveToday,
+                DATE_FORMAT(e.hire_date, '%Y-%m-%d') AS hireDate,
+                ${initialSalary} AS initialAnnualSalary,
+                ${resignationDate} AS resignationDate,
+                e.employment_status AS employmentStatus,
+                ${accountRole} AS role,
+                ${accountStatus} AS accountStatus
+            FROM employees e
+            LEFT JOIN departments d ON d.department_id = e.department_id
+            ${hasAccounts ? 'LEFT JOIN employee_accounts ea ON ea.employee_id = e.employee_id' : ''}
+            ORDER BY e.employee_id
+        `;
+        const [rows] = await promiseDb.query(query, queryValues);
+        return res.json({ success: true, data: rows });
     } catch (error) {
         console.error('직원 목록 조회 오류:', error);
-
         return res.status(500).json({
-            success: false,
-            message: '직원 목록을 불러오지 못했습니다.'
+            success: false, message: '직원 목록을 불러오지 못했습니다.'
         });
     }
 });
-
 
 // 부서 목록 조회
 // 부서장 이름과 설명을 함께 조회해 직원·부서 통합 화면에서 사용합니다.
 hrRouter.get('/departments', async (req, res) => {
-    const query = `
-        SELECT
-            d.department_id AS departmentId,
-            d.department_name AS departmentName,
-            d.manager_id AS managerId,
-            m.name AS managerName,
-            d.description
-        FROM departments d
-        LEFT JOIN employees m
-            ON m.employee_id = d.manager_id
-        ORDER BY d.department_id
-    `;
-
     try {
+        const hasColumn = await getHrSchemaColumns();
+        const hasManagerId = hasColumn('departments', 'manager_id');
+        const managerId = hasManagerId ? 'd.manager_id' : 'NULL';
+        const managerName = hasManagerId
+            ? 'm.name'
+            : (hasColumn('departments', 'manager') ? 'd.manager' : 'NULL');
+        const description = hasColumn('departments', 'description')
+            ? 'd.description'
+            : (hasColumn('departments', 'department_ex') ? 'd.department_ex' : 'NULL');
+        const query = `
+            SELECT
+                d.department_id AS departmentId,
+                d.department_name AS departmentName,
+                ${managerId} AS managerId,
+                ${managerName} AS managerName,
+                ${description} AS description
+            FROM departments d
+            ${hasManagerId ? 'LEFT JOIN employees m ON m.employee_id = d.manager_id' : ''}
+            ORDER BY d.department_id
+        `;
         const [rows] = await promiseDb.query(query);
-
-        return res.json({
-            success: true,
-            data: rows
-        });
+        return res.json({ success: true, data: rows });
     } catch (error) {
         console.error('부서 목록 조회 오류:', error);
-
         return res.status(500).json({
-            success: false,
-            message: '부서 목록을 불러오지 못했습니다.'
+            success: false, message: '부서 목록을 불러오지 못했습니다.'
         });
     }
 });
 
-
-// 부서 등록
-// 선택한 직원은 부서장으로 연결하고 부서명 중복을 먼저 확인합니다.
 hrRouter.post('/departments', async (req, res) => {
     const departmentName = normalizeDepartmentName(req.body.departmentName);
     const description = String(req.body.description || '').trim();
