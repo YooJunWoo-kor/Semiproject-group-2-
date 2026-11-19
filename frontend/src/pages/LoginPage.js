@@ -1,13 +1,22 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { findLoginAccount, saveLoginUser } from "../utils/authStorage";
 
+const SAVED_ID_KEY = "NMD_ERP_LOGIN_KEY";
 
 function Home() {
-
     const [loginId, setLoginId] = useState("master@enova.co.kr");
-    const [password, setPassword] = useState("1111");
+    const [password, setPassword] = useState("");
+    const [rememberId, setRememberId] = useState(false);
+
+    useEffect(() => {
+        const savedId = localStorage.getItem(SAVED_ID_KEY);
+        if (savedId) {
+            setLoginId(savedId);
+            setRememberId(true);
+        }
+    }, []);
 
     const navigate = useNavigate();
 
@@ -19,16 +28,23 @@ function Home() {
 
             // 2. 서버 응답 결과 판별
             if (responseData && responseData.result === "success") {
+                // 이메일 기억하기 체크 여부에 따라 localStorage 저장 또는 삭제
+                if (rememberId) {
+                    localStorage.setItem(SAVED_ID_KEY, loginId);
+                } else {
+                    localStorage.removeItem(SAVED_ID_KEY);
+                }
+
                 saveLoginUser({
                     employeeKey: responseData.user.employee_id || null,
                     name: responseData.user.name,
                     email: responseData.user.email,
-                    departmentName : responseData.user.department_name,
+                    departmentName: responseData.user.department_name,
                     department: responseData.user.department_id,
                     position: responseData.user.position,
                     role: responseData.user.role
                 });
-                
+
                 navigate('/main');
             } else {
                 alert(responseData || "로그인에 실패했습니다.");
@@ -39,19 +55,11 @@ function Home() {
         }
     };
 
-
-    const registerHendle = (e) => {
-        e.preventDefault();
-        navigate('/register');
-    };
-
-
     return (
         <div className="login-page" data-theme='light'>
             <div className="login-border">
                 <header>
                     <h2>ERP 시스템</h2>
-                    <p>사내 전사적 자원관리 시스템</p>
                 </header>
                 <main>
                     <form onSubmit={handleLogin}>
@@ -64,12 +72,7 @@ function Home() {
                                 type="text"
                                 placeholder="이메일을 입력하세요"
                                 value={loginId}
-                                onChange={(e) =>
-                                    setLoginId(
-                                        e.target.value
-                                    )
-                                }
-                                // required
+                                onChange={(e) => setLoginId(e.target.value)}
                             />
                         </div>
                         <div>
@@ -81,17 +84,22 @@ function Home() {
                                 type="password"
                                 placeholder="비밀번호를 입력하세요"
                                 value={password}
-                                onChange={(e) =>
-                                    setPassword(
-                                        e.target.value
-                                    )
-                                }
-                                // required
+                                onChange={(e) => setPassword(e.target.value)}
                             />
                         </div>
                         <div>
-                            <label>
-                                <input type="checkbox" />
+                            <label style={{ cursor: "pointer" }}>
+                                <input
+                                    type="checkbox"
+                                    checked={rememberId}
+                                    onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        setRememberId(checked);
+                                        if (!checked) {
+                                            localStorage.removeItem(SAVED_ID_KEY);
+                                        }
+                                    }}
+                                />
                                 이메일 기억하기
                             </label>
                         </div>
