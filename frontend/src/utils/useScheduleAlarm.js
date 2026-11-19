@@ -1,84 +1,194 @@
-import { useEffect, useRef } from 'react';
-import axios from 'axios';
-import { API_BASE_URL, getLoginUser } from './authStorage';
 
-// 단위(m, h, d)를 '분(minute)' 단위로 변환
-const convertToMinutes = (num, type) => {
-    const n = Number(num) || 0;
-    if (type === 'm') return n;
-    if (type === 'h') return n * 60;
-    if (type === 'd') return n * 60 * 24;
+import { useEffect, useRef, useState } from "react";
+import axios from "axios";
+import { API_BASE_URL, getLoginUser } from "./authStorage";
+
+const toMinutes = (num, type) => {
+    const n = Number(num);
+    if (!Number.isFinite(n) || n <= 0) return 0;
+
+    if (type === "m") return n;
+    if (type === "h") return n * 60;
+    if (type === "d") return n * 1440;
     return 0;
 };
 
-// 초(second) 단위를 제외한 '분(minute)' 기준 타임스탬프 반환
-const getMinuteTimestamp = (dateObj) => {
-    return Math.floor(dateObj.getTime() / (1000 * 60));
+// DB의 날짜와 시간을 결합해 분 단위 시각으로 변환
+const parseMinute = (date, time) => {
+    const day = String(date ?? "").slice(0, 10);
+    const clock = String(time ?? "").slice(0, 8);
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+    if (!/^\d{2}:\d{2}(:\d{2})?$/.test(clock)) return null;
+
+    const dateTime = new Date(
+        `${day}T${clock.length === 5 ? clock + ":00" : clock}`
+    );
+
+    return Number.isNaN(dateTime.getTime())
+        ? null
+        : Math.floor(dateTime.getTime() / 60000);
+};
+
+const loadNotifications = (userID) => {
+    if (!userID) return [];
+
+    try {
+        const saved = JSON.parse(
+            localStorage.getItem(`schedule-notifications-${userID}`) || "[]"
+        );
+        return Array.isArray(saved) ? saved : [];
+    } catch {
+        return [];
+    }
 };
 
 export function useScheduleAlarm() {
-    // 같은 분(minute)에 동일한 알람이 중복 실행되는 것 방지
-    const notifiedRef = useRef(new Set());
+    const userID = getLoginUser()?.employeeKey;
+
+    const [notifications, setNotifications] = useState(() =>
+        loadNotifications(userID)
+    );
+    const [toast, setToast] = useState(null);
+
+    // 이미 생성한 알림 ID를 기억해 중복 생성 방지
+    const seenRef = useRef(
+        new Set(notifications.map((item) => item.id))
+    );
+
+    // 새 알림과 읽음 상태를 브라우저에 저장
+    useEffect(() => {
+        if (!userID) return;
+
+        localStorage.setItem(
+            `schedule-notifications-${userID}`,
+            JSON.stringify(notifications)
+        );
+    }, [userID, notifications]);
 
     useEffect(() => {
+        if (!userID) return;
+
+        let stopped = false;
+        let checking = false;
+
         const checkScheduleAlarms = async () => {
-            const user = getLoginUser();
-            const userID = user?.employeeKey;
-            if (!userID) return;
+            if (checking) return;
+            checking = true;
 
             try {
-                // 백엔드에서 이미 isNotifyEnabled = '1' 인 일정만 조회함
-                const res = await axios.post(`${API_BASE_URL}/schedule/getMyAlarms`, { userID });
-                const alarms = res.data;
+                const response = await axios.post(
+                    `${API_BASE_URL}/schedule/getMyAlarms`,
+                    { userID }
+                );
 
-                console.log(alarms);
+                if (stopped || !Array.isArray(response.data)) return;
 
-                const now = new Date();
-                const nowMin = getMinuteTimestamp(now);
+                const nowMin = Math.floor(Date.now() / 60000);
 
-                alarms.forEach((item) => {
-                    const intervalMin = convertToMinutes(item.timerNum, item.timerType);
-                    if (intervalMin <= 0) return;
+                response.data.forEach((item) => {
+                    const interval = toMinutes(item.timerNum, item.timerType);
+                    if (!interval) return;
 
-                    let shouldNotify = false;
-                    let alarmLabel = '';
+                    const endMin = parseMinute(item.end_date, item.end_time);
+                    if (endMin === null) return;
 
-                    // 1. '마감전' 알람 체크: (마감일시 - 설정 시간) === 현재 시각
-                    if (item.timerTiming === '마감전') {
-                        const endDate = new Date(item.end_date);
-                        const targetMin = getMinuteTimestamp(endDate) - intervalMin;
+                    let triggerMin = null;
 
-                        if (nowMin === targetMin) {
-                            shouldNotify = true;
-                            alarmLabel = `마감 ${item.timerNum}${item.timerType} 전`;
-                        }
+                    if (item.timerTiming === "마감전") {
+                        triggerMin = endMin - interval;
+                    } else if (item.timerTiming === "반복") {
+                        const startMin = parseMinute(
+                            item.start_date,
+                            item.start_time
+                        );
+
+                        if (startMin === null) return;
+                        if (nowMin < startMin || nowMin > endMin) return;
+
+                        const repeatCount = Math.floor(
+                            (nowMin - startMin) / interval
+                        );
+
+                        if (repeatCount < 1) return;
+                        triggerMin = startMin + repeatCount * interval;
                     }
-                    // 2. '반복' 알람 체크: 시작일시 이후 경과 시간이 설정 주기의 배수일 때
-                    else if (item.timerTiming === '반복') {
-                        const startDate = new Date(item.start_date);
-                        const startMin = getMinuteTimestamp(startDate);
-                        const elapsedMin = nowMin - startMin;
 
-                        if (elapsedMin >= 0 && elapsedMin % intervalMin === 0) {
-                            shouldNotify = true;
-                            alarmLabel = `${item.timerNum}${item.timerType} 주기 반복 알림`;
-                        }
+                    // 예정 시각부터 1분 이내에만 알림 표시
+                    if (
+                        triggerMin === null ||
+                        nowMin < triggerMin ||
+                        nowMin - triggerMin > 1 ||
+                        nowMin > endMin
+                    ) {
+                        return;
                     }
 
-                    // 3. 조건 충족 시 중복 확인 후 알람 실행
-                    const uniqueKey = `${item.schedule_id}_${nowMin}`;
-                    if (shouldNotify && !notifiedRef.current.has(uniqueKey)) {
-                        notifiedRef.current.add(uniqueKey);
-                        alert(`⏰ [${alarmLabel}]\n일정: ${item.schedule_name}`);
-                    }
+                    const id = `${userID}-${item.schedule_id}-${item.timerTiming}-${triggerMin}`;
+
+                    if (seenRef.current.has(id)) return;
+                    seenRef.current.add(id);
+
+                    const unit = {
+                        m: "분",
+                        h: "시간",
+                        d: "일"
+                    }[item.timerType];
+
+                    const message =
+                        item.timerTiming === "마감전"
+                            ? `마감 ${item.timerNum}${unit} 전입니다.`
+                            : `${item.timerNum}${unit} 간격 반복 알림입니다.`;
+
+                    const newNotification = {
+                        id,
+                        title: item.schedule_name,
+                        message,
+                        read: false,
+                        createdAt: new Date().toISOString()
+                    };
+
+                    setNotifications((prev) =>
+                        [newNotification, ...prev].slice(0, 100)
+                    );
+
+                    setToast(newNotification);
                 });
             } catch (error) {
-                console.error('스케줄 알람 체크 오류:', error);
+                if (!stopped) {
+                    console.error("일정 알림 조회 실패:", error);
+                }
+            } finally {
+                checking = false;
             }
         };
 
         checkScheduleAlarms();
-        const timer = setInterval(checkScheduleAlarms, 60 * 1000);
-        return () => clearInterval(timer);
-    }, []);
+
+        const timer = setInterval(checkScheduleAlarms, 15000);
+
+        return () => {
+            stopped = true;
+            clearInterval(timer);
+        };
+    }, [userID]);
+
+    const markAsRead = (id) => {
+        setNotifications((prev) =>
+            prev.map((item) =>
+                item.id === id ? { ...item, read: true } : item
+            )
+        );
+
+        setToast((prev) => (prev?.id === id ? null : prev));
+    };
+
+    const dismissToast = () => setToast(null);
+
+    return {
+        notifications,
+        markAsRead,
+        toast,
+        dismissToast
+    };
 }
