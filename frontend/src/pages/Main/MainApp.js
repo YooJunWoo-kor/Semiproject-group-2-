@@ -15,13 +15,27 @@ import HeaderNav from '../../components/HeaderNav';
 import MyTeskList from './mytesk/MyTeskList';
 import { useScheduleAlarm } from '../../utils/useScheduleAlarm';
 import MotionBanner from '../../components/MotionBanner';
+import ScheduleAlarmToast from '../../components/ScheduleAlarmToast';
 
 function MainApp() {
-    useScheduleAlarm();
+    const {
+        notifications,
+        markAsRead,
+        toast,
+        dismissToast
+    } = useScheduleAlarm();
 
     return (
         <div className="main-sell" data-theme='light'>
-            <HeaderNav />
+            <HeaderNav
+                notifications={notifications}
+                onReadNotification={markAsRead}
+            />
+
+            <ScheduleAlarmToast
+                notification={toast}
+                onClose={dismissToast}
+            />
             {/* 실제 화면 라우팅 연결 영역 */}
             {/* <MotionBanner /> */}
             <Routes>

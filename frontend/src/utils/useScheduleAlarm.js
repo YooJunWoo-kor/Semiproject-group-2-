@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL, getLoginUser } from './authStorage';
 
@@ -13,12 +13,16 @@ const convertToMinutes = (num, type) => {
 
 // 초(second) 단위를 제외한 '분(minute)' 기준 타임스탬프 반환
 const getMinuteTimestamp = (dateObj) => {
-    return Math.floor(dateObj.getTime() / (1000 * 60));
+    return Math.floor(dateObj.getTime() / (60 * 1000));
 };
 
 export function useScheduleAlarm() {
     // 같은 분(minute)에 동일한 알람이 중복 실행되는 것 방지
     const notifiedRef = useRef(new Set());
+
+    //추가 : 알림 목록, 토스트
+    const [notifications, setNotifications] = useState([]);
+    const [toast, setToast] = useState(null);
 
     useEffect(() => {
         const checkScheduleAlarms = async () => {
@@ -45,7 +49,7 @@ export function useScheduleAlarm() {
 
                     // 1. '마감전' 알람 체크: (마감일시 - 설정 시간) === 현재 시각
                     if (item.timerTiming === '마감전') {
-                        const endDate = new Date(item.end_date);
+                        const endDate = new Date(`${item.end_date}T${item.end_time}`); //실제 종료 시각 반영
                         const targetMin = getMinuteTimestamp(endDate) - intervalMin;
 
                         if (nowMin === targetMin) {
@@ -55,7 +59,7 @@ export function useScheduleAlarm() {
                     }
                     // 2. '반복' 알람 체크: 시작일시 이후 경과 시간이 설정 주기의 배수일 때
                     else if (item.timerTiming === '반복') {
-                        const startDate = new Date(item.start_date);
+                        const startDate = new Date(`${item.start_date}T${item.start_time}`); 
                         const startMin = getMinuteTimestamp(startDate);
                         const elapsedMin = nowMin - startMin;
 
@@ -69,7 +73,16 @@ export function useScheduleAlarm() {
                     const uniqueKey = `${item.schedule_id}_${nowMin}`;
                     if (shouldNotify && !notifiedRef.current.has(uniqueKey)) {
                         notifiedRef.current.add(uniqueKey);
-                        alert(`⏰ [${alarmLabel}]\n일정: ${item.schedule_name}`);
+
+                        const newNotification = {
+                            id: uniqueKey,
+                            title: item.schedule_name,
+                            message: alarmLabel,
+                            read: false
+                        };
+
+                        setNotifications(prev => [newNotification, ...prev]);
+                        setToast(newNotification);
                     }
                 });
             } catch (error) {
@@ -81,4 +94,30 @@ export function useScheduleAlarm() {
         const timer = setInterval(checkScheduleAlarms, 60 * 1000);
         return () => clearInterval(timer);
     }, []);
+
+    // 추가: 알림 읽음 처리
+    const markAsRead = (id) => {
+        setNotifications(prev =>
+            prev.map(item =>
+                item.id === id
+                    ? { ...item, read: true }
+                    : item
+            )
+        );
+
+        setToast(prev => prev?.id === id ? null : prev);
+    };
+
+    // 추가: 토스트 닫기
+    const dismissToast = () => {
+        setToast(null);
+    };
+
+    // 추가: MainApp으로 전달
+    return {
+        notifications,
+        markAsRead,
+        toast,
+        dismissToast
+    };
 }

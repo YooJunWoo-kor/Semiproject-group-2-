@@ -132,9 +132,10 @@ function addApprovedWeekdaysToSet(rows, hireDate, asOfDate, daySet) {
     });
 }
 
+// 휴가 신청 정보는 별도 draft_leave 테이블 없이 my_draft.detail_data JSON에서 조회합니다.
 const leaveQuery = `
     SELECT
-        dl.leave_id AS leaveId,
+        md.draft_id AS leaveId,
         md.draft_id AS draftId,
         md.employee_id AS employeeId,
         e.employee_number AS employeeNumber,
@@ -145,31 +146,28 @@ const leaveQuery = `
         md.document_type AS leaveType,
         md.title,
         md.content AS reason,
-        DATE_FORMAT(dl.start_date, '%Y-%m-%d') AS startDate,
-        DATE_FORMAT(dl.end_date, '%Y-%m-%d') AS endDate,
+        JSON_UNQUOTE(JSON_EXTRACT(md.detail_data, '$.startDate')) AS startDate,
+        JSON_UNQUOTE(JSON_EXTRACT(md.detail_data, '$.endDate')) AS endDate,
         md.status AS sourceStatus,
         DATE_FORMAT(md.created_at, '%Y-%m-%d %H:%i') AS applicationDate,
         md.approver_id AS approverId,
         approver.name AS approverName,
         DATE_FORMAT(md.processed_at, '%Y-%m-%d %H:%i') AS approvalDate
-    FROM draft_leave dl
-    INNER JOIN my_draft md
-        ON md.draft_id = dl.draft_id
-    INNER JOIN employees e
-        ON e.employee_id = md.employee_id
-    LEFT JOIN departments d
-        ON d.department_id = e.department_id
-    LEFT JOIN employees approver
-        ON approver.employee_id = md.approver_id
-    WHERE (? IS NULL OR (
-        dl.start_date < ?
-        AND dl.end_date >= ?
-    ))
+    FROM my_draft md
+    INNER JOIN employees e ON e.employee_id = md.employee_id
+    LEFT JOIN departments d ON d.department_id = e.department_id
+    LEFT JOIN employees approver ON approver.employee_id = md.approver_id
+    WHERE md.document_type = '휴가'
+      AND md.status IN ('PENDING', 'APPROVED', 'REJECTED', '승인', '승인완료', '완료', '반려')
       AND (? IS NULL OR (
-        dl.start_date < ?
-        AND dl.end_date >= ?
-    ))
-    ORDER BY dl.start_date DESC, dl.leave_id DESC
+        JSON_UNQUOTE(JSON_EXTRACT(md.detail_data, '$.startDate')) < ?
+        AND JSON_UNQUOTE(JSON_EXTRACT(md.detail_data, '$.endDate')) >= ?
+      ))
+      AND (? IS NULL OR (
+        JSON_UNQUOTE(JSON_EXTRACT(md.detail_data, '$.startDate')) < ?
+        AND JSON_UNQUOTE(JSON_EXTRACT(md.detail_data, '$.endDate')) >= ?
+      ))
+    ORDER BY md.created_at DESC, md.draft_id DESC
 `;
 
 function nextMonthStart(month) {
@@ -289,16 +287,14 @@ hrLeaveRouter.get('/leaves/summary', async (req, res) => {
         const employee = employeeRows[0];
         const [leaveRows] = await promiseDb.query(
             `SELECT
-                DATE_FORMAT(dl.start_date, '%Y-%m-%d') AS startDate,
-                DATE_FORMAT(dl.end_date, '%Y-%m-%d') AS endDate
-             FROM draft_leave dl
-             INNER JOIN my_draft md
-                 ON md.draft_id = dl.draft_id
+                JSON_UNQUOTE(JSON_EXTRACT(md.detail_data, '$.startDate')) AS startDate,
+                JSON_UNQUOTE(JSON_EXTRACT(md.detail_data, '$.endDate')) AS endDate
+             FROM my_draft md
              WHERE md.employee_id = ?
                AND md.document_type = '휴가'
                AND md.status IN ('APPROVED', '승인', '승인완료', '완료')
-               AND dl.end_date >= ?
-               AND dl.start_date <= ?`,
+               AND JSON_UNQUOTE(JSON_EXTRACT(md.detail_data, '$.endDate')) >= ?
+               AND JSON_UNQUOTE(JSON_EXTRACT(md.detail_data, '$.startDate')) <= ?`,
             [employeeId, employee.hireDate, asOf]
         );
 

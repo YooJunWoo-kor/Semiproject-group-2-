@@ -32,7 +32,7 @@ function ScheduleModalPopup({onClose, setSubmit}){
     }
   
     const mList = [];
-    for(let i = 0; i <= 60; i+=5){
+    for(let i = 0; i < 60; i+=5){
       mList.push(String(i).padStart(2,0));
     }
   
@@ -283,7 +283,7 @@ function ScheduleModalPopup({onClose, setSubmit}){
               className="form-input notify-time-input"
               placeholder="숫자 입력"
               value = {timerNum}
-              onChange = {(e)=>{setTimerNum(timerNum)}}
+              onChange={(e) => setTimerNum(Number(e.target.value))}
             />
             <select className="form-input notify-unit-select"
               value = {timerType}
