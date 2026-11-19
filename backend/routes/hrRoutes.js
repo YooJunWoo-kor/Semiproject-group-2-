@@ -22,7 +22,7 @@ const hrRouter = express.Router();
 
 // 레거시 DB의 선택 컬럼을 확인해 조회 기능을 가능한 한 유지합니다.
 async function getHrSchemaColumns() {
-    const tables = ['employees', 'departments', 'employee_accounts', 'attendance', 'draft_leave', 'my_draft'];
+    const tables = ['employees', 'departments', 'employee_accounts', 'attendance', 'my_draft'];
     const placeholders = tables.map(() => '?').join(', ');
     const [rows] = await promiseDb.query(
         'SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.COLUMNS ' +
@@ -443,23 +443,6 @@ hrRouter.get('/employees', async (req, res) => {
             queryValues.push(today);
         }
 
-        if (['employee_id', 'start_date', 'end_date', 'draft_id'].every(
-            (column) => hasColumn('draft_leave', column)
-        ) && ['draft_id', 'employee_id', 'status'].every(
-            (column) => hasColumn('my_draft', column)
-        )) {
-            leaveChecks.push(
-                `EXISTS (
-                    SELECT 1 FROM draft_leave leave_detail
-                    JOIN my_draft leave_draft ON leave_draft.draft_id = leave_detail.draft_id
-                    WHERE leave_draft.employee_id = e.employee_id
-                      AND leave_draft.status IN ('APPROVED', '승인', '완료')
-                      AND ? BETWEEN leave_detail.start_date AND leave_detail.end_date
-                )`
-            );
-            queryValues.push(today);
-        }
-
         if (['employee_id', 'document_type', 'status', 'detail_data'].every(
             (column) => hasColumn('my_draft', column)
         )) {
@@ -468,7 +451,7 @@ hrRouter.get('/employees', async (req, res) => {
                     SELECT 1 FROM my_draft leave_draft
                     WHERE leave_draft.employee_id = e.employee_id
                       AND leave_draft.document_type = '휴가'
-                      AND leave_draft.status IN ('APPROVED', '승인', '완료')
+                      AND leave_draft.status IN ('APPROVED', '승인', '승인완료', '완료')
                       AND JSON_UNQUOTE(JSON_EXTRACT(leave_draft.detail_data, '$.startDate')) <= ?
                       AND JSON_UNQUOTE(JSON_EXTRACT(leave_draft.detail_data, '$.endDate')) >= ?
                 )`
