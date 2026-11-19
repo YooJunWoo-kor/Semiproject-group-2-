@@ -161,42 +161,235 @@
   outline-offset: 2px;
 }
 
-/* Header.css 맨 아래에 추가 */
+/* =========================================================
+   헤더 일정 알림 (종 아이콘 + 미읽음 배지 + 알림 목록)
+   HeaderNav.js의 header-* 클래스만 대상으로 합니다.
+========================================================= */
 
-.header-work-menu {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
+/* 상단 네비게이션의 알림 메뉴가 화면 콘텐츠 아래로 숨지 않게 합니다. */
+.erp-top-nav {
+  position: relative;
+  z-index: 30;
 }
 
-.header-work-menu .mypage-link {
+.erp-top-nav .header-work-menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.erp-top-nav .header-work-menu .mypage-link,
+.erp-top-nav .header-work-menu .mypage-link:hover,
+.erp-top-nav .header-work-menu .mypage-link.active {
   margin-left: 0 !important;
 }
 
-.header-bell-wrap {
-  position: relative;
-}
-
-.header-bell-button {
+.erp-top-nav .header-bell-wrap {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
+  flex-shrink: 0;
 }
 
-.header-bell-count {
+/* 전역 button(최소 높이 38px, 패딩 9px) 규칙을 이 버튼에서만 재정의합니다. */
+.erp-top-nav .header-bell-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  min-height: 46px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: #344054;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+/* JSX의 <Bell size={21} />보다 크게 표시하되 JSX는 수정하지 않습니다. */
+.erp-top-nav .header-bell-button svg {
+  display: block;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  stroke-width: 2;
+}
+
+.erp-top-nav .header-bell-button:hover,
+.erp-top-nav .header-bell-button[aria-expanded="true"] {
+  background: #edf5ff;
+  color: #0377e4;
+}
+
+.erp-top-nav .header-bell-button:focus-visible {
+  outline: 2px solid #0377e4;
+  outline-offset: 2px;
+}
+
+/* 배지는 종 버튼 기준으로 우측 상단에 겹칩니다. */
+.erp-top-nav .header-bell-count {
   position: absolute;
-  top: -4px;
-  right: -5px;
-  padding: 2px 5px;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border: 2px solid #fff;
   border-radius: 999px;
-  background: #ef4444;
-  color: white;
+  background: #e53935;
+  color: #fff;
   font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* 종 클릭 시 나타나는 작은 알림 목록 */
+.erp-top-nav .header-alarm-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 1000;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  max-height: min(420px, calc(100vh - 85px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 14px 40px rgb(15 23 42 / 16%);
+  color: #172033;
+  animation: headerAlarmEnter 0.2s ease-out both;
+}
+
+@keyframes headerAlarmEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.erp-top-nav .header-alarm-title {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 16px;
+  border-bottom: 1px solid #edf0f5;
+  background: #fff;
+}
+
+.erp-top-nav .header-alarm-title strong {
+  font-size: 14px;
+  font-weight: 800;
+  color: #172033;
+}
+
+.erp-top-nav .header-alarm-title button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.erp-top-nav .header-alarm-title button:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.erp-top-nav .header-alarm-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  min-height: auto;
+  margin: 0;
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 1px solid #f1f5f9;
+  border-radius: 0;
+  background: #fff;
+  color: #334155;
+  text-align: left;
+  white-space: normal;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.erp-top-nav .header-alarm-item:last-child {
+  border-bottom: 0;
+}
+
+.erp-top-nav .header-alarm-item:hover,
+.erp-top-nav .header-alarm-item:focus-visible {
+  background: #f3f8ff;
+}
+
+.erp-top-nav .header-alarm-item strong {
+  color: #172033;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.erp-top-nav .header-alarm-item span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.erp-top-nav .header-alarm-empty {
+  margin: 0;
+  padding: 30px 16px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 400;
+  text-align: center;
+}
+
+@media (max-width: 580px) {
+  .erp-top-nav .header-alarm-dropdown {
+    width: 300px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-top-nav .header-alarm-dropdown {
+    animation: none;
+  }
 }
