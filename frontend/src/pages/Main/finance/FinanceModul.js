@@ -6,14 +6,11 @@ import '../../../css/Table.css';
 import { API_BASE_URL } from '../../../utils/authStorage';
 import ModalBase from '../../../components/ModalBase';
 import FinanceDocumentForm from './components/FinanceDocumentForm';
-
-// server.js의 app.use('/api/finance', financeRouters) 경로와 맞춰 주세요.
-// 다른 주소라면 이 상수만 기존 재무관리 API 주소로 변경합니다.
-
 import "../../../css/Form.css";
 import "../../../css/SubMain.css";
 import "../../../css/ModalPopup.css";
 import "../../../css/GroupBord.css";
+
 const DASHBOARD_API = API_BASE_URL + '/finance/dashboard';
 const PERIODS = [['day', '일간'], ['week', '주간'], ['month', '월간'], ['year', '연간']];
 const PERIOD_TEXT = {
@@ -57,7 +54,6 @@ function PaymentSummary({
         </section>;
 }
 function FinanceModul() {
-  // null: 모달 닫힘
   // documentId가 null이면 같은 제목의 문서 선택 화면
   const [scheduleDialog, setScheduleDialog] = useState(null);
   const [documentDetail, setDocumentDetail] = useState(null);

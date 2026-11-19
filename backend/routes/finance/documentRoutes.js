@@ -1,4 +1,5 @@
 const queries = require("../../queries/finance/documentQueries");
+const companyQueries = require("../../queries/finance/companyQueries");
 const express = require("express");
 const db = require("../../db");
 const financeMysql = require("mysql2/promise");
@@ -67,7 +68,21 @@ function financeDocumentParty(value, label) {
     return party;
 }
 
-function financeDocumentPayload(body) {
+// [회사 정보 DB 연동] 새 문서의 공급자 정보는 company_info에서 조회합니다.
+async function documentBusiness() {
+    const rows = await new Promise((resolve, reject) => {
+        db.query(companyQueries.selectDocumentBusiness, [], (error, rows) => error ? reject(error) : resolve(rows));
+    });
+    if (!rows.length) financeDocumentFail(400, 'company_info 테이블에 회사 기본정보를 먼저 등록해주세요.');
+    return financeDocumentParty(rows[0], '회사 기본정보');
+}
+
+router.get('/document-business', async (req, res) => {
+    try { return res.json(await documentBusiness()); }
+    catch (error) { return financeDocumentError(res, error); }
+});
+
+function financeDocumentPayload(body, business) {
     if (!body || typeof body !== 'object' || Array.isArray(body)) financeDocumentFail(400, '문서 입력값을 확인해주세요.');
     const type = body.document_type;
     if (!Object.prototype.hasOwnProperty.call(financeDocumentTypes, type)) financeDocumentFail(400, '문서 종류를 확인해주세요.');
@@ -84,10 +99,11 @@ function financeDocumentPayload(body) {
     let taxMinor = 0n;
     const items = raw.items.map((item, index) => {
         if (!item || typeof item !== 'object' || Array.isArray(item)) financeDocumentFail(400, '품목 정보를 확인해주세요.');
-        const quantity = financeDocumentScaled(item.quantity, 3, '수량', 1000000, false);
+        if (!/^[1-9]\d*$/.test(String(item.quantity))) financeDocumentFail(400, '수량은 1 이상의 정수로 입력해주세요.');
+        const quantity = financeDocumentScaled(item.quantity, 0, '수량', 1000000, false);
         const price = financeDocumentScaled(item.unitPrice, digits, '단가', 1000000000);
         const rate = financeDocumentScaled(item.taxRate, 2, '세율', 100);
-        const supply = (quantity * price + 500n) / 1000n;
+        const supply = quantity * price;
         const tax = (supply * rate + 5000n) / 10000n;
         supplyMinor += supply;
         taxMinor += tax;
@@ -95,7 +111,7 @@ function financeDocumentPayload(body) {
             id: index + 1,
             name: financeDocumentText(item.name, '품목명', 150, true),
             description: financeDocumentText(item.description, '품목 설명', 300),
-            quantity: financeDocumentDecimal(quantity, 3),
+            quantity: financeDocumentDecimal(quantity, 0),
             unitPrice: financeDocumentDecimal(price, digits),
             taxRate: financeDocumentDecimal(rate, 2)
         };
@@ -107,7 +123,7 @@ function financeDocumentPayload(body) {
     return {
         type, partnerId: financeDocumentId(body.partner_id, '거래처 ID', true),
         data: {
-            business: financeDocumentParty(raw.business, '사업자 정보'), customer: financeDocumentParty(raw.customer, '고객 정보'),
+            business, customer: financeDocumentParty(raw.customer, '고객 정보'),
             date, extraDate: extraDate || '', currency, method,
             account: financeDocumentText(raw.account, '입금 계좌 안내', 200),
             note: financeDocumentText(raw.note, '비고', 2000), items
@@ -126,6 +142,9 @@ function financeDocumentDecode(row) {
 
 function financeDocumentError(res, error) {
     if (error.status) return res.status(error.status).json({ message: error.message });
+    if (error.code === 'ER_NO_SUCH_TABLE' && /company_info/.test(error.sqlMessage || error.message || '')) {
+        return res.status(500).json({ message: 'company_info 테이블이 없습니다. 회사 정보 테이블을 먼저 생성해주세요.' });
+    }
     console.error('재무 문서 보관 오류:', error);
     return res.status(500).json({ message: '문서를 처리하지 못했습니다. finance_documents 테이블과 서버 연결을 확인해주세요.' });
 }
@@ -169,7 +188,8 @@ router.get('/documents/:docId', (req, res) => {
 router.post('/documents', async (req, res) => {
     let connection;
     try {
-        const payload = financeDocumentPayload(req.body);
+        // [회사 정보 DB 연동] 클라이언트의 공급자 값 대신 DB 값을 문서에 저장합니다.
+        const payload = financeDocumentPayload(req.body, await documentBusiness());
         // 제공된 기존 API와 동일한 사원 ID 전달 방식입니다.
         // 서버 인증 미들웨어가 있다면 인증된 req.user.employee_id를 우선 사용합니다.
         const employeeId = financeDocumentId(req.user?.employee_id ?? req.body.employee_id, '작성 사원 ID');
@@ -184,6 +204,19 @@ router.post('/documents', async (req, res) => {
         if (payload.partnerId !== null) {
             const [partners] = await connection.execute(queries.selectPartners, [payload.partnerId]);
             if (!partners.length) financeDocumentFail(400, '선택한 거래처가 없습니다. 거래처 목록을 다시 불러오거나 직접 입력으로 변경해주세요.');
+        }
+        // 저장 직전에도 계좌 상태를 확인하여 중지 계좌 선택을 차단합니다.
+        if (payload.type === 'invoice' && payload.data.method === '계좌이체') {
+            const accountId = financeDocumentId(req.body.data.accountId, '입금 계좌');
+            const [accounts] = await connection.execute(
+                'SELECT bank_name, account_number, account_name FROM bank_accounts WHERE account_id = ? AND account_status IN (?, ?) FOR UPDATE',
+                [accountId, '사용', 'ACTIVE']);
+            if (!accounts.length) financeDocumentFail(400, '사용 가능한 입금 계좌를 다시 선택해주세요.');
+            const account = accounts[0];
+            payload.data.accountId = accountId;
+            payload.data.account = [account.bank_name, account.account_number, account.account_name].filter(Boolean).join(' / ');
+        } else {
+            payload.data.account = '';
         }
         const createdDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
         const snapshot = {

@@ -64,6 +64,14 @@ function HeaderNav() {
     // 위의 함수로 유저정보를 받아옴
     const user = getLoginUser();
     // 유저의 전체 이름 저장
+
+    const isMaster = Number(user?.employeeKey) === 9999;
+    const departmentName = user?.departmentName;
+
+    const showHr = isMaster || departmentName === '인사팀';
+    const showFinance = isMaster || departmentName === '재무팀';
+    const showQuality = isMaster || departmentName === '제품개발부서';
+
     const userName = user?.name || user?.userName || "사용자";
     // 유저의 첫글자 저장
     const userFName = userName[0];
@@ -95,9 +103,9 @@ function HeaderNav() {
         <div>
             <nav className="erp-top-nav" aria-label="ERP 주 메뉴">
                 <NavLink to="/main" end>대시보드</NavLink>
-                <NavLink to="/main/hr">인사</NavLink>
-                <NavLink to="/main/finance">재무</NavLink>
-                <NavLink to="/main/qa">품질</NavLink>
+                {showHr && <NavLink to="/main/hr">인사</NavLink>}
+                {showFinance && <NavLink to="/main/finance">재무</NavLink>}
+                {showQuality && <NavLink to="/main/qa">품질</NavLink>}
                 <NavLink to="/main/schedule">일정</NavLink>
                 <NavLink to="/main/project">프로젝트</NavLink>
                 {/* <NavLink to="/main/crm">고객관리</NavLink> */}

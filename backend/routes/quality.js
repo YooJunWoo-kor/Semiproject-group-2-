@@ -66,7 +66,6 @@ router.post("/products", (req, res) => {
         const {
             productCode,
             productName,
-            productType,
             company,
             price,
             stock,

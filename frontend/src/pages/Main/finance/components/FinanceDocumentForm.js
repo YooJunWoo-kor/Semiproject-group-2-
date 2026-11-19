@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { DOCUMENT_TYPES, localDate, currencyDigits, money, calculateRows, calculateTotals, printDocument, saveFinanceDocument, getDocumentPartners } from './financeDocumentUtils';
+import { DOCUMENT_TYPES, localDate, currencyDigits, money, calculateRows, calculateTotals, printDocument, saveFinanceDocument, getDocumentPartners, getDocumentBusiness, getDocumentAccounts } from './financeDocumentUtils';
 import './Finance.css';
 import { validateEmail, validatePhone, validateBusinessNumber, validateLength, validateDateRange } from '../../../../utils/validation';
 import { getLoginUser } from '../../../../utils/authStorage';
@@ -58,26 +58,25 @@ function refreshValidity(form) {
     if (input.disabled || input.readOnly || input.tagName === 'SELECT') continue;
     const label = input.dataset.label || '입력값';
     const textField = input.tagName === 'TEXTAREA' || ['text', 'email', 'tel'].includes(input.type);
-    let result = { valid: true, message: '' };
-    if (textField) {
-      result = validateLength(input.value, {
-        required: input.required,
-        max: input.maxLength >= 0 ? input.maxLength : Infinity,
-        label
-      });
+    if (textField && !validateLength(input.value, {
+      required: input.required,
+      max: input.maxLength >= 0 ? input.maxLength : Infinity
+    })) {
+      input.setCustomValidity(`${label}의 필수 입력 여부와 글자 수를 확인해주세요.`);
+      continue;
     }
     const validators = { email: validateEmail, phone: validatePhone, businessNumber: validateBusinessNumber };
     const validator = validators[input.dataset.validation];
-    if (result.valid && validator) result = validator(input.value, { required: input.required, label });
-    if (!result.valid) input.setCustomValidity(result.message);
+    if (validator && !validator(input.value, { required: input.required })) {
+      input.setCustomValidity(`${label} 형식을 확인해주세요.`);
+    }
   }
   const start = form.querySelector('[data-date-role="start"]');
   const end = form.querySelector('[data-date-role="end"]');
-  if (start && end) {
-    const result = validateDateRange(start.value, end.value, {
-      required: true, startLabel: start.dataset.label, endLabel: end.dataset.label
-    });
-    if (!result.valid) (start.value ? end : start).setCustomValidity(result.message);
+  if (start && end && !validateDateRange(start.value, end.value, { required: true })) {
+    let target = end;
+    if (!start.value) target = start;
+    target.setCustomValidity(`${start.dataset.label}과 ${end.dataset.label}의 입력값과 날짜 순서를 확인해주세요.`);
   }
 }
 
@@ -100,7 +99,6 @@ function PartyFields({
         placeholder: 'example@company.com'
       })}
             {field('address', '주소')}
-            {field('city', '도시')}
             {field('country', '국가')}
             {field('phone', '전화번호', {
         type: 'tel',
@@ -144,8 +142,28 @@ export default function FinanceDocumentForm({
   const [storageError, setStorageError] = useState('');
   const [partners, setPartners] = useState([]);
   const [partnerError, setPartnerError] = useState('');
-  const [lifecycle, setLifecycle] = useState(null);
   const readOnly = Boolean(savedDocument);
+  const [accounts, setAccounts] = useState([]);
+  const [setupError, setSetupError] = useState('');
+  const [businessReady, setBusinessReady] = useState(false);
+  useEffect(() => {
+    if (readOnly) return;
+    const controller = new AbortController();
+    getDocumentBusiness(controller.signal).then(business => {
+      if (controller.signal.aborted) return;
+      setData(old => ({ ...old, business }));
+      setBusinessReady(true);
+    }).catch(error => {
+      if (error.name !== 'AbortError') setSetupError(error.message);
+    });
+    if (type === 'invoice') getDocumentAccounts(controller.signal).then(value => {
+      if (!controller.signal.aborted) setAccounts(value);
+    }).catch(error => {
+      if (error.name !== 'AbortError') setSetupError(error.message);
+    });
+    return () => controller.abort();
+  }, [readOnly, type]);
+  const [lifecycle, setLifecycle] = useState(null);
   useEffect(() => {
     const controller = new AbortController();
     setLifecycle(controller);
@@ -197,6 +215,7 @@ export default function FinanceDocumentForm({
     if (saving || savedDocument || !lifecycle || lifecycle.signal.aborted) return;
     setStorageError('');
     if (!formElement) return;
+    if (!businessReady) { setStorageError('회사 기본정보를 불러온 뒤 저장해주세요.'); return; }
     refreshValidity(formElement);
     if (!formElement.reportValidity()) return;
     if (!employeeId) {
@@ -276,7 +295,7 @@ export default function FinanceDocumentForm({
         handleSave();
       }}>
                 <fieldset className="fd-storage-fields" disabled={saving || readOnly}>
-                <PartyFields title="01  사업자 정보" value={data.business} onChange={updateParty('business')} business />
+                {setupError && <p className="fd-storage-error" role="alert">{setupError}</p>}
                 <section className="fd-card">
                     <h3>고객 정보 입력 방식</h3>
                     {readOnly ? <p className="fd-storage-info subtext">{savedDocument.partner_id ? '기존 거래처와 연결된 문서' : '고객 정보를 직접 입력한 문서'}</p> : <>
@@ -290,25 +309,36 @@ export default function FinanceDocumentForm({
                         <p className="fd-storage-info subtext">거래처를 등록하지 않아도 고객 정보를 직접 입력해 저장할 수 있습니다.</p>
                     </>}
                 </section>
-                <PartyFields title={`02  ${config.party} 정보`} value={data.customer} onChange={updateParty('customer')} />
+                <PartyFields title={`${config.party} 정보`} value={data.customer} onChange={updateParty('customer')} />
                 <section className="fd-card">
-                    <h3>03  {config.title} 상세</h3>
+                    <h3>{config.title} 상세</h3>
                     <div className="fd-grid">
                         <Field label={`${config.title} 번호`} value={data.number} readOnly placeholder="저장 시 자동 발급" />
                         <Field label={config.date} dateRole="start" type="date" required value={data.date} onChange={e => update('date', e.target.value)} />
                         {config.extraDate && <Field label={config.extraDate} dateRole="end" type="date" min={data.date} required value={data.extraDate} onChange={e => update('extraDate', e.target.value)} />}
                         <label className="fd-field"><span>통화</span><select value={data.currency} onChange={e => update('currency', e.target.value)}><option value="KRW">KRW — 원</option><option value="USD">USD — 달러</option><option value="EUR">EUR — 유로</option><option value="JPY">JPY — 엔</option></select></label>
                         {type !== 'estimate' && <label className="fd-field"><span>{type === 'receipt' ? '결제 방법' : '지급 방법'}</span><select value={data.method} onChange={e => update('method', e.target.value)}><option>계좌이체</option><option>카드</option><option>현금</option><option>기타</option></select></label>}
-                        {type === 'invoice' && <Field label="입금 계좌 / 지급 안내" value={data.account} maxLength={200} onChange={e => update('account', e.target.value)} />}
+                        {type === 'invoice' && data.method === '계좌이체' && <label className="fd-field"><span>입금 계좌 *</span>
+                          {readOnly ? <input value={data.account || ''} readOnly /> : <select required value={data.accountId || ''} onChange={e => {
+                            const account = accounts.find(row => String(row.account_id) === e.target.value);
+                            setData(old => ({ ...old, accountId: e.target.value, account: account ? [account.bank_name, account.account_number, account.account_name].filter(Boolean).join(' / ') : '' }));
+                          }}>
+                            <option value="">{accounts.length ? '입금 계좌 선택' : '사용 가능한 등록 계좌가 없습니다'}</option>
+                            {accounts.map(account => <option key={account.account_id} value={String(account.account_id)}>{[account.bank_name, account.account_number, account.account_name].filter(Boolean).join(' / ')}</option>)}
+                          </select>}
+                        </label>}
                     </div>
                 </section>
                 <section className="fd-card">
-                    <div className="fd-section-title"><h3>04  품목</h3><span>부가세 별도</span></div>
+                    <div className="fd-section-title"><h3>품목</h3><span>부가세 별도</span></div>
                     {rows.map((item, index) => <div className="fd-item" key={item.id}>
                         <div className="fd-item-title"><strong>품목 {index + 1}</strong><button type="button" className="fd-text-button" disabled={rows.length === 1} onClick={() => update('items', data.items.filter(row => row.id !== item.id))} aria-label={`품목 ${index + 1} 삭제`}>삭제</button></div>
                         <Field label="품목명" required maxLength={150} value={item.name} onChange={e => updateItem(item.id, 'name', e.target.value)} placeholder="예: 화장품 샘플 제작" />
                         <div className="fd-item-numbers">
-                            <Field label="수량" type="number" min="0.001" max="1000000" step="0.001" required value={item.quantity} onChange={e => updateItem(item.id, 'quantity', e.target.value)} />
+                            <Field label="수량" type="text" inputMode="numeric" pattern="[1-9][0-9]{0,6}" maxLength={7} required value={item.quantity} onChange={e => {
+                              const value = e.target.value;
+                              if (/^\d*$/.test(value) && Number(value) <= 1000000) updateItem(item.id, 'quantity', value);
+                            }} />
                             <Field label="단가" type="number" min="0" max="1000000000" step={10 ** -currencyDigits(data.currency)} required value={item.unitPrice} onChange={e => updateItem(item.id, 'unitPrice', e.target.value)} />
                             <Field label="세율 (%)" type="number" min="0" max="100" step="0.01" required value={item.taxRate} onChange={e => updateItem(item.id, 'taxRate', e.target.value)} />
                         </div>
@@ -317,7 +347,7 @@ export default function FinanceDocumentForm({
                     </div>)}
                     <button type="button" className="fd-secondary" disabled={data.items.length >= 50} onClick={() => update('items', [...data.items, newItem()])}>＋ 품목 추가</button>
                 </section>
-                <section className="fd-card"><h3>05  비고</h3><label className="fd-field"><span>안내 사항 / 추가 메모</span><textarea data-label="비고" rows={4} maxLength={2000} value={data.note} onChange={e => update('note', e.target.value)} placeholder="거래 조건, 감사 인사 등을 입력해주세요." /></label></section>
+                <section className="fd-card"><h3>비고</h3><label className="fd-field"><span>안내 사항 / 추가 메모</span><textarea data-label="비고" rows={4} maxLength={2000} value={data.note} onChange={e => update('note', e.target.value)} placeholder="거래 조건, 감사 인사 등을 입력해주세요." /></label></section>
                 </fieldset>
             </form>
             <aside className="fd-side">
@@ -405,9 +435,9 @@ export default function FinanceDocumentForm({
                             {/* 청구서에만 표시 */}
                             {type === 'invoice' && <div>
                                     <p>지급 방법: {data.method}</p>
-                                    <p>아래 계좌로 입금 부탁드립니다.</p>
+                                    {data.method === '계좌이체' && <p>아래 계좌로 입금 부탁드립니다.</p>}
 
-                                    {data.account && <p>입금 계좌 / 지급 안내: {data.account}</p>}
+                                    {data.method === '계좌이체' && data.account && <p>입금 계좌 / 지급 안내: {data.account}</p>}
                                 </div>}
 
                             {/* 모든 문서에 표시 */}

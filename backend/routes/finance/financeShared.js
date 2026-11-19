@@ -20,6 +20,16 @@ function readAmount(value) {
     return Number.isSafeInteger(amount) && amount > 0 ? amount : null;
 }
 
+// [비용 연동 추가] 별도 비용 행을 우선 사용하고, 없으면 원본의 항목 금액을 합산합니다.
+function readExpenseAmount(detailData, expenses = []) {
+    const detail = readDetailData(detailData);
+    const items = expenses.length ? expenses : detail.expenseItems;
+    if (!Array.isArray(items) || !items.length) return null;
+    const amounts = items.map(item => readAmount(item.amount));
+    if (amounts.includes(null)) return null;
+    return readAmount(amounts.reduce((total, value) => total + value, 0));
+}
+
 function readDueDate(value) {
     if (typeof value !== 'string' || !/^[1-9]\d{3}-\d{2}-\d{2}$/.test(value)) return null;
     const date = new Date(`${value}T00:00:00Z`);
@@ -53,7 +63,7 @@ function toApprovedDraftView(rows, includeUnapproved = false) {
             requester_name: row.requester_name,
             department_name: row.department_name,
             title: row.title, content: row.content || '',
-            amount: readAmount(row.expense_amount ?? row.payroll_amount ?? detail.amount),
+            amount: readAmount(row.expense_amount ?? (row.document_type === '비용' ? readExpenseAmount(detail) : row.payroll_amount ?? detail.amount)),
             due_date: readDueDate(detail.due_date),
             approval_status: financeApprovalStatus(row.status), original_approval_status: row.status, document_type: row.document_type,
             created_at: row.created_at,
@@ -144,4 +154,4 @@ function summary(entries, previousEntries, scheduled) {
 
 
 
-module.exports = { payrollPaymentRowsSql, readDetailData, readAmount, readDueDate, financeApprovalStatus, toApprovedDraftView, approvalPaidRowsSql, expenseGroups, incomeGroups, groups, category, seoulToday, dateString, period, amount, sum, summary };
+module.exports = { readExpenseAmount, payrollPaymentRowsSql, readDetailData, readAmount, readDueDate, financeApprovalStatus, toApprovedDraftView, approvalPaidRowsSql, expenseGroups, incomeGroups, groups, category, seoulToday, dateString, period, amount, sum, summary };

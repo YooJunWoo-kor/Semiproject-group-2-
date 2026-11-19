@@ -227,7 +227,9 @@ router.post('/:draftId/decision', async (req, res) => {
         return res.json({ message: decision === 'approve' ? '승인 완료' : '반려 완료' });
     } catch (error) {
         console.error('결재 처리 오류:', error);
-        return res.status(500).json({ message: '결재 처리 실패' });
+        return res.status(error.status || 500).json({
+            message: error.status ? error.message : '결재 처리 실패'
+        });
     }
 });
 
@@ -318,7 +320,10 @@ router.post("/:draftId/receipt", receiptUpload.single("receipt"), (req, res) => 
          [imageUrl, draftId, employeeId],
          
          (err, result) => {
-            if(err) return res.status(500).json({message: "저장 실패"});
+            if (err) {
+                console.error("영수증 경로 저장 오류:", err);
+                return res.status(500).json({ message: "영수증 저장 실패" });
+            }
 
          
 
