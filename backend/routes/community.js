@@ -53,7 +53,7 @@ function handle(action) {
     };
 }
 
-// 게시판 설정을 찾은 뒤 글·댓글 처리 함수에 전달
+// 게시판 설정을 찾은 뒤 글·댓글 처리 함수에 전달합니다.
 function withBoard(action, fixedPath) {
     return handle(async (req, res) => {
         const apiPath = fixedPath ?? `/${req.params.boardPath}`;
@@ -120,11 +120,13 @@ router.get('/posts', handle(async (req, res) => {
     const conditions = boardType === undefined ? '' : 'WHERE p.board_type = ?';
     const params = boardType === undefined ? [] : [boardType];
 
+    // [수정] 삭제되지 않은 원댓글과 대댓글만 개수에 포함합니다.
     const [posts] = await db.promise().execute(
         `SELECT p.*, e.name AS employee_name, e.email AS login_id,
                 (SELECT COUNT(*)
                  FROM community_comments c
-                 WHERE c.post_id = p.post_id) AS comment_count
+                 WHERE c.post_id = p.post_id
+                   AND c.deleted_at IS NULL) AS comment_count
          FROM community_posts p
          LEFT JOIN employees e ON p.employee_id = e.employee_id
          ${conditions}
@@ -147,12 +149,36 @@ async function loadBoard(board) {
         [board.type]
     );
 
+    // [수정] 삭제된 답글은 제외하고, 답글이 남은 원댓글은 안내 문구로 표시합니다.
     const [comments] = await db.promise().execute(
-        `SELECT c.*, e.name AS employee_name, e.email AS login_id
+        `SELECT c.comment_id,
+                c.post_id,
+                c.parent_comment_id,
+                c.deleted_at,
+                CASE WHEN c.deleted_at IS NULL THEN c.content
+                     ELSE '삭제된 댓글입니다' END AS content,
+                CASE WHEN c.deleted_at IS NULL THEN c.employee_id END AS employee_id,
+                CASE WHEN c.deleted_at IS NULL THEN e.name END AS employee_name,
+                CASE WHEN c.deleted_at IS NULL THEN e.email END AS login_id,
+                c.created_at,
+                c.updated_at
          FROM community_comments c
          JOIN community_posts p ON c.post_id = p.post_id
          LEFT JOIN employees e ON c.employee_id = e.employee_id
          WHERE p.board_type = ?
+           AND (
+               c.deleted_at IS NULL
+               OR (
+                   c.parent_comment_id IS NULL
+                   AND EXISTS (
+                       SELECT 1
+                       FROM community_comments reply
+                       WHERE reply.parent_comment_id = c.comment_id
+                         AND reply.post_id = c.post_id
+                         AND reply.deleted_at IS NULL
+                   )
+               )
+           )
          ORDER BY c.created_at, c.comment_id`,
         [board.type]
     );
@@ -182,6 +208,7 @@ function readPost(body, board) {
     return [body.title.trim(), body.content.trim(), category, important];
 }
 
+// 기존 주소에 맞춰 댓글 번호와 게시글 번호를 확인합니다.
 function commentTarget(req, board) {
     const { commentId, postId } = req.params;
 
@@ -214,11 +241,12 @@ async function updateComment(req, res, board) {
         return badRequest(res, '댓글 번호와 내용을 확인해 주세요.');
     }
 
+    // [수정] 삭제된 댓글은 수정 대상에서 제외합니다.
     const [result] = await db.promise().execute(
         `UPDATE community_comments c
          JOIN community_posts p ON c.post_id = p.post_id
          SET c.content = ?, c.updated_at = CURRENT_TIMESTAMP
-         WHERE ${target.condition}`,
+         WHERE ${target.condition} AND c.deleted_at IS NULL`,
         [req.body.content.trim(), ...target.params]
     );
 
@@ -236,9 +264,15 @@ async function deleteComment(req, res, board) {
         return badRequest(res, '댓글 번호를 확인해 주세요.');
     }
 
+    // [수정] 댓글의 삭제 시각을 기록하고 기존 수정 시각은 유지합니다.
     const [result] = await db.promise().execute(
-        `DELETE c FROM community_comments c
+        `DELETE c, reply
+         FROM community_comments c
          JOIN community_posts p ON c.post_id = p.post_id
+         LEFT JOIN community_comments reply
+           ON reply.post_id = c.post_id
+          AND reply.parent_comment_id = c.comment_id
+          AND c.parent_comment_id IS NULL
          WHERE ${target.condition}`,
         target.params
     );
@@ -365,31 +399,53 @@ router.delete('/:boardPath/:postId', withBoard(async (req, res, board) => {
     res.json({ message: '게시글이 삭제되었습니다.' });
 }));
 
-// 8. 동적 게시판 댓글 등록
+// 8. 동적 게시판 댓글·대댓글 등록
 router.post('/:boardPath/:postId/comments', withBoard(async (req, res, board) => {
     const { postId } = req.params;
+    const { content, employee_id, parent_comment_id = null } = req.body ?? {};
 
-    if (!validId(postId) ||
-        !validId(req.body?.employee_id) ||
-        !validText(req.body?.content, 10000)) {
+    if (!validId(postId) || !validId(employee_id) || !validText(content, 10000)) {
         return badRequest(res, '게시글 번호, 댓글 내용과 작성 직원 번호를 확인해 주세요.');
     }
 
+    const isReply = parent_comment_id !== null;
+    if (isReply && !validId(parent_comment_id)) {
+        return badRequest(res, '원댓글 번호를 확인해 주세요.');
+    }
+
     const [result] = await db.promise().execute(
-        `INSERT INTO community_comments (post_id, content, employee_id)
-         SELECT post_id, ?, ?
-         FROM community_posts
-         WHERE post_id = ? AND board_type = ?`,
-        [req.body.content.trim(), req.body.employee_id, postId, board.type]
+        `INSERT INTO community_comments
+             (post_id, content, employee_id, parent_comment_id)
+         SELECT p.post_id, ?, ?, ?
+         FROM community_posts p
+         LEFT JOIN community_comments parent
+           ON parent.comment_id = ?
+          AND parent.post_id = p.post_id
+          AND parent.parent_comment_id IS NULL
+          AND parent.deleted_at IS NULL
+         WHERE p.post_id = ? AND p.board_type = ?
+           AND (? IS NULL OR parent.comment_id IS NOT NULL)`,
+        [
+            content.trim(),
+            employee_id,
+            parent_comment_id,
+            parent_comment_id,
+            postId,
+            board.type,
+            parent_comment_id
+        ]
     );
 
     if (!result.affectedRows) {
-        return notFound(res, '게시글을 찾을 수 없습니다.');
+        const message = isReply
+            ? '게시글 또는 답글을 달 수 있는 원댓글을 찾을 수 없습니다.'
+            : '게시글을 찾을 수 없습니다.';
+        return notFound(res, message);
     }
 
     res.status(201).json({
         comment_id: result.insertId,
-        message: '댓글이 등록되었습니다.'
+        message: isReply ? '답글이 등록되었습니다.' : '댓글이 등록되었습니다.'
     });
 }));
 
