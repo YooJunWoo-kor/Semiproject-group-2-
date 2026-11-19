@@ -10,6 +10,7 @@ import { API_BASE_URL } from '../../../utils/authStorage';
 
 import { getLoginUser } from '../../../utils/authStorage';
 
+// 날짜를 YYYY-MM-DD 형식으로 변환
 function formatDate(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -29,31 +30,104 @@ export default function Dashboard() {
     // 부서 직원 표에서 사용할 자료
     const [leaveCount, setLeaveCount] = useState(0);
 
+ // 1. 오늘 날짜
     const today = formatDate(new Date());
 
-    const todayAttendance = attendanceData.filter(
-        (attendance) => attendance.attendanceDate === today
-    );
-    const todayWorkingCount = todayAttendance.filter(
-        (attendance) =>
-            attendance.clockIn ||
-            attendance.status === '정상' ||
-            attendance.status === '지각'
-    ).length;
+   // 2. 전체 근태 데이터 중 오늘 날짜만 추출
+   const todayAttendance = attendanceData.filter(
+    (attendance) => attendance.attendanceDate === today
+);   
 
-    const abnormalStatuses = [
+
+//     // const todayAbnormalCount = new Set(
+//     // todayAttendance
+//     //     .filter((attendance) => {
+//     //         const memo = String(attendance.memo || "").trim();
+//     //         const hasMemo = memo !== "" && memo !== "-";
+
+//             // 휴가는 금일휴가자 카드에서 별도로 계산
+//             if (attendance.status === "휴가") {
+//                 return false;
+//             }
+
+//             // 이상근태 상태이거나 메모가 있으면 포함
+//             return (
+//                 abnormalStatuses.includes(attendance.status) ||
+//                 hasMemo
+//             );
+//         })
+//         .map((attendance) => attendance.employeeId)
+//         .filter((employeeId) => employeeId != null)
+// ).size;
+
+
+    // const todayWorkingCount = todayAttendance.filter(
+    //     (attendance) =>
+    //         attendance.clockIn ||
+    //         attendance.status === '정상' ||
+    //         attendance.status === '지각'
+    // ).length;
+
+     // 3. 이상근태로 판단할 상태 목록
+     const abnormalStatuses = [
         '지각',
         '조퇴',
         '야근',
         '지각·조퇴',
-        '지각·야근'
+        '지각·야근',
+        '출장'
     ];
-    
-    const todayAbnormalCount = todayAttendance.filter(
-        (attendance) =>
-            attendance.clockIn &&
-            abnormalStatuses.includes(attendance.status)
-    ).length;
+
+      // 4. 오늘 출근자 수 (직원 중복 제거)
+      const todayWorkingCount = new Set(
+        todayAttendance
+            .filter(
+                (attendance) =>
+                    attendance.clockIn ||
+                    attendance.status === '정상' ||
+                    attendance.status === '지각'
+            )
+            .map((attendance) => attendance.employeeId)
+            .filter((employeeId) => employeeId != null)
+    ).size;
+
+
+    // 5. 오늘 이상근태자 수 (메모 포함, 직원 중복 제거)
+    const todayAbnormalCount = new Set(
+        todayAttendance
+            .filter((attendance) => {
+                const memo = String(attendance.memo || '').trim();
+                const hasMemo = memo !== '' && memo !== '-';
+
+                // 휴가는 별도 카드에서 집계
+                if (attendance.status === '휴가') {
+                    return false;
+                }
+
+                // 이상근태 상태 또는 메모가 있는 경우
+                return (
+                    abnormalStatuses.includes(attendance.status) ||
+                    hasMemo
+                );
+            })
+            .map((attendance) => attendance.employeeId)
+            .filter((employeeId) => employeeId != null)
+    ).size;
+
+
+     // 6. 금일 휴가자 수 (직원 중복 제거)
+     const todayLeaveCount = new Set(
+        todayAttendance
+            .filter(
+                (attendance) => attendance.status === '휴가'
+            )
+            .map((attendance) => attendance.employeeId)
+            .filter((employeeId) => employeeId != null)
+    ).size;
+
+
+
+
 
     useEffect(() => {
         loadLeave();
@@ -80,7 +154,7 @@ export default function Dashboard() {
         }
     }
 
-    // 상단 통계 카드용 근태 및 조직 요약 조회
+    // 7. 상단 통계 카드용 근태 및 조직 요약 조회
     useEffect(() => {
         let ignore = false;
 
@@ -132,6 +206,8 @@ export default function Dashboard() {
         };
     }, []);
 
+
+
     return (
         <div className="border-container">
             <header className="dashboard-header">
@@ -150,11 +226,12 @@ export default function Dashboard() {
             )}
 
             <section className="stats-section">
+                <StatisticsCard title="운용부서" count={String(departments)} stiyle={0} />
                 <StatisticsCard title="전체직원" count={String(employeesCount)} stiyle={1} />
                 <StatisticsCard title="오늘출근" count={String(todayWorkingCount)} stiyle={1} />
                 <StatisticsCard title="이상근태자" count={String(todayAbnormalCount)} stiyle={1} />
-                <StatisticsCard title="사용한 연차" count={String(leaveCount)} stiyle={3} />
-                <StatisticsCard title="운용부서" count={String(departments)} stiyle={0} />
+                <StatisticsCard title="금일휴가자" count={String(todayLeaveCount)} stiyle={1} />
+                
                
             </section>
 
