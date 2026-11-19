@@ -78,7 +78,7 @@ export async function getAttendance(){
          const formattedData = dataSet.map((item)=>{
             const stData = formatDateToYYYYMMDD(item.date);
             const enData = stData;
-            const title = item.title;
+            const title = item.title === "지각·조퇴" ? "조퇴" : item.title;
 
             return {
                 title: title
