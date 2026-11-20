@@ -1695,15 +1695,15 @@ function Items({
               }}>분류 변경</button>}
 
               {selectedItem.isApprovalDocument && !selectedItem.isPayrollDraft && getTradeApprovalStatus(selectedItem, approvedDocuments) === 'APPROVED' && <button type="button" className="erp-primary-button" disabled={saving || paymentSaving || attachmentBusy || selectedItem.totalAmount == null} onClick={() => openApprovedTradeForm(selectedItem)}>거래정보 등록</button>}
-              <button type="button" disabled={selectedItem.isApprovalDocument || getTradeApprovalStatus(selectedItem, approvedDocuments) === 'UNAPPROVED' || saving || paymentSaving || attachmentBusy} onClick={() => openPaymentForm(selectedItem)}>
+              <button type="button"  onClick={() => openPaymentForm(selectedItem)}>
                 {selectedItem.type === "SALES" ? "입금 등록" : "출금 등록"}
               </button>
 
-              <button type="button" disabled={selectedItem.isApprovalDocument || saving || paymentSaving || attachmentBusy} className="erp-primary-button" onClick={() => openEditItemForm(selectedItem)}>
+              <button type="button"  className="erp-primary-button" onClick={() => openEditItemForm(selectedItem)}>
                 수정
               </button>
 
-              <button type="button" disabled={selectedItem.isApprovalDocument || saving || paymentSaving || attachmentBusy} className="finance-detail-delete" onClick={handleItemDelete}>
+              <button type="button"  className="finance-detail-delete" onClick={handleItemDelete}>
                 삭제
               </button>
 
