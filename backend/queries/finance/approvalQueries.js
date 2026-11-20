@@ -112,8 +112,9 @@ const selectApprovalSteps = `
 const selectEmployees = `SELECT e.employee_id
              FROM employees e
              INNER JOIN employee_accounts ea ON ea.employee_id = e.employee_id
+             LEFT JOIN departments finance_department ON finance_department.department_id = e.department_id
              WHERE e.employee_id = ? AND ea.account_status = 'ACTIVE'
-               AND (e.department_id = 1 OR ea.role = 'MASTER')
+               AND (finance_department.department_name LIKE '재무%' OR ea.role = 'MASTER')
              FOR UPDATE`;
 
 const insertApprovalDocuments = `INSERT INTO approval_documents (
@@ -143,8 +144,9 @@ const selectEmployeeAccounts = `SELECT employee_id FROM employee_accounts
 const selectEmployees2 = `SELECT e.employee_id
              FROM employees e
              INNER JOIN employee_accounts ea ON ea.employee_id = e.employee_id
+             LEFT JOIN departments finance_department ON finance_department.department_id = e.department_id
              WHERE e.employee_id = ? AND ea.account_status = 'ACTIVE'
-               AND (e.department_id = 1 OR ea.role = 'MASTER')
+               AND (finance_department.department_name LIKE '재무%' OR ea.role = 'MASTER')
              FOR UPDATE`;
 
 const selectApprovalDocuments3 = 'SELECT document_id, approval_status FROM approval_documents WHERE document_id = ? FOR UPDATE';
@@ -193,9 +195,10 @@ const selectPayments = `
             ORDER BY payment_date DESC, payment_id DESC
         `;
 
-const selectEmployees3 = `SELECT e.employee_id, e.department_id, ea.role
+const selectEmployees3 = `SELECT e.employee_id, e.department_id, finance_department.department_name, ea.role
              FROM employees e
              INNER JOIN employee_accounts ea ON ea.employee_id = e.employee_id
+             LEFT JOIN departments finance_department ON finance_department.department_id = e.department_id
              WHERE e.employee_id = ? AND ea.password_hash = ? AND ea.account_status = 'ACTIVE'`;
 
 const selectApprovalDocuments5 = 'SELECT document_id, amount, approval_status FROM approval_documents WHERE document_id = ? FOR UPDATE';

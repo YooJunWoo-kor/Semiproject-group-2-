@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import BasicTable from '../../../../components/BasicTable';
 import Items from './Items';
 import ModalBase from '../../../../components/ModalBase';
-import { getLoginUser } from '../../../../utils/authStorage';
+import { getLoginUser, canAccessFinance } from '../../../../utils/authStorage';
 import { getPaymentManagement, savePaymentClassification } from '../../../../utils/financeService';
 import Approval from './Approval';
 import '../../../../css/SubMain.css';
@@ -98,7 +98,7 @@ export default function PaymentManagement({
 }) {
   const navigate = useNavigate();
   const user = getLoginUser();
-  const permitted = user?.role === 'MASTER' || Number(user?.department_id) === 1;
+  const permitted = canAccessFinance(user);
   const direction = '전체';
   const [tradeType, setTradeType] = useState('ALL');
   const [monthInput, setMonthInput] = useState(currentMonth);
@@ -271,7 +271,7 @@ export default function PaymentManagement({
       setSaving(false);
     }
   }
-  //if (!permitted) return <div className="border-container"><h2 className="subtitle">결제 관리</h2><p role="alert">재무부 또는 MASTER 계정만 이용할 수 있습니다.</p></div>;
+  if (!permitted) return <div className="border-container"><h2 className="subtitle">지출·거래 관리</h2><p role="alert">재무팀 또는 MASTER 계정만 이용할 수 있습니다.</p></div>;
   if (workflow) return <div className="pm-workflow">
     <button type="button" disabled={workflowBusy} onClick={() => setWorkflow(null)}>← 결제 관리로 돌아가기</button>
     <Approval key={`${workflow.documentId || ''}-${workflow.draft}`} initialDocumentId={workflow.documentId} initialDraftOpen={workflow.draft} expenseGroups={expenseGroups} onBusyChange={setWorkflowBusy} />

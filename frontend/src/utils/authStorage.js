@@ -21,23 +21,41 @@ export const TOGLE_COLORS = [
     '#64748b'  // 9: 뉴트럴 슬레이트 (기타)
   ];
 
+// 로그인·계정 전환 데이터의 필드명을 한 가지 형태로 정규화합니다.
+function normalizeLoginUser(user) {
+    if (!user || typeof user !== 'object') return null;
+    const employeeId = user.employee_id ?? user.employeeKey ?? null;
+    const departmentId = user.department_id ?? user.department ?? null;
+    return {
+        ...user,
+        employee_id: employeeId,
+        employeeKey: user.employeeKey ?? employeeId,
+        department_id: departmentId,
+        department: user.department ?? departmentId
+    };
+}
+
 // 로그인 사용자 저장
-/* employeeKey,name, email, department,position, role */
 export function saveLoginUser(user) {
-    localStorage.setItem(
-        LOGIN_USER_KEY,
-        JSON.stringify(user)
-    );
-    
+    localStorage.setItem(LOGIN_USER_KEY, JSON.stringify(normalizeLoginUser(user)));
 }
 
 // 로그인 사용자 조회
-/* employeeKey,name, email, department,position, role */
 export function getLoginUser() {
-    const user = localStorage.getItem(LOGIN_USER_KEY);
-    if (!user) return null;
+    const savedUser = localStorage.getItem(LOGIN_USER_KEY);
+    if (!savedUser) return null;
+    return normalizeLoginUser(JSON.parse(savedUser));
+}
 
-    return JSON.parse(user);
+export function isFinanceDepartment(user) {
+    const departmentName = String(user?.departmentName ?? user?.department_name ?? '').trim();
+    if (departmentName) return departmentName.startsWith('재무');
+    const departmentId = Number(user?.department_id ?? user?.department);
+    return departmentId === 1 || departmentId === 7;
+}
+
+export function canAccessFinance(user = getLoginUser()) {
+    return String(user?.role || '').trim().toUpperCase() === 'MASTER' || isFinanceDepartment(user);
 }
 
 //오늘날짜 조회

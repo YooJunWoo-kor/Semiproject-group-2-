@@ -2,6 +2,7 @@ import { getFinanceError, koreaDate as todayInKorea } from './financeUtils';
 import React, { useEffect, useState } from 'react';
 import ModalBase from '../../../../components/ModalBase';
 import { getApprovalPayments, createApprovalPayment, getBankAccounts, getCorporateCards, getApprovalAttachments, uploadApprovalAttachment, downloadApprovalAttachment } from '../../../../utils/financeService';
+import { canAccessFinance } from '../../../../utils/authStorage';
 import './Finance.css';
 import '../../../../css/Form.css';
 import '../../../../css/Table.css';
@@ -124,12 +125,9 @@ export function ApprovalPayments({
     Boolean(summary) && isSameDocument && hasValidAmounts;
 
   // 3. 로그인한 사용자의 지급 권한 확인
-  const isLoggedIn = Number(loginUser?.employee_id) > 0;
-  const isMaster = loginUser?.role === "MASTER";
-  const isFinanceDepartment = Number(loginUser?.department_id) === 1;
-
-  const isFinance =
-    isLoggedIn && (isMaster || isFinanceDepartment);
+  const employeeId = Number(loginUser?.employee_id ?? loginUser?.employeeKey);
+  const isLoggedIn = Number.isSafeInteger(employeeId) && employeeId > 0;
+  const isFinance = isLoggedIn && canAccessFinance(loginUser);
 
   // 4. 승인 상태와 남은 지급 금액 확인
   const isApproved =
@@ -255,7 +253,7 @@ export function ApprovalPayments({
     onBusyChange(true);
     try {
       const result = await createApprovalPayment(approval.id, {
-        employee_id: loginUser.employee_id,
+        employee_id: employeeId,
         password: form.password,
         payment_date: form.payment_date,
         amount,

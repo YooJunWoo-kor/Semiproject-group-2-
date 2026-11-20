@@ -2,7 +2,7 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const db = require('../../db');
 const queries = require('../../queries/finance/payrollQueries');
-const { readDueDate, seoulToday } = require('./financeShared');
+const { readDueDate, seoulToday, isFinanceDepartmentName } = require('./financeShared');
 const { validateAdditionalPayroll, selectAdditionalPayrolls, toAdditionalRow, fail } = require('../../services/additionalPayroll');
 const router = express.Router();
 router.get('/additional-payrolls', async (req, res) => {
@@ -28,7 +28,7 @@ router.post('/additional-payrolls/:draftId/payments', async (req, res) => {
             user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME });
         const [users] = await connection.execute(queries.selectEmployees, [actor, password]);
         if (!users.length) fail('로그인 비밀번호를 확인해주세요.', 401);
-        if (users[0].role !== 'MASTER' && Number(users[0].department_id) !== 1) fail('재무부 또는 MASTER만 지급할 수 있습니다.', 403);
+        if (!isFinanceDepartmentName(users[0].department_name) && String(users[0].role || '').trim().toUpperCase() !== 'MASTER') fail('재무부 또는 MASTER만 지급할 수 있습니다.', 403);
         await connection.beginTransaction();
         const [drafts] = await connection.execute('SELECT * FROM my_draft WHERE draft_id = ? FOR UPDATE', [id]);
         const draft = drafts[0];

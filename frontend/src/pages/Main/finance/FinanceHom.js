@@ -6,7 +6,7 @@ import BankAccount from './pages/BankAccount';
 import FinanceWorkspace from './pages/FinanceWorkspace';
 import Partners from './pages/Partners';
 import Nav from '../../../components/Nav';
-import { getLoginUser } from "../../../utils/authStorage";
+import { canAccessFinance } from "../../../utils/authStorage";
 import "../../../css/Form.css";
 import "../../../css/Table.css";
 import "../../../css/SubMain.css";
@@ -16,15 +16,7 @@ import "../../../css/GroupBord.css";
 
 function FinanceHome() {
   const mainUrl = "/main/finance";
-  const loginUser = getLoginUser();
-
-
-  // 재무 관리는 재무부 소속 + master 계정만 확인 가능하게 할 예정
-
-  // 마스터이거나 재무부 소속이면 true
-  const canAccessFinance =
-    loginUser?.role === "MASTER" ||
-          String(loginUser?.department ?? loginUser?.department_id) === "7";
+  const hasFinanceAccess = canAccessFinance();
 
   // 모든 부서에 보여줄 메뉴
   const commonMenus = [{ name: "대시보드", url: mainUrl }];
@@ -40,7 +32,7 @@ function FinanceHome() {
   let urlList = commonMenus;
 
   // 로그인한 사용자의 부서ID가 1이면 재무 메뉴도 추가합니다.
-  if (canAccessFinance) {
+  if (hasFinanceAccess) {
     urlList = [...commonMenus, ...financeMenus];
   }
   return <div className="sub-main-contain finance-module">

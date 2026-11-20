@@ -2,7 +2,7 @@ const queries = require("../../queries/finance/approvalQueries");
 const express = require("express");
 const db = require("../../db");
 const financeMysql = require("mysql2/promise");
-const { toApprovedDraftView, category, amount, summary } = require("./financeShared");
+const { toApprovedDraftView, category, amount, summary, isFinanceDepartmentName } = require("./financeShared");
 
 const router = express.Router();
 
@@ -491,7 +491,7 @@ router.post('/approvals/:documentId/payments', async (req, res) => {
             [employeeId, password]
         );
         if (accounts.length === 0) fail(401, '비밀번호 또는 계정 상태를 확인해 주세요.');
-        if (Number(accounts[0].department_id) !== 1 && accounts[0].role !== 'MASTER') {
+        if (!isFinanceDepartmentName(accounts[0].department_name) && String(accounts[0].role || '').trim().toUpperCase() !== 'MASTER') {
             fail(403, '재무부 또는 MASTER 계정만 지급을 등록할 수 있습니다.');
         }
 

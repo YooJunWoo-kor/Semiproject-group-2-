@@ -77,8 +77,9 @@ function selectPayrolls2(value0) {
     `;
 }
 
-const selectEmployees = `SELECT e.department_id, ea.role
+const selectEmployees = `SELECT e.department_id, finance_department.department_name, ea.role
             FROM employees e INNER JOIN employee_accounts ea ON ea.employee_id = e.employee_id
+            LEFT JOIN departments finance_department ON finance_department.department_id = e.department_id
             WHERE e.employee_id = ? AND ea.password_hash = ? AND ea.account_status = 'ACTIVE'`;
 
 const selectPayrolls3 = `SELECT p.*, d.status AS approval_status, d.draft_id
@@ -134,8 +135,9 @@ const selectPayments2 = `SELECT salary.payment_id, salary.payroll_id, salary.amo
           AND JSON_UNQUOTE(JSON_EXTRACT(salary.payroll_snapshot, '$.pay_month')) = ?
         ORDER BY salary.payment_id`;
 
-const selectEmployees2 = `SELECT e.department_id, ea.role
+const selectEmployees2 = `SELECT e.department_id, finance_department.department_name, ea.role
             FROM employees e INNER JOIN employee_accounts ea ON ea.employee_id = e.employee_id
+            LEFT JOIN departments finance_department ON finance_department.department_id = e.department_id
             WHERE e.employee_id = ? AND ea.password_hash = ? AND ea.account_status = 'ACTIVE'`;
 
 const selectPayments3 = `SELECT payment_id, payroll_id, amount, payroll_snapshot,

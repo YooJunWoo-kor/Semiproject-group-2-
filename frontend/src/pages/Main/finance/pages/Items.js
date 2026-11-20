@@ -11,7 +11,7 @@ import PaginationTable from '../../../../components/PaginationTable';
 import { FilterTabs, RadioGroup, CheckboxFilter, SelectFilter } from '../../../../components/FilterControls';
 import WeeklyCalendar from '../../../../components/weeklycalendar/WeeklyCalendar';
 import BasicCalendar from '../../../../components/calendar/BasicCalendar';
-import { API_BASE_URL, getLoginUser } from '../../../../utils/authStorage';
+import { API_BASE_URL, getLoginUser, canAccessFinance } from '../../../../utils/authStorage';
 import "../../../../css/Form.css";
 import "../../../../css/Table.css";
 import "../../../../css/SubMain.css";
@@ -831,7 +831,7 @@ function Items({
   const payrollUnpaidRows = payrollRows.filter(row => row.payment_status !== '지급완료');
   const payrollNetPending = payrollUnpaidRows.reduce((sum, row) => sum + Number(row.net_pay || 0), 0);
   const payrollCurrentUser = getLoginUser();
-  const payrollCanPay = payrollCurrentUser?.role === 'MASTER' || Number(payrollCurrentUser?.department_id ?? payrollCurrentUser?.department) === 1;
+  const payrollCanPay = canAccessFinance(payrollCurrentUser);
   async function handlePayrollPayment(event) {
     event.preventDefault();
     if (payrollPaymentSaving || payrollDetailLoading || !payrollMonth || !payrollCanPay) return;

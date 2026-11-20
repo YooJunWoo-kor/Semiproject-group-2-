@@ -97,8 +97,9 @@ function selectSummary(value0) {
                 GROUP BY pay_month HAVING SUM(deduction_amount) > 0`;
 }
 
-const selectEmployees = `SELECT e.department_id, ea.role FROM employees e
+const selectEmployees = `SELECT e.department_id, finance_department.department_name, ea.role FROM employees e
             INNER JOIN employee_accounts ea ON ea.employee_id = e.employee_id
+            LEFT JOIN departments finance_department ON finance_department.department_id = e.department_id
             WHERE e.employee_id = ? AND ea.password_hash = ? AND ea.account_status = 'ACTIVE'`;
 
 const selectApprovalDocuments2 = "SELECT '출금' AS direction FROM approval_documents WHERE document_id = ? FOR UPDATE";

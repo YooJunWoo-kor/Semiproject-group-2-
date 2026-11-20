@@ -2,7 +2,7 @@ const queries = require("../../queries/finance/payrollQueries");
 const express = require("express");
 const db = require("../../db");
 const financeMysql = require("mysql2/promise");
-const { payrollPaymentRowsSql, readDetailData, readDueDate, seoulToday, amount, sum, summary } = require("./financeShared");
+const { payrollPaymentRowsSql, readDetailData, readDueDate, seoulToday, amount, sum, summary, isFinanceDepartmentName } = require("./financeShared");
 
 const router = express.Router();
 
@@ -70,7 +70,7 @@ router.post('/payrolls/:month/payments', async (req, res) => {
         // 기존 로그인/분류 변경과 동일한 계정 확인 방식입니다.
         const [users] = await connection.execute(queries.selectEmployees, [employeeId, password]);
         if (!users.length) fail(401, '비밀번호 또는 계정 상태를 확인해 주세요.');
-        if (Number(users[0].department_id) !== 1 && users[0].role !== 'MASTER') fail(403, '재무부 또는 MASTER만 급여를 지급 등록할 수 있습니다.');
+        if (!isFinanceDepartmentName(users[0].department_name) && String(users[0].role || '').trim().toUpperCase() !== 'MASTER') fail(403, '재무부 또는 MASTER만 급여를 지급 등록할 수 있습니다.');
         await connection.beginTransaction();
         transactionOpen = true;
         const [rows] = await connection.execute(queries.selectPayrolls3, [month]);
@@ -217,7 +217,7 @@ router.post('/payroll-deductions/:month/payments', async (req, res) => {
         });
         const [users] = await connection.execute(queries.selectEmployees2, [employeeId, password]);
         if (!users.length) fail(401, '비밀번호 또는 계정 상태를 확인해 주세요.');
-        if (Number(users[0].department_id) !== 1 && users[0].role !== 'MASTER') fail(403, '재무부 또는 MASTER만 공제액 납부를 등록할 수 있습니다.');
+        if (!isFinanceDepartmentName(users[0].department_name) && String(users[0].role || '').trim().toUpperCase() !== 'MASTER') fail(403, '재무부 또는 MASTER만 공제액 납부를 등록할 수 있습니다.');
         await connection.beginTransaction();
         transactionOpen = true;
         const [sources] = await connection.execute(queries.selectPayments3, [month]);

@@ -88,6 +88,10 @@ const incomeGroups = [
     ['sales', '제품 매출', ['도매 매출', '소매 매출', '온라인 매출']],
     ['other_income', '기타 수입', ['환급금', '기타 수입']]
 ];
+function isFinanceDepartmentName(value) {
+    return String(value || '').trim().startsWith('재무');
+}
+
 function groups(direction) {
     const prefix = direction === '출금' ? 'expense' : 'income';
     const source = direction === '출금' ? expenseGroups : incomeGroups;
@@ -154,4 +158,4 @@ function summary(entries, previousEntries, scheduled) {
 
 
 
-module.exports = { readExpenseAmount, payrollPaymentRowsSql, readDetailData, readAmount, readDueDate, financeApprovalStatus, toApprovedDraftView, approvalPaidRowsSql, expenseGroups, incomeGroups, groups, category, seoulToday, dateString, period, amount, sum, summary };
+module.exports = { readExpenseAmount, payrollPaymentRowsSql, readDetailData, readAmount, readDueDate, financeApprovalStatus, isFinanceDepartmentName, toApprovedDraftView, approvalPaidRowsSql, expenseGroups, incomeGroups, groups, category, seoulToday, dateString, period, amount, sum, summary };

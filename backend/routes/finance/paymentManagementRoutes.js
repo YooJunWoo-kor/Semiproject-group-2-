@@ -1,7 +1,7 @@
 const queries = require("../../queries/finance/paymentManagementQueries");
 const express = require("express");
 const financeMysql = require("mysql2/promise");
-const { payrollPaymentRowsSql, groups, category, period, amount, summary } = require("./financeShared");
+const { payrollPaymentRowsSql, groups, category, period, amount, summary, isFinanceDepartmentName } = require("./financeShared");
 
 const router = express.Router();
 
@@ -89,7 +89,7 @@ router.put('/payment-management/classification', async (req, res) => {
         });
         const [users] = await connection.execute(queries.selectEmployees, [employeeId, password]);
         if (!users.length) fail(401, '비밀번호 또는 계정 상태를 확인해 주세요.');
-        if (Number(users[0].department_id) !== 1 && users[0].role !== 'MASTER') fail(403, '재무부 또는 MASTER만 분류를 변경할 수 있습니다.');
+        if (!isFinanceDepartmentName(users[0].department_name) && String(users[0].role || '').trim().toUpperCase() !== 'MASTER') fail(403, '재무부 또는 MASTER만 분류를 변경할 수 있습니다.');
         await connection.beginTransaction();
         let rows;
         if (type === 'approval') {

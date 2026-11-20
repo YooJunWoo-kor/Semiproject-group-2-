@@ -83,7 +83,14 @@ const selectEmployeeAccounts = `
                 SELECT 1 FROM employee_accounts ea
                 WHERE ea.employee_id = e.employee_id
                   AND ea.account_status = 'ACTIVE'
-                  AND (e.department_id = 1 OR ea.role = 'MASTER')
+                  AND (
+                      EXISTS (
+                          SELECT 1 FROM departments finance_department
+                          WHERE finance_department.department_id = e.department_id
+                            AND finance_department.department_name LIKE '재무%'
+                      )
+                      OR ea.role = 'MASTER'
+                  )
             ) AS can_approve
         FROM employees e
         LEFT JOIN departments d
