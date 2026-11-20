@@ -1,7 +1,11 @@
-import { getCorpCardStatusLabel } from "./corpCardModel";
+// 담당 화면: 자금관리 → 법인카드
+// 역할: 카드 기본정보 및 사용 이력 상세 창
+import { FinanceButton } from "../ui/FinanceButton";
+import { getCorpCardStatusLabel } from "../../models/financeCorpCardModel";
 import React from "react";
-import { FinanceResourceModal, FinanceResourceDetails } from "../FinanceDetailUI";
-import { FinancePaymentHistory } from "../FinanceFunds";
+import { FinanceResourceModal, FinanceResourceDetails } from "../ui/FinanceDetailDisplay";
+import { FinancePaymentHistory } from "../ui/FinancePaymentHistory";
+
 export default function CorpCardDetailModal({
   cardPayments,
   cardSaving,
@@ -18,12 +22,10 @@ export default function CorpCardDetailModal({
   statusSavingId,
 }) {
   function renderHistoryContent() {
-    if (paymentsLoading) {
-      return <p>거래내역을 불러오는 중입니다.</p>;
-    }
-    if (paymentsError) {
-      return <p role="alert">{paymentsError}</p>;
-    }
+    if (paymentsLoading) return <p>거래내역을 불러오는 중입니다.</p>;
+
+    if (paymentsError) return <p role="alert">{paymentsError}</p>;
+
     return (
       <FinancePaymentHistory
         key={selectedCard.id}
@@ -37,7 +39,7 @@ export default function CorpCardDetailModal({
     );
   }
   function renderCardContent() {
-    if (cardView === "detail") {
+    if (cardView === "detail")
       return (
         <FinanceResourceDetails
           rows={[
@@ -52,14 +54,11 @@ export default function CorpCardDetailModal({
           ]}
         />
       );
-    }
+
     return (
       <>
         <p
-          style={{
-            margin: "0 0 8px",
-            overflowWrap: "anywhere",
-          }}
+          style={{ margin: "0 0 8px", overflowWrap: "anywhere", }}
         >
           {selectedCard.cardName}
         </p>
@@ -68,42 +67,42 @@ export default function CorpCardDetailModal({
     );
   }
   function renderCardActions() {
-    if (cardView === "detail") {
+    if (cardView === "detail")
       return (
         <>
-          <button
+          <FinanceButton
             type="button"
             disabled={cardSaving || limitSaving || statusSavingId !== null}
             onClick={() => openCardHistory(selectedCard.id)}
           >
             거래내역
-          </button>
-          <button
+          </FinanceButton>
+          <FinanceButton
             type="button"
-            className="erp-primary-button"
             disabled={cardSaving || limitSaving || statusSavingId !== null}
             onClick={() => openEditCardForm(selectedCard)}
+            variant="primary"
           >
             수정
-          </button>
-          <button
+          </FinanceButton>
+          <FinanceButton
             type="button"
             disabled={cardSaving || limitSaving || statusSavingId !== null}
             onClick={() => openLimitForm(selectedCard)}
           >
             한도변경
-          </button>
+          </FinanceButton>
         </>
       );
-    }
+
     return (
-      <button
+      <FinanceButton
         type="button"
         disabled={cardSaving || limitSaving || statusSavingId !== null}
         onClick={() => openCardDetail(selectedCard.id)}
       >
         상세
-      </button>
+      </FinanceButton>
     );
   }
   return (

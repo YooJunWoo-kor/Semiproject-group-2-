@@ -1,5 +1,8 @@
+// 담당 화면: 자금관리 → 법인카드
+// 역할: 카드 월 한도 변경 입력 창
 import React from "react";
 import ModalBase from "../../../../../components/ModalBase";
+
 export default function CorpCardLimitModal({
   closeLimitModal,
   handleLimitSubmit,

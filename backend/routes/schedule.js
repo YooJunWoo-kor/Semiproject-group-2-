@@ -1,46 +1,51 @@
-const express =  require('express');
+const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
 router.post('/setSchedule', (req, res) => {
     const scheduleValue = [
-        req.body.title,        //제목
-        req.body.scheduleType, //공개여부
-        req.body.userID,       //작성자
-        req.body.startDay,     //시작일시
-        req.body.endDay,       //종료일시
-        req.body.startTime,    //시작시간
-        req.body.endTime,      //종료시간
-        req.body.typeId,       //색상
-        req.body.description,  //스케쥴상세내용
-    ]
-
+        req.body.title,
+        req.body.scheduleType,
+        req.body.userID,
+        req.body.startDay,
+        req.body.endDay,
+        req.body.startTime,
+        req.body.endTime,
+        req.body.typeId,
+        req.body.description,
+        req.body.userID
+    ];
     //참여자 리스트
     const employeeList = req.body.participant;
 
     const query = `
-        INSERT INTO schedule (
-            schedule_name,
-            schedule_type,
-            employee_id,
-            start_date,
-            end_date,
-            start_time,
-            end_time,
-            type_id,
-            description
-        ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? );`
+    INSERT INTO schedule (
+        schedule_name,
+        schedule_type,
+        creator_id,
+        start_date,
+        end_date,
+        start_time,
+        end_time,
+        type_id,
+        description,
+        department_id
+    )
+    SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, department_id
+    FROM employees
+    WHERE employee_id = ?
+`;
 
-    db.query(query, scheduleValue, (err,data)=>{
-        if(err){ 
+    db.query(query, scheduleValue, (err, data) => {
+        if (err) {
             console.log('스케쥴등록 db에러', err);
             return res.status(500).json({
                 status: false
-                ,message : '스케쥴 등록db에러'
+                , message: '스케쥴 등록db에러'
             });
         };
 
-        if(data && data.affectedRows > 0){
+        if (data && data.affectedRows > 0) {
             console.log('스케쥴 등록완료');
 
             //스케쥴 리스트에 내 스케줄과 알람설정 등록
@@ -56,79 +61,79 @@ router.post('/setSchedule', (req, res) => {
             const my_schedule_insert_query = `insert
 	            into schedule_attendee (schedule_id, employee_id, isNotifyEnabled, timerNum, timerType, timerTiming)
 	            values (?,?,?,?,?,?)`
-            
-            db.query(my_schedule_insert_query, my_schedule_attendee_value, (msiqErr, msiqData) =>{
-                if(msiqErr){
+
+            db.query(my_schedule_insert_query, my_schedule_attendee_value, (msiqErr, msiqData) => {
+                if (msiqErr) {
                     console.log('내 스케쥴 등록 DB에러', msiqErr);
-                    return res.status(500).json({status:false, massage: '내 스케쥴 등록 DB에러'});
+                    return res.status(500).json({ status: false, massage: '내 스케쥴 등록 DB에러' });
                 }
-                
-                if(msiqData && msiqData.affectedRows > 0){
+
+                if (msiqData && msiqData.affectedRows > 0) {
                     console.log('내 스케쥴 등록 성공');
 
                     //참여자가 있다면 참여자들 스케쥴 생성
-                    if(employeeList > 0){
-                        const employeeID = employeeList.map((user)=>{
+                    if (employeeList > 0) {
+                        const employeeID = employeeList.map((user) => {
                             return [data.insertId, user.employeeID];
                         });
 
                         const scheduleAttendeeQuery = `
                             insert into schedule_attendee ( schedule_id, employee_id )
                             values ( ? )`
-                        
-                        db.query(scheduleAttendeeQuery, [employeeID], (atErr, atData) =>{
-                            if(atErr){
+
+                        db.query(scheduleAttendeeQuery, [employeeID], (atErr, atData) => {
+                            if (atErr) {
                                 console.log('참여자스케쥴등록 db에러');
-                                return res.status(500).json({status:false, message: '참여자스케쥴등록 db에러'});
+                                return res.status(500).json({ status: false, message: '참여자스케쥴등록 db에러' });
                             }
 
-                            if(atData && atData.affectedRows > 0){
+                            if (atData && atData.affectedRows > 0) {
                                 console.log('참여자 스케쥴 등록 완료');
                                 return res.status(200).json({
                                     status: true
-                                    ,message: `'${req.body.title}'일정이 정상적으로 등록되었습니다.`
+                                    , message: `'${req.body.title}'일정이 정상적으로 등록되었습니다.`
                                 });
                             }
 
-                            else{
-                                return res.status(400).json({ status: false ,message: '참여자 스케쥴 등록 실패' });
+                            else {
+                                return res.status(400).json({ status: false, message: '참여자 스케쥴 등록 실패' });
                             }
                         })
                     }
 
-                    else{
+                    else {
                         return res.status(200).json({
                             status: true
-                            ,message: `'${req.body.title}'일정이 정상적으로 등록되었습니다.`
+                            , message: `'${req.body.title}'일정이 정상적으로 등록되었습니다.`
                         });
                     }
                 }
 
-                else{
+                else {
                     console.log('내 스케쥴 등록 실패')
-                    return res.status(400).json({status: false, massage: '내 스케쥴 등록 실패'})
+                    return res.status(400).json({ status: false, massage: '내 스케쥴 등록 실패' })
                 }
             })
         }
-        else{
+        else {
             return res.status(400).json({
                 status: false
-                ,message: '등록 실패'
+                , message: '등록 실패'
             })
         }
     })
 })
 
-router.get('/getSchedulData', async (req, res)=>{
-    try{
+router.get('/getSchedulData', async (req, res) => {
+    try {
         const [rows] = await db.promise().query(
             `select * from schedule where schedule_type = 'PUBLIC' or schedule_type = 1 order by start_date `
         );
 
         return res.status(200).json(rows);
-    } catch(error){
+    } catch (error) {
         console.log('조회 실패', error);
-        return res.status(500).json({status:false, massage: '조회실패'});
+        return res.status(500).json({ status: false, massage: '조회실패' });
     }
 })
 
@@ -143,24 +148,24 @@ router.post('/getMySchedule', async (req, res) => {
         where employee_id = ?
         order by schedule_id
         )`;
-        
-    db.query(query, employeeID, (err,data)=>{
+
+    db.query(query, employeeID, (err, data) => {
         if (err) {
             console.error("내 스케줄 DB 오류:", err);
-        
+
             return res.status(500).json({
                 status: false,
                 message: "내 스케줄 데이터 조회 실패"
             });
         }
 
-        if(data && data.length > 0){
+        if (data && data.length > 0) {
             console.log(data);
             return res.status(200).json(data);
         }
-        else{
+        else {
             console.log('내 스케쥴 데이터 조회 실패', data);
-            return res.status(400).json({status: false, data:'내 스케줄 대이터 조회 실패'});
+            return res.status(400).json({ status: false, data: '내 스케줄 대이터 조회 실패' });
         }
     });
 })
@@ -168,7 +173,7 @@ router.post('/getMySchedule', async (req, res) => {
 // POST /api/schedule/getMyWorklist
 router.post('/getMyWorklist', async (req, res) => {
     const { userID } = req.body;
-    
+
     try {
         const sql = `
             SELECT 

@@ -1,6 +1,8 @@
+// 담당 화면: 자금관리 → 회사계좌
+// 역할: 목록의 열 정의와 행 데이터를 구성합니다. 제목·셀 표시·정렬·관리 버튼을 수정할 때 확인합니다.
 import React from "react";
-import { FinanceStatusBadge } from "../FinanceDetailUI";
-import { getBankAccountStatusLabel, getBankAccountStatusTone } from "./bankAccountModel";
+import { FinanceStatusBadge } from "../ui/FinanceDetailDisplay";
+import { getBankAccountStatusLabel, getBankAccountStatusTone, } from "../../models/financeBankAccountModel";
 
 export default function createBankAccountTableData({
   accountStatusSaving,
@@ -41,7 +43,6 @@ export default function createBankAccountTableData({
     },
     {
       key: "status",
-      width: "80px",
       label: "상태",
       render: (acc) => (
         <FinanceStatusBadge tone={getBankAccountStatusTone(acc.status)}>
@@ -51,7 +52,6 @@ export default function createBankAccountTableData({
     },
     {
       key: "actions",
-      width: "180px",
       label: "관리",
       render: (acc) => (
         <div

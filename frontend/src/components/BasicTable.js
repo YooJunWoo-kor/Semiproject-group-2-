@@ -16,35 +16,31 @@ function BasicTable({ title, th, td = [] }) {
                 <table>
                     <thead>
                         <tr>
-                            {th.map((item, index)=>(
+                            {headers.map((item, index) => (
                                 <th key={index}>{item}</th>
                             ))}
                         </tr>
                     </thead>
 
-                    {!td ?
-                        <tr
-                            style={{
-                                height:'200px'
-                            }}
-                        ><td
-                            colSpan={th.length}
-                            style={{
-                                textAlign: 'center'
-
-                            }}
-                        >등록된 정보가 없습니다.</td></tr>
-
-                            : td.map((item)=>{
-                                return <tr>{item.content.map((item, index)=>(
-                                    <td
-                                        key={index}
-                                        style={{
-                                            fontSize:"13"
-                                    }}>{item}</td>
-                                ))}</tr>
-                        })}
-
+                    <tbody>
+                        {rows.length === 0 ? (
+                            <tr style={{ height: "200px" }}>
+                                <td colSpan={headers.length} style={{ textAlign: "center" }}>
+                                    등록된 정보가 없습니다.
+                                </td>
+                            </tr>
+                        ) : (
+                            rows.map((row, rowIndex) => (
+                                <tr key={row.id != null ? `row-${row.id}` : `index-${rowIndex}`}>
+                                    {row.content.map((cell, cellIndex) => (
+                                        <td key={cellIndex} style={{ fontSize: "13px" }}>
+                                            {cell}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
                 </table>
             </div>
         </div>

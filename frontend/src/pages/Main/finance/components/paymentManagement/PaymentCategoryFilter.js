@@ -1,14 +1,19 @@
+// 담당 화면: 지출·거래 관리 요약
+// 역할: 비용/수입 분류 선택과 선택 항목 표시
 import React, { useEffect, useState } from "react";
-import { getCategoryDropdownLabel } from "./paymentManagementModel";
+import { getCategoryDropdownLabel, getPaymentCategorySelection, changePaymentCategorySelection, getAllPaymentCategoryCodes, } from "../../models/financePaymentOverviewModel";
 
-export default function PaymentCategoryFilter({ groups, selectedCodes, onChange, disabled, resetKey }) {
-  
+export default function PaymentCategoryFilter({
+  groups,
+  selectedCodes,
+  onChange,
+  disabled,
+  resetKey,
+}) {
   const [open, setOpen] = useState(false);
   const [rootElement, setRootElement] = useState(null);
   const [triggerElement, setTriggerElement] = useState(null);
-  const items = groups.flatMap((group) => group.items);
-  const selected = items.filter((item) => selectedCodes.includes(item.key));
-  const allSelected = items.length > 0 && selected.length === items.length;
+  const { items, selected, allSelected } = getPaymentCategorySelection(groups, selectedCodes);
   useEffect(() => {
     setOpen(false);
   }, [resetKey, disabled]);
@@ -36,25 +41,18 @@ export default function PaymentCategoryFilter({ groups, selectedCodes, onChange,
   }
   const label = getCategoryDropdownLabel(selected, allSelected);
   function toggleAllCategories(checked) {
-    if (checked) {
-      onChange(items.map((item) => item.key));
-      return;
-    }
-    onChange([]);
+    onChange(getAllPaymentCategoryCodes(items, checked));
   }
   function toggleCategory(key, checked) {
-    if (checked) {
-      onChange([...selectedCodes, key]);
-      return;
-    }
-    onChange(selectedCodes.filter((code) => code !== key));
+    onChange(changePaymentCategorySelection(selectedCodes, key, checked));
   }
   return (
     <div
       className="pm-category-dropdown"
       ref={setRootElement}
       onBlur={(event) => {
-        if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+        if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget))
+          setOpen(false);
       }}
     >
       <button
@@ -126,7 +124,11 @@ export function PaymentSelectionChips({ selectedItems, tradeBusy, setSelectedCod
           key={item.key}
           disabled={tradeBusy}
           aria-label={`${item.label} 선택 해제`}
-          onClick={() => setSelectedCodes((previous) => previous.filter((code) => code !== item.key))}
+          onClick={() =>
+            setSelectedCodes((previous) =>
+              changePaymentCategorySelection(previous, item.key, false),
+            )
+          }
         >
           {item.label} <span aria-hidden="true">×</span>
         </button>

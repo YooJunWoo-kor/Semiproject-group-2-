@@ -1,7 +1,9 @@
+// 담당 화면: 결재·이력 / 승인 지급
+// 역할: 결재 문서 상세와 승인·반려·지급 등 관련 화면 연결
 import { ApprovalSteps, ApprovalDecisionPanel } from "./ApprovalSteps";
 import React from "react";
-import { FinanceAttachments, ApprovalPayments } from "../FinanceApproval";
-import { FinanceDetailRows } from "../FinanceDetailUI";
+import { FinanceAttachments, ApprovalPayments } from "./ApprovalPaymentEvidence";
+import { FinanceDetailRows } from "../ui/FinanceDetailDisplay";
 import ModalBase from "../../../../../components/ModalBase";
 
 export default function ApprovalDetailModal({
@@ -32,7 +34,7 @@ export default function ApprovalDetailModal({
   stepsLoading,
 }) {
   function renderPaymentSection() {
-    if (selectedApproval.isSourceDraft || selectedApproval.isLinkedTrade) {
+    if (selectedApproval.isSourceDraft || selectedApproval.isLinkedTrade)
       return (
         <p role="status">
           {selectedApproval.isLinkedTrade
@@ -40,7 +42,7 @@ export default function ApprovalDetailModal({
             : "내업무 관리에서 최종 승인된 기안서입니다. 품목관리에서 거래정보를 등록한 뒤 지급할 수 있습니다."}
         </p>
       );
-    }
+
     return (
       <ApprovalPayments
         key={selectedApproval.id}
@@ -56,7 +58,10 @@ export default function ApprovalDetailModal({
     );
   }
   return (
-    <div ref={setApprovalModalElement} className="finance-registration-modal finance-approval-detail">
+    <div
+      ref={setApprovalModalElement}
+      className="finance-registration-modal finance-approval-detail"
+    >
       <ModalBase
         title={paymentFormOpen ? "지출 지급 등록" : "결재 문서 상세정보"}
         onClose={closeApprovalDetail}

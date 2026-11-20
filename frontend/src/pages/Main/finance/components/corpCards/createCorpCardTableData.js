@@ -1,6 +1,9 @@
-import { FinanceStatusBadge } from "../FinanceDetailUI";
+// 담당 화면: 자금관리 → 법인카드
+// 역할: 목록의 열 정의와 행 데이터를 구성합니다. 제목·셀 표시·정렬·관리 버튼을 수정할 때 확인합니다.
+import { FinanceStatusBadge } from "../ui/FinanceDetailDisplay";
 import React from "react";
-import { getCorpCardStatusLabel, getCorpCardStatusTone, getCorpCardStatusActionLabel } from "./corpCardModel";
+import { getCorpCardStatusLabel, getCorpCardStatusTone, getCorpCardStatusActionLabel, } from "../../models/financeCorpCardModel";
+
 export default function createCorpCardTableData({
   cardSaving,
   filteredCards,
@@ -36,7 +39,13 @@ export default function createCorpCardTableData({
     },
     {
       key: "status",
-      label: "상태",
+      label: (
+        <span
+          style={{ display: "block", textAlign: "center", }}
+        >
+          상태
+        </span>
+      ),
       render: (card) => (
         <FinanceStatusBadge tone={getCorpCardStatusTone(card.status)}>
           {getCorpCardStatusLabel(card.status)}
@@ -48,12 +57,7 @@ export default function createCorpCardTableData({
       label: "관리",
       render: (card) => (
         <div
-          style={{
-            display: "inline-flex",
-            gap: 4,
-            flexWrap: "nowrap",
-            whiteSpace: "nowrap",
-          }}
+          style={{ display: "inline-flex", gap: 4, flexWrap: "nowrap", whiteSpace: "nowrap", }}
         >
           <button
             type="button"
@@ -71,11 +75,7 @@ export default function createCorpCardTableData({
             type="button"
             disabled={cardSaving || limitSaving || statusSavingId !== null}
             onClick={() => openCardHistory(card.id)}
-            style={{
-              flexShrink: 0,
-              whiteSpace: "nowrap",
-              padding: "6px 8px",
-            }}
+            style={{ flexShrink: 0, whiteSpace: "nowrap", padding: "6px 8px", }}
           >
             거래내역
           </button>
@@ -88,11 +88,7 @@ export default function createCorpCardTableData({
               !["사용", "ACTIVE", "STOP"].includes(card.status)
             }
             onClick={() => handleCardStatusChange(card)}
-            style={{
-              flexShrink: 0,
-              whiteSpace: "nowrap",
-              padding: "6px 8px",
-            }}
+            style={{ flexShrink: 0, whiteSpace: "nowrap", padding: "6px 8px", }}
           >
             {getCorpCardStatusActionLabel(card, statusSavingId)}
           </button>
@@ -110,7 +106,6 @@ export default function createCorpCardTableData({
       </React.Fragment>
     )),
   }));
-
   return {
     cardColumns,
     cardHeaders,

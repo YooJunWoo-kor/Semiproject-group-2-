@@ -1,3 +1,7 @@
+// 담당 화면: 결재·이력 / 승인 지급
+// 역할: 기안서 작성 입력 화면
+import { FinanceButton } from "../ui/FinanceButton";
+import { FinanceControl, FinanceField, FinanceActions } from "../ui/FinanceFormControls";
 import React from "react";
 import ModalBase from "../../../../../components/ModalBase";
 
@@ -32,22 +36,26 @@ export default function ApprovalDraftModal({
                   label: "결재자",
                 },
               ].map((field) => (
-                <div key={field.name}>
-                  <label htmlFor={`draft-${field.name}`}>{field.label} *</label>
-
-                  <select
+                <FinanceField
+                  key={field.name}
+                  label={<>{field.label} *</>}
+                  htmlFor={`draft-${field.name}`}
+                >
+                  <FinanceControl
                     id={`draft-${field.name}`}
                     name={field.name}
                     value={draftForm[field.name]}
                     onChange={handleDraftChange}
                     disabled={employeesLoading || Boolean(employeesError)}
                     required
+                    as="select"
                   >
                     <option value="">선택해 주세요</option>
 
                     {draftEmployees
                       .filter(
-                        (employee) => field.name !== "approver_id" || Number(employee.can_approve) === 1,
+                        (employee) =>
+                          field.name !== "approver_id" || Number(employee.can_approve) === 1,
                       )
                       .map((employee) => (
                         <option key={employee.employee_id} value={employee.employee_id}>
@@ -56,13 +64,12 @@ export default function ApprovalDraftModal({
                           {employee.employee_number}
                         </option>
                       ))}
-                  </select>
-                </div>
+                  </FinanceControl>
+                </FinanceField>
               ))}
 
-              <div>
-                <label htmlFor="draft-title">제목 *</label>
-                <input
+              <FinanceField label={<>제목 *</>} htmlFor="draft-title">
+                <FinanceControl
                   id="draft-title"
                   name="title"
                   type="text"
@@ -71,17 +78,17 @@ export default function ApprovalDraftModal({
                   maxLength={150}
                   required
                 />
-              </div>
+              </FinanceField>
 
               {expenseGroups.length > 0 && (
-                <div>
-                  <label htmlFor="draft-category">지출 분류 / 세부 항목 *</label>
-                  <select
+                <FinanceField label={<>지출 분류 / 세부 항목 *</>} htmlFor="draft-category">
+                  <FinanceControl
                     id="draft-category"
                     name="category_code"
                     value={draftForm.category_code}
                     onChange={handleDraftChange}
                     required
+                    as="select"
                   >
                     <option value="">선택해 주세요</option>
                     {expenseGroups.map((group) => (
@@ -93,29 +100,28 @@ export default function ApprovalDraftModal({
                         ))}
                       </optgroup>
                     ))}
-                  </select>
-                </div>
+                  </FinanceControl>
+                </FinanceField>
               )}
 
-              <div>
-                <label htmlFor="draft-type">문서 유형 *</label>
-                <select
+              <FinanceField label={<>문서 유형 *</>} htmlFor="draft-type">
+                <FinanceControl
                   id="draft-type"
                   name="document_type"
                   value={draftForm.document_type}
                   onChange={handleDraftChange}
                   required
+                  as="select"
                 >
                   <option value="일반">일반</option>
                   <option value="비용">비용</option>
                   <option value="구매">구매</option>
                   <option value="급여">급여</option>
-                </select>
-              </div>
+                </FinanceControl>
+              </FinanceField>
 
-              <div>
-                <label htmlFor="draft-amount">신청 금액 *</label>
-                <input
+              <FinanceField label={<>신청 금액 *</>} htmlFor="draft-amount">
+                <FinanceControl
                   id="draft-amount"
                   name="amount"
                   type="number"
@@ -125,29 +131,28 @@ export default function ApprovalDraftModal({
                   onChange={handleDraftChange}
                   required
                 />
-              </div>
+              </FinanceField>
 
-              <div>
-                <label htmlFor="draft-due-date">처리 마감일</label>
-                <input
+              <FinanceField label={<>처리 마감일</>} htmlFor="draft-due-date">
+                <FinanceControl
                   id="draft-due-date"
                   name="due_date"
                   type="date"
                   value={draftForm.due_date}
                   onChange={handleDraftChange}
                 />
-              </div>
+              </FinanceField>
 
-              <div>
-                <label htmlFor="draft-content">내용</label>
-                <textarea
+              <FinanceField label={<>내용</>} htmlFor="draft-content">
+                <FinanceControl
                   id="draft-content"
                   name="content"
                   rows={5}
                   value={draftForm.content}
                   onChange={handleDraftChange}
+                  as="textarea"
                 />
-              </div>
+              </FinanceField>
 
               <p>기안은 대기 상태로 등록됩니다.</p>
 
@@ -155,13 +160,18 @@ export default function ApprovalDraftModal({
               {employeesError && <p role="alert">{employeesError}</p>}
               {draftError && <p role="alert">{draftError}</p>}
 
-              <button type="submit" disabled={employeesLoading || Boolean(employeesError)}>
-                {draftSaving ? "저장 중..." : "저장"}
-              </button>
-
-              <button type="button" onClick={closeDraftForm}>
-                취소
-              </button>
+              <FinanceActions>
+                <FinanceButton
+                  type="submit"
+                  disabled={employeesLoading || Boolean(employeesError)}
+                  variant="primary"
+                >
+                  {draftSaving ? "저장 중..." : "저장"}
+                </FinanceButton>
+                <FinanceButton type="button" onClick={closeDraftForm}>
+                  취소
+                </FinanceButton>
+              </FinanceActions>
             </fieldset>
           </form>
         }

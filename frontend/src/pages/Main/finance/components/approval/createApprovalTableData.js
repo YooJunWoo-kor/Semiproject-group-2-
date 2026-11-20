@@ -1,6 +1,8 @@
+// 담당 화면: 결재·이력 / 승인 지급
+// 역할: 목록의 열 정의와 행 데이터를 구성합니다. 제목·셀 표시·정렬·관리 버튼을 수정할 때 확인합니다.
 import React from "react";
-import { FinanceStatusBadge } from "../FinanceDetailUI";
-import { getApprovalStatusTone } from "./approvalModel";
+import { FinanceStatusBadge } from "../ui/FinanceDetailDisplay";
+import { getApprovalStatusTone } from "../../models/financeApprovalModel";
 
 export default function createApprovalTableData({
   attachmentSaving,

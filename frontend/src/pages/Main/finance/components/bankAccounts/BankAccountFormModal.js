@@ -1,4 +1,7 @@
+// 담당 화면: 자금관리 → 회사계좌
+// 역할: 계좌 등록·수정 입력 창
 import React from "react";
+import { FinanceField, FinanceControl, FinanceButton, FinanceActions, } from "../ui/FinanceDetailDisplay";
 import ModalBase from "../../../../../components/ModalBase";
 
 export default function BankAccountFormModal({
@@ -46,13 +49,17 @@ export default function BankAccountFormModal({
                   maxLength: 30,
                 },
               ].map((field) => (
-                <div key={field.name}>
-                  <label htmlFor={`account-${field.name}`}>
-                    {field.label}
-                    {field.required ? " *" : ""}
-                  </label>
-
-                  <input
+                <FinanceField
+                  key={field.name}
+                  label={
+                    <>
+                      {field.label}
+                      {field.required ? " *" : ""}
+                    </>
+                  }
+                  htmlFor={`account-${field.name}`}
+                >
+                  <FinanceControl
                     id={`account-${field.name}`}
                     name={field.name}
                     type="text"
@@ -61,29 +68,28 @@ export default function BankAccountFormModal({
                     required={field.required}
                     maxLength={field.maxLength}
                   />
-                </div>
+                </FinanceField>
               ))}
 
-              <div>
-                <label htmlFor="account-currency">통화 *</label>
-                <select
+              <FinanceField label={<>통화 *</>} htmlFor="account-currency">
+                <FinanceControl
                   id="account-currency"
                   name="currency"
                   value={accountForm.currency}
                   onChange={handleAccountChange}
                   disabled={editingAccountId !== null}
                   required
+                  as="select"
                 >
                   <option value="KRW">KRW — 원화</option>
                   <option value="USD">USD — 미국 달러</option>
                   <option value="JPY">JPY — 일본 엔</option>
                   <option value="EUR">EUR — 유로</option>
-                </select>
-              </div>
+                </FinanceControl>
+              </FinanceField>
 
-              <div>
-                <label htmlFor="account-balance">초기 잔액 *</label>
-                <input
+              <FinanceField label={<>초기 잔액 *</>} htmlFor="account-balance">
+                <FinanceControl
                   id="account-balance"
                   name="balance"
                   type="number"
@@ -94,17 +100,16 @@ export default function BankAccountFormModal({
                   disabled={editingAccountId !== null}
                   required
                 />
-              </div>
+              </FinanceField>
 
-              <div>
-                <label htmlFor="account-employee">관리 사원</label>
-
-                <select
+              <FinanceField label={<>관리 사원</>} htmlFor="account-employee">
+                <FinanceControl
                   id="account-employee"
                   name="employee_id"
                   value={accountForm.employee_id}
                   onChange={handleAccountChange}
                   disabled={employeesLoading || Boolean(employeesError)}
+                  as="select"
                 >
                   <option value="">미지정</option>
 
@@ -115,11 +120,11 @@ export default function BankAccountFormModal({
                       {employee.employee_number}
                     </option>
                   ))}
-                </select>
+                </FinanceControl>
 
                 {employeesLoading && <p>관리 사원 목록을 불러오는 중입니다.</p>}
                 {employeesError && <p role="alert">{employeesError}</p>}
-              </div>
+              </FinanceField>
 
               <p>
                 {editingAccountId === null
@@ -129,11 +134,14 @@ export default function BankAccountFormModal({
 
               {formError && <p role="alert">{formError}</p>}
 
-              <button type="submit">{saving ? "저장 중..." : "저장"}</button>
-
-              <button type="button" onClick={closeRegistrationModal}>
-                취소
-              </button>
+              <FinanceActions>
+                <FinanceButton type="submit" variant="primary">
+                  {saving ? "저장 중..." : "저장"}
+                </FinanceButton>
+                <FinanceButton type="button" onClick={closeRegistrationModal}>
+                  취소
+                </FinanceButton>
+              </FinanceActions>
             </fieldset>
           </form>
         }

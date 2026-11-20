@@ -1,3 +1,7 @@
+// 담당 화면: 지출·거래 관리 / 급여
+// 역할: 거래 입금·출금 등록 입력 창
+import { FinanceButton } from "../ui/FinanceButton";
+import { FinanceControl, FinanceField, FinanceActions } from "../ui/FinanceFormControls";
 import React from "react";
 import ModalBase from "../../../../../components/ModalBase";
 
@@ -29,9 +33,8 @@ export default function ItemPaymentModal({
             <p>선택한 품목이 속한 거래 전체를 기준으로 정산합니다.</p>
 
             <fieldset disabled={paymentSaving}>
-              <div>
-                <label htmlFor="payment-date">처리 날짜 *</label>
-                <input
+              <FinanceField label={<>처리 날짜 *</>} htmlFor="payment-date">
+                <FinanceControl
                   id="payment-date"
                   name="payment_date"
                   type="date"
@@ -39,11 +42,10 @@ export default function ItemPaymentModal({
                   onChange={handlePaymentChange}
                   required
                 />
-              </div>
+              </FinanceField>
 
-              <div>
-                <label htmlFor="payment-amount">처리 금액 *</label>
-                <input
+              <FinanceField label={<>처리 금액 *</>} htmlFor="payment-amount">
+                <FinanceControl
                   id="payment-amount"
                   name="amount"
                   type="number"
@@ -53,101 +55,92 @@ export default function ItemPaymentModal({
                   onChange={handlePaymentChange}
                   required
                 />
-              </div>
+              </FinanceField>
 
-              <div>
-                <label htmlFor="payment-method">결제수단 *</label>
-                <select
+              <FinanceField label={<>결제수단 *</>} htmlFor="payment-method">
+                <FinanceControl
                   id="payment-method"
                   name="payment_method"
                   value={paymentForm.payment_method}
                   onChange={handlePaymentChange}
                   required
+                  as="select"
                 >
                   <option value="계좌이체">계좌이체</option>
                   <option value="현금">현금</option>
-                  {paymentTarget.type === "PURCHASE" && (
-                    <option value="법인카드">법인카드</option>
-                  )}
-                </select>
-              </div>
+                  {paymentTarget.type === "PURCHASE" && <option value="법인카드">법인카드</option>}
+                </FinanceControl>
+              </FinanceField>
 
               {paymentForm.payment_method === "계좌이체" && (
-                <div>
-                  <label htmlFor="payment-account">회사계좌 *</label>
-
-                  <select
+                <FinanceField label={<>회사계좌 *</>} htmlFor="payment-account">
+                  <FinanceControl
                     id="payment-account"
                     name="account_id"
                     value={paymentForm.account_id}
                     onChange={handlePaymentChange}
                     disabled={accountsLoading || Boolean(accountsError)}
                     required
+                    as="select"
                   >
                     <option value="">회사계좌 선택</option>
 
                     {paymentAccounts.map((account) => (
-                      <option
-                        key={account.account_id}
-                        value={account.account_id}
-                      >
+                      <option key={account.account_id} value={account.account_id}>
                         {account.bank_name} / {account.account_name}
                         {" / "}
                         {account.account_number}
                       </option>
                     ))}
-                  </select>
+                  </FinanceControl>
 
                   {accountsLoading && <p>회사계좌를 불러오는 중입니다.</p>}
                   {accountsError && <p role="alert">{accountsError}</p>}
 
-                  {!accountsLoading &&
-                    !accountsError &&
-                    paymentAccounts.length === 0 && (
-                      <p>선택 가능한 원화 계좌가 없습니다.</p>
-                    )}
-                </div>
+                  {!accountsLoading && !accountsError && paymentAccounts.length === 0 && (
+                    <p>선택 가능한 원화 계좌가 없습니다.</p>
+                  )}
+                </FinanceField>
               )}
 
               {paymentForm.payment_method === "법인카드" && (
-                <div>
-                  <label htmlFor="payment-card">법인카드 *</label>
-                  <select
+                <FinanceField label={<>법인카드 *</>} htmlFor="payment-card">
+                  <FinanceControl
                     id="payment-card"
                     name="card_id"
                     value={paymentForm.card_id}
                     onChange={handlePaymentChange}
                     required
                     disabled={cardsLoading || Boolean(cardsError)}
+                    as="select"
                   >
                     <option value="">법인카드 선택</option>
                     {paymentCards.map((card) => (
                       <option key={card.card_id} value={card.card_id}>
-                        {card.card_name} / 잔여 한도{" "}
-                        {Number(card.remaining_limit).toLocaleString()}원
+                        {card.card_name} / 잔여 한도 {Number(card.remaining_limit).toLocaleString()}
+                        원
                       </option>
                     ))}
-                  </select>
+                  </FinanceControl>
                   {cardsLoading && <p>법인카드를 불러오는 중입니다.</p>}
                   {cardsError && <p role="alert">{cardsError}</p>}
-                  {!cardsLoading &&
-                    !cardsError &&
-                    paymentCards.length === 0 && (
-                      <p>선택 가능한 법인카드가 없습니다.</p>
-                    )}
+                  {!cardsLoading && !cardsError && paymentCards.length === 0 && (
+                    <p>선택 가능한 법인카드가 없습니다.</p>
+                  )}
                   <p>카드 결제 시 사용량이 증가하고 잔여 한도가 감소합니다.</p>
-                </div>
+                </FinanceField>
               )}
 
               {paymentError && <p role="alert">{paymentError}</p>}
 
-              <button type="submit">
-                {paymentSaving ? "저장 중..." : "저장"}
-              </button>
-
-              <button type="button" onClick={closePaymentModal}>
-                취소
-              </button>
+              <FinanceActions>
+                <FinanceButton type="submit" variant="primary">
+                  {paymentSaving ? "저장 중..." : "저장"}
+                </FinanceButton>
+                <FinanceButton type="button" onClick={closePaymentModal}>
+                  취소
+                </FinanceButton>
+              </FinanceActions>
             </fieldset>
           </form>
         }

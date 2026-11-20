@@ -1,7 +1,11 @@
+// 담당 화면: 지출·거래 관리 / 급여
+// 역할: 급여 상세 및 지급 관련 화면
+import { FinanceControl, FinanceField, FinanceFormStack } from "../ui/FinanceFormControls";
+import { FinanceButton } from "../ui/FinanceButton";
 import React from "react";
 import ModalBase from "../../../../../components/ModalBase";
 import DetailSummary from "./ItemDetailSummary";
-import { getSettlementLabel } from "./itemUtils";
+import { getSettlementLabel } from "../../models/financeItemTradeRules";
 
 //화면 표시만 담당합니다. 상태와 처리는 Items.js에서 전달합니다.
 export default function PayrollDetailModal({
@@ -80,9 +84,7 @@ export default function PayrollDetailModal({
             <DetailSummary
               title={`${payrollMonth} 급여 (인건비)`}
               amount={
-                selectedItem.totalAmount == null
-                  ? "미등록"
-                  : payrollWon(selectedItem.totalAmount)
+                selectedItem.totalAmount == null ? "미등록" : payrollWon(selectedItem.totalAmount)
               }
               status={getSettlementLabel(selectedItem.status)}
             />
@@ -100,9 +102,8 @@ export default function PayrollDetailModal({
                       fontSize: 13,
                     }}
                   >
-                    직원{" "}
-                    {new Set(payrollRows.map((row) => row.employee_id)).size}명
-                    · 급여 승인 완료
+                    직원 {new Set(payrollRows.map((row) => row.employee_id)).size}명 · 급여 승인
+                    완료
                   </p>
                   <dl
                     style={{
@@ -131,10 +132,7 @@ export default function PayrollDetailModal({
                           }}
                         >
                           {payrollWon(
-                            payrollRows.reduce(
-                              (sum, row) => sum + Number(row[key] || 0),
-                              0,
-                            ),
+                            payrollRows.reduce((sum, row) => sum + Number(row[key] || 0), 0),
                           )}
                         </dd>
                       </React.Fragment>
@@ -160,9 +158,7 @@ export default function PayrollDetailModal({
                           }}
                         >
                           {row.name}{" "}
-                          <span className="subtext">
-                            ({row.employee_number || "사번 미등록"})
-                          </span>
+                          <span className="subtext">({row.employee_number || "사번 미등록"})</span>
                         </strong>
                         <span
                           className="subtext"
@@ -171,8 +167,8 @@ export default function PayrollDetailModal({
                           }}
                           title={row.draft_title}
                         >
-                          {row.department_name || "부서 미등록"} · 기안서 #
-                          {row.draft_id} · {row.payment_status || "미등록"}
+                          {row.department_name || "부서 미등록"} · 기안서 #{row.draft_id} ·{" "}
+                          {row.payment_status || "미등록"}
                         </span>
                       </div>
                       <dl className="payroll-employee-values">
@@ -202,8 +198,7 @@ export default function PayrollDetailModal({
                             fontSize: 12,
                           }}
                         >
-                          지급 이력 #{row.payment_id} ·{" "}
-                          {row.registered_payment_date}
+                          지급 이력 #{row.payment_id} · {row.registered_payment_date}
                           <br />
                           {row.payment_bank_name} · {row.payment_account_name} ·{" "}
                           {payrollWon(row.registered_payment_amount)}
@@ -211,12 +206,8 @@ export default function PayrollDetailModal({
                       )}
                     </article>
                   ))}
-                  {payrollPaymentNotice && (
-                    <p role="status">{payrollPaymentNotice}</p>
-                  )}
-                  {payrollPaymentError && (
-                    <p role="alert">{payrollPaymentError}</p>
-                  )}
+                  {payrollPaymentNotice && <p role="status">{payrollPaymentNotice}</p>}
+                  {payrollPaymentError && <p role="alert">{payrollPaymentError}</p>}
                   {payrollCanPay && payrollUnpaidRows.length > 0 && (
                     <form
                       onSubmit={handlePayrollPayment}
@@ -225,11 +216,7 @@ export default function PayrollDetailModal({
                       }}
                     >
                       <fieldset
-                        disabled={
-                          payrollPaymentSaving ||
-                          payrollDetailLoading ||
-                          accountsLoading
-                        }
+                        disabled={payrollPaymentSaving || payrollDetailLoading || accountsLoading}
                         style={{
                           minWidth: 0,
                           padding: 12,
@@ -248,88 +235,79 @@ export default function PayrollDetailModal({
                             fontSize: 12,
                           }}
                         >
-                          실제 은행 송금 후 등록하세요. 이 버튼은 은행 송금을
-                          실행하지 않습니다.
+                          실제 은행 송금 후 등록하세요. 이 버튼은 은행 송금을 실행하지 않습니다.
                         </p>
-                        <div
-                          style={{
-                            display: "grid",
-                            gap: 8,
-                          }}
-                        >
-                          <label htmlFor="payroll-account">출금 회사계좌</label>
-                          <select
-                            id="payroll-account"
-                            required
-                            value={payrollPayForm.account_id}
-                            onChange={(event) =>
-                              setPayrollPayForm((previous) => ({
-                                ...previous,
-                                account_id: event.target.value,
-                              }))
-                            }
-                          >
-                            <option value="">회사계좌 선택</option>
-                            {paymentAccounts.map((account) => (
-                              <option
-                                key={account.account_id}
-                                value={account.account_id}
-                              >
-                                {account.bank_name} · {account.account_name} ·
-                                잔액 {payrollWon(account.balance)}
-                              </option>
-                            ))}
-                          </select>
+                        <FinanceFormStack>
+                          <FinanceField label={<>출금 회사계좌</>} htmlFor="payroll-account">
+                            <FinanceControl
+                              id="payroll-account"
+                              required
+                              value={payrollPayForm.account_id}
+                              onChange={(event) =>
+                                setPayrollPayForm((previous) => ({
+                                  ...previous,
+                                  account_id: event.target.value,
+                                }))
+                              }
+                              as="select"
+                            >
+                              <option value="">회사계좌 선택</option>
+                              {paymentAccounts.map((account) => (
+                                <option key={account.account_id} value={account.account_id}>
+                                  {account.bank_name} · {account.account_name} · 잔액{" "}
+                                  {payrollWon(account.balance)}
+                                </option>
+                              ))}
+                            </FinanceControl>
+                          </FinanceField>
                           {accountsError && <p role="alert">{accountsError}</p>}
-                          <label htmlFor="payroll-date">실제 지급일</label>
-                          <input
-                            id="payroll-date"
-                            type="date"
-                            required
-                            max={today}
-                            value={payrollPayForm.payment_date}
-                            onChange={(event) =>
-                              setPayrollPayForm((previous) => ({
-                                ...previous,
-                                payment_date: event.target.value,
-                              }))
-                            }
-                          />
-                          <label htmlFor="payroll-password">
-                            로그인 비밀번호 확인
-                          </label>
-                          <input
-                            id="payroll-password"
-                            type="password"
-                            autoComplete="current-password"
-                            required
-                            value={payrollPayForm.password}
-                            onChange={(event) =>
-                              setPayrollPayForm((previous) => ({
-                                ...previous,
-                                password: event.target.value,
-                              }))
-                            }
-                          />
-                          <button
+                          <FinanceField label={<>실제 지급일</>} htmlFor="payroll-date">
+                            <FinanceControl
+                              id="payroll-date"
+                              type="date"
+                              required
+                              max={today}
+                              value={payrollPayForm.payment_date}
+                              onChange={(event) =>
+                                setPayrollPayForm((previous) => ({
+                                  ...previous,
+                                  payment_date: event.target.value,
+                                }))
+                              }
+                            />
+                          </FinanceField>
+                          <FinanceField
+                            label={<>로그인 비밀번호 확인</>}
+                            htmlFor="payroll-password"
+                          >
+                            <FinanceControl
+                              id="payroll-password"
+                              type="password"
+                              autoComplete="current-password"
+                              required
+                              value={payrollPayForm.password}
+                              onChange={(event) =>
+                                setPayrollPayForm((previous) => ({
+                                  ...previous,
+                                  password: event.target.value,
+                                }))
+                              }
+                            />
+                          </FinanceField>
+                          <FinanceButton
                             type="submit"
-                            className="register-btn"
-                            disabled={
-                              payrollNetPending <= 0 ||
-                              paymentAccounts.length === 0
-                            }
+                            disabled={payrollNetPending <= 0 || paymentAccounts.length === 0}
+                            variant="primary"
                           >
                             {payrollPaymentSaving
                               ? "등록 중…"
                               : `${payrollWon(payrollNetPending)} 지급 등록`}
-                          </button>
-                        </div>
+                          </FinanceButton>
+                        </FinanceFormStack>
                       </fieldset>
                     </form>
                   )}
-                  {payrollUnpaidRows.length === 0 && (
-                    <p>모든 직원의 급여가 지급 등록되었습니다.</p>
-                  )}
+                  {payrollUnpaidRows.length === 0 && <p>모든 직원의 급여가 지급 등록되었습니다.</p>}
                   <p
                     className="subtext"
                     style={{
@@ -337,8 +315,8 @@ export default function PayrollDetailModal({
                       fontSize: 12,
                     }}
                   >
-                    실지급액 = 세전 급여 − 공제액. 공제액의 납부 상태는 공제액
-                    상세에서 확인할 수 있습니다.
+                    실지급액 = 세전 급여 − 공제액. 공제액의 납부 상태는 공제액 상세에서 확인할 수
+                    있습니다.
                   </p>
                 </>
               ))}

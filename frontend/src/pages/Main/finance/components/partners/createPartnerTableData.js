@@ -1,4 +1,6 @@
-import { getPartnerBalanceLabel } from "./partnerModel";
+// 담당 화면: 거래처 관리
+// 역할: 목록의 열 정의와 행 데이터를 구성합니다. 제목·셀 표시·정렬·관리 버튼을 수정할 때 확인합니다.
+import { getPartnerBalanceLabel } from "../../models/financePartnerModel";
 import React from "react";
 
 export default function createPartnerTableData({

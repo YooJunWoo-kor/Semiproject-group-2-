@@ -1,6 +1,9 @@
+// 담당 화면: 거래처 관리
+// 역할: 거래처 등록·수정 입력 창
 import React from "react";
+import { FinanceField, FinanceControl, FinanceButton, FinanceActions, } from "../ui/FinanceDetailDisplay";
 import ModalBase from "../../../../../components/ModalBase";
-import { partnerCalendarColors } from "./partnerModel";
+import { partnerCalendarColors } from "../../models/financePartnerModel";
 
 export default function PartnerFormModal({
   closeRegistrationModal,
@@ -67,12 +70,17 @@ export default function PartnerFormModal({
                 max: 100,
               },
             ].map((field) => (
-              <div key={field.name}>
-                <label htmlFor={`partner-${field.name}`}>
-                  {field.label}
-                  {field.required ? " *" : ""}
-                </label>
-                <input
+              <FinanceField
+                key={field.name}
+                label={
+                  <>
+                    {field.label}
+                    {field.required ? " *" : ""}
+                  </>
+                }
+                htmlFor={`partner-${field.name}`}
+              >
+                <FinanceControl
                   id={`partner-${field.name}`}
                   name={field.name}
                   type="text"
@@ -82,26 +90,25 @@ export default function PartnerFormModal({
                   maxLength={field.max}
                   disabled={saving}
                 />
-              </div>
+              </FinanceField>
             ))}
 
-            <div>
-              <label htmlFor="partner-trade-role">거래 구분 *</label>
-              <select
+            <FinanceField label={<>거래 구분 *</>} htmlFor="partner-trade-role">
+              <FinanceControl
                 id="partner-trade-role"
                 name="trade_role"
                 value={partnerForm.trade_role}
                 onChange={handlePartnerChange}
                 disabled={saving}
+                as="select"
               >
                 <option value="매입">매입</option>
                 <option value="매출">매출</option>
-              </select>
-            </div>
+              </FinanceControl>
+            </FinanceField>
 
-            <div>
-              <label htmlFor="partner-closing-day">정기 마감일</label>
-              <input
+            <FinanceField label={<>정기 마감일</>} htmlFor="partner-closing-day">
+              <FinanceControl
                 id="partner-closing-day"
                 name="closing_day"
                 type="number"
@@ -113,7 +120,7 @@ export default function PartnerFormModal({
                 onChange={handlePartnerChange}
                 disabled={saving}
               />
-            </div>
+            </FinanceField>
 
             <fieldset className="finance-color-fieldset" disabled={saving}>
               <legend className="finance-color-legend">일정 색상</legend>
@@ -136,7 +143,11 @@ export default function PartnerFormModal({
                 }}
               >
                 {partnerCalendarColors.map(({ typeId, color }, index) => (
-                  <label key={typeId} title={`색상 ${index + 1}: ${color}`} className="finance-color-option">
+                  <label
+                    key={typeId}
+                    title={`색상 ${index + 1}: ${color}`}
+                    className="finance-color-option"
+                  >
                     <input
                       type="radio"
                       name="calendar_type_id"
@@ -158,26 +169,27 @@ export default function PartnerFormModal({
               </div>
             </fieldset>
 
-            <div>
-              <label htmlFor="partner-memo">메모</label>
-              <textarea
+            <FinanceField label={<>메모</>} htmlFor="partner-memo">
+              <FinanceControl
                 id="partner-memo"
                 name="memo"
                 value={partnerForm.memo}
                 onChange={handlePartnerChange}
                 disabled={saving}
+                as="textarea"
               />
-            </div>
+            </FinanceField>
 
             {formError && <p role="alert">{formError}</p>}
 
-            <button type="submit" disabled={saving}>
-              {saving ? "저장 중..." : "저장"}
-            </button>
-
-            <button type="button" disabled={saving} onClick={closeRegistrationModal}>
-              취소
-            </button>
+            <FinanceActions>
+              <FinanceButton type="submit" disabled={saving} variant="primary">
+                {saving ? "저장 중..." : "저장"}
+              </FinanceButton>
+              <FinanceButton type="button" disabled={saving} onClick={closeRegistrationModal}>
+                취소
+              </FinanceButton>
+            </FinanceActions>
           </form>
         }
       />

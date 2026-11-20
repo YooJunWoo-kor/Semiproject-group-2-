@@ -1,3 +1,5 @@
+// 담당 화면: 지출·거래 관리 / 급여
+// 역할: 거래 상세의 제목·금액·상태 등 상단 요약
 import React from "react";
 
 export default function DetailSummary({ title, amount, status }) {

@@ -1,7 +1,10 @@
-import { getBankAccountStatusLabel, getBankAccountStatusActionLabel } from "./bankAccountModel";
+// 담당 화면: 자금관리 → 회사계좌
+// 역할: 계좌 기본정보 및 거래 이력 상세 창
+import { FinanceButton } from "../ui/FinanceButton";
+import { getBankAccountStatusLabel, getBankAccountStatusActionLabel, } from "../../models/financeBankAccountModel";
 import React from "react";
-import { FinanceResourceModal, FinanceResourceDetails } from "../FinanceDetailUI";
-import { FinancePaymentHistory } from "../FinanceFunds";
+import { FinanceResourceModal, FinanceResourceDetails } from "../ui/FinanceDetailDisplay";
+import { FinancePaymentHistory } from "../ui/FinancePaymentHistory";
 
 export default function BankAccountDetailModal({
   accountPayments,
@@ -18,12 +21,10 @@ export default function BankAccountDetailModal({
   selectedAccount,
 }) {
   function renderHistoryContent() {
-    if (paymentsLoading) {
-      return <p>거래내역을 불러오는 중입니다.</p>;
-    }
-    if (paymentsError) {
-      return <p role="alert">{paymentsError}</p>;
-    }
+    if (paymentsLoading) return <p>거래내역을 불러오는 중입니다.</p>;
+
+    if (paymentsError) return <p role="alert">{paymentsError}</p>;
+
     return (
       <FinancePaymentHistory
         className="finance-account-history"
@@ -37,9 +38,8 @@ export default function BankAccountDetailModal({
       />
     );
   }
-
   function renderAccountContent() {
-    if (accountView === "detail") {
+    if (accountView === "detail")
       return (
         <FinanceResourceDetails
           rows={[
@@ -47,8 +47,10 @@ export default function BankAccountDetailModal({
             ["은행명", selectedAccount.bankName],
             ["계좌번호", selectedAccount.accountNumber],
             ["계좌명", selectedAccount.accountName],
-            ["용도 구분", selectedAccount.accountType],
-            ["현재 잔액", `${selectedAccount.balance.toLocaleString()} ${selectedAccount.currency}`],
+            [
+              "현재 잔액",
+              `${selectedAccount.balance.toLocaleString()} ${selectedAccount.currency}`,
+            ],
             ["통화", selectedAccount.currency],
             ["담당자", selectedAccount.managerName],
             ["최근 거래일시", selectedAccount.lastTransactionDate],
@@ -56,7 +58,7 @@ export default function BankAccountDetailModal({
           ]}
         />
       );
-    }
+
     return (
       <>
         <div
@@ -77,7 +79,6 @@ export default function BankAccountDetailModal({
       </>
     );
   }
-  
   return (
     <FinanceResourceModal
       key={accountView}
@@ -87,32 +88,34 @@ export default function BankAccountDetailModal({
       actions={
         <>
           {accountView === "detail" && (
-            <button
+            <FinanceButton
               type="button"
               disabled={saving || accountStatusSaving}
               onClick={() => openAccountHistory(selectedAccount.id)}
             >
               거래내역
-            </button>
+            </FinanceButton>
           )}
-          <button
+          <FinanceButton
             type="button"
-            className="erp-primary-button"
             disabled={saving || accountStatusSaving}
             onClick={() => openEditAccountForm(selectedAccount)}
+            variant="primary"
           >
             수정
-          </button>
+          </FinanceButton>
           {accountView === "detail" && (
-            <button
+            <FinanceButton
               type="button"
               disabled={
-                saving || accountStatusSaving || !["사용", "ACTIVE", "STOP"].includes(selectedAccount.status)
+                saving ||
+                accountStatusSaving ||
+                !["사용", "ACTIVE", "STOP"].includes(selectedAccount.status)
               }
               onClick={() => handleAccountStatusChange(selectedAccount)}
             >
               {getBankAccountStatusActionLabel(selectedAccount.status, accountStatusSaving)}
-            </button>
+            </FinanceButton>
           )}
         </>
       }

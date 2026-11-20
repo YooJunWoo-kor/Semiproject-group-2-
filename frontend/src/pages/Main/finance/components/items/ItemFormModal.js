@@ -1,3 +1,8 @@
+// 담당 화면: 지출·거래 관리 / 급여
+// 역할: 거래·품목 등록 및 수정 입력 창
+import { FinanceButton } from "../ui/FinanceButton";
+import { FinanceControl, FinanceField, FinanceActions } from "../ui/FinanceFormControls";
+import { calculateItemAmounts } from "../../models/financeItemTransactionModel";
 import React from "react";
 import ModalBase from "../../../../../components/ModalBase";
 
@@ -16,13 +21,12 @@ export default function ItemFormModal({
   partnerOptions,
   saving,
 }) {
+  const amounts = calculateItemAmounts(itemForm);
   function getModalTitle() {
-    if (linkingApproval) {
-      return "승인 지출 거래정보 등록";
-    }
-    if (editingItemId === null) {
-      return "신규 매입·매출 거래 등록";
-    }
+    if (linkingApproval) return "승인 지출 거래정보 등록";
+
+    if (editingItemId === null) return "신규 매입·매출 거래 등록";
+
     return "거래 품목 수정";
   }
   return (
@@ -37,58 +41,55 @@ export default function ItemFormModal({
                 <p>
                   원본: {linkingApproval.itemName}
                   <br />
-                  승인 금액: {linkingApproval.totalAmount.toLocaleString()}원 ·
-                  입력 합계가 이 금액과 같아야 합니다.
+                  승인 금액: {linkingApproval.totalAmount.toLocaleString()}원 · 입력 합계가 이
+                  금액과 같아야 합니다.
                 </p>
               )}
               {!isExpenseRegistration && (
                 <>
-                  <div>
-                    <label htmlFor="item-partner">거래처 *</label>
-                    <select
+                  <FinanceField label={<>거래처 *</>} htmlFor="item-partner">
+                    <FinanceControl
                       id="item-partner"
                       name="partner_id"
                       value={itemForm.partner_id}
                       onChange={handleItemChange}
                       required
+                      as="select"
                     >
                       <option value="">거래처 선택</option>
 
                       {partnerOptions.map((partner) => (
-                        <option
-                          key={partner.partner_id}
-                          value={partner.partner_id}
-                        >
+                        <option key={partner.partner_id} value={partner.partner_id}>
                           {partner.company_name}
                         </option>
                       ))}
-                    </select>
-                  </div>
+                    </FinanceControl>
+                  </FinanceField>
 
-                  <div>
-                    <label htmlFor="item-trade-type">거래 구분 *</label>
-                    <select
+                  <FinanceField label={<>거래 구분 *</>} htmlFor="item-trade-type">
+                    <FinanceControl
                       id="item-trade-type"
                       disabled={Boolean(linkingApproval)}
                       name="trade_type"
                       value={itemForm.trade_type}
                       onChange={handleItemChange}
                       required
+                      as="select"
                     >
                       <option value="매입">매입</option>
                       <option value="매출">매출</option>
-                    </select>
-                  </div>
+                    </FinanceControl>
+                  </FinanceField>
                 </>
               )}
-              <div>
-                <label htmlFor="item-category">거래 분류</label>
-                <select
+              <FinanceField label={<>거래 분류</>} htmlFor="item-category">
+                <FinanceControl
                   id="item-category"
                   name="category_code"
                   value={itemForm.category_code || ""}
                   onChange={handleItemChange}
                   disabled={saving}
+                  as="select"
                 >
                   <option value="">
                     {linkingApproval
@@ -107,9 +108,9 @@ export default function ItemFormModal({
                       ))}
                     </optgroup>
                   ))}
-                </select>
+                </FinanceControl>
                 {categoryError && <p role="alert">{categoryError}</p>}
-              </div>
+              </FinanceField>
 
               {/* 같은 구조의 입력칸은 map으로 만듭니다. */}
               {[
@@ -165,21 +166,20 @@ export default function ItemFormModal({
                 .filter(
                   (field) =>
                     !isExpenseRegistration ||
-                    ![
-                      "due_date",
-                      "standard",
-                      "quantity",
-                      "unit_price",
-                    ].includes(field.name),
+                    !["due_date", "standard", "quantity", "unit_price"].includes(field.name),
                 )
                 .map((field) => (
-                  <div key={field.name}>
-                    <label htmlFor={`item-${field.name}`}>
-                      {field.label}
-                      {field.required ? " *" : ""}
-                    </label>
-
-                    <input
+                  <FinanceField
+                    key={field.name}
+                    label={
+                      <>
+                        {field.label}
+                        {field.required ? " *" : ""}
+                      </>
+                    }
+                    htmlFor={`item-${field.name}`}
+                  >
+                    <FinanceControl
                       id={`item-${field.name}`}
                       name={field.name}
                       type={field.type}
@@ -190,25 +190,12 @@ export default function ItemFormModal({
                       min={field.min}
                       step={field.step}
                     />
-                  </div>
+                  </FinanceField>
                 ))}
 
-              <p>
-                공급가액:{" "}
-                {(
-                  Number(itemForm.quantity) * Number(itemForm.unit_price)
-                ).toLocaleString()}
-                원
-              </p>
+              <p>공급가액: {amounts.supplyAmount.toLocaleString()}원</p>
 
-              <p>
-                합계 금액:{" "}
-                {(
-                  Number(itemForm.quantity) * Number(itemForm.unit_price) +
-                  Number(itemForm.vat)
-                ).toLocaleString()}
-                원
-              </p>
+              <p>합계 금액: {amounts.totalAmount.toLocaleString()}원</p>
 
               {/* [비용 간편등록 추가] 등록만으로 계좌를 차감하거나 지급완료로 처리하지 않습니다. */}
               <p>
@@ -219,11 +206,14 @@ export default function ItemFormModal({
 
               {formError && <p role="alert">{formError}</p>}
 
-              <button type="submit">{saving ? "저장 중..." : "저장"}</button>
-
-              <button type="button" onClick={closeRegistrationModal}>
-                취소
-              </button>
+              <FinanceActions>
+                <FinanceButton type="submit" variant="primary">
+                  {saving ? "저장 중..." : "저장"}
+                </FinanceButton>
+                <FinanceButton type="button" onClick={closeRegistrationModal}>
+                  취소
+                </FinanceButton>
+              </FinanceActions>
             </fieldset>
           </form>
         }

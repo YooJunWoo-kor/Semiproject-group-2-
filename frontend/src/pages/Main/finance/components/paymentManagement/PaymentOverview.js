@@ -1,5 +1,7 @@
+// 담당 화면: 지출·거래 관리 요약
+// 역할: 지출·거래 분류별 현황 표시
 import React from "react";
-import { won, total } from "./paymentManagementModel";
+import { won, total } from "../../models/financePaymentOverviewModel";
 
 export default function PaymentOverview({
   data,
@@ -25,7 +27,8 @@ export default function PaymentOverview({
               {source.groups.map((group) => {
                 const keys = group.items.map((item) => `${value}:${item.code}`);
                 const selected =
-                  keys.length === selectedCodes.length && keys.every((code) => selectedCodes.includes(code));
+                  keys.length === selectedCodes.length &&
+                  keys.every((code) => selectedCodes.includes(code));
                 return (
                   <button
                     type="button"
@@ -36,7 +39,9 @@ export default function PaymentOverview({
                     onClick={() => handleOverviewGroupSelect(value, keys, selected)}
                   >
                     <span>{group.label}</span>
-                    <strong>{won(total(source.entries.filter((row) => row.group_id === group.id)))}</strong>
+                    <strong>
+                      {won(total(source.entries.filter((row) => row.group_id === group.id)))}
+                    </strong>
                   </button>
                 );
               })}

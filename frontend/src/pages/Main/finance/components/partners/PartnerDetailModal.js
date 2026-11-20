@@ -1,9 +1,13 @@
-import { getPartnerClosingDayLabel } from "./partnerModel";
+// 담당 화면: 거래처 관리
+// 역할: 거래처 기본정보 상세
+import { FinanceActions } from "../ui/FinanceFormControls";
+import { FinanceButton } from "../ui/FinanceButton";
+import { getPartnerClosingDayLabel } from "../../models/financePartnerModel";
 import React from "react";
-import { FinanceDetailRows } from "../FinanceDetailUI";
+import { FinanceDetailRows } from "../ui/FinanceDetailDisplay";
 import ModalBase from "../../../../../components/ModalBase";
 import { TOGLE_COLORS } from "../../../../../utils/authStorage";
-import { getPartnerCalendarTypeId } from "./partnerModel";
+import { getPartnerCalendarTypeId } from "../../models/financePartnerModel";
 
 export default function PartnerDetailModal({
   closePartnerDetail,
@@ -59,24 +63,24 @@ export default function PartnerDetailModal({
                 </tbody>
               </table>
             </div>
-            <div className="finance-detail-actions">
-              <button
+            <FinanceActions className="finance-detail-actions">
+              <FinanceButton
                 type="button"
-                className="erp-primary-button"
                 disabled={saving || deleting}
                 onClick={() => openEditPartnerForm(selectedPartner)}
+                variant="primary"
               >
                 수정
-              </button>
-              <button
+              </FinanceButton>
+              <FinanceButton
                 type="button"
                 className="finance-detail-delete"
                 disabled={saving || deleting}
                 onClick={() => handlePartnerDelete(selectedPartner)}
               >
                 {deleting ? "삭제 중..." : "삭제"}
-              </button>
-            </div>
+              </FinanceButton>
+            </FinanceActions>
           </section>
         }
       />

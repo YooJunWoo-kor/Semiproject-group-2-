@@ -211,7 +211,7 @@ function BasicCalendar({ schedule = [], readOnly = false, onEventClick }) {
                       {day !== null && (
                         <span
                           className={`g-cal-day-num ${
-                            dayIndex === 0 ? 'sun' : dayIndex === 6 ? 'sat' : ''
+                            dayIndex === 0 ? 'sun' : dayIndex  ? 'sat' : ''
                           }`}
                         >
                           {day}

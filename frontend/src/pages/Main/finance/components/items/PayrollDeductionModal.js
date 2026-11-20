@@ -1,3 +1,7 @@
+// 담당 화면: 지출·거래 관리 / 급여
+// 역할: 급여 공제액과 납부 입력 창
+import { FinanceControl, FinanceField, FinanceFormStack } from "../ui/FinanceFormControls";
+import { FinanceButton } from "../ui/FinanceButton";
 import React from "react";
 import ModalBase from "../../../../../components/ModalBase";
 import DetailSummary from "./ItemDetailSummary";
@@ -23,14 +27,12 @@ export default function PayrollDeductionModal({
 }) {
   function getDeductionStatus() {
     if (Number(deductionData.pending_total) > 0) {
-      if (Number(deductionData.paid_total) > 0) {
-        return "일부 완료";
-      }
+      if (Number(deductionData.paid_total) > 0) return "일부 완료";
+
       return "대기";
     }
-    if (deductionData.items.length > 0) {
-      return "완료";
-    }
+    if (deductionData.items.length > 0) return "완료";
+
     return "미등록";
   }
   return (
@@ -43,14 +45,9 @@ export default function PayrollDeductionModal({
           <section
             style={{
               width: "100%",
-              minWidth: 0,
+              minWidth: 0
             }}
           >
-            <style>{`
-                      .finance-registration-modal .modal-boder.finance-deduction-modal { width: min(560px, calc(100vw - 32px)); min-width: 0; max-width: 100%; }
-                      .finance-deduction-modal table { width: 100%; table-layout: fixed; }
-                      .finance-deduction-modal th, .finance-deduction-modal td { padding: 9px; font-size: 13px; overflow-wrap: anywhere; }
-                    `}</style>
             {deductionNotice && <p role="status">{deductionNotice}</p>}
             {deductionError && <p role="alert">{deductionError}</p>}
             {deductionLoading && <p role="status">공제액 조회 중…</p>}
@@ -59,8 +56,7 @@ export default function PayrollDeductionModal({
                 <DetailSummary
                   title={`${deductionMonth} 급여 공제액`}
                   amount={payrollWon(
-                    Number(deductionData.pending_total) +
-                      Number(deductionData.paid_total),
+                    Number(deductionData.pending_total) + Number(deductionData.paid_total),
                   )}
                   status={getDeductionStatus()}
                 />
@@ -141,87 +137,82 @@ export default function PayrollDeductionModal({
                           fontSize: 12,
                         }}
                       >
-                        실제 납부 후 등록하세요. 해당 월 미납 공제액 전액을 한
-                        건으로 등록하며, 은행 송금이나 기관 납부를 실행하지
-                        않습니다.
+                        실제 납부 후 등록하세요. 해당 월 미납 공제액 전액을 한 건으로 등록하며, 은행
+                        송금이나 기관 납부를 실행하지 않습니다.
                       </p>
-                      <div
-                        style={{
-                          display: "grid",
-                          gap: 8,
-                        }}
-                      >
-                        <label htmlFor="deduction-account">출금 회사계좌</label>
-                        <select
-                          id="deduction-account"
-                          required
-                          value={deductionForm.account_id}
-                          onChange={(event) =>
-                            setDeductionForm((previous) => ({
-                              ...previous,
-                              account_id: event.target.value,
-                            }))
-                          }
-                        >
-                          <option value="">회사계좌 선택</option>
-                          {paymentAccounts.map((account) => (
-                            <option
-                              key={account.account_id}
-                              value={account.account_id}
-                            >
-                              {account.bank_name} · {account.account_name} ·
-                              잔액 {payrollWon(account.balance)}
-                            </option>
-                          ))}
-                        </select>
+                      <FinanceFormStack>
+                        <FinanceField label={<>출금 회사계좌</>} htmlFor="deduction-account">
+                          <FinanceControl
+                            id="deduction-account"
+                            required
+                            value={deductionForm.account_id}
+                            onChange={(event) =>
+                              setDeductionForm((previous) => ({
+                                ...previous,
+                                account_id: event.target.value,
+                              }))
+                            }
+                            as="select"
+                          >
+                            <option value="">회사계좌 선택</option>
+                            {paymentAccounts.map((account) => (
+                              <option key={account.account_id} value={account.account_id}>
+                                {account.bank_name} · {account.account_name} · 잔액{" "}
+                                {payrollWon(account.balance)}
+                              </option>
+                            ))}
+                          </FinanceControl>
+                        </FinanceField>
                         {accountsError && <p role="alert">{accountsError}</p>}
-                        <label htmlFor="deduction-date">실제 납부일</label>
-                        <input
-                          id="deduction-date"
-                          type="date"
-                          required
-                          max={today}
-                          value={deductionForm.payment_date}
-                          onChange={(event) =>
-                            setDeductionForm((previous) => ({
-                              ...previous,
-                              payment_date: event.target.value,
-                            }))
-                          }
-                        />
-                        <label htmlFor="deduction-password">
-                          로그인 비밀번호 확인
-                        </label>
-                        <input
-                          id="deduction-password"
-                          type="password"
-                          autoComplete="current-password"
-                          required
-                          value={deductionForm.password}
-                          onChange={(event) =>
-                            setDeductionForm((previous) => ({
-                              ...previous,
-                              password: event.target.value,
-                            }))
-                          }
-                        />
-                        <button
+                        <FinanceField label={<>실제 납부일</>} htmlFor="deduction-date">
+                          <FinanceControl
+                            id="deduction-date"
+                            type="date"
+                            required
+                            max={today}
+                            value={deductionForm.payment_date}
+                            onChange={(event) =>
+                              setDeductionForm((previous) => ({
+                                ...previous,
+                                payment_date: event.target.value,
+                              }))
+                            }
+                          />
+                        </FinanceField>
+                        <FinanceField
+                          label={<>로그인 비밀번호 확인</>}
+                          htmlFor="deduction-password"
+                        >
+                          <FinanceControl
+                            id="deduction-password"
+                            type="password"
+                            autoComplete="current-password"
+                            required
+                            value={deductionForm.password}
+                            onChange={(event) =>
+                              setDeductionForm((previous) => ({
+                                ...previous,
+                                password: event.target.value,
+                              }))
+                            }
+                          />
+                        </FinanceField>
+                        <FinanceButton
                           type="submit"
-                          className="register-btn"
                           disabled={paymentAccounts.length === 0}
+                          variant="primary"
                         >
                           {deductionSaving
                             ? "등록 중…"
                             : `${payrollWon(deductionData.pending_total)} 납부 등록`}
-                        </button>
-                      </div>
+                        </FinanceButton>
+                      </FinanceFormStack>
                     </fieldset>
                   </form>
                 )}
-                {deductionData.items.length > 0 &&
-                  Number(deductionData.pending_total) === 0 && (
-                    <p>공제액 납부가 모두 등록되었습니다.</p>
-                  )}
+                {deductionData.items.length > 0 && Number(deductionData.pending_total) === 0 && (
+                  <p>공제액 납부가 모두 등록되었습니다.</p>
+                )}
               </>
             )}
           </section>
