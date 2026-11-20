@@ -1116,3 +1116,37 @@
         transition: none;
     }
 }
+
+/* 제품 목록의 품질 상태 선택창에만 적용 */
+.quality-product-status-select {
+    width: 150px;
+    min-width: 150px;
+    min-height: 42px;
+    padding: 9px 36px 9px 14px;
+    border: 1px solid #cad7e5;
+    border-radius: 10px;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235b708a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    box-shadow: 0 2px 8px rgba(32, 67, 108, 0.06);
+    color: #334155;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.quality-product-status-select:hover {
+    border-color: #89a9cd;
+    box-shadow: 0 3px 10px rgba(32, 67, 108, 0.10);
+}
+
+.quality-product-status-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+}

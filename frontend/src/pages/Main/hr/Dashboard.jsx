@@ -2,7 +2,8 @@ import StatisticsCard from '../../../components/StatisticsCard';
 import { useEffect, useState } from 'react';
 import {
     getHrAttendance,
-    getHrOrganization
+    getHrDepartments,
+    getHrEmployees
 } from '../../../components/HrData';
 import DepartmentAttendanceComp from './DepartmentAttendanceComp';
 import axios from 'axios';
@@ -22,6 +23,7 @@ export default function Dashboard() {
     const [attendanceData, setAttendanceData] = useState([]);
     const [attendanceLoading, setAttendanceLoading] = useState(true);
     const [attendanceError, setAttendanceError] = useState('');
+    const [organizationError, setOrganizationError] = useState('');
 
     const [departments, setDepartmentsCount] = useState(0);
     const [employeesCount, setEmployeesCount] = useState(0);
@@ -75,33 +77,53 @@ export default function Dashboard() {
             setAttendanceError('');
 
             try {
-                const [attendanceRes, [deptRes, empRes]] = await Promise.all([
-                    getHrAttendance(),
-                    getHrOrganization()
-                ]);
+                // 한 요청 오류가 다른 영역의 성공한 데이터를 지우지 않도록 각각 처리합니다.
+                const [attendanceResult, departmentResult, employeeResult] =
+                    await Promise.allSettled([
+                        getHrAttendance(),
+                        getHrDepartments(),
+                        getHrEmployees()
+                    ]);
 
                 if (!ignore) {
-                    if (
-                        attendanceRes.data.success &&
-                        Array.isArray(attendanceRes.data.data)
-                    ) {
-                        setAttendanceData(attendanceRes.data.data);
+                    const validData = (result) =>
+                        result.status === 'fulfilled' &&
+                        result.value.data.success &&
+                        Array.isArray(result.value.data.data);
+
+                    if (validData(attendanceResult)) {
+                        setAttendanceData(attendanceResult.value.data.data);
+                        setAttendanceError('');
                     } else {
+                        console.error('근태 요약 조회 실패:', attendanceResult);
                         setAttendanceData([]);
                         setAttendanceError('근태 정보를 불러오지 못했습니다.');
                     }
 
-                    if (deptRes.data.success && Array.isArray(deptRes.data.data)) {
-                        setDepartmentsCount(deptRes.data.data.length);
+                    const organizationErrors = [];
+                    if (validData(departmentResult)) {
+                        setDepartmentsCount(departmentResult.value.data.data.length);
+                    } else {
+                        console.error('부서 요약 조회 실패:', departmentResult);
+                        setDepartmentsCount(0);
+                        organizationErrors.push('부서 정보');
                     }
-                    if (empRes.data.success && Array.isArray(empRes.data.data)) {
-                        setEmployeesCount(empRes.data.data.length);
+                    if (validData(employeeResult)) {
+                        setEmployeesCount(employeeResult.value.data.data.length);
+                    } else {
+                        console.error('직원 요약 조회 실패:', employeeResult);
+                        setEmployeesCount(0);
+                        organizationErrors.push('직원 정보');
                     }
+                    setOrganizationError(
+                        organizationErrors.length
+                            ? organizationErrors.join('·') + '를 불러오지 못했습니다.'
+                            : ''
+                    );
                 }
             } catch (error) {
                 console.error('대시보드 요약 조회 오류:', error);
                 if (!ignore) {
-                    setAttendanceData([]);
                     setAttendanceError('근태 정보를 불러오지 못했습니다.');
                 }
             } finally {
@@ -132,6 +154,11 @@ export default function Dashboard() {
             {attendanceError && (
                 <p className="hr-dashboard-feedback error" role="alert">
                     {attendanceError}
+                </p>
+            )}
+            {organizationError && (
+                <p className="hr-dashboard-feedback error" role="alert">
+                    {organizationError}
                 </p>
             )}
 

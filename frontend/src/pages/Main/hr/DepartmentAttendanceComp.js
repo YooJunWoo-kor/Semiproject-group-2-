@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
     getHrDepartmentAttendance,
-    getHrOrganization
+    getHrDepartments
 } from '../../../components/HrData';
 
 export default function DepartmentAttendanceComp({ today }) {
@@ -28,7 +28,7 @@ export default function DepartmentAttendanceComp({ today }) {
             setOrganizationError('');
 
             try {
-                const [departmentResponse] = await getHrOrganization();
+                const departmentResponse = await getHrDepartments();
 
                 if (
                     !departmentResponse.data.success ||

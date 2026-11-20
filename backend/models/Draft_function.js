@@ -51,34 +51,13 @@ function leaveDays(startDate, endDate) {
     return ((end.getTime() - start.getTime()) / 86400000) + 1;
 }
 
-async function ensureLeaveDetail(draftId, documentType, detailData) {
+// 휴가 상세는 my_draft.detail_data JSON에만 보관합니다.
+function validateLeaveDetail(documentType, detailData) {
     if (documentType !== '휴가') return;
-
-    const days = leaveDays(detailData.startDate, detailData.endDate);
+    const days = leaveDays(detailData?.startDate, detailData?.endDate);
     if (!days) {
         throw new Error('휴가 시작일과 종료일이 올바르지 않습니다.');
     }
-
-    const [existingRows] = await promiseDb.query(
-        `SELECT leave_id
-         FROM draft_leave
-         WHERE draft_id = ?
-         LIMIT 1
-         FOR UPDATE`,
-        [draftId]
-    );
-
-    if (existingRows.length > 0) return;
-
-    await promiseDb.query(
-        `INSERT INTO draft_leave (
-            draft_id,
-            start_date,
-            end_date,
-            leave_days
-         ) VALUES (?, ?, ?, ?)`,
-        [draftId, detailData.startDate, detailData.endDate, days]
-    );
 }
 
 async function persistExpenseDetail(draftId, documentType, detailData) {
@@ -309,7 +288,7 @@ class Draft {
                       d.content, d.detail_data, d.status, d.created_at, e.name AS writer_name
                  FROM my_draft d
                  LEFT JOIN employees e ON e.employee_id = d.employee_id
-                 WHERE d.approver_id = ? AND d.status = 'APPROVED'
+                 WHERE d.approver_id = ? AND d.status IN ('APPROVED', '승인', '승인완료', '완료')
                  ORDER BY d.created_at DESC, d.draft_id DESC`;
         const [rows] = await promiseDb.query(sql, [employeeId]);
         return rows;
@@ -512,8 +491,7 @@ class Draft {
                 [draftId]
             );
             const draft = draftRows[0];
-            await ensureLeaveDetail(
-                draftId,
+            validateLeaveDetail(
                 draft?.document_type,
                 parseDetailData(draft?.detail_data)
             );
@@ -559,8 +537,8 @@ class Draft {
                 );
             }
 
-            // 기존 휴가 상세 저장도 같은 트랜잭션에서 처리합니다.
-            await ensureLeaveDetail(draftId, documentType, detailData);
+            // 휴가 기간을 검증합니다. 상세정보는 이미 my_draft.detail_data에 저장됩니다.
+            validateLeaveDetail(documentType, detailData);
             await promiseDb.commit();
             return draftId;
         } catch (error) {
