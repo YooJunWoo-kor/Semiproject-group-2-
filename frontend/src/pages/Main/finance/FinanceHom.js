@@ -31,7 +31,7 @@ function FinanceHome() {
   // 기본적으로 공통 메뉴만 보여줍니다.
   let urlList = commonMenus;
 
-  // 로그인한 사용자의 부서ID가 1이면 재무 메뉴도 추가합니다.
+  // 재무팀 또는 MASTER 계정에만 재무 전용 메뉴를 추가합니다.
   if (hasFinanceAccess) {
     urlList = [...commonMenus, ...financeMenus];
   }
@@ -39,11 +39,11 @@ function FinanceHome() {
     <Nav urlist={urlList} title='재무' />
     <Routes>
       <Route index element={<FinanceModul />} />
-      <Route path='funds/*' element={<FinanceFunds />} />
+      <Route path='funds/*' element={hasFinanceAccess ? <FinanceFunds /> : <Navigate to={mainUrl} replace />} />
       <Route path='corp-card/*' element={<Navigate to="/main/finance/funds?tab=cards" replace />} />
       <Route path='bank-account/*' element={<Navigate to="/main/finance/funds?tab=accounts" replace />} />
       <Route path='approval/*' element={<Navigate to="/main/finance/items?view=analysis" replace />} />
-      <Route path='partners/*' element={<Partners />} />
+      <Route path='partners/*' element={hasFinanceAccess ? <Partners /> : <Navigate to={mainUrl} replace />} />
       <Route path='items/*' element={<FinanceWorkspace />} />
       <Route path='*' element={<Navigate to="/main/finance" replace />} />
     </Routes>
