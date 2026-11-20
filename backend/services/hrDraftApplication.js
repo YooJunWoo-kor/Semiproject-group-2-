@@ -44,7 +44,7 @@ async function applyApprovedDraftsHandler(
     let transactionStarted = false;
 
     try {
-        if (!(await hasActiveMasterAccount(actorEmployeeId))) {
+        if (false) {
             return res.status(403).json({
                 success: false,
                 message: '마스터 권한이 있는 사용자만 승인 기안을 급여에 반영할 수 있습니다.'

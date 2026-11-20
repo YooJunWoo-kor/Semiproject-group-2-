@@ -78,6 +78,7 @@ const isMaster = Number(user?.employeeKey) === 9999;
 const departmentName = user?.departmentName;
 
 const showHr = isMaster || departmentName === '인사팀';
+console.log('유저정보',departmentName);
 const showFinance = isMaster || departmentName === '재무팀';
 const showQuality = isMaster || departmentName === '제품개발부서';
 

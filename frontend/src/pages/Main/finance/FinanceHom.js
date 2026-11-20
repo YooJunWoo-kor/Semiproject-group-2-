@@ -22,7 +22,9 @@ function FinanceHome() {
   // 재무 관리는 재무부 소속 + master 계정만 확인 가능하게 할 예정
 
   // 마스터이거나 재무부 소속이면 true
-  const canAccessFinance = loginUser?.role === "MASTER" || String(loginUser?.department ?? loginUser?.department_id) === "6";
+  const canAccessFinance =
+    loginUser?.role === "MASTER" ||
+          String(loginUser?.department ?? loginUser?.department_id) === "7";
 
   // 모든 부서에 보여줄 메뉴
   const commonMenus = [{ name: "대시보드", url: mainUrl }];

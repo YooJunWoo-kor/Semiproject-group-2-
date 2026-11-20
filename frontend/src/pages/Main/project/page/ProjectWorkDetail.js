@@ -193,10 +193,10 @@ function ProjectWorkDetail({ projectID, onBack, onTaskUpdated }) {
                             style={{
                                 flex: 1,
                                 overflowY: "auto",
-                                maxHeight: "220px",
+                                maxHeight: "120px",
                                 display: "flex",
                                 flexDirection: "column",
-                                gap: "8px",
+                                gap: "5px",
                                 marginBottom: "12px",
                             }}
                         >

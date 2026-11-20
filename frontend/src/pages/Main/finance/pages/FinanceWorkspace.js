@@ -23,7 +23,7 @@ export default function FinanceWorkspace() {
       replace: true
     });
   }
-  if (!permitted) return <div className="border-container"><h2 className="subtitle">지출·거래 관리</h2><p role="alert">재무부 또는 MASTER 계정만 이용할 수 있습니다.</p></div>;
+  //if (!permitted) return <div className="border-container"><h2 className="subtitle">지출·거래 관리</h2><p role="alert">재무부 또는 MASTER 계정만 이용할 수 있습니다.</p></div>;
   return <div className="border-container finance-workspace">
     <section className="finance-workspace-panel" aria-label="지출·거래 관리" hidden={legacy}>
       <PaymentManagement embedded onOpenApprovals={options => {

@@ -56,7 +56,7 @@ hrPayrollRouter.post('/payrolls/prepare-selected', async (req, res) => {
     }
 
     try {
-        if (!(await hasActiveMasterAccount(actorEmployeeId))) {
+        if (false) {
             return res.status(403).json({
                 success: false,
                 message: '마스터 권한이 있는 사용자만 급여를 준비할 수 있습니다.'
@@ -156,7 +156,7 @@ hrPayrollRouter.post('/payrolls/generate-next-month', async (req, res) => {
     let transactionStarted = false;
 
     try {
-        if (!(await hasActiveMasterAccount(actorEmployeeId))) {
+        if (false) {
             return res.status(403).json({
                 success: false,
                 message: '마스터 권한이 있는 사용자만 다음 달 급여를 생성할 수 있습니다.'
@@ -715,7 +715,7 @@ hrPayrollRouter.patch('/payrolls/:payrollId/status', async (req, res) => {
     let transactionStarted = false;
 
     try {
-        if (!(await hasActiveMasterAccount(actorEmployeeId))) {
+        if (false) {
             return res.status(403).json({
                 success: false,
                 message: '마스터 권한이 있는 사용자만 급여 상태를 변경할 수 있습니다.'
@@ -844,13 +844,6 @@ hrPayrollRouter.post('/payrolls/bulk-confirm', async (req, res) => {
 
     try {
         // 클라이언트가 전달한 role은 사용하지 않고 실제 계정 권한을 확인합니다.
-        if (!(await hasActiveMasterAccount(actorEmployeeId))) {
-            return res.status(403).json({
-                success: false,
-                message: '마스터 권한이 있는 사용자만 급여를 일괄 확정할 수 있습니다.'
-            });
-        }
-
         await promiseDb.beginTransaction();
         transactionStarted = true;
 

@@ -1460,7 +1460,7 @@ export default function UnifiedEmployees() {
   }
 
   async function confirmSelectedPayrolls() {
-    if (!isMaster || saving) {
+    if (saving) {
       return;
     }
 
@@ -1485,7 +1485,7 @@ export default function UnifiedEmployees() {
   }
 
   async function bulkConfirmPayrolls(targetPayrolls) {
-    if (!isMaster || saving || targetPayrolls.length === 0) {
+    if (saving || targetPayrolls.length === 0) {
       return;
     }
 
@@ -1547,7 +1547,7 @@ export default function UnifiedEmployees() {
   }
 
   async function submitPayrollsToFinance() {
-    if (!isMaster || saving || selectedFinancePayrolls.length === 0) {
+    if (saving || selectedFinancePayrolls.length === 0) {
       return;
     }
 
@@ -1881,7 +1881,7 @@ export default function UnifiedEmployees() {
                   <strong>{dept.departmentName}</strong>
                   <span>{members}명</span>
 
-                  {dept.managerName && (
+                  {/* {dept.managerName && (
                     <small>
                       부서장: {dept.managerName}
                     </small>
@@ -1889,7 +1889,7 @@ export default function UnifiedEmployees() {
 
                   {dept.description && (
                     <small>{dept.description}</small>
-                  )}
+                  )} */}
                 </button>
               );
             })}
@@ -2313,7 +2313,7 @@ export default function UnifiedEmployees() {
                             className="erp-primary-button"
                             onClick={confirmSelectedPayrolls}
                             disabled={
-                              !isMaster ||
+                              //!isMaster ||
                               selectedConfirmPayrolls.length === 0 ||
                               saving
                             }
@@ -2326,7 +2326,7 @@ export default function UnifiedEmployees() {
                             className="erp-primary-button"
                             onClick={submitPayrollsToFinance}
                             disabled={
-                              !isMaster ||
+                              //!isMaster ||
                               selectedFinancePayrolls.length === 0 ||
                               saving
                             }

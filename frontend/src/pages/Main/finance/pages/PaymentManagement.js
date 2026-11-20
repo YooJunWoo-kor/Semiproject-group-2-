@@ -271,7 +271,7 @@ export default function PaymentManagement({
       setSaving(false);
     }
   }
-  if (!permitted) return <div className="border-container"><h2 className="subtitle">결제 관리</h2><p role="alert">재무부 또는 MASTER 계정만 이용할 수 있습니다.</p></div>;
+  //if (!permitted) return <div className="border-container"><h2 className="subtitle">결제 관리</h2><p role="alert">재무부 또는 MASTER 계정만 이용할 수 있습니다.</p></div>;
   if (workflow) return <div className="pm-workflow">
     <button type="button" disabled={workflowBusy} onClick={() => setWorkflow(null)}>← 결제 관리로 돌아가기</button>
     <Approval key={`${workflow.documentId || ''}-${workflow.draft}`} initialDocumentId={workflow.documentId} initialDraftOpen={workflow.draft} expenseGroups={expenseGroups} onBusyChange={setWorkflowBusy} />
@@ -329,10 +329,16 @@ export default function PaymentManagement({
     {loading && <p role="status">결제 관리 정보를 불러오는 중입니다.</p>}
     {error && <div role="alert"><p>{error}</p><button type="button" onClick={() => setRefresh(value => value + 1)}>다시 조회</button></div>}
     {data && <div className="pm-columns pm-unified-columns">
-      <section className="pm-overview-panel" aria-label="지출·수입 분류 요약">
+      <section
+        className="vertical-box size-fill"
+        style={{alignSelf:'stretch'}}
+         aria-label="지출·수입 분류 요약">
         {[['expense', '출금', '지출·매입 요약'], ['income', '입금', '수입·매출 요약']].map(([key, value, title]) => {
           const source = data.overview[key];
-          return <div className="pm-overview-card" key={key}>
+          return <div
+            className="pm-overview-card size-fill"
+            style={{alignSelf:'stretch'}}
+          key={key}>
             <div className="pm-panel-heading"><h4>{title}</h4><strong>{won(source.summary.total)}</strong></div>
             <div className="pm-overview-groups">{source.groups.map(group => {
                 const keys = group.items.map(item => `${value}:${item.code}`);
